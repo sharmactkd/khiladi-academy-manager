@@ -179,11 +179,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   if (user.loginProvider !== "local") {
-    return errorResponse(
-      res,
-      `Please login using ${user.loginProvider}`,
-      400
-    );
+    return errorResponse(res, `Please login using ${user.loginProvider}`, 400);
   }
 
   const isPasswordValid = await user.comparePassword(password);
@@ -254,6 +250,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   session.lastUsedAt = new Date();
 
   const accessToken = generateAccessToken(user);
+
   await user.save();
 
   return successResponse(res, "Access token refreshed", {
@@ -292,4 +289,12 @@ export const getMe = asyncHandler(async (req, res) => {
   return successResponse(res, "Current user fetched successfully", {
     user: buildSafeUserResponse(req.user),
   });
+});
+
+export const googleLoginPlaceholder = asyncHandler(async (req, res) => {
+  return errorResponse(
+    res,
+    "Google login will be implemented in a later step",
+    501
+  );
 });

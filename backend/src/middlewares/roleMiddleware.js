@@ -18,3 +18,15 @@ export const allowRoles = (...roles) => {
     next();
   };
 };
+
+export const requireAcademyOwner = (req, res, next) => {
+  if (!req.user) {
+    return errorResponse(res, "Authentication required", 401);
+  }
+
+  if (!["academy_owner", "super_admin"].includes(req.user.role)) {
+    return errorResponse(res, "Only academy owner can perform this action", 403);
+  }
+
+  next();
+};

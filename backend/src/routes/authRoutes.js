@@ -6,6 +6,7 @@ import {
   refreshAccessToken,
   logoutUser,
   getMe,
+  googleLoginPlaceholder,
 } from "../controllers/authController.js";
 
 import {
@@ -38,6 +39,8 @@ router.post(
   validateRequest,
   loginUser
 );
+
+router.post("/google", authRateLimiter, googleLoginPlaceholder);
 
 router.post("/refresh", authRateLimiter, refreshAccessToken);
 
