@@ -1,39 +1,32 @@
-import express from "express";
-import dotenv from "dotenv";
-import mongoose from "mongoose";
-import cors from "cors";
-import helmet from "helmet";
-import cookieParser from "cookie-parser";
+import http from "http";
+import app from "./src/app.js";
+import connectDB from "./src/config/db.js";
+import env from "./src/config/env.js";
+import logger from "./src/utils/logger.js";
 
-dotenv.config();
+const server = http.createServer(app);
 
-const app = express();
+const startServer = async () => {
+  try {
+    await connectDB();
 
-app.use(helmet());
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL,
-    credentials: true,
-  })
-);
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+    server.listen(env.PORT, () => {
+      logger.info(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
+    });
+  } catch (error) {
+    logger.error(`Server startup failed: ${error.message}`);
+    process.exit(1);
+  }
+};
 
-app.get("/", (req, res) => {
-  res.json({ message: "KHILADI Academy Manager API running" });
+startServer();
+
+process.on("unhandledRejection", (reason) => {
+  logger.error(`Unhandled Rejection: ${reason}`);
+  server.close(() => process.exit(1));
 });
 
-const PORT = process.env.PORT || 5000;
-
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB connected");
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.error("MongoDB connection failed:", error.message);
-  });
+process.on("uncaughtException", (error) => {
+  logger.error(`Uncaught Exception: ${error.message}`);
+  process.exit(1);
+});
