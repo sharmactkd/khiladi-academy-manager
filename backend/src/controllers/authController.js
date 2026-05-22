@@ -83,15 +83,16 @@ export const buildSafeUserResponse = (user) => {
   return user.createSafeResponse();
 };
 
-const createAuditLog = async ({ req, actor, action, metadata = {} }) => {
+const createAuditLog = async ({ req, user = null, action, metadata = {} }) => {
   try {
     await AuditLog.create({
-      actor: actor || null,
+      user,
+      academy: null,
       action,
-      entityType: "auth",
-      metadata,
+      module: "auth",
       ip: req.ip || "",
       userAgent: req.get("user-agent") || "",
+      metadata,
     });
   } catch {
     // Audit failure should never break auth flow.
@@ -145,7 +146,7 @@ export const registerUser = asyncHandler(async (req, res) => {
 
   await createAuditLog({
     req,
-    actor: user._id,
+    user: user._id,
     action: "USER_REGISTERED",
     metadata: { role: user.role },
   });
@@ -198,7 +199,7 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   await createAuditLog({
     req,
-    actor: user._id,
+    user: user._id,
     action: "USER_LOGGED_IN",
   });
 
@@ -274,7 +275,7 @@ export const logoutUser = asyncHandler(async (req, res) => {
 
       await createAuditLog({
         req,
-        actor: user._id,
+        user: user._id,
         action: "USER_LOGGED_OUT",
       });
     }

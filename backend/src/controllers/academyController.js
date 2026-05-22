@@ -30,16 +30,22 @@ const buildSafeUpdatePayload = (body) => {
   return payload;
 };
 
-const createAuditLog = async ({ req, actor, action, academy, metadata = {} }) => {
+const createAuditLog = async ({
+  req,
+  user = null,
+  academy = null,
+  action,
+  metadata = {},
+}) => {
   try {
     await AuditLog.create({
-      actor: actor || null,
+      user,
+      academy,
       action,
-      entityType: "academy",
-      entityId: academy?._id || null,
-      metadata,
+      module: "academy",
       ip: req.ip || "",
       userAgent: req.get("user-agent") || "",
+      metadata,
     });
   } catch {
     // Audit log failure should not break main request.
@@ -52,7 +58,9 @@ export const createAcademy = asyncHandler(async (req, res) => {
   }
 
   const ownerId =
-    req.user.role === "super_admin" && req.body.owner ? req.body.owner : req.user._id;
+    req.user.role === "super_admin" && req.body.owner
+      ? req.body.owner
+      : req.user._id;
 
   const existingAcademy = await Academy.findOne({ owner: ownerId });
 
@@ -78,21 +86,16 @@ export const createAcademy = asyncHandler(async (req, res) => {
 
   await createAuditLog({
     req,
-    actor: req.user._id,
+    user: req.user._id,
+    academy: academy._id,
     action: "ACADEMY_CREATED",
-    academy,
     metadata: {
       academyName: academy.academyName,
       owner: academy.owner,
     },
   });
 
-  return successResponse(
-    res,
-    "Academy created successfully",
-    { academy },
-    201
-  );
+  return successResponse(res, "Academy created successfully", { academy }, 201);
 });
 
 export const getMyAcademy = asyncHandler(async (req, res) => {
@@ -124,9 +127,9 @@ export const updateMyAcademy = asyncHandler(async (req, res) => {
 
   await createAuditLog({
     req,
-    actor: req.user._id,
+    user: req.user._id,
+    academy: academy._id,
     action: "ACADEMY_UPDATED",
-    academy,
     metadata: {
       updatedFields: Object.keys(safePayload),
     },
