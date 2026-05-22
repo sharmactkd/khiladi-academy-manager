@@ -1,51 +1,71 @@
-import dotenv from "dotenv";
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import cookieParser from "cookie-parser";
+import morgan from "morgan";
 
-dotenv.config();
+import env from "./config/env.js";
 
-const requiredEnvVars = [
-  "MONGO_URI",
-  "JWT_ACCESS_SECRET",
-  "JWT_REFRESH_SECRET",
-];
+import authRoutes from "./routes/authRoutes.js";
+import academyRoutes from "./routes/academyRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
-requiredEnvVars.forEach((key) => {
-  if (!process.env[key]) {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
+import studentRoutes from "./routes/studentRoutes.js";
+import batchRoutes from "./routes/batchRoutes.js";
+import attendanceRoutes from "./routes/attendanceRoutes.js";
+import feePlanRoutes from "./routes/feePlanRoutes.js";
+import feePaymentRoutes from "./routes/feePaymentRoutes.js";
+
+import {
+  errorHandler,
+  notFoundHandler,
+} from "./middlewares/errorMiddleware.js";
+
+const app = express();
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+
+app.use(
+  cors({
+    origin: env.CLIENT_URL,
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
+
+if (!env.isProduction) {
+  app.use(morgan("dev"));
+}
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "KHILADI Academy Manager API is running",
+    data: {
+      status: "ok",
+      environment: env.NODE_ENV,
+    },
+  });
 });
 
-const env = {
-  NODE_ENV: process.env.NODE_ENV || "development",
-  PORT: Number(process.env.PORT) || 5000,
+app.use("/api/auth", authRoutes);
+app.use("/api/academy", academyRoutes);
+app.use("/api/admin", adminRoutes);
 
-  MONGO_URI: process.env.MONGO_URI,
-  CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",
+app.use("/api/students", studentRoutes);
+app.use("/api/batches", batchRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/fee-plans", feePlanRoutes);
+app.use("/api/fee-payments", feePaymentRoutes);
 
-  JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
-  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
+app.use(notFoundHandler);
+app.use(errorHandler);
 
-  ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m",
-  REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d",
-  REFRESH_TOKEN_COOKIE_NAME:
-    process.env.REFRESH_TOKEN_COOKIE_NAME || "khiladi_refresh_token",
-
-  MAX_REFRESH_SESSIONS: Number(process.env.MAX_REFRESH_SESSIONS) || 5,
-
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
-
-  SMTP_HOST: process.env.SMTP_HOST || "",
-  SMTP_PORT: Number(process.env.SMTP_PORT) || 587,
-  SMTP_USER: process.env.SMTP_USER || "",
-  SMTP_PASS: process.env.SMTP_PASS || "",
-  MAIL_FROM:
-    process.env.MAIL_FROM ||
-    "KHILADI Academy Manager <noreply@khiladi.com>",
-
-  FRONTEND_RESET_PASSWORD_URL:
-    process.env.FRONTEND_RESET_PASSWORD_URL ||
-    "http://localhost:5173/reset-password",
-
-  isProduction: process.env.NODE_ENV === "production",
-};
-
-export default env;
+export default app;

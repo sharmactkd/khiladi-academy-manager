@@ -30,3 +30,29 @@ export const requireAcademyOwner = (req, res, next) => {
 
   next();
 };
+
+export const allowAcademyManagement = (req, res, next) => {
+  if (!req.user) {
+    return errorResponse(res, "Authentication required", 401);
+  }
+
+  if (
+    !["super_admin", "academy_owner", "assistant_coach"].includes(req.user.role)
+  ) {
+    return errorResponse(res, "You are not authorized for management APIs", 403);
+  }
+
+  next();
+};
+
+export const allowFeeManagement = (req, res, next) => {
+  if (!req.user) {
+    return errorResponse(res, "Authentication required", 401);
+  }
+
+  if (!["super_admin", "academy_owner"].includes(req.user.role)) {
+    return errorResponse(res, "You are not authorized for fee management", 403);
+  }
+
+  next();
+};

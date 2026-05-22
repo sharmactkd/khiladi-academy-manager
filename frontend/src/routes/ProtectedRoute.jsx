@@ -1,44 +1,18 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
+import useAuth from "../hooks/useAuth.js";
 
-import Login from "../pages/auth/Login.jsx";
-import Register from "../pages/auth/Register.jsx";
-import ForgotPassword from "../pages/auth/ForgotPassword.jsx";
-import ResetPassword from "../pages/auth/ResetPassword.jsx";
-import OwnerDashboard from "../pages/dashboard/OwnerDashboard.jsx";
-import CreateAcademy from "../pages/onboarding/CreateAcademy.jsx";
-import Users from "../pages/admin/Users.jsx";
-import Unauthorized from "../pages/errors/Unauthorized.jsx";
-import NotFound from "../pages/errors/NotFound.jsx";
+const ProtectedRoute = () => {
+  const { isAuthenticated, loading } = useAuth();
 
-import ProtectedRoute from "./ProtectedRoute.jsx";
-import RoleRoute from "./RoleRoute.jsx";
-import DashboardLayout from "../layouts/DashboardLayout.jsx";
+  if (loading) {
+    return <p>Loading...</p>;
+  }
 
-const AppRoutes = () => {
-  return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-
-      <Route element={<ProtectedRoute />}>
-        <Route element={<DashboardLayout />}>
-          <Route path="/dashboard" element={<OwnerDashboard />} />
-          <Route path="/onboarding/create-academy" element={<CreateAcademy />} />
-
-          <Route element={<RoleRoute allowedRoles={["super_admin"]} />}>
-            <Route path="/admin/users" element={<Users />} />
-          </Route>
-        </Route>
-      </Route>
-
-      <Route path="/unauthorized" element={<Unauthorized />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
+  return <Outlet />;
 };
 
-export default AppRoutes;
+export default ProtectedRoute;
