@@ -1,4 +1,7 @@
+import crypto from "crypto";
 import ms from "ms";
+import { OAuth2Client } from "google-auth-library";
+
 import User from "../models/User.js";
 import AuditLog from "../models/AuditLog.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -9,20 +12,17 @@ import {
   hashToken,
 } from "../utils/generateToken.js";
 import env from "../config/env.js";
+import { sendPasswordResetEmail } from "../services/emailService.js";
+import logger from "../utils/logger.js";
+
+const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 const getRefreshTokenExpiryDate = () => {
   const milliseconds = ms(env.REFRESH_TOKEN_EXPIRES_IN);
-
-  if (!milliseconds) {
-    return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-  }
-
-  return new Date(Date.now() + milliseconds);
+  return new Date(Date.now() + (milliseconds || 30 * 24 * 60 * 60 * 1000));
 };
 
-export const hashRefreshToken = (refreshToken) => {
-  return hashToken(refreshToken);
-};
+export const hashRefreshToken = (refreshToken) => hashToken(refreshToken);
 
 export const normalizeRefreshTokenSessions = (user) => {
   const now = new Date();
@@ -79,9 +79,7 @@ export const clearRefreshTokenCookie = (res) => {
   });
 };
 
-export const buildSafeUserResponse = (user) => {
-  return user.createSafeResponse();
-};
+export const buildSafeUserResponse = (user) => user.createSafeResponse();
 
 const createAuditLog = async ({ req, user = null, action, metadata = {} }) => {
   try {
@@ -95,8 +93,26 @@ const createAuditLog = async ({ req, user = null, action, metadata = {} }) => {
       metadata,
     });
   } catch {
-    // Audit failure should never break auth flow.
+    // Audit failure should not break auth flow.
   }
+};
+
+const issueAuthResponse = async ({ req, res, user, message, statusCode = 200 }) => {
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken();
+
+  await addRefreshTokenSession(user, refreshToken, req);
+  setRefreshTokenCookie(res, refreshToken);
+
+  return successResponse(
+    res,
+    message,
+    {
+      user: buildSafeUserResponse(user),
+      accessToken,
+    },
+    statusCode
+  );
 };
 
 export const registerUser = asyncHandler(async (req, res) => {
@@ -138,12 +154,6 @@ export const registerUser = asyncHandler(async (req, res) => {
     loginProvider: "local",
   });
 
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken();
-
-  await addRefreshTokenSession(user, refreshToken, req);
-  setRefreshTokenCookie(res, refreshToken);
-
   await createAuditLog({
     req,
     user: user._id,
@@ -151,15 +161,13 @@ export const registerUser = asyncHandler(async (req, res) => {
     metadata: { role: user.role },
   });
 
-  return successResponse(
+  return issueAuthResponse({
+    req,
     res,
-    "Registration successful",
-    {
-      user: buildSafeUserResponse(user),
-      accessToken,
-    },
-    201
-  );
+    user,
+    message: "Registration successful",
+    statusCode: 201,
+  });
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
@@ -190,12 +198,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   user.lastLoginAt = new Date();
-
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken();
-
-  await addRefreshTokenSession(user, refreshToken, req);
-  setRefreshTokenCookie(res, refreshToken);
+  await user.save();
 
   await createAuditLog({
     req,
@@ -203,10 +206,167 @@ export const loginUser = asyncHandler(async (req, res) => {
     action: "USER_LOGGED_IN",
   });
 
-  return successResponse(res, "Login successful", {
-    user: buildSafeUserResponse(user),
-    accessToken,
+  return issueAuthResponse({
+    req,
+    res,
+    user,
+    message: "Login successful",
   });
+});
+
+export const googleLogin = asyncHandler(async (req, res) => {
+  const { googleToken, role = "academy_owner" } = req.body;
+
+  if (!env.GOOGLE_CLIENT_ID) {
+    return errorResponse(res, "Google login is not configured", 500);
+  }
+
+  if (role === "super_admin") {
+    return errorResponse(res, "super_admin cannot register publicly", 403);
+  }
+
+  const ticket = await googleClient.verifyIdToken({
+    idToken: googleToken,
+    audience: env.GOOGLE_CLIENT_ID,
+  });
+
+  const payload = ticket.getPayload();
+
+  if (!payload?.email) {
+    return errorResponse(res, "Google account email not found", 400);
+  }
+
+  const email = payload.email.toLowerCase();
+  const googleId = payload.sub;
+
+  let user = await User.findOne({
+    $or: [{ googleId }, { email }],
+  });
+
+  if (user) {
+    if (!user.googleId) {
+      user.googleId = googleId;
+    }
+
+    if (!user.profilePicture && payload.picture) {
+      user.profilePicture = payload.picture;
+    }
+
+    user.loginProvider = user.loginProvider || "google";
+    user.isEmailVerified = Boolean(payload.email_verified);
+    user.lastLoginAt = new Date();
+    await user.save();
+  } else {
+    user = await User.create({
+      name: payload.name || email.split("@")[0],
+      email,
+      role,
+      loginProvider: "google",
+      googleId,
+      profilePicture: payload.picture || "",
+      isEmailVerified: Boolean(payload.email_verified),
+      lastLoginAt: new Date(),
+    });
+  }
+
+  if (!user.isActive || user.isSuspended) {
+    return errorResponse(res, "User account is inactive or suspended", 403);
+  }
+
+  await createAuditLog({
+    req,
+    user: user._id,
+    action: "GOOGLE_LOGIN",
+    metadata: { email: user.email },
+  });
+
+  return issueAuthResponse({
+    req,
+    res,
+    user,
+    message: "Google login successful",
+  });
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const genericMessage =
+    "If an account exists with this email, password reset instructions have been sent";
+
+  const user = await User.findOne({ email: email.toLowerCase() }).select(
+    "+passwordResetToken +passwordResetExpires"
+  );
+
+  if (!user || !user.isActive || user.isSuspended) {
+    return successResponse(res, genericMessage);
+  }
+
+  const rawResetToken = crypto.randomBytes(32).toString("hex");
+
+  user.passwordResetToken = hashToken(rawResetToken);
+  user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+
+  await user.save({ validateBeforeSave: false });
+
+  const resetUrl = `${env.FRONTEND_RESET_PASSWORD_URL}?token=${rawResetToken}`;
+
+  if (env.NODE_ENV === "development") {
+    logger.info(`Development password reset URL: ${resetUrl}`);
+  }
+
+  await sendPasswordResetEmail({
+    to: user.email,
+    resetUrl,
+  });
+
+  await createAuditLog({
+    req,
+    user: user._id,
+    action: "PASSWORD_RESET_REQUESTED",
+  });
+
+  return successResponse(res, genericMessage);
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, password } = req.body;
+
+  const tokenHash = hashToken(token);
+
+  const user = await User.findOne({
+    passwordResetToken: tokenHash,
+    passwordResetExpires: { $gt: new Date() },
+  }).select("+passwordResetToken +passwordResetExpires +password");
+
+  if (!user) {
+    return errorResponse(res, "Invalid or expired reset token", 400);
+  }
+
+  if (!user.isActive || user.isSuspended) {
+    return errorResponse(res, "User account is inactive or suspended", 403);
+  }
+
+  user.password = password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  user.refreshTokens = [];
+
+  if (user.loginProvider === "google") {
+    user.loginProvider = "local";
+  }
+
+  await user.save();
+
+  clearRefreshTokenCookie(res);
+
+  await createAuditLog({
+    req,
+    user: user._id,
+    action: "PASSWORD_RESET_COMPLETED",
+  });
+
+  return successResponse(res, "Password reset successful");
 });
 
 export const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -290,12 +450,4 @@ export const getMe = asyncHandler(async (req, res) => {
   return successResponse(res, "Current user fetched successfully", {
     user: buildSafeUserResponse(req.user),
   });
-});
-
-export const googleLoginPlaceholder = asyncHandler(async (req, res) => {
-  return errorResponse(
-    res,
-    "Google login will be implemented in a later step",
-    501
-  );
 });

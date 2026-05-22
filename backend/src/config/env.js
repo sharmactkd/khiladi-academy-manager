@@ -19,7 +19,6 @@ const env = {
   PORT: Number(process.env.PORT) || 5000,
 
   MONGO_URI: process.env.MONGO_URI,
-
   CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",
 
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
@@ -31,6 +30,20 @@ const env = {
     process.env.REFRESH_TOKEN_COOKIE_NAME || "khiladi_refresh_token",
 
   MAX_REFRESH_SESSIONS: Number(process.env.MAX_REFRESH_SESSIONS) || 5,
+
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
+
+  SMTP_HOST: process.env.SMTP_HOST || "",
+  SMTP_PORT: Number(process.env.SMTP_PORT) || 587,
+  SMTP_USER: process.env.SMTP_USER || "",
+  SMTP_PASS: process.env.SMTP_PASS || "",
+  MAIL_FROM:
+    process.env.MAIL_FROM ||
+    "KHILADI Academy Manager <noreply@khiladi.com>",
+
+  FRONTEND_RESET_PASSWORD_URL:
+    process.env.FRONTEND_RESET_PASSWORD_URL ||
+    "http://localhost:5173/reset-password",
 
   isProduction: process.env.NODE_ENV === "production",
 };

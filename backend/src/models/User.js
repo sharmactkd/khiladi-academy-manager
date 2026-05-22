@@ -136,15 +136,28 @@ const userSchema = new mongoose.Schema(
       type: [refreshTokenSessionSchema],
       default: [],
     },
+
+    passwordResetToken: {
+      type: String,
+      select: false,
+      default: undefined,
+    },
+
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+      default: undefined,
+    },
+
+    passwordChangedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
-
-userSchema.index({ role: 1 });
-userSchema.index({ isActive: 1 });
-userSchema.index({ isSuspended: 1 });
 
 userSchema.pre("validate", function (next) {
   if (!this.email && !this.phone && this.loginProvider === "local") {
@@ -166,6 +179,7 @@ userSchema.pre("save", async function (next) {
 
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
+  this.passwordChangedAt = new Date(Date.now() - 1000);
   next();
 });
 

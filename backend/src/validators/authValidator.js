@@ -55,3 +55,40 @@ export const loginValidator = [
 
   body("password").notEmpty().withMessage("Password is required"),
 ];
+
+export const googleLoginValidator = [
+  body("googleToken")
+    .trim()
+    .notEmpty()
+    .withMessage("Google token is required"),
+
+  body("role")
+    .optional()
+    .isIn(allowedPublicRoles)
+    .withMessage("Invalid role for Google registration"),
+];
+
+export const forgotPasswordValidator = [
+  body("email")
+    .trim()
+    .notEmpty()
+    .withMessage("Email is required")
+    .isEmail()
+    .withMessage("Please enter a valid email")
+    .normalizeEmail(),
+];
+
+export const resetPasswordValidator = [
+  body("token")
+    .trim()
+    .notEmpty()
+    .withMessage("Reset token is required"),
+
+  body("password")
+    .notEmpty()
+    .withMessage("Password is required")
+    .matches(passwordRegex)
+    .withMessage(
+      "Password must be 8-72 characters and include uppercase, lowercase, number, and special character"
+    ),
+];

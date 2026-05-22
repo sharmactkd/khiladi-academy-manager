@@ -1,0 +1,44 @@
+{
+  "name": "khiladi-academy-manager-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "@react-oauth/google": "^0.13.5",
+    "@tanstack/react-query": "^5.100.11",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.25",
+    "axios": "^1.16.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.2.1",
+    "dayjs": "^1.11.20",
+    "file-saver": "^2.0.5",
+    "framer-motion": "^12.40.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "lucide-react": "^1.16.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-hook-form": "^7.76.0",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^7.15.1",
+    "react-to-print": "^3.3.0",
+    "recharts": "^3.8.1",
+    "vite": "^7.3.0",
+    "vite-plugin-pwa": "^1.3.0",
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.2.0"
+  }
+}

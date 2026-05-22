@@ -3,15 +3,20 @@ import express from "express";
 import {
   registerUser,
   loginUser,
+  googleLogin,
+  forgotPassword,
+  resetPassword,
   refreshAccessToken,
   logoutUser,
   getMe,
-  googleLoginPlaceholder,
 } from "../controllers/authController.js";
 
 import {
   registerValidator,
   loginValidator,
+  googleLoginValidator,
+  forgotPasswordValidator,
+  resetPasswordValidator,
 } from "../validators/authValidator.js";
 
 import validateRequest from "../middlewares/validateRequest.js";
@@ -40,7 +45,29 @@ router.post(
   loginUser
 );
 
-router.post("/google", authRateLimiter, googleLoginPlaceholder);
+router.post(
+  "/google",
+  loginRateLimiter,
+  googleLoginValidator,
+  validateRequest,
+  googleLogin
+);
+
+router.post(
+  "/forgot-password",
+  authRateLimiter,
+  forgotPasswordValidator,
+  validateRequest,
+  forgotPassword
+);
+
+router.post(
+  "/reset-password",
+  authRateLimiter,
+  resetPasswordValidator,
+  validateRequest,
+  resetPassword
+);
 
 router.post("/refresh", authRateLimiter, refreshAccessToken);
 

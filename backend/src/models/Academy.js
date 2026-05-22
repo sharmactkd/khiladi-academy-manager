@@ -148,11 +148,10 @@ const academySchema = new mongoose.Schema(
   }
 );
 
-academySchema.index({ owner: 1 }, { unique: true });
+
 academySchema.index({ academyName: "text" });
 academySchema.index({ city: 1, state: 1 });
-academySchema.index({ isActive: 1 });
-academySchema.index({ subscriptionStatus: 1 });
+
 
 academySchema.pre("save", function (next) {
   if (Array.isArray(this.martialArts)) {
