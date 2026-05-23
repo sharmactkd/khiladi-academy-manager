@@ -85,11 +85,34 @@ import Invoices from "../pages/billing/Invoices.jsx";
 import InvoiceDetail from "../pages/billing/InvoiceDetail.jsx";
 import PaymentHistory from "../pages/billing/PaymentHistory.jsx";
 
+import Branches from "../pages/branches/Branches.jsx";
+import AddBranch from "../pages/branches/AddBranch.jsx";
+import EditBranch from "../pages/branches/EditBranch.jsx";
+import BranchDetail from "../pages/branches/BranchDetail.jsx";
+
+import AnalyticsDashboard from "../pages/analytics/AnalyticsDashboard.jsx";
+import StudentAnalytics from "../pages/analytics/StudentAnalytics.jsx";
+import AttendanceAnalytics from "../pages/analytics/AttendanceAnalytics.jsx";
+import FeesAnalytics from "../pages/analytics/FeesAnalytics.jsx";
+import PerformanceAnalytics from "../pages/analytics/PerformanceAnalytics.jsx";
+
+import Reports from "../pages/reports/Reports.jsx";
+import ReportPreview from "../pages/reports/ReportPreview.jsx";
+
+import Skills from "../pages/skills/Skills.jsx";
+import AddSkill from "../pages/skills/AddSkill.jsx";
+import SkillAssessments from "../pages/skills/SkillAssessments.jsx";
+import StudentSkillProfile from "../pages/skills/StudentSkillProfile.jsx";
+
+import SmartTimeline from "../pages/smartTimeline/SmartTimeline.jsx";
+import StudentPerformance from "../pages/performance/StudentPerformance.jsx";
+
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import RoleRoute from "./RoleRoute.jsx";
 import DashboardLayout from "../layouts/DashboardLayout.jsx";
 
 const managementRoles = ["super_admin", "academy_owner", "assistant_coach"];
+const ownerRoles = ["super_admin", "academy_owner"];
 const feeRoles = ["super_admin", "academy_owner"];
 const parentPortalRoles = ["parent", "student"];
 const billingRoles = ["super_admin", "academy_owner"];
@@ -123,26 +146,11 @@ const AppRoutes = () => {
 
           <Route element={<RoleRoute allowedRoles={parentPortalRoles} />}>
             <Route path="/parent" element={<ParentDashboard />} />
-            <Route
-              path="/parent/students/:studentId"
-              element={<ParentStudentProfile />}
-            />
-            <Route
-              path="/parent/students/:studentId/attendance"
-              element={<ParentStudentAttendance />}
-            />
-            <Route
-              path="/parent/students/:studentId/fees"
-              element={<ParentStudentFees />}
-            />
-            <Route
-              path="/parent/students/:studentId/progress"
-              element={<ParentStudentProgress />}
-            />
-            <Route
-              path="/parent/students/:studentId/documents"
-              element={<ParentStudentDocuments />}
-            />
+            <Route path="/parent/students/:studentId" element={<ParentStudentProfile />} />
+            <Route path="/parent/students/:studentId/attendance" element={<ParentStudentAttendance />} />
+            <Route path="/parent/students/:studentId/fees" element={<ParentStudentFees />} />
+            <Route path="/parent/students/:studentId/progress" element={<ParentStudentProgress />} />
+            <Route path="/parent/students/:studentId/documents" element={<ParentStudentDocuments />} />
             <Route path="/my-announcements" element={<MyAnnouncements />} />
           </Route>
 
@@ -150,10 +158,28 @@ const AppRoutes = () => {
           <Route path="/announcements/:id" element={<AnnouncementDetail />} />
 
           <Route element={<RoleRoute allowedRoles={managementRoles} />}>
+            <Route path="/branches" element={<Branches />} />
+            <Route path="/branches/:id" element={<BranchDetail />} />
+
+            <Route path="/analytics" element={<AnalyticsDashboard />} />
+            <Route path="/analytics/students" element={<StudentAnalytics />} />
+            <Route path="/analytics/attendance" element={<AttendanceAnalytics />} />
+            <Route path="/analytics/performance" element={<PerformanceAnalytics />} />
+
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/reports/preview" element={<ReportPreview />} />
+
+            <Route path="/skills" element={<Skills />} />
+            <Route path="/skill-assessments" element={<SkillAssessments />} />
+
             <Route path="/students" element={<Students />} />
             <Route path="/students/new" element={<AddStudent />} />
             <Route path="/students/:id" element={<StudentProfile />} />
             <Route path="/students/:id/edit" element={<EditStudent />} />
+
+            <Route path="/students/:studentId/skills" element={<StudentSkillProfile />} />
+            <Route path="/students/:studentId/smart-timeline" element={<SmartTimeline />} />
+            <Route path="/students/:studentId/performance" element={<StudentPerformance />} />
 
             <Route path="/batches" element={<Batches />} />
             <Route path="/batches/new" element={<AddBatch />} />
@@ -161,76 +187,34 @@ const AppRoutes = () => {
             <Route path="/batches/:id/edit" element={<EditBatch />} />
 
             <Route path="/attendance" element={<AttendanceSheet />} />
-            <Route
-              path="/attendance/student/:studentId"
-              element={<StudentAttendanceHistory />}
-            />
-            <Route
-              path="/attendance/batch/:batchId"
-              element={<BatchAttendanceHistory />}
-            />
+            <Route path="/attendance/student/:studentId" element={<StudentAttendanceHistory />} />
+            <Route path="/attendance/batch/:batchId" element={<BatchAttendanceHistory />} />
 
             <Route path="/belt-tests" element={<BeltTests />} />
             <Route path="/belt-tests/new" element={<AddBeltTest />} />
             <Route path="/belt-tests/:id/edit" element={<EditBeltTest />} />
-            <Route
-              path="/students/:studentId/belt-history"
-              element={<StudentBeltHistory />}
-            />
+            <Route path="/students/:studentId/belt-history" element={<StudentBeltHistory />} />
 
-            <Route
-              path="/championship-records"
-              element={<ChampionshipRecords />}
-            />
-            <Route
-              path="/championship-records/new"
-              element={<AddChampionshipRecord />}
-            />
-            <Route
-              path="/championship-records/:id/edit"
-              element={<EditChampionshipRecord />}
-            />
-            <Route
-              path="/students/:studentId/championship-history"
-              element={<StudentChampionshipHistory />}
-            />
+            <Route path="/championship-records" element={<ChampionshipRecords />} />
+            <Route path="/championship-records/new" element={<AddChampionshipRecord />} />
+            <Route path="/championship-records/:id/edit" element={<EditChampionshipRecord />} />
+            <Route path="/students/:studentId/championship-history" element={<StudentChampionshipHistory />} />
 
-            <Route
-              path="/students/:studentId/timeline"
-              element={<StudentTimeline />}
-            />
+            <Route path="/students/:studentId/timeline" element={<StudentTimeline />} />
 
             <Route path="/id-card-templates" element={<IdCardTemplates />} />
             <Route path="/id-cards/generate" element={<GenerateIdCard />} />
             <Route path="/id-cards/:id/print" element={<PrintIdCard />} />
-            <Route
-              path="/students/:studentId/id-cards"
-              element={<StudentIdCards />}
-            />
+            <Route path="/students/:studentId/id-cards" element={<StudentIdCards />} />
 
-            <Route
-              path="/certificate-templates"
-              element={<CertificateTemplates />}
-            />
-            <Route
-              path="/certificates/generate"
-              element={<GenerateCertificate />}
-            />
-            <Route
-              path="/certificates/:id/print"
-              element={<PrintCertificate />}
-            />
-            <Route
-              path="/students/:studentId/certificates"
-              element={<StudentCertificates />}
-            />
+            <Route path="/certificate-templates" element={<CertificateTemplates />} />
+            <Route path="/certificates/generate" element={<GenerateCertificate />} />
+            <Route path="/certificates/:id/print" element={<PrintCertificate />} />
+            <Route path="/students/:studentId/certificates" element={<StudentCertificates />} />
 
             <Route path="/parent-links" element={<ParentLinks />} />
             <Route path="/parent-links/new" element={<CreateParentLink />} />
-            <Route
-              path="/students/:studentId/parent-links"
-              element={<StudentParentLinks />}
-            />
+            <Route path="/students/:studentId/parent-links" element={<StudentParentLinks />} />
 
             <Route path="/announcements" element={<Announcements />} />
             <Route path="/announcements/new" element={<CreateAnnouncement />} />
@@ -239,15 +223,20 @@ const AppRoutes = () => {
             <Route path="/reminders/attendance" element={<AttendanceReminder />} />
           </Route>
 
+          <Route element={<RoleRoute allowedRoles={ownerRoles} />}>
+            <Route path="/branches/new" element={<AddBranch />} />
+            <Route path="/branches/:id/edit" element={<EditBranch />} />
+            <Route path="/skills/new" element={<AddSkill />} />
+          </Route>
+
           <Route element={<RoleRoute allowedRoles={feeRoles} />}>
+            <Route path="/analytics/fees" element={<FeesAnalytics />} />
+
             <Route path="/fees" element={<FeesDashboard />} />
             <Route path="/fees/plans" element={<FeePlans />} />
             <Route path="/fees/collect" element={<CollectFee />} />
             <Route path="/fees/pending" element={<PendingFees />} />
-            <Route
-              path="/fees/student/:studentId"
-              element={<StudentFeeHistory />}
-            />
+            <Route path="/fees/student/:studentId" element={<StudentFeeHistory />} />
             <Route path="/fees/receipt/:paymentId" element={<ReceiptView />} />
             <Route path="/reminders/fee" element={<FeeReminder />} />
           </Route>

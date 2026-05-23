@@ -1,143 +1,167 @@
+import mongoose from "mongoose";
+
 import Batch from "../models/Batch.js";
+import Branch from "../models/Branch.js";
 import Student from "../models/Student.js";
+
 import asyncHandler from "../utils/asyncHandler.js";
-import { successResponse, errorResponse } from "../utils/apiResponse.js";
+import {
+  successResponse,
+  errorResponse,
+} from "../utils/apiResponse.js";
 
-const safeBatchFields = [
-  "branch",
-  "batchName",
-  "martialArt",
-  "coach",
-  "assistantCoaches",
-  "days",
-  "startTime",
-  "endTime",
-  "maxStudents",
-  "status",
-  "notes",
-];
+import { buildBranchAccessFilter } from "../services/branchAccessService.js";
 
-const buildPayload = (body) => {
-  const payload = {};
-  safeBatchFields.forEach((field) => {
-    if (Object.prototype.hasOwnProperty.call(body, field)) {
-      payload[field] = body[field] || undefined;
-    }
+const validateBranch = async (academyId, branchId) => {
+  if (!branchId) return null;
+
+  if (!mongoose.Types.ObjectId.isValid(branchId)) {
+    throw new Error("Invalid branch id");
+  }
+
+  const branch = await Branch.findOne({
+    _id: branchId,
+    academy: academyId,
+    isActive: true,
   });
-  return payload;
+
+  if (!branch) {
+    throw new Error("Branch not found");
+  }
+
+  return branch;
 };
 
 export const createBatch = asyncHandler(async (req, res) => {
+  if (req.body.branch) {
+    await validateBranch(req.academyId, req.body.branch);
+  }
+
+  if (Array.isArray(req.body.students) && req.body.students.length) {
+    const students = await Student.countDocuments({
+      _id: { $in: req.body.students },
+      academy: req.academyId,
+    });
+
+    if (students !== req.body.students.length) {
+      return errorResponse(
+        res,
+        "Some students do not belong to this academy",
+        400
+      );
+    }
+  }
+
   const batch = await Batch.create({
-    ...buildPayload(req.body),
+    ...req.body,
     academy: req.academyId,
     createdBy: req.user._id,
     updatedBy: req.user._id,
   });
 
-  return successResponse(res, "Batch created successfully", { batch }, 201);
+  return successResponse(
+    res,
+    "Batch created successfully",
+    batch,
+    201
+  );
 });
 
 export const getBatches = asyncHandler(async (req, res) => {
-  const filter = {};
+  const { branch, martialArt } = req.query;
 
-  if (req.academyId) filter.academy = req.academyId;
-  if (req.query.status) filter.status = req.query.status;
-  if (req.query.martialArt) filter.martialArt = req.query.martialArt;
+  const query = {
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  };
 
-  const batches = await Batch.find(filter)
-    .sort({ createdAt: -1 })
-    .populate("coach", "name email phone role")
-    .populate("assistantCoaches", "name email phone role")
-    .lean();
+  if (branch) {
+    query.branch = branch;
+  }
 
-  const batchIds = batches.map((batch) => batch._id);
+  if (martialArt) {
+    query.martialArt = martialArt;
+  }
 
-  const counts = await Student.aggregate([
-    {
-      $match: {
-        batch: { $in: batchIds },
-        status: { $ne: "left" },
-      },
-    },
-    {
-      $group: {
-        _id: "$batch",
-        studentCount: { $sum: 1 },
-      },
-    },
-  ]);
+  const batches = await Batch.find(query)
+    .populate("branch", "branchName branchCode")
+    .populate("coach", "name email role")
+    .populate("students", "firstName lastName admissionNumber")
+    .sort({ createdAt: -1 });
 
-  const countMap = new Map(
-    counts.map((item) => [String(item._id), item.studentCount])
+  return successResponse(
+    res,
+    "Batches fetched successfully",
+    batches
   );
-
-  const result = batches.map((batch) => ({
-    ...batch,
-    studentCount: countMap.get(String(batch._id)) || 0,
-  }));
-
-  return successResponse(res, "Batches fetched successfully", {
-    batches: result,
-  });
 });
 
 export const getBatchById = asyncHandler(async (req, res) => {
-  const filter = { _id: req.params.id };
-  if (req.academyId) filter.academy = req.academyId;
-
-  const batch = await Batch.findOne(filter)
-    .populate("coach", "name email phone role")
-    .populate("assistantCoaches", "name email phone role");
+  const batch = await Batch.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  })
+    .populate("branch", "branchName branchCode")
+    .populate("coach", "name email role")
+    .populate("students", "firstName lastName admissionNumber");
 
   if (!batch) {
     return errorResponse(res, "Batch not found", 404);
   }
 
-  const studentCount = await Student.countDocuments({
-    academy: batch.academy,
-    batch: batch._id,
-    status: { $ne: "left" },
-  });
-
-  return successResponse(res, "Batch fetched successfully", {
-    batch,
-    studentCount,
-  });
+  return successResponse(
+    res,
+    "Batch fetched successfully",
+    batch
+  );
 });
 
 export const updateBatch = asyncHandler(async (req, res) => {
-  const filter = { _id: req.params.id };
-  if (req.academyId) filter.academy = req.academyId;
-
-  const batch = await Batch.findOne(filter);
+  const batch = await Batch.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  });
 
   if (!batch) {
     return errorResponse(res, "Batch not found", 404);
   }
 
-  Object.assign(batch, buildPayload(req.body), {
-    updatedBy: req.user._id,
+  if (req.body.branch) {
+    await validateBranch(req.academyId, req.body.branch);
+  }
+
+  Object.keys(req.body).forEach((key) => {
+    batch[key] = req.body[key];
   });
+
+  batch.updatedBy = req.user._id;
 
   await batch.save();
 
-  return successResponse(res, "Batch updated successfully", { batch });
+  return successResponse(
+    res,
+    "Batch updated successfully",
+    batch
+  );
 });
 
 export const deleteBatch = asyncHandler(async (req, res) => {
-  const filter = { _id: req.params.id };
-  if (req.academyId) filter.academy = req.academyId;
-
-  const batch = await Batch.findOne(filter);
+  const batch = await Batch.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  });
 
   if (!batch) {
     return errorResponse(res, "Batch not found", 404);
   }
 
-  batch.status = "inactive";
-  batch.updatedBy = req.user._id;
-  await batch.save();
+  await batch.deleteOne();
 
-  return successResponse(res, "Batch deactivated successfully", { batch });
+  return successResponse(
+    res,
+    "Batch deleted successfully"
+  );
 });

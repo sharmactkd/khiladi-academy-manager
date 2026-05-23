@@ -1,1 +1,285 @@
 ye 100% industry standared, professional, future proof, secure banane k liye ek strong propmt generate kro, jisme ek hi prompt me mujhe har file ka poora complte updated code mile, code me kuch bhi kate naa, kuch bhi chhoote na, or complete code , na snippet, na structure, full complete code
+
+
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+
+import { getDashboardAnalytics } from "../../api/analyticsApi";
+
+import AnalyticsCard from "../../components/analytics/AnalyticsCard";
+import LineChartCard from "../../components/analytics/LineChartCard";
+import BarChartCard from "../../components/analytics/BarChartCard";
+
+const OwnerDashboard = () => {
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await getDashboardAnalytics();
+
+      setDashboard(res.data || null);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message || "Failed to load dashboard"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  if (loading) {
+    return <div className="page">Loading dashboard...</div>;
+  }
+
+  if (error) {
+    return <div className="page alert alert-error">{error}</div>;
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1>Academy Dashboard</h1>
+          <p>Analytics overview for your academy</p>
+        </div>
+
+        <div className="table-actions">
+          <Link to="/analytics" className="btn btn-primary">
+            Open Analytics
+          </Link>
+
+          <Link to="/reports" className="btn btn-secondary">
+            Reports
+          </Link>
+        </div>
+      </div>
+
+      <div className="analytics-grid">
+        <AnalyticsCard
+          title="Total Students"
+          value={dashboard?.totalStudents || 0}
+        />
+
+        <AnalyticsCard
+          title="Active Students"
+          value={dashboard?.activeStudents || 0}
+        />
+
+        <AnalyticsCard
+          title="Batches"
+          value={dashboard?.totalBatches || 0}
+        />
+
+        <AnalyticsCard
+          title="Pending Fees"
+          value={`₹${dashboard?.pendingFees || 0}`}
+        />
+
+        <AnalyticsCard
+          title="Attendance Today"
+          value={`${dashboard?.todayAttendancePercentage || 0}%`}
+        />
+
+        <AnalyticsCard
+          title="Monthly Collection"
+          value={`₹${dashboard?.monthlyFeesCollected || 0}`}
+        />
+
+        <AnalyticsCard
+          title="Certificates"
+          value={dashboard?.certificatesIssued || 0}
+        />
+
+        <AnalyticsCard
+          title="Medals"
+          value={dashboard?.medalCount || 0}
+        />
+      </div>
+
+      <div className="charts-grid">
+        <LineChartCard
+          title="Admissions Trend"
+          data={dashboard?.admissionsTrend || []}
+          dataKey="count"
+          xKey="month"
+        />
+
+        <BarChartCard
+          title="Attendance Trend"
+          data={dashboard?.attendanceTrend || []}
+          dataKey="attendance"
+          xKey="date"
+        />
+      </div>
+
+      <div className="dashboard-two-column">
+        <div className="card">
+          <h3>Recent Admissions</h3>
+
+          {(dashboard?.recentAdmissions || []).length ? (
+            dashboard.recentAdmissions.map((student) => (
+              <div key={student._id} className="list-row">
+                <span>
+                  {student.firstName} {student.lastName}
+                </span>
+
+                <small>
+                  {student.createdAt
+                    ? new Date(student.createdAt).toLocaleDateString()
+                    : "-"}
+                </small>
+              </div>
+            ))
+          ) : (
+            <p>No recent admissions.</p>
+          )}
+        </div>
+
+        <div className="card">
+          <h3>Recent Payments</h3>
+
+          {(dashboard?.recentPayments || []).length ? (
+            dashboard.recentPayments.map((payment) => (
+              <div key={payment._id} className="list-row">
+                <span>
+                  {payment.student?.firstName}{" "}
+                  {payment.student?.lastName}
+                </span>
+
+                <strong>₹{payment.amount}</strong>
+              </div>
+            ))
+          ) : (
+            <p>No recent payments.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OwnerDashboard;
+
+
+
+
+
+
+
+
+
+
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+export const exportToExcel = ({
+  data = [],
+  fileName = "report",
+  sheetName = "Sheet1",
+}) => {
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    sheetName
+  );
+
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+  });
+
+  const blob = new Blob([excelBuffer], {
+    type:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+  });
+
+  saveAs(blob, `${fileName}.xlsx`);
+};
+
+export const exportToPdf = ({
+  title = "Report",
+  columns = [],
+  rows = [],
+  fileName = "report",
+}) => {
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+
+  doc.text(title, 14, 18);
+
+  autoTable(doc, {
+    startY: 28,
+    head: [columns],
+    body: rows,
+  });
+
+  doc.save(`${fileName}.pdf`);
+};
+
+export const printElement = (elementId) => {
+  const element = document.getElementById(elementId);
+
+  if (!element) return;
+
+  const printWindow = window.open("", "_blank");
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Print</title>
+
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+
+          th,
+          td {
+            border: 1px solid #ddd;
+            padding: 8px;
+          }
+
+          th {
+            background: #f5f5f5;
+          }
+        </style>
+      </head>
+
+      <body>
+        ${element.innerHTML}
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+
+  printWindow.focus();
+
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 500);
+};
+

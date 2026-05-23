@@ -1,183 +1,199 @@
-import Batch from "../models/Batch.js";
+import mongoose from "mongoose";
+
 import Student from "../models/Student.js";
+import Branch from "../models/Branch.js";
+
 import asyncHandler from "../utils/asyncHandler.js";
-import { successResponse, errorResponse } from "../utils/apiResponse.js";
+import {
+  successResponse,
+  errorResponse,
+} from "../utils/apiResponse.js";
 
-const safeStudentFields = [
-  "branch",
-  "batch",
-  "studentCode",
-  "admissionNumber",
-  "name",
-  "photo",
-  "gender",
-  "dob",
-  "phone",
-  "email",
-  "parentName",
-  "parentPhone",
-  "address",
-  "city",
-  "state",
-  "martialArt",
-  "beltRank",
-  "joiningDate",
-  "status",
-  "medicalNotes",
-  "emergencyContactName",
-  "emergencyContactPhone",
-];
+import { buildBranchAccessFilter } from "../services/branchAccessService.js";
 
-const buildPayload = (body) => {
-  const payload = {};
-  safeStudentFields.forEach((field) => {
-    if (Object.prototype.hasOwnProperty.call(body, field)) {
-      payload[field] = body[field] || undefined;
-    }
-  });
-  return payload;
-};
+const validateBranch = async (academyId, branchId) => {
+  if (!branchId) return null;
 
-const validateBatchAccess = async ({ academyId, batchId }) => {
-  if (!batchId) return null;
+  if (!mongoose.Types.ObjectId.isValid(branchId)) {
+    throw new Error("Invalid branch id");
+  }
 
-  const batch = await Batch.findOne({
-    _id: batchId,
+  const branch = await Branch.findOne({
+    _id: branchId,
     academy: academyId,
+    isActive: true,
   });
 
-  return batch;
+  if (!branch) {
+    throw new Error("Branch not found");
+  }
+
+  return branch;
 };
 
 export const createStudent = asyncHandler(async (req, res) => {
-  const payload = buildPayload(req.body);
+  const academyId = req.academyId;
 
-  if (payload.batch) {
-    const batch = await validateBatchAccess({
-      academyId: req.academyId,
-      batchId: payload.batch,
-    });
+  if (req.body.branch) {
+    await validateBranch(academyId, req.body.branch);
+  }
 
-    if (!batch) {
-      return errorResponse(res, "Batch not found in your academy", 404);
-    }
+  const existing = await Student.findOne({
+    academy: academyId,
+    admissionNumber: req.body.admissionNumber,
+  });
+
+  if (existing) {
+    return errorResponse(
+      res,
+      "Admission number already exists",
+      409
+    );
   }
 
   const student = await Student.create({
-    ...payload,
-    academy: req.academyId,
+    ...req.body,
+    academy: academyId,
     createdBy: req.user._id,
     updatedBy: req.user._id,
   });
 
-  return successResponse(res, "Student created successfully", { student }, 201);
+  return successResponse(
+    res,
+    "Student created successfully",
+    student,
+    201
+  );
 });
 
 export const getStudents = asyncHandler(async (req, res) => {
-  const page = Number(req.query.page) || 1;
-  const limit = Math.min(Number(req.query.limit) || 20, 100);
-  const skip = (page - 1) * limit;
+  const {
+    branch,
+    status,
+    martialArt,
+    search,
+  } = req.query;
 
-  const filter = {};
-  if (req.academyId) filter.academy = req.academyId;
+  const query = {
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  };
 
-  if (req.query.status) filter.status = req.query.status;
-  if (req.query.batch) filter.batch = req.query.batch;
-  if (req.query.martialArt) filter.martialArt = req.query.martialArt;
-  if (req.query.beltRank) filter.beltRank = req.query.beltRank;
+  if (branch) {
+    query.branch = branch;
+  }
 
-  if (req.query.search) {
-    const searchRegex = new RegExp(req.query.search.trim(), "i");
-    filter.$or = [
-      { name: searchRegex },
-      { phone: searchRegex },
-      { studentCode: searchRegex },
+  if (status) {
+    query.status = status;
+  }
+
+  if (martialArt) {
+    query.martialArt = martialArt;
+  }
+
+  if (search) {
+    query.$or = [
+      {
+        firstName: {
+          $regex: search,
+          $options: "i",
+        },
+      },
+      {
+        lastName: {
+          $regex: search,
+          $options: "i",
+        },
+      },
+      {
+        admissionNumber: {
+          $regex: search,
+          $options: "i",
+        },
+      },
+      {
+        phone: {
+          $regex: search,
+          $options: "i",
+        },
+      },
     ];
   }
 
-  const [students, total] = await Promise.all([
-    Student.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("batch", "batchName martialArt days startTime endTime status"),
-    Student.countDocuments(filter),
-  ]);
+  const students = await Student.find(query)
+    .populate("branch", "branchName branchCode")
+    .sort({ createdAt: -1 });
 
-  return successResponse(res, "Students fetched successfully", {
-    students,
-    pagination: {
-      total,
-      page,
-      limit,
-      pages: Math.ceil(total / limit),
-    },
-  });
+  return successResponse(
+    res,
+    "Students fetched successfully",
+    students
+  );
 });
 
 export const getStudentById = asyncHandler(async (req, res) => {
-  const filter = { _id: req.params.id };
-  if (req.academyId) filter.academy = req.academyId;
-
-  const student = await Student.findOne(filter).populate(
-    "batch",
-    "batchName martialArt days startTime endTime status"
-  );
+  const student = await Student.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  }).populate("branch", "branchName branchCode");
 
   if (!student) {
     return errorResponse(res, "Student not found", 404);
   }
 
-  return successResponse(res, "Student fetched successfully", { student });
+  return successResponse(
+    res,
+    "Student fetched successfully",
+    student
+  );
 });
 
 export const updateStudent = asyncHandler(async (req, res) => {
-  const filter = { _id: req.params.id };
-  if (req.academyId) filter.academy = req.academyId;
-
-  const student = await Student.findOne(filter);
+  const student = await Student.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  });
 
   if (!student) {
     return errorResponse(res, "Student not found", 404);
   }
 
-  const payload = buildPayload(req.body);
-
-  if (payload.batch) {
-    const batch = await validateBatchAccess({
-      academyId: student.academy,
-      batchId: payload.batch,
-    });
-
-    if (!batch) {
-      return errorResponse(res, "Batch not found in your academy", 404);
-    }
+  if (req.body.branch) {
+    await validateBranch(req.academyId, req.body.branch);
   }
 
-  Object.assign(student, payload, {
-    updatedBy: req.user._id,
+  Object.keys(req.body).forEach((key) => {
+    student[key] = req.body[key];
   });
+
+  student.updatedBy = req.user._id;
 
   await student.save();
 
-  return successResponse(res, "Student updated successfully", { student });
+  return successResponse(
+    res,
+    "Student updated successfully",
+    student
+  );
 });
 
 export const deleteStudent = asyncHandler(async (req, res) => {
-  const filter = { _id: req.params.id };
-  if (req.academyId) filter.academy = req.academyId;
-
-  const student = await Student.findOne(filter);
+  const student = await Student.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  });
 
   if (!student) {
     return errorResponse(res, "Student not found", 404);
   }
 
-  student.status = "left";
-  student.updatedBy = req.user._id;
-  await student.save();
+  await student.deleteOne();
 
-  return successResponse(res, "Student marked as left successfully", {
-    student,
-  });
+  return successResponse(
+    res,
+    "Student deleted successfully"
+  );
 });

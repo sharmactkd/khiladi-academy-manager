@@ -12,6 +12,7 @@ const Sidebar = () => {
 
   const canManageFees = ["super_admin", "academy_owner"].includes(user?.role);
   const canManageBilling = ["super_admin", "academy_owner"].includes(user?.role);
+  const canManageOwnerOnly = ["super_admin", "academy_owner"].includes(user?.role);
   const isParentPortalUser = ["parent", "student"].includes(user?.role);
 
   return (
@@ -48,9 +49,23 @@ const Sidebar = () => {
             <NavLink to="/onboarding/create-academy">Academy Profile</NavLink>
 
             <div className="sidebar-section-title">Academy</div>
+            <NavLink to="/branches">Branches</NavLink>
             <NavLink to="/students">Students</NavLink>
             <NavLink to="/batches">Batches</NavLink>
             <NavLink to="/attendance">Attendance</NavLink>
+
+            <div className="sidebar-section-title">Analytics</div>
+            <NavLink to="/analytics">Dashboard Analytics</NavLink>
+            <NavLink to="/analytics/students">Student Analytics</NavLink>
+            <NavLink to="/analytics/attendance">Attendance Analytics</NavLink>
+            {canManageFees && <NavLink to="/analytics/fees">Fees Analytics</NavLink>}
+            <NavLink to="/analytics/performance">Performance Analytics</NavLink>
+            <NavLink to="/reports">Reports</NavLink>
+
+            <div className="sidebar-section-title">Skills</div>
+            <NavLink to="/skills">Skills</NavLink>
+            {canManageOwnerOnly && <NavLink to="/skills/new">Add Skill</NavLink>}
+            <NavLink to="/skill-assessments">Skill Assessments</NavLink>
 
             <div className="sidebar-section-title">Records</div>
             <NavLink to="/belt-tests">Belt Tests</NavLink>

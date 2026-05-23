@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+
 import { academyApi } from "../../api/academyApi.js";
 import { billingApi } from "../../api/billingApi.js";
+import { getDashboardAnalytics } from "../../api/analyticsApi.js";
+
 import useAuth from "../../hooks/useAuth.js";
 import UsageMeter from "../../components/billing/UsageMeter.jsx";
 
@@ -10,6 +13,7 @@ const OwnerDashboard = () => {
 
   const [academy, setAcademy] = useState(null);
   const [billing, setBilling] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const canManageRecords = [
@@ -31,6 +35,15 @@ const OwnerDashboard = () => {
           const billingResponse = await billingApi.getMySubscription();
           setBilling(billingResponse.data?.data || null);
         }
+
+        if (canManageRecords) {
+          try {
+            const analyticsResponse = await getDashboardAnalytics();
+            setAnalytics(analyticsResponse.data || null);
+          } catch {
+            setAnalytics(null);
+          }
+        }
       } catch {
         setAcademy(null);
       } finally {
@@ -39,7 +52,7 @@ const OwnerDashboard = () => {
     };
 
     loadDashboard();
-  }, [canManageBilling]);
+  }, [canManageBilling, canManageRecords]);
 
   const plan = billing?.plan || {};
   const usage = billing?.usage || {};
@@ -113,14 +126,26 @@ const OwnerDashboard = () => {
           </p>
 
           <div className="usage-grid">
-            <UsageMeter label="Students" used={usage.students} limit={limits.students} />
-            <UsageMeter label="Batches" used={usage.batches} limit={limits.batches} />
+            <UsageMeter
+              label="Students"
+              used={usage.students}
+              limit={limits.students}
+            />
+            <UsageMeter
+              label="Batches"
+              used={usage.batches}
+              limit={limits.batches}
+            />
             <UsageMeter
               label="Certificates"
               used={usage.certificates}
               limit={limits.certificates}
             />
-            <UsageMeter label="ID Cards" used={usage.idCards} limit={limits.idCards} />
+            <UsageMeter
+              label="ID Cards"
+              used={usage.idCards}
+              limit={limits.idCards}
+            />
             <UsageMeter
               label="Announcements"
               used={usage.announcements}
@@ -133,6 +158,47 @@ const OwnerDashboard = () => {
             <Link to="/billing">Billing Dashboard</Link>
             <Link to="/billing/invoices">Invoices</Link>
             <Link to="/billing/payments">Payment History</Link>
+          </div>
+        </div>
+      )}
+
+      {canManageRecords && analytics && (
+        <div className="card dashboard-section">
+          <h3>Phase 6 — Analytics & Multi-Branch</h3>
+          <p className="muted">
+            View branch-wise analytics, reports, skill tracking and student
+            performance.
+          </p>
+
+          <div className="usage-grid">
+            <UsageMeter
+              label="Total Students"
+              used={analytics.totalStudents || 0}
+              limit="∞"
+            />
+            <UsageMeter
+              label="Active Students"
+              used={analytics.activeStudents || 0}
+              limit="∞"
+            />
+            <UsageMeter
+              label="Batches"
+              used={analytics.totalBatches || 0}
+              limit="∞"
+            />
+            <UsageMeter
+              label="Certificates"
+              used={analytics.certificatesIssued || 0}
+              limit="∞"
+            />
+          </div>
+
+          <div className="dashboard-actions">
+            <Link to="/branches">Branches</Link>
+            <Link to="/analytics">Analytics Dashboard</Link>
+            <Link to="/reports">Reports</Link>
+            <Link to="/skills">Skills</Link>
+            <Link to="/skill-assessments">Skill Assessments</Link>
           </div>
         </div>
       )}

@@ -36,6 +36,14 @@ import billingRoutes from "./routes/billingRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
 import adminGrantRoutes from "./routes/adminGrantRoutes.js";
 
+import branchRoutes from "./routes/branchRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
+import skillRoutes from "./routes/skillRoutes.js";
+import skillAssessmentRoutes from "./routes/skillAssessmentRoutes.js";
+import performanceRoutes from "./routes/performanceRoutes.js";
+import smartTimelineRoutes from "./routes/smartTimelineRoutes.js";
+
 import {
   errorHandler,
   notFoundHandler,
@@ -78,6 +86,14 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/academy", academyRoutes);
 app.use("/api/admin", adminRoutes);
+
+app.use("/api/branches", branchRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/skills", skillRoutes);
+app.use("/api/skill-assessments", skillAssessmentRoutes);
+app.use("/api/performance", performanceRoutes);
+app.use("/api/smart-timeline", smartTimelineRoutes);
 
 app.use("/api/students", studentRoutes);
 app.use("/api/batches", batchRoutes);
