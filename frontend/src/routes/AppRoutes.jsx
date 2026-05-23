@@ -54,12 +54,34 @@ import GenerateCertificate from "../pages/certificates/GenerateCertificate.jsx";
 import PrintCertificate from "../pages/certificates/PrintCertificate.jsx";
 import StudentCertificates from "../pages/certificates/StudentCertificates.jsx";
 
+import ParentLinks from "../pages/parentLinks/ParentLinks.jsx";
+import CreateParentLink from "../pages/parentLinks/CreateParentLink.jsx";
+import StudentParentLinks from "../pages/parentLinks/StudentParentLinks.jsx";
+
+import ParentDashboard from "../pages/parentPortal/ParentDashboard.jsx";
+import ParentStudentProfile from "../pages/parentPortal/ParentStudentProfile.jsx";
+import ParentStudentAttendance from "../pages/parentPortal/ParentStudentAttendance.jsx";
+import ParentStudentFees from "../pages/parentPortal/ParentStudentFees.jsx";
+import ParentStudentProgress from "../pages/parentPortal/ParentStudentProgress.jsx";
+import ParentStudentDocuments from "../pages/parentPortal/ParentStudentDocuments.jsx";
+
+import Announcements from "../pages/announcements/Announcements.jsx";
+import CreateAnnouncement from "../pages/announcements/CreateAnnouncement.jsx";
+import AnnouncementDetail from "../pages/announcements/AnnouncementDetail.jsx";
+import MyAnnouncements from "../pages/announcements/MyAnnouncements.jsx";
+
+import Notifications from "../pages/notifications/Notifications.jsx";
+import CommunicationLogs from "../pages/communication/CommunicationLogs.jsx";
+import FeeReminder from "../pages/reminders/FeeReminder.jsx";
+import AttendanceReminder from "../pages/reminders/AttendanceReminder.jsx";
+
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import RoleRoute from "./RoleRoute.jsx";
 import DashboardLayout from "../layouts/DashboardLayout.jsx";
 
 const managementRoles = ["super_admin", "academy_owner", "assistant_coach"];
 const feeRoles = ["super_admin", "academy_owner"];
+const parentPortalRoles = ["parent", "student"];
 
 const AppRoutes = () => {
   return (
@@ -75,6 +97,34 @@ const AppRoutes = () => {
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<OwnerDashboard />} />
           <Route path="/onboarding/create-academy" element={<CreateAcademy />} />
+
+          <Route element={<RoleRoute allowedRoles={parentPortalRoles} />}>
+            <Route path="/parent" element={<ParentDashboard />} />
+            <Route
+              path="/parent/students/:studentId"
+              element={<ParentStudentProfile />}
+            />
+            <Route
+              path="/parent/students/:studentId/attendance"
+              element={<ParentStudentAttendance />}
+            />
+            <Route
+              path="/parent/students/:studentId/fees"
+              element={<ParentStudentFees />}
+            />
+            <Route
+              path="/parent/students/:studentId/progress"
+              element={<ParentStudentProgress />}
+            />
+            <Route
+              path="/parent/students/:studentId/documents"
+              element={<ParentStudentDocuments />}
+            />
+            <Route path="/my-announcements" element={<MyAnnouncements />} />
+          </Route>
+
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/announcements/:id" element={<AnnouncementDetail />} />
 
           <Route element={<RoleRoute allowedRoles={managementRoles} />}>
             <Route path="/students" element={<Students />} />
@@ -151,6 +201,19 @@ const AppRoutes = () => {
               path="/students/:studentId/certificates"
               element={<StudentCertificates />}
             />
+
+            <Route path="/parent-links" element={<ParentLinks />} />
+            <Route path="/parent-links/new" element={<CreateParentLink />} />
+            <Route
+              path="/students/:studentId/parent-links"
+              element={<StudentParentLinks />}
+            />
+
+            <Route path="/announcements" element={<Announcements />} />
+            <Route path="/announcements/new" element={<CreateAnnouncement />} />
+
+            <Route path="/communication-logs" element={<CommunicationLogs />} />
+            <Route path="/reminders/attendance" element={<AttendanceReminder />} />
           </Route>
 
           <Route element={<RoleRoute allowedRoles={feeRoles} />}>
@@ -163,6 +226,7 @@ const AppRoutes = () => {
               element={<StudentFeeHistory />}
             />
             <Route path="/fees/receipt/:paymentId" element={<ReceiptView />} />
+            <Route path="/reminders/fee" element={<FeeReminder />} />
           </Route>
 
           <Route element={<RoleRoute allowedRoles={["super_admin"]} />}>

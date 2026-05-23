@@ -5,14 +5,11 @@ import useAuth from "../../hooks/useAuth.js";
 
 const NotificationBell = () => {
   const { user, isAuthenticated } = useAuth();
-
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const loadUnreadCount = async () => {
-      if (!isAuthenticated || !user) {
-        return;
-      }
+      if (!isAuthenticated || !user) return;
 
       try {
         const response = await notificationApi.getAll({
@@ -29,14 +26,11 @@ const NotificationBell = () => {
     loadUnreadCount();
   }, [isAuthenticated, user]);
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
   return (
     <Link className="notification-bell" to="/notifications">
       <span>🔔</span>
-
       {unreadCount > 0 && <strong>{unreadCount}</strong>}
     </Link>
   );

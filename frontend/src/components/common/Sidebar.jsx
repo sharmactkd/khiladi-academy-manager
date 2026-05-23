@@ -4,11 +4,15 @@ import useAuth from "../../hooks/useAuth.js";
 const Sidebar = () => {
   const { user } = useAuth();
 
-  const canManageAcademy = ["super_admin", "academy_owner", "assistant_coach"].includes(
-    user?.role
-  );
+  const canManageAcademy = [
+    "super_admin",
+    "academy_owner",
+    "assistant_coach",
+  ].includes(user?.role);
 
   const canManageFees = ["super_admin", "academy_owner"].includes(user?.role);
+
+  const isParentPortalUser = ["parent", "student"].includes(user?.role);
 
   return (
     <aside className="sidebar">
@@ -18,11 +22,21 @@ const Sidebar = () => {
       </div>
 
       <nav className="sidebar-nav">
-        <NavLink to="/dashboard">Dashboard</NavLink>
-        <NavLink to="/onboarding/create-academy">Academy Profile</NavLink>
+        {!isParentPortalUser && <NavLink to="/dashboard">Dashboard</NavLink>}
+
+        {isParentPortalUser && (
+          <>
+            <div className="sidebar-section-title">Parent Portal</div>
+            <NavLink to="/parent">My Students</NavLink>
+            <NavLink to="/my-announcements">My Announcements</NavLink>
+            <NavLink to="/notifications">Notifications</NavLink>
+          </>
+        )}
 
         {canManageAcademy && (
           <>
+            <NavLink to="/onboarding/create-academy">Academy Profile</NavLink>
+
             <div className="sidebar-section-title">Academy</div>
             <NavLink to="/students">Students</NavLink>
             <NavLink to="/batches">Batches</NavLink>
@@ -35,6 +49,16 @@ const Sidebar = () => {
             <NavLink to="/id-cards/generate">Generate ID Card</NavLink>
             <NavLink to="/certificate-templates">Certificate Templates</NavLink>
             <NavLink to="/certificates/generate">Generate Certificate</NavLink>
+
+            <div className="sidebar-section-title">Communication</div>
+            <NavLink to="/parent-links">Parent Links</NavLink>
+            <NavLink to="/announcements">Announcements</NavLink>
+            <NavLink to="/communication-logs">Communication Logs</NavLink>
+            <NavLink to="/reminders/attendance">Attendance Reminder</NavLink>
+
+            {canManageFees && <NavLink to="/reminders/fee">Fee Reminder</NavLink>}
+
+            <NavLink to="/notifications">Notifications</NavLink>
           </>
         )}
 

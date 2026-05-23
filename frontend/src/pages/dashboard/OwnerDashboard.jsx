@@ -8,9 +8,13 @@ const OwnerDashboard = () => {
   const [academy, setAcademy] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const canManageRecords = ["super_admin", "academy_owner", "assistant_coach"].includes(
-    user?.role
-  );
+  const canManageRecords = [
+    "super_admin",
+    "academy_owner",
+    "assistant_coach",
+  ].includes(user?.role);
+
+  const canManageFees = ["super_admin", "academy_owner"].includes(user?.role);
 
   useEffect(() => {
     const loadAcademy = async () => {
@@ -88,22 +92,41 @@ const OwnerDashboard = () => {
       </div>
 
       {canManageRecords && (
-        <div className="card dashboard-section">
-          <h3>Phase 3 — Records & Documents</h3>
-          <p className="muted">
-            Manage belt tests, championships, student timelines, ID cards and
-            certificates.
-          </p>
+        <>
+          <div className="card dashboard-section">
+            <h3>Phase 3 — Records & Documents</h3>
+            <p className="muted">
+              Manage belt tests, championships, student timelines, ID cards and
+              certificates.
+            </p>
 
-          <div className="dashboard-actions">
-            <Link to="/belt-tests">Belt Tests</Link>
-            <Link to="/championship-records">Championship Records</Link>
-            <Link to="/id-card-templates">ID Card Templates</Link>
-            <Link to="/id-cards/generate">Generate ID Card</Link>
-            <Link to="/certificate-templates">Certificate Templates</Link>
-            <Link to="/certificates/generate">Generate Certificate</Link>
+            <div className="dashboard-actions">
+              <Link to="/belt-tests">Belt Tests</Link>
+              <Link to="/championship-records">Championship Records</Link>
+              <Link to="/id-card-templates">ID Card Templates</Link>
+              <Link to="/id-cards/generate">Generate ID Card</Link>
+              <Link to="/certificate-templates">Certificate Templates</Link>
+              <Link to="/certificates/generate">Generate Certificate</Link>
+            </div>
           </div>
-        </div>
+
+          <div className="card dashboard-section">
+            <h3>Phase 4 — Parent Portal & Communication</h3>
+            <p className="muted">
+              Link parents, publish announcements, send reminders and track
+              communication logs.
+            </p>
+
+            <div className="dashboard-actions">
+              <Link to="/parent-links">Parent Links</Link>
+              <Link to="/announcements">Announcements</Link>
+              <Link to="/announcements/new">Create Announcement</Link>
+              <Link to="/communication-logs">Communication Logs</Link>
+              <Link to="/reminders/attendance">Attendance Reminder</Link>
+              {canManageFees && <Link to="/reminders/fee">Fee Reminder</Link>}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
