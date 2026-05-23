@@ -111,6 +111,19 @@ const StudentProfile = () => {
             Attendance History
           </Link>
           <Link to={`/fees/student/${student._id}`}>Fee History</Link>
+          <Link to={`/students/${student._id}/belt-history`}>
+            Belt History
+          </Link>
+          <Link to={`/students/${student._id}/championship-history`}>
+            Championship History
+          </Link>
+          <Link to={`/students/${student._id}/timeline`}>
+            Progress Timeline
+          </Link>
+          <Link to={`/students/${student._id}/id-cards`}>ID Cards</Link>
+          <Link to={`/students/${student._id}/certificates`}>
+            Certificates
+          </Link>
         </div>
       </div>
     </div>

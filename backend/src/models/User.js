@@ -159,7 +159,7 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.pre("validate", function (next) {
+userSchema.pre("validate", function () {
   if (!this.email && !this.phone && this.loginProvider === "local") {
     this.invalidate("email", "Email or phone is required");
     this.invalidate("phone", "Email or phone is required");
@@ -168,19 +168,16 @@ userSchema.pre("validate", function (next) {
   if (this.loginProvider === "local" && !this.password) {
     this.invalidate("password", "Password is required");
   }
-
-  next();
 });
 
-userSchema.pre("save", async function (next) {
+userSchema.pre("save", async function () {
   if (!this.isModified("password") || !this.password) {
-    return next();
+    return;
   }
 
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   this.passwordChangedAt = new Date(Date.now() - 1000);
-  next();
 });
 
 userSchema.methods.comparePassword = async function (candidatePassword) {

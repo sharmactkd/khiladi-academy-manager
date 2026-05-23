@@ -40,20 +40,29 @@ export const AuthProvider = ({ children }) => {
     }
   }, [persistAuth]);
 
-  useEffect(() => {
-    const boot = async () => {
-      const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+useEffect(() => {
+  const boot = async () => {
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const storedUser = getStoredJson(USER_KEY);
 
-      if (token) {
-        setAccessToken(token);
-      }
-
-      await refreshAuth();
+    if (token && storedUser) {
+      setAccessToken(token);
       setLoading(false);
-    };
+      return;
+    }
 
-    boot();
-  }, [refreshAuth]);
+    if (!token && !storedUser) {
+      persistAuth(null, null);
+      setLoading(false);
+      return;
+    }
+
+    await refreshAuth();
+    setLoading(false);
+  };
+
+  boot();
+}, [refreshAuth, persistAuth]);
 
   const register = async (payload) => {
     const response = await authApi.register(payload);

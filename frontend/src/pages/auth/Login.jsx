@@ -50,14 +50,15 @@ const Login = () => {
       <form className="form" onSubmit={handleSubmit}>
         {error && <div className="alert alert-error">{error}</div>}
 
-        <Input
-          label="Email or Phone"
-          name="identifier"
-          value={form.identifier}
-          onChange={handleChange}
-          placeholder="test@example.com"
-          required
-        />
+      <Input
+  label="Email or Phone"
+  name="identifier"
+  value={form.identifier}
+  onChange={handleChange}
+  placeholder="test@example.com"
+  autoComplete="username"
+  required
+/>
 
         <Input
           label="Password"

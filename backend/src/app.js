@@ -16,6 +16,14 @@ import attendanceRoutes from "./routes/attendanceRoutes.js";
 import feePlanRoutes from "./routes/feePlanRoutes.js";
 import feePaymentRoutes from "./routes/feePaymentRoutes.js";
 
+import beltTestRoutes from "./routes/beltTestRoutes.js";
+import championshipRecordRoutes from "./routes/championshipRecordRoutes.js";
+import studentTimelineRoutes from "./routes/studentTimelineRoutes.js";
+import idCardTemplateRoutes from "./routes/idCardTemplateRoutes.js";
+import idCardRoutes from "./routes/idCardRoutes.js";
+import certificateTemplateRoutes from "./routes/certificateTemplateRoutes.js";
+import certificateRoutes from "./routes/certificateRoutes.js";
+
 import {
   errorHandler,
   notFoundHandler,
@@ -64,6 +72,14 @@ app.use("/api/batches", batchRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/fee-plans", feePlanRoutes);
 app.use("/api/fee-payments", feePaymentRoutes);
+
+app.use("/api/belt-tests", beltTestRoutes);
+app.use("/api/championship-records", championshipRecordRoutes);
+app.use("/api/student-timeline", studentTimelineRoutes);
+app.use("/api/id-card-templates", idCardTemplateRoutes);
+app.use("/api/id-cards", idCardRoutes);
+app.use("/api/certificate-templates", certificateTemplateRoutes);
+app.use("/api/certificates", certificateRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

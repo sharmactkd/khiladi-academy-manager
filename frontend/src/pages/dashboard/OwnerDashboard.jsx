@@ -8,6 +8,10 @@ const OwnerDashboard = () => {
   const [academy, setAcademy] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const canManageRecords = ["super_admin", "academy_owner", "assistant_coach"].includes(
+    user?.role
+  );
+
   useEffect(() => {
     const loadAcademy = async () => {
       try {
@@ -35,10 +39,18 @@ const OwnerDashboard = () => {
       <div className="grid two">
         <div className="card">
           <h3>Current User</h3>
-          <p><strong>Name:</strong> {user?.name}</p>
-          <p><strong>Email:</strong> {user?.email || "Not added"}</p>
-          <p><strong>Phone:</strong> {user?.phone || "Not added"}</p>
-          <p><strong>Role:</strong> {user?.role}</p>
+          <p>
+            <strong>Name:</strong> {user?.name}
+          </p>
+          <p>
+            <strong>Email:</strong> {user?.email || "Not added"}
+          </p>
+          <p>
+            <strong>Phone:</strong> {user?.phone || "Not added"}
+          </p>
+          <p>
+            <strong>Role:</strong> {user?.role}
+          </p>
         </div>
 
         <div className="card">
@@ -48,10 +60,19 @@ const OwnerDashboard = () => {
             <p>Loading academy...</p>
           ) : academy ? (
             <>
-              <p><strong>Name:</strong> {academy.academyName}</p>
-              <p><strong>Martial Arts:</strong> {academy.martialArts?.join(", ")}</p>
-              <p><strong>City:</strong> {academy.city || "Not added"}</p>
-              <p><strong>Plan:</strong> {academy.subscriptionPlan}</p>
+              <p>
+                <strong>Name:</strong> {academy.academyName}
+              </p>
+              <p>
+                <strong>Martial Arts:</strong>{" "}
+                {academy.martialArts?.join(", ")}
+              </p>
+              <p>
+                <strong>City:</strong> {academy.city || "Not added"}
+              </p>
+              <p>
+                <strong>Plan:</strong> {academy.subscriptionPlan}
+              </p>
             </>
           ) : (
             <>
@@ -65,6 +86,25 @@ const OwnerDashboard = () => {
           )}
         </div>
       </div>
+
+      {canManageRecords && (
+        <div className="card dashboard-section">
+          <h3>Phase 3 — Records & Documents</h3>
+          <p className="muted">
+            Manage belt tests, championships, student timelines, ID cards and
+            certificates.
+          </p>
+
+          <div className="dashboard-actions">
+            <Link to="/belt-tests">Belt Tests</Link>
+            <Link to="/championship-records">Championship Records</Link>
+            <Link to="/id-card-templates">ID Card Templates</Link>
+            <Link to="/id-cards/generate">Generate ID Card</Link>
+            <Link to="/certificate-templates">Certificate Templates</Link>
+            <Link to="/certificates/generate">Generate Certificate</Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -23,16 +23,33 @@ const Sidebar = () => {
 
         {canManageAcademy && (
           <>
+            <div className="sidebar-section-title">Academy</div>
             <NavLink to="/students">Students</NavLink>
             <NavLink to="/batches">Batches</NavLink>
             <NavLink to="/attendance">Attendance</NavLink>
+
+            <div className="sidebar-section-title">Records</div>
+            <NavLink to="/belt-tests">Belt Tests</NavLink>
+            <NavLink to="/championship-records">Championships</NavLink>
+            <NavLink to="/id-card-templates">ID Card Templates</NavLink>
+            <NavLink to="/id-cards/generate">Generate ID Card</NavLink>
+            <NavLink to="/certificate-templates">Certificate Templates</NavLink>
+            <NavLink to="/certificates/generate">Generate Certificate</NavLink>
           </>
         )}
 
-        {canManageFees && <NavLink to="/fees">Fees</NavLink>}
+        {canManageFees && (
+          <>
+            <div className="sidebar-section-title">Finance</div>
+            <NavLink to="/fees">Fees</NavLink>
+          </>
+        )}
 
         {user?.role === "super_admin" && (
-          <NavLink to="/admin/users">Admin Users</NavLink>
+          <>
+            <div className="sidebar-section-title">Admin</div>
+            <NavLink to="/admin/users">Admin Users</NavLink>
+          </>
         )}
       </nav>
     </aside>
