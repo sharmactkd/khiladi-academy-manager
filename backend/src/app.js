@@ -24,6 +24,13 @@ import idCardRoutes from "./routes/idCardRoutes.js";
 import certificateTemplateRoutes from "./routes/certificateTemplateRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
 
+import parentLinkRoutes from "./routes/parentLinkRoutes.js";
+import parentPortalRoutes from "./routes/parentPortalRoutes.js";
+import announcementRoutes from "./routes/announcementRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import communicationLogRoutes from "./routes/communicationLogRoutes.js";
+import reminderRoutes from "./routes/reminderRoutes.js";
+
 import {
   errorHandler,
   notFoundHandler,
@@ -80,6 +87,13 @@ app.use("/api/id-card-templates", idCardTemplateRoutes);
 app.use("/api/id-cards", idCardRoutes);
 app.use("/api/certificate-templates", certificateTemplateRoutes);
 app.use("/api/certificates", certificateRoutes);
+
+app.use("/api/parent-links", parentLinkRoutes);
+app.use("/api/parent-portal", parentPortalRoutes);
+app.use("/api/announcements", announcementRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/communication-logs", communicationLogRoutes);
+app.use("/api/reminders", reminderRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
