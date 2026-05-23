@@ -11,7 +11,7 @@ const Sidebar = () => {
   ].includes(user?.role);
 
   const canManageFees = ["super_admin", "academy_owner"].includes(user?.role);
-
+  const canManageBilling = ["super_admin", "academy_owner"].includes(user?.role);
   const isParentPortalUser = ["parent", "student"].includes(user?.role);
 
   return (
@@ -30,6 +30,16 @@ const Sidebar = () => {
             <NavLink to="/parent">My Students</NavLink>
             <NavLink to="/my-announcements">My Announcements</NavLink>
             <NavLink to="/notifications">Notifications</NavLink>
+          </>
+        )}
+
+        {canManageBilling && (
+          <>
+            <div className="sidebar-section-title">SaaS Billing</div>
+            <NavLink to="/plans">Plans</NavLink>
+            <NavLink to="/billing">Billing</NavLink>
+            <NavLink to="/billing/invoices">Invoices</NavLink>
+            <NavLink to="/billing/payments">Payments</NavLink>
           </>
         )}
 
@@ -73,6 +83,7 @@ const Sidebar = () => {
           <>
             <div className="sidebar-section-title">Admin</div>
             <NavLink to="/admin/users">Admin Users</NavLink>
+            <NavLink to="/admin/grants">Admin Grants</NavLink>
           </>
         )}
       </nav>

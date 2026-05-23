@@ -45,6 +45,13 @@ const env = {
     process.env.FRONTEND_RESET_PASSWORD_URL ||
     "http://localhost:5173/reset-password",
 
+  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || "",
+  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || "",
+  RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || "",
+
+  GST_PERCENTAGE: Number(process.env.GST_PERCENTAGE) || 18,
+  BILLING_GRACE_DAYS: Number(process.env.BILLING_GRACE_DAYS) || 7,
+
   isProduction: process.env.NODE_ENV === "production",
 };
 

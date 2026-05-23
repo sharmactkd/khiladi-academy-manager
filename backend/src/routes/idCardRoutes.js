@@ -14,6 +14,7 @@ import {
   requireResolvedAcademy,
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
+import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
 
 import {
   idCardIdValidator,
@@ -29,7 +30,13 @@ router.use(allowAcademyManagement);
 router.use(resolveUserAcademy);
 router.use(requireResolvedAcademy);
 
-router.post("/generate", generateIdCardValidator, validateRequest, generateIdCard);
+router.post(
+  "/generate",
+  generateIdCardValidator,
+  validateRequest,
+  enforceLimit("idCards"),
+  generateIdCard
+);
 
 router.get(
   "/student/:studentId",

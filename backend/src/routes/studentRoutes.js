@@ -15,6 +15,7 @@ import {
   requireResolvedAcademy,
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
+import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
 
 import {
   studentIdValidator,
@@ -32,7 +33,7 @@ router.use(requireResolvedAcademy);
 
 router
   .route("/")
-  .post(createStudentValidator, validateRequest, createStudent)
+  .post(createStudentValidator, validateRequest, enforceLimit("students"), createStudent)
   .get(listStudentsValidator, validateRequest, getStudents);
 
 router

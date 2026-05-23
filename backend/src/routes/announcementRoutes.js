@@ -14,6 +14,7 @@ import {
   requireResolvedAcademy,
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
+import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
 import {
   announcementIdValidator,
   createAnnouncementValidator,
@@ -35,7 +36,12 @@ router.use(requireResolvedAcademy);
 
 router
   .route("/")
-  .post(createAnnouncementValidator, validateRequest, createAnnouncement)
+  .post(
+    createAnnouncementValidator,
+    validateRequest,
+    enforceLimit("announcements"),
+    createAnnouncement
+  )
   .get(listAnnouncementsValidator, validateRequest, getAnnouncements);
 
 router

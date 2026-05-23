@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { academyApi } from "../../api/academyApi.js";
+import { billingApi } from "../../api/billingApi.js";
 import useAuth from "../../hooks/useAuth.js";
+import UsageMeter from "../../components/billing/UsageMeter.jsx";
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
+
   const [academy, setAcademy] = useState(null);
+  const [billing, setBilling] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const canManageRecords = [
@@ -15,12 +19,18 @@ const OwnerDashboard = () => {
   ].includes(user?.role);
 
   const canManageFees = ["super_admin", "academy_owner"].includes(user?.role);
+  const canManageBilling = ["super_admin", "academy_owner"].includes(user?.role);
 
   useEffect(() => {
-    const loadAcademy = async () => {
+    const loadDashboard = async () => {
       try {
-        const response = await academyApi.getMyAcademy();
-        setAcademy(response.data?.data?.academy || null);
+        const academyResponse = await academyApi.getMyAcademy();
+        setAcademy(academyResponse.data?.data?.academy || null);
+
+        if (canManageBilling) {
+          const billingResponse = await billingApi.getMySubscription();
+          setBilling(billingResponse.data?.data || null);
+        }
       } catch {
         setAcademy(null);
       } finally {
@@ -28,8 +38,12 @@ const OwnerDashboard = () => {
       }
     };
 
-    loadAcademy();
-  }, []);
+    loadDashboard();
+  }, [canManageBilling]);
+
+  const plan = billing?.plan || {};
+  const usage = billing?.usage || {};
+  const limits = plan?.limits || {};
 
   return (
     <div className="page">
@@ -75,7 +89,7 @@ const OwnerDashboard = () => {
                 <strong>City:</strong> {academy.city || "Not added"}
               </p>
               <p>
-                <strong>Plan:</strong> {academy.subscriptionPlan}
+                <strong>Plan:</strong> {academy.subscriptionPlan || "free"}
               </p>
             </>
           ) : (
@@ -90,6 +104,38 @@ const OwnerDashboard = () => {
           )}
         </div>
       </div>
+
+      {canManageBilling && billing && (
+        <div className="card dashboard-section">
+          <h3>Phase 5 — SaaS Billing</h3>
+          <p className="muted">
+            Current plan: <strong>{plan.name || "Free"}</strong>
+          </p>
+
+          <div className="usage-grid">
+            <UsageMeter label="Students" used={usage.students} limit={limits.students} />
+            <UsageMeter label="Batches" used={usage.batches} limit={limits.batches} />
+            <UsageMeter
+              label="Certificates"
+              used={usage.certificates}
+              limit={limits.certificates}
+            />
+            <UsageMeter label="ID Cards" used={usage.idCards} limit={limits.idCards} />
+            <UsageMeter
+              label="Announcements"
+              used={usage.announcements}
+              limit={limits.announcements}
+            />
+          </div>
+
+          <div className="dashboard-actions">
+            <Link to="/plans">View Plans</Link>
+            <Link to="/billing">Billing Dashboard</Link>
+            <Link to="/billing/invoices">Invoices</Link>
+            <Link to="/billing/payments">Payment History</Link>
+          </div>
+        </div>
+      )}
 
       {canManageRecords && (
         <>

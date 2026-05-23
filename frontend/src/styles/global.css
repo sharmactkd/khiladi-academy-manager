@@ -813,3 +813,183 @@ th {
     align-items: stretch;
   }
 }
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.plan-card {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.plan-card.popular {
+  border-color: #2563eb;
+  box-shadow: 0 20px 50px rgba(37, 99, 235, 0.16);
+}
+
+.plan-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.plan-price strong {
+  font-size: 34px;
+}
+
+.plan-price span {
+  color: #6b7280;
+}
+
+.plan-features {
+  margin: 0;
+  padding-left: 18px;
+  color: #374151;
+}
+
+.plan-features li {
+  margin-bottom: 8px;
+}
+
+.plan-limits {
+  display: grid;
+  gap: 6px;
+  color: #4b5563;
+}
+
+.plan-limits p {
+  margin: 0;
+}
+
+.premium-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.usage-meter {
+  display: grid;
+  gap: 8px;
+}
+
+.usage-meter-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.usage-meter-header span {
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.usage-meter-track {
+  width: 100%;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.usage-meter-fill {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 999px;
+}
+
+.upgrade-card {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.coupon-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+.invoice-preview {
+  width: 100%;
+  background: #ffffff;
+  color: #111827;
+}
+
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 2px solid #111827;
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+}
+
+.invoice-header h1,
+.invoice-header h2,
+.invoice-header p {
+  margin: 0 0 8px;
+}
+
+.invoice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.invoice-total {
+  margin-top: 24px;
+  display: grid;
+  justify-content: end;
+  text-align: right;
+}
+
+.invoice-total p,
+.invoice-total h2 {
+  margin: 4px 0;
+}
+
+@media (max-width: 1000px) {
+  .plans-grid,
+  .usage-grid,
+  .invoice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-card-header,
+  .invoice-header {
+    flex-direction: column;
+  }
+
+  .coupon-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .invoice-preview {
+    padding: 0;
+  }
+}

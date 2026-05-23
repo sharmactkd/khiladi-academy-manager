@@ -14,6 +14,7 @@ import {
   requireResolvedAcademy,
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
+import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
 
 import {
   certificateIdValidator,
@@ -33,6 +34,7 @@ router.post(
   "/generate",
   generateCertificateValidator,
   validateRequest,
+  enforceLimit("certificates"),
   generateCertificate
 );
 

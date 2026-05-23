@@ -8,6 +8,7 @@ import ResetPassword from "../pages/auth/ResetPassword.jsx";
 import OwnerDashboard from "../pages/dashboard/OwnerDashboard.jsx";
 import CreateAcademy from "../pages/onboarding/CreateAcademy.jsx";
 import Users from "../pages/admin/Users.jsx";
+import AdminGrants from "../pages/admin/AdminGrants.jsx";
 import Unauthorized from "../pages/errors/Unauthorized.jsx";
 import NotFound from "../pages/errors/NotFound.jsx";
 
@@ -75,6 +76,15 @@ import CommunicationLogs from "../pages/communication/CommunicationLogs.jsx";
 import FeeReminder from "../pages/reminders/FeeReminder.jsx";
 import AttendanceReminder from "../pages/reminders/AttendanceReminder.jsx";
 
+import Plans from "../pages/plans/Plans.jsx";
+import BillingDashboard from "../pages/billing/BillingDashboard.jsx";
+import Checkout from "../pages/billing/Checkout.jsx";
+import PaymentSuccess from "../pages/billing/PaymentSuccess.jsx";
+import PaymentFailed from "../pages/billing/PaymentFailed.jsx";
+import Invoices from "../pages/billing/Invoices.jsx";
+import InvoiceDetail from "../pages/billing/InvoiceDetail.jsx";
+import PaymentHistory from "../pages/billing/PaymentHistory.jsx";
+
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import RoleRoute from "./RoleRoute.jsx";
 import DashboardLayout from "../layouts/DashboardLayout.jsx";
@@ -82,6 +92,7 @@ import DashboardLayout from "../layouts/DashboardLayout.jsx";
 const managementRoles = ["super_admin", "academy_owner", "assistant_coach"];
 const feeRoles = ["super_admin", "academy_owner"];
 const parentPortalRoles = ["parent", "student"];
+const billingRoles = ["super_admin", "academy_owner"];
 
 const AppRoutes = () => {
   return (
@@ -96,6 +107,18 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<OwnerDashboard />} />
+
+          <Route element={<RoleRoute allowedRoles={billingRoles} />}>
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/billing" element={<BillingDashboard />} />
+            <Route path="/billing/checkout/:planCode" element={<Checkout />} />
+            <Route path="/billing/success" element={<PaymentSuccess />} />
+            <Route path="/billing/failed" element={<PaymentFailed />} />
+            <Route path="/billing/invoices" element={<Invoices />} />
+            <Route path="/billing/invoices/:id" element={<InvoiceDetail />} />
+            <Route path="/billing/payments" element={<PaymentHistory />} />
+          </Route>
+
           <Route path="/onboarding/create-academy" element={<CreateAcademy />} />
 
           <Route element={<RoleRoute allowedRoles={parentPortalRoles} />}>
@@ -231,6 +254,7 @@ const AppRoutes = () => {
 
           <Route element={<RoleRoute allowedRoles={["super_admin"]} />}>
             <Route path="/admin/users" element={<Users />} />
+            <Route path="/admin/grants" element={<AdminGrants />} />
           </Route>
         </Route>
       </Route>

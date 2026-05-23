@@ -1,5 +1,6 @@
 import CommunicationLog from "../models/CommunicationLog.js";
 import { sendWhatsAppMessage } from "./whatsappService.js";
+import { hasFeature } from "./planService.js";
 
 let emailSender = null;
 
@@ -149,6 +150,31 @@ export const sendWhatsAppCommunication = async ({
   metadata = {},
   createdBy = null,
 }) => {
+  const allowed = await hasFeature({
+    academyId: academy,
+    featureName: "whatsapp",
+  });
+
+  if (!allowed) {
+    return createCommunicationLog({
+      academy,
+      recipientUser,
+      relatedStudent,
+      channel: "whatsapp",
+      type,
+      to,
+      subject: "",
+      message,
+      status: "skipped",
+      provider: "plan_restricted",
+      providerMessageId: "",
+      errorMessage: "WhatsApp requires Premium or Enterprise plan",
+      metadata,
+      createdBy,
+      sentAt: null,
+    });
+  }
+
   const result = await sendWhatsAppMessage({
     to,
     message,

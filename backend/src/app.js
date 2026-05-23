@@ -31,6 +31,11 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import communicationLogRoutes from "./routes/communicationLogRoutes.js";
 import reminderRoutes from "./routes/reminderRoutes.js";
 
+import planRoutes from "./routes/planRoutes.js";
+import billingRoutes from "./routes/billingRoutes.js";
+import couponRoutes from "./routes/couponRoutes.js";
+import adminGrantRoutes from "./routes/adminGrantRoutes.js";
+
 import {
   errorHandler,
   notFoundHandler,
@@ -94,6 +99,11 @@ app.use("/api/announcements", announcementRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/communication-logs", communicationLogRoutes);
 app.use("/api/reminders", reminderRoutes);
+
+app.use("/api/plans", planRoutes);
+app.use("/api/billing", billingRoutes);
+app.use("/api/coupons", couponRoutes);
+app.use("/api/admin/grants", adminGrantRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

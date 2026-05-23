@@ -15,6 +15,7 @@ import {
   requireResolvedAcademy,
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
+import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
 
 import {
   batchIdValidator,
@@ -32,7 +33,7 @@ router.use(requireResolvedAcademy);
 
 router
   .route("/")
-  .post(createBatchValidator, validateRequest, createBatch)
+  .post(createBatchValidator, validateRequest, enforceLimit("batches"), createBatch)
   .get(listBatchesValidator, validateRequest, getBatches);
 
 router

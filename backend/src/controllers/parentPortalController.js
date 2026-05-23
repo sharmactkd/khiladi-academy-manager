@@ -1,5 +1,4 @@
 import StudentGuardian from "../models/StudentGuardian.js";
-import Student from "../models/Student.js";
 import Attendance from "../models/Attendance.js";
 import FeePayment from "../models/FeePayment.js";
 import BeltTest from "../models/BeltTest.js";
@@ -9,12 +8,14 @@ import GeneratedIdCard from "../models/GeneratedIdCard.js";
 import GeneratedCertificate from "../models/GeneratedCertificate.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
+import { hasFeature } from "../services/planService.js";
 
 const requireParentPortalUser = (req, res) => {
   if (!["parent", "student"].includes(req.user.role)) {
     errorResponse(res, "Only parent/student portal users can access this route", 403);
     return false;
   }
+
   return true;
 };
 
@@ -23,7 +24,28 @@ const getActiveLink = async ({ userId, studentId }) => {
     guardianUser: userId,
     student: studentId,
     isActive: true,
-  }).populate("student", "name studentCode phone email parentName parentPhone photo gender dob beltRank martialArt status batch academy");
+  }).populate(
+    "student",
+    "name studentCode phone email parentName parentPhone photo gender dob beltRank martialArt status batch academy"
+  );
+};
+
+const ensureParentPortalFeature = async ({ academyId, res }) => {
+  const allowed = await hasFeature({
+    academyId,
+    featureName: "parentPortal",
+  });
+
+  if (!allowed) {
+    errorResponse(
+      res,
+      "Parent portal requires Pro, Premium, or Enterprise plan",
+      403
+    );
+    return false;
+  }
+
+  return true;
 };
 
 export const getMyPortalStudents = asyncHandler(async (req, res) => {
@@ -34,10 +56,25 @@ export const getMyPortalStudents = asyncHandler(async (req, res) => {
     isActive: true,
   })
     .populate("academy", "academyName city state")
-    .populate("student", "name studentCode photo beltRank status batch")
+    .populate("student", "name studentCode photo beltRank status batch academy")
     .sort({ createdAt: -1 });
 
-  return successResponse(res, "Portal students fetched successfully", { links });
+  const filteredLinks = [];
+
+  for (const link of links) {
+    const allowed = await hasFeature({
+      academyId: link.academy?._id || link.academy,
+      featureName: "parentPortal",
+    });
+
+    if (allowed) {
+      filteredLinks.push(link);
+    }
+  }
+
+  return successResponse(res, "Portal students fetched successfully", {
+    links: filteredLinks,
+  });
 });
 
 export const getPortalStudentProfile = asyncHandler(async (req, res) => {
@@ -50,6 +87,10 @@ export const getPortalStudentProfile = asyncHandler(async (req, res) => {
 
   if (!link) {
     return errorResponse(res, "You are not linked with this student", 403);
+  }
+
+  if (!(await ensureParentPortalFeature({ academyId: link.academy, res }))) {
+    return;
   }
 
   return successResponse(res, "Student profile fetched successfully", {
@@ -72,7 +113,14 @@ export const getPortalStudentAttendance = asyncHandler(async (req, res) => {
   });
 
   if (!link) return errorResponse(res, "You are not linked with this student", 403);
-  if (!link.canViewAttendance) return errorResponse(res, "Attendance access disabled", 403);
+
+  if (!(await ensureParentPortalFeature({ academyId: link.academy, res }))) {
+    return;
+  }
+
+  if (!link.canViewAttendance) {
+    return errorResponse(res, "Attendance access disabled", 403);
+  }
 
   const attendance = await Attendance.find({
     academy: link.academy,
@@ -91,7 +139,9 @@ export const getPortalStudentAttendance = asyncHandler(async (req, res) => {
     ),
   }));
 
-  return successResponse(res, "Student attendance fetched successfully", { records });
+  return successResponse(res, "Student attendance fetched successfully", {
+    records,
+  });
 });
 
 export const getPortalStudentFees = asyncHandler(async (req, res) => {
@@ -103,16 +153,27 @@ export const getPortalStudentFees = asyncHandler(async (req, res) => {
   });
 
   if (!link) return errorResponse(res, "You are not linked with this student", 403);
-  if (!link.canViewFees) return errorResponse(res, "Fee access disabled", 403);
+
+  if (!(await ensureParentPortalFeature({ academyId: link.academy, res }))) {
+    return;
+  }
+
+  if (!link.canViewFees) {
+    return errorResponse(res, "Fee access disabled", 403);
+  }
 
   const payments = await FeePayment.find({
     academy: link.academy,
     student: req.params.studentId,
   })
     .sort({ month: -1, createdAt: -1 })
-    .select("amount discount finalAmount month dueDate paidDate status paymentMode receiptNumber");
+    .select(
+      "amount discount finalAmount month dueDate paidDate status paymentMode receiptNumber"
+    );
 
-  return successResponse(res, "Student fee data fetched successfully", { payments });
+  return successResponse(res, "Student fee data fetched successfully", {
+    payments,
+  });
 });
 
 export const getPortalStudentProgress = asyncHandler(async (req, res) => {
@@ -124,7 +185,14 @@ export const getPortalStudentProgress = asyncHandler(async (req, res) => {
   });
 
   if (!link) return errorResponse(res, "You are not linked with this student", 403);
-  if (!link.canViewProgress) return errorResponse(res, "Progress access disabled", 403);
+
+  if (!(await ensureParentPortalFeature({ academyId: link.academy, res }))) {
+    return;
+  }
+
+  if (!link.canViewProgress) {
+    return errorResponse(res, "Progress access disabled", 403);
+  }
 
   const [beltTests, championshipRecords, timeline] = await Promise.all([
     BeltTest.find({
@@ -159,7 +227,14 @@ export const getPortalStudentDocuments = asyncHandler(async (req, res) => {
   });
 
   if (!link) return errorResponse(res, "You are not linked with this student", 403);
-  if (!link.canViewDocuments) return errorResponse(res, "Document access disabled", 403);
+
+  if (!(await ensureParentPortalFeature({ academyId: link.academy, res }))) {
+    return;
+  }
+
+  if (!link.canViewDocuments) {
+    return errorResponse(res, "Document access disabled", 403);
+  }
 
   const [idCards, certificates] = await Promise.all([
     GeneratedIdCard.find({
