@@ -108,6 +108,13 @@ const academySchema = new mongoose.Schema(
       maxlength: [80, "Country cannot exceed 80 characters"],
     },
 
+    pincode: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: [12, "Pincode cannot exceed 12 characters"],
+    },
+
     branchesEnabled: {
       type: Boolean,
       default: false,
@@ -151,22 +158,22 @@ const academySchema = new mongoose.Schema(
 academySchema.index({ academyName: "text" });
 academySchema.index({ city: 1, state: 1 });
 
-academySchema.pre("save", function (next) {
+academySchema.pre("save", function () {
   if (Array.isArray(this.martialArts)) {
     this.martialArts = this.martialArts
       .map((item) => String(item || "").trim())
       .filter(Boolean);
   }
 
-  if (this.phone) {
-    this.phone = String(this.phone).replace(/\D/g, "");
-  }
+  if (this.countryCode === "+91" && this.phone) {
+    const digits = String(this.phone).replace(/\D/g, "").slice(0, 10);
 
-  if (this.countryCode === "+91" && this.phone && this.phone.length > 10) {
-    this.phone = this.phone.slice(0, 10);
+    if (digits.length === 10) {
+      this.phone = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(
+        6
+      )}`;
+    }
   }
-
-  next();
 });
 
 const Academy = mongoose.model("Academy", academySchema);

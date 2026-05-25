@@ -45,6 +45,10 @@ export const errorHandler = (error, req, res, next) => {
 
   logger.error(`${statusCode} - ${message}`);
 
+  if (!env.isProduction) {
+    console.error(error);
+  }
+
   if (!env.isProduction && error.stack) {
     data = {
       ...(data ? { errors: data } : {}),

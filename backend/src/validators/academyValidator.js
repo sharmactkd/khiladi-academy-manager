@@ -1,7 +1,8 @@
 import { body } from "express-validator";
 
-const phoneRegex = /^[0-9]{1,15}$/;
+const phoneRegex = /^[0-9-]{1,15}$/;
 const indiaPhoneRegex = /^[0-9]{10}$/;
+const indiaPhoneDisplayRegex = /^[0-9]{4}-[0-9]{2}-[0-9]{4}$/;
 const countryCodeRegex = /^\+[0-9]{1,6}$/;
 
 const stringField = (field, max, label) =>
@@ -15,10 +16,18 @@ const phoneValidator = body("phone")
   .optional({ checkFalsy: true })
   .trim()
   .matches(phoneRegex)
-  .withMessage("Phone must contain numbers only")
+  .withMessage("Phone must contain numbers and hyphen only")
   .custom((value, { req }) => {
-    if (req.body.countryCode === "+91" && !indiaPhoneRegex.test(value)) {
-      throw new Error("India phone number must be exactly 10 digits");
+    const phone = String(value || "").trim();
+    const normalizedPhone = phone.replace(/-/g, "");
+
+    if (req.body.countryCode === "+91") {
+      const isValidDisplayFormat = indiaPhoneDisplayRegex.test(phone);
+      const isValidDigits = indiaPhoneRegex.test(normalizedPhone);
+
+      if (!isValidDisplayFormat || !isValidDigits) {
+        throw new Error("India phone number must be in format 0000-00-0000");
+      }
     }
 
     return true;
@@ -64,6 +73,7 @@ export const createAcademyValidator = [
   stringField("city", 80, "District"),
   stringField("state", 80, "State"),
   stringField("country", 80, "Country"),
+  stringField("pincode", 12, "Pincode"),
 
   body("branchesEnabled")
     .optional()
@@ -133,6 +143,7 @@ export const updateAcademyValidator = [
   stringField("city", 80, "District"),
   stringField("state", 80, "State"),
   stringField("country", 80, "Country"),
+  stringField("pincode", 12, "Pincode"),
 
   body("branchesEnabled")
     .optional()

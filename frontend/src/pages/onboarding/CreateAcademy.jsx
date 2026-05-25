@@ -113,12 +113,24 @@ const CreateAcademy = () => {
     countryCodeOptions.find((country) => country.dialCode === selectedDialCode) ||
     countryCodeOptions.find((country) => country.isoCode === DEFAULT_COUNTRY_ISO);
 
-  const handleChange = (event) => {
-    setForm((prev) => ({
-      ...prev,
-      [event.target.name]: event.target.value,
-    }));
-  };
+const handleChange = (event) => {
+  let { name, value } = event.target;
+
+  if (name === "phone") {
+    value = value.replace(/\D/g, "");
+
+    if (value.length > 4 && value.length <= 6) {
+      value = `${value.slice(0, 4)}-${value.slice(4)}`;
+    } else if (value.length > 6) {
+      value = `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 10)}`;
+    }
+  }
+
+  setForm((prev) => ({
+    ...prev,
+    [name]: value,
+  }));
+};
 
   const handleCountryCodeSelect = (country) => {
     const nextDialCode = country.dialCode;
@@ -211,7 +223,7 @@ const CreateAcademy = () => {
     try {
       await academyApi.createAcademy({
         ...form,
-        phone: form.phone,
+        phone: displayPhone,
         martialArts: form.martialArts
           .split(",")
           .map((item) => item.trim())
