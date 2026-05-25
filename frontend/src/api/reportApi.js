@@ -1,4 +1,4 @@
-import api from "../api";
+import api from "./api.js";
 
 export const getStudentsReport = async (params = {}) => {
   const res = await api.get("/reports/students", { params });

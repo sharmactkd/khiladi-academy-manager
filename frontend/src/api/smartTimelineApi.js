@@ -1,4 +1,4 @@
-import api from "../api";
+import api from "./api.js";
 
 export const getSmartTimeline = async (studentId) => {
   const res = await api.get(`/smart-timeline/student/${studentId}`);

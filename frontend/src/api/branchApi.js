@@ -1,4 +1,4 @@
-import api from "../api";
+import api from "./api.js";
 
 export const getBranches = async (params = {}) => {
   const res = await api.get("/branches", { params });

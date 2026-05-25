@@ -1,4 +1,4 @@
-import api from "./index.js";
+import api from "./api.js";
 
 export const tournamentSyncApi = {
   submitEntry: (payload) => api.post("/tournament-sync/entries", payload),
