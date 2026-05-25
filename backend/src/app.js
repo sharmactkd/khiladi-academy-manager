@@ -44,6 +44,10 @@ import skillAssessmentRoutes from "./routes/skillAssessmentRoutes.js";
 import performanceRoutes from "./routes/performanceRoutes.js";
 import smartTimelineRoutes from "./routes/smartTimelineRoutes.js";
 
+import tournamentIntegrationRoutes from "./routes/tournamentIntegrationRoutes.js";
+import tournamentEntrySyncRoutes from "./routes/tournamentEntrySyncRoutes.js";
+import tournamentResultSyncRoutes from "./routes/tournamentResultSyncRoutes.js";
+
 import {
   errorHandler,
   notFoundHandler,
@@ -120,6 +124,10 @@ app.use("/api/plans", planRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/admin/grants", adminGrantRoutes);
+
+app.use("/api/tournament-integrations", tournamentIntegrationRoutes);
+app.use("/api/tournament-sync/entries", tournamentEntrySyncRoutes);
+app.use("/api/tournament-sync/results", tournamentResultSyncRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

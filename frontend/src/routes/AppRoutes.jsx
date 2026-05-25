@@ -107,6 +107,12 @@ import StudentSkillProfile from "../pages/skills/StudentSkillProfile.jsx";
 import SmartTimeline from "../pages/smartTimeline/SmartTimeline.jsx";
 import StudentPerformance from "../pages/performance/StudentPerformance.jsx";
 
+import TournamentIntegration from "../pages/tournamentIntegration/TournamentIntegration.jsx";
+import SubmitTournamentEntry from "../pages/tournamentIntegration/SubmitTournamentEntry.jsx";
+import SyncedTournamentEntries from "../pages/tournamentIntegration/SyncedTournamentEntries.jsx";
+import ImportTournamentResults from "../pages/tournamentIntegration/ImportTournamentResults.jsx";
+import StudentTournamentHistory from "../pages/tournamentIntegration/StudentTournamentHistory.jsx";
+
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import RoleRoute from "./RoleRoute.jsx";
 import DashboardLayout from "../layouts/DashboardLayout.jsx";
@@ -180,6 +186,7 @@ const AppRoutes = () => {
             <Route path="/students/:studentId/skills" element={<StudentSkillProfile />} />
             <Route path="/students/:studentId/smart-timeline" element={<SmartTimeline />} />
             <Route path="/students/:studentId/performance" element={<StudentPerformance />} />
+            <Route path="/students/:studentId/tournament-history" element={<StudentTournamentHistory />} />
 
             <Route path="/batches" element={<Batches />} />
             <Route path="/batches/new" element={<AddBatch />} />
@@ -221,12 +228,17 @@ const AppRoutes = () => {
 
             <Route path="/communication-logs" element={<CommunicationLogs />} />
             <Route path="/reminders/attendance" element={<AttendanceReminder />} />
+
+            <Route path="/tournament-sync/entries/new" element={<SubmitTournamentEntry />} />
+            <Route path="/tournament-sync/entries" element={<SyncedTournamentEntries />} />
+            <Route path="/tournament-sync/results/import" element={<ImportTournamentResults />} />
           </Route>
 
           <Route element={<RoleRoute allowedRoles={ownerRoles} />}>
             <Route path="/branches/new" element={<AddBranch />} />
             <Route path="/branches/:id/edit" element={<EditBranch />} />
             <Route path="/skills/new" element={<AddSkill />} />
+            <Route path="/integrations/tournament" element={<TournamentIntegration />} />
           </Route>
 
           <Route element={<RoleRoute allowedRoles={feeRoles} />}>

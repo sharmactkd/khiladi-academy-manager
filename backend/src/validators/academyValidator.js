@@ -1,6 +1,8 @@
 import { body } from "express-validator";
 
-const phoneRegex = /^[0-9]{10,15}$/;
+const phoneRegex = /^[0-9]{1,15}$/;
+const indiaPhoneRegex = /^[0-9]{10}$/;
+const countryCodeRegex = /^\+[0-9]{1,6}$/;
 
 const stringField = (field, max, label) =>
   body(field)
@@ -8,6 +10,25 @@ const stringField = (field, max, label) =>
     .trim()
     .isLength({ max })
     .withMessage(`${label} cannot exceed ${max} characters`);
+
+const phoneValidator = body("phone")
+  .optional({ checkFalsy: true })
+  .trim()
+  .matches(phoneRegex)
+  .withMessage("Phone must contain numbers only")
+  .custom((value, { req }) => {
+    if (req.body.countryCode === "+91" && !indiaPhoneRegex.test(value)) {
+      throw new Error("India phone number must be exactly 10 digits");
+    }
+
+    return true;
+  });
+
+const countryCodeValidator = body("countryCode")
+  .optional({ checkFalsy: true })
+  .trim()
+  .matches(countryCodeRegex)
+  .withMessage("Country code must be valid, for example +91");
 
 export const createAcademyValidator = [
   body("academyName")
@@ -35,18 +56,14 @@ export const createAcademyValidator = [
     .withMessage("Please enter a valid academy email")
     .normalizeEmail(),
 
-  body("phone")
-    .optional({ checkFalsy: true })
-    .trim()
-    .matches(phoneRegex)
-    .withMessage("Phone must be 10 to 15 digits"),
+  countryCodeValidator,
+  phoneValidator,
 
   stringField("logo", 500, "Logo"),
   stringField("address", 500, "Address"),
-  stringField("city", 80, "City"),
+  stringField("city", 80, "District"),
   stringField("state", 80, "State"),
   stringField("country", 80, "Country"),
-  stringField("pincode", 12, "Pincode"),
 
   body("branchesEnabled")
     .optional()
@@ -108,18 +125,14 @@ export const updateAcademyValidator = [
     .withMessage("Please enter a valid academy email")
     .normalizeEmail(),
 
-  body("phone")
-    .optional({ checkFalsy: true })
-    .trim()
-    .matches(phoneRegex)
-    .withMessage("Phone must be 10 to 15 digits"),
+  countryCodeValidator,
+  phoneValidator,
 
   stringField("logo", 500, "Logo"),
   stringField("address", 500, "Address"),
-  stringField("city", 80, "City"),
+  stringField("city", 80, "District"),
   stringField("state", 80, "State"),
   stringField("country", 80, "Country"),
-  stringField("pincode", 12, "Pincode"),
 
   body("branchesEnabled")
     .optional()

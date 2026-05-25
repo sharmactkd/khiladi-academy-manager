@@ -1,8 +1,9 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import useAuth from "../../hooks/useAuth.js";
 
 const Sidebar = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const canManageAcademy = [
     "super_admin",
@@ -14,6 +15,11 @@ const Sidebar = () => {
   const canManageBilling = ["super_admin", "academy_owner"].includes(user?.role);
   const canManageOwnerOnly = ["super_admin", "academy_owner"].includes(user?.role);
   const isParentPortalUser = ["parent", "student"].includes(user?.role);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <aside className="sidebar">
@@ -80,9 +86,7 @@ const Sidebar = () => {
             <NavLink to="/announcements">Announcements</NavLink>
             <NavLink to="/communication-logs">Communication Logs</NavLink>
             <NavLink to="/reminders/attendance">Attendance Reminder</NavLink>
-
             {canManageFees && <NavLink to="/reminders/fee">Fee Reminder</NavLink>}
-
             <NavLink to="/notifications">Notifications</NavLink>
           </>
         )}
@@ -102,6 +106,12 @@ const Sidebar = () => {
           </>
         )}
       </nav>
+
+      <div className="sidebar-footer">
+        <button type="button" className="btn btn-danger" onClick={handleLogout}>
+          Logout
+        </button>
+      </div>
     </aside>
   );
 };

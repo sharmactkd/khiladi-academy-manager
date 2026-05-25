@@ -3,6 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { studentApi } from "../../api/studentApi.js";
 
+const getStudentName = (student) => {
+  const fullName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
+  return fullName || student?.name || "Student";
+};
+
 const StudentProfile = () => {
   const { id } = useParams();
   const [student, setStudent] = useState(null);
@@ -30,8 +35,8 @@ const StudentProfile = () => {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>{student.name}</h1>
-          <p>{student.studentCode}</p>
+          <h1>{getStudentName(student)}</h1>
+          <p>{student.admissionNumber || student.studentCode || "-"}</p>
         </div>
 
         <Link className="btn btn-primary" to={`/students/${student._id}/edit`}>
@@ -46,8 +51,8 @@ const StudentProfile = () => {
         </div>
 
         <div className="card stat-card">
-          <span>Batch</span>
-          <strong>{student.batch?.batchName || "-"}</strong>
+          <span>Branch</span>
+          <strong>{student.branch?.branchName || "-"}</strong>
         </div>
 
         <div className="card stat-card">
@@ -71,19 +76,17 @@ const StudentProfile = () => {
           </p>
           <p>
             <strong>DOB:</strong>{" "}
-            {student.dob ? new Date(student.dob).toLocaleDateString() : "-"}
+            {student.dateOfBirth
+              ? new Date(student.dateOfBirth).toLocaleDateString()
+              : student.dob
+                ? new Date(student.dob).toLocaleDateString()
+                : "-"}
           </p>
           <p>
             <strong>Martial Art:</strong> {student.martialArt || "-"}
           </p>
           <p>
             <strong>Belt Rank:</strong> {student.beltRank || "-"}
-          </p>
-          <p>
-            <strong>Parent:</strong> {student.parentName || "-"}
-          </p>
-          <p>
-            <strong>Parent Phone:</strong> {student.parentPhone || "-"}
           </p>
           <p>
             <strong>City:</strong> {student.city || "-"}
@@ -99,7 +102,7 @@ const StudentProfile = () => {
           <strong>Address:</strong> {student.address || "-"}
         </p>
         <p>
-          <strong>Medical Notes:</strong> {student.medicalNotes || "-"}
+          <strong>Notes:</strong> {student.notes || "-"}
         </p>
       </div>
 
@@ -116,6 +119,9 @@ const StudentProfile = () => {
           </Link>
           <Link to={`/students/${student._id}/championship-history`}>
             Championship History
+          </Link>
+          <Link to={`/students/${student._id}/tournament-history`}>
+            Tournament History
           </Link>
           <Link to={`/students/${student._id}/timeline`}>
             Progress Timeline

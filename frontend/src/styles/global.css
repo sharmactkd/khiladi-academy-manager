@@ -1398,3 +1398,12 @@ button:disabled,
     max-width: 100%;
   }
 }
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sidebar-footer .btn {
+  width: 100%;
+}
