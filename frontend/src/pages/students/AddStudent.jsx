@@ -5,6 +5,17 @@ import toast from "react-hot-toast";
 import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
 
+const onlyDigits = (value) => String(value || "").replace(/\D/g, "");
+
+const formatPhone = (value) => {
+  const digits = onlyDigits(value).slice(0, 10);
+
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+};
+
 const AddStudent = () => {
   const navigate = useNavigate();
   const [batches, setBatches] = useState([]);
@@ -13,19 +24,27 @@ const AddStudent = () => {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm({
     defaultValues: {
       gender: "other",
       status: "active",
+      phone: "",
+      parentPhone: "",
+      emergencyContactPhone: "",
     },
   });
 
   useEffect(() => {
     const fetchBatches = async () => {
       try {
-        const response = await batchApi.getAll({ status: "active" });
-        setBatches(response.data?.data?.batches || []);
+        const response = await batchApi.getAll();
+
+        const list = response.data?.data || [];
+        const activeBatches = list.filter((batch) => batch.isActive);
+
+        setBatches(activeBatches);
       } catch {
         setBatches([]);
       }
@@ -34,18 +53,48 @@ const AddStudent = () => {
     fetchBatches();
   }, []);
 
-  const onSubmit = async (values) => {
-    try {
-      setSaving(true);
-      await studentApi.create(values);
-      toast.success("Student add ho gaya");
-      navigate("/students");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Student add nahi hua");
-    } finally {
-      setSaving(false);
-    }
+  const handlePhoneChange = (fieldName, event) => {
+    const formattedPhone = formatPhone(event.target.value);
+
+    setValue(fieldName, formattedPhone, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
   };
+
+const onSubmit = async (values) => {
+  try {
+    setSaving(true);
+
+    const nameParts = String(values.name || "").trim().split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ");
+
+    const payload = {
+      ...values,
+
+      firstName,
+      lastName,
+      dateOfBirth: values.dob,
+      admissionNumber: values.admissionNumber || values.studentCode,
+
+      emergencyContact: {
+        name: values.emergencyContactName || "",
+        phone: values.emergencyContactPhone || "",
+      },
+    };
+
+    await studentApi.create(payload);
+
+    toast.success("Student add ho gaya");
+    navigate("/students");
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Student add nahi hua");
+    console.log("Student create error:", error.response?.data);
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <div className="page">
@@ -105,7 +154,13 @@ const AddStudent = () => {
 
           <label>
             Phone
-            <input {...register("phone")} />
+            <input
+              {...register("phone")}
+              inputMode="numeric"
+              placeholder="0000-00-0000"
+              maxLength={12}
+              onChange={(event) => handlePhoneChange("phone", event)}
+            />
           </label>
 
           <label>
@@ -120,7 +175,13 @@ const AddStudent = () => {
 
           <label>
             Parent Phone
-            <input {...register("parentPhone")} />
+            <input
+              {...register("parentPhone")}
+              inputMode="numeric"
+              placeholder="0000-00-0000"
+              maxLength={12}
+              onChange={(event) => handlePhoneChange("parentPhone", event)}
+            />
           </label>
 
           <label>
@@ -167,7 +228,15 @@ const AddStudent = () => {
 
           <label>
             Emergency Contact Phone
-            <input {...register("emergencyContactPhone")} />
+            <input
+              {...register("emergencyContactPhone")}
+              inputMode="numeric"
+              placeholder="0000-00-0000"
+              maxLength={12}
+              onChange={(event) =>
+                handlePhoneChange("emergencyContactPhone", event)
+              }
+            />
           </label>
         </div>
 

@@ -16,26 +16,36 @@ const Students = () => {
     beltRank: "",
   });
 
-  const fetchStudents = async () => {
-    try {
-      setLoading(true);
-      const response = await studentApi.getAll(filters);
-      setStudents(response.data?.data?.students || []);
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Students load nahi hue");
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchStudents = async () => {
+  try {
+    setLoading(true);
 
-  const fetchBatches = async () => {
-    try {
-      const response = await batchApi.getAll({ status: "active" });
-      setBatches(response.data?.data?.batches || []);
-    } catch {
-      setBatches([]);
-    }
-  };
+    const cleanFilters = Object.fromEntries(
+      Object.entries(filters).filter(([, value]) => String(value || "").trim())
+    );
+
+    const response = await studentApi.getAll(cleanFilters);
+
+    setStudents(response.data?.data || []);
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Students load nahi hue");
+  } finally {
+    setLoading(false);
+  }
+};
+
+ const fetchBatches = async () => {
+  try {
+    const response = await batchApi.getAll();
+
+    const list = response.data?.data || [];
+    const activeBatches = list.filter((batch) => batch.isActive);
+
+    setBatches(activeBatches);
+  } catch {
+    setBatches([]);
+  }
+};
 
   useEffect(() => {
     fetchBatches();
@@ -145,28 +155,32 @@ const Students = () => {
                 </tr>
               </thead>
               <tbody>
-                {students.map((student) => (
-                  <tr key={student._id}>
-                    <td>{student.studentCode}</td>
-                    <td>{student.name}</td>
-                    <td>{student.phone || "-"}</td>
-                    <td>{student.batch?.batchName || "-"}</td>
-                    <td>{student.martialArt || "-"}</td>
-                    <td>{student.beltRank || "-"}</td>
-                    <td>
-                      <span className={`badge badge-${student.status}`}>
-                        {student.status}
-                      </span>
-                    </td>
-                    <td className="actions">
-                      <Link to={`/students/${student._id}`}>View</Link>
-                      <Link to={`/students/${student._id}/edit`}>Edit</Link>
-                      <button onClick={() => handleDelete(student._id)}>
-                        Left
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+              {students.map((student) => {
+  const fullName = `${student.firstName || ""} ${
+    student.lastName || ""
+  }`.trim();
+
+  return (
+    <tr key={student._id}>
+      <td>{student.studentCode || student.admissionNumber || "-"}</td>
+      <td>{student.name || fullName || "-"}</td>
+      <td>{student.phone || "-"}</td>
+      <td>{student.batch?.batchName || "-"}</td>
+      <td>{student.martialArt || "-"}</td>
+      <td>{student.beltRank || "-"}</td>
+      <td>
+        <span className={`badge badge-${student.status}`}>
+          {student.status}
+        </span>
+      </td>
+      <td className="actions">
+        <Link to={`/students/${student._id}`}>View</Link>
+        <Link to={`/students/${student._id}/edit`}>Edit</Link>
+        <button onClick={() => handleDelete(student._id)}>Left</button>
+      </td>
+    </tr>
+  );
+})}
               </tbody>
             </table>
           </div>

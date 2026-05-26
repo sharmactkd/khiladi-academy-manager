@@ -158,10 +158,26 @@ export const deleteBatch = asyncHandler(async (req, res) => {
     return errorResponse(res, "Batch not found", 404);
   }
 
+  batch.isActive = false;
+  batch.updatedBy = req.user._id;
+
+  await batch.save();
+
+  return successResponse(res, "Batch marked inactive successfully", batch);
+});
+
+export const hardDeleteBatch = asyncHandler(async (req, res) => {
+  const batch = await Batch.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  });
+
+  if (!batch) {
+    return errorResponse(res, "Batch not found", 404);
+  }
+
   await batch.deleteOne();
 
-  return successResponse(
-    res,
-    "Batch deleted successfully"
-  );
+  return successResponse(res, "Batch permanently deleted successfully");
 });

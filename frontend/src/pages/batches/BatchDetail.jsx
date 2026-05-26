@@ -4,6 +4,22 @@ import toast from "react-hot-toast";
 import { batchApi } from "../../api/batchApi.js";
 import { studentApi } from "../../api/studentApi.js";
 
+const formatTime = (time) => {
+  if (!time) return "-";
+
+  const [hours, minutes] = time.split(":");
+
+  const date = new Date();
+  date.setHours(Number(hours));
+  date.setMinutes(Number(minutes));
+
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 const BatchDetail = () => {
   const { id } = useParams();
   const [batch, setBatch] = useState(null);
@@ -19,9 +35,11 @@ const BatchDetail = () => {
           studentApi.getAll({ batch: id, status: "active" }),
         ]);
 
-        setBatch(batchRes.data?.data?.batch);
-        setStudentCount(batchRes.data?.data?.studentCount || 0);
-        setStudents(studentRes.data?.data?.students || []);
+       const batchData = batchRes.data?.data || null;
+
+setBatch(batchData);
+setStudentCount(batchData?.students?.length || 0);
+setStudents(studentRes.data?.data?.students || studentRes.data?.data || []);
       } catch (error) {
         toast.error(error.response?.data?.message || "Batch load nahi hua");
       } finally {
@@ -42,15 +60,21 @@ const BatchDetail = () => {
           <h1>{batch.batchName}</h1>
           <p>{batch.martialArt}</p>
         </div>
-        <Link className="btn btn-primary" to={`/batches/${batch._id}/edit`}>
-          Edit Batch
-        </Link>
+       <div className="actions">
+  <Link className="btn btn-primary" to="/students/new">
+    Add Student
+  </Link>
+
+  <Link className="btn btn-primary" to={`/batches/${batch._id}/edit`}>
+    Edit Batch
+  </Link>
+</div>
       </div>
 
       <div className="grid grid-3">
         <div className="card stat-card">
           <span>Status</span>
-          <strong>{batch.status}</strong>
+          <strong>{batch.isActive ? "active" : "inactive"}</strong>
         </div>
         <div className="card stat-card">
           <span>Students</span>
@@ -58,17 +82,23 @@ const BatchDetail = () => {
         </div>
         <div className="card stat-card">
           <span>Time</span>
-          <strong>
-            {batch.startTime || "-"} - {batch.endTime || "-"}
-          </strong>
+         <strong>
+  {formatTime(batch.schedule?.[0]?.startTime)} -{" "}
+  {formatTime(batch.schedule?.[0]?.endTime)}
+</strong>
         </div>
       </div>
 
       <div className="card">
         <h2>Batch Details</h2>
         <div className="details-grid">
-          <p><strong>Days:</strong> {batch.days?.join(", ") || "-"}</p>
-          <p><strong>Max Students:</strong> {batch.maxStudents || 0}</p>
+         <p>
+  <strong>Days:</strong>{" "}
+  {batch.schedule?.map((item) => item.day).join(", ") || "-"}
+</p>
+<p>
+  <strong>Capacity:</strong> {batch.capacity || 0}
+</p>
           <p><strong>Coach:</strong> {batch.coach?.name || "-"}</p>
           <p><strong>Notes:</strong> {batch.notes || "-"}</p>
         </div>

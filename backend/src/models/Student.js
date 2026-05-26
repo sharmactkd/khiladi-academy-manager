@@ -178,6 +178,18 @@ studentSchema.index({
   status: 1,
 });
 
+studentSchema.pre("save", function () {
+  if (this.phone) {
+    this.phone = String(this.phone).replace(/\D/g, "").slice(0, 10);
+  }
+
+  if (this.emergencyContact?.phone) {
+    this.emergencyContact.phone = String(this.emergencyContact.phone)
+      .replace(/\D/g, "")
+      .slice(0, 10);
+  }
+});
+
 const Student = mongoose.model("Student", studentSchema);
 
 export default Student;

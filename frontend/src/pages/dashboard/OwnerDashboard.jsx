@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { academyApi } from "../../api/academyApi.js";
@@ -25,24 +25,55 @@ const OwnerDashboard = () => {
   const canManageFees = ["super_admin", "academy_owner"].includes(user?.role);
   const canManageBilling = ["super_admin", "academy_owner"].includes(user?.role);
 
+  const plan = billing?.plan || {};
+  const usage = billing?.usage || {};
+  const limits = plan?.limits || {};
+
+  const hasAnalyticsAccess = useMemo(() => {
+    if (user?.role === "super_admin") return true;
+
+    const value = limits?.analytics;
+
+    return (
+      value === true ||
+      value === "true" ||
+      value === "enabled" ||
+      value === "yes" ||
+      value === 1 ||
+      value === "1" ||
+      value === "unlimited"
+    );
+  }, [limits?.analytics, user?.role]);
+
   useEffect(() => {
     const loadDashboard = async () => {
       try {
         const academyResponse = await academyApi.getMyAcademy();
         setAcademy(academyResponse.data?.data?.academy || null);
 
+        let billingData = null;
+
         if (canManageBilling) {
           const billingResponse = await billingApi.getMySubscription();
-          setBilling(billingResponse.data?.data || null);
+          billingData = billingResponse.data?.data || null;
+          setBilling(billingData);
         }
 
-        if (canManageRecords) {
-          try {
-            const analyticsResponse = await getDashboardAnalytics();
-            setAnalytics(analyticsResponse.data || null);
-          } catch {
-            setAnalytics(null);
-          }
+        const analyticsAllowed =
+          user?.role === "super_admin" ||
+          billingData?.plan?.limits?.analytics === true ||
+          billingData?.plan?.limits?.analytics === "true" ||
+          billingData?.plan?.limits?.analytics === "enabled" ||
+          billingData?.plan?.limits?.analytics === "yes" ||
+          billingData?.plan?.limits?.analytics === 1 ||
+          billingData?.plan?.limits?.analytics === "1" ||
+          billingData?.plan?.limits?.analytics === "unlimited";
+
+        if (canManageRecords && analyticsAllowed) {
+          const analyticsResponse = await getDashboardAnalytics();
+          setAnalytics(analyticsResponse.data || null);
+        } else {
+          setAnalytics(null);
         }
       } catch {
         setAcademy(null);
@@ -52,20 +83,22 @@ const OwnerDashboard = () => {
     };
 
     loadDashboard();
-  }, [canManageBilling, canManageRecords]);
-
-  const plan = billing?.plan || {};
-  const usage = billing?.usage || {};
-  const limits = plan?.limits || {};
+  }, [canManageBilling, canManageRecords, user?.role]);
 
   return (
     <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Owner Dashboard</h1>
-          <p className="muted">Manage your academy foundation from here.</p>
-        </div>
-      </div>
+     <div className="page-header">
+  <div>
+    <h1>Owner Dashboard</h1>
+    <p className="muted">Manage your academy foundation from here.</p>
+  </div>
+
+  {canManageRecords && academy && (
+    <Link className="btn btn-primary" to="/students/new">
+      Add Student
+    </Link>
+  )}
+</div>
 
       <div className="grid two">
         <div className="card">
@@ -126,31 +159,11 @@ const OwnerDashboard = () => {
           </p>
 
           <div className="usage-grid">
-            <UsageMeter
-              label="Students"
-              used={usage.students}
-              limit={limits.students}
-            />
-            <UsageMeter
-              label="Batches"
-              used={usage.batches}
-              limit={limits.batches}
-            />
-            <UsageMeter
-              label="Certificates"
-              used={usage.certificates}
-              limit={limits.certificates}
-            />
-            <UsageMeter
-              label="ID Cards"
-              used={usage.idCards}
-              limit={limits.idCards}
-            />
-            <UsageMeter
-              label="Announcements"
-              used={usage.announcements}
-              limit={limits.announcements}
-            />
+            <UsageMeter label="Students" used={usage.students} limit={limits.students} />
+            <UsageMeter label="Batches" used={usage.batches} limit={limits.batches} />
+            <UsageMeter label="Certificates" used={usage.certificates} limit={limits.certificates} />
+            <UsageMeter label="ID Cards" used={usage.idCards} limit={limits.idCards} />
+            <UsageMeter label="Announcements" used={usage.announcements} limit={limits.announcements} />
           </div>
 
           <div className="dashboard-actions">
@@ -162,7 +175,7 @@ const OwnerDashboard = () => {
         </div>
       )}
 
-      {canManageRecords && analytics && (
+      {canManageRecords && hasAnalyticsAccess && analytics && (
         <div className="card dashboard-section">
           <h3>Phase 6 — Analytics & Multi-Branch</h3>
           <p className="muted">
@@ -171,26 +184,10 @@ const OwnerDashboard = () => {
           </p>
 
           <div className="usage-grid">
-            <UsageMeter
-              label="Total Students"
-              used={analytics.totalStudents || 0}
-              limit="∞"
-            />
-            <UsageMeter
-              label="Active Students"
-              used={analytics.activeStudents || 0}
-              limit="∞"
-            />
-            <UsageMeter
-              label="Batches"
-              used={analytics.totalBatches || 0}
-              limit="∞"
-            />
-            <UsageMeter
-              label="Certificates"
-              used={analytics.certificatesIssued || 0}
-              limit="∞"
-            />
+            <UsageMeter label="Total Students" used={analytics.totalStudents || 0} limit="∞" />
+            <UsageMeter label="Active Students" used={analytics.activeStudents || 0} limit="∞" />
+            <UsageMeter label="Batches" used={analytics.totalBatches || 0} limit="∞" />
+            <UsageMeter label="Certificates" used={analytics.certificatesIssued || 0} limit="∞" />
           </div>
 
           <div className="dashboard-actions">
@@ -199,6 +196,22 @@ const OwnerDashboard = () => {
             <Link to="/reports">Reports</Link>
             <Link to="/skills">Skills</Link>
             <Link to="/skill-assessments">Skill Assessments</Link>
+          </div>
+        </div>
+      )}
+
+      {canManageRecords && !hasAnalyticsAccess && (
+        <div className="card dashboard-section">
+          <h3>Phase 6 — Analytics & Multi-Branch 🔒</h3>
+          <p className="muted">
+            Analytics feature is not included in your current plan. Upgrade to
+            Pro or higher plan to unlock branch-wise analytics, reports, skill
+            tracking and performance insights.
+          </p>
+
+          <div className="dashboard-actions">
+            <Link to="/plans">Upgrade Plan</Link>
+            <Link to="/billing">Billing Dashboard</Link>
           </div>
         </div>
       )}

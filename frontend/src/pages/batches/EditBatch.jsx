@@ -18,14 +18,41 @@ const EditBatch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const { register, handleSubmit, reset } = useForm();
+
+  const { register, handleSubmit, reset } = useForm({
+    defaultValues: {
+      batchName: "",
+      martialArt: "",
+      startTime: "",
+      endTime: "",
+      maxStudents: 0,
+      status: "active",
+      days: [],
+      notes: "",
+    },
+  });
 
   useEffect(() => {
     const fetchBatch = async () => {
       try {
         const response = await batchApi.getById(id);
-        const batch = response.data?.data?.batch;
-        reset(batch);
+        const batch = response.data?.data;
+
+        if (!batch) {
+          toast.error("Batch not found");
+          return;
+        }
+
+        reset({
+          batchName: batch.batchName || "",
+          martialArt: batch.martialArt || "",
+          startTime: batch.schedule?.[0]?.startTime || "",
+          endTime: batch.schedule?.[0]?.endTime || "",
+          maxStudents: batch.capacity || 0,
+          status: batch.isActive ? "active" : "inactive",
+          days: batch.schedule?.map((item) => item.day) || [],
+          notes: batch.notes || "",
+        });
       } catch (error) {
         toast.error(error.response?.data?.message || "Batch load nahi hua");
       } finally {
@@ -39,9 +66,18 @@ const EditBatch = () => {
   const onSubmit = async (values) => {
     try {
       await batchApi.update(id, {
-        ...values,
-        maxStudents: Number(values.maxStudents || 0),
+        batchName: values.batchName,
+        martialArt: values.martialArt,
+        capacity: Number(values.maxStudents || 0),
+        isActive: values.status === "active",
+        notes: values.notes || "",
+        schedule: (values.days || []).map((day) => ({
+          day,
+          startTime: values.startTime,
+          endTime: values.endTime,
+        })),
       });
+
       toast.success("Batch update ho gaya");
       navigate(`/batches/${id}`);
     } catch (error) {
@@ -64,12 +100,12 @@ const EditBatch = () => {
         <div className="grid grid-2">
           <label>
             Batch Name
-            <input {...register("batchName")} />
+            <input {...register("batchName", { required: true })} />
           </label>
 
           <label>
             Martial Art
-            <input {...register("martialArt")} />
+            <input {...register("martialArt", { required: true })} />
           </label>
 
           <label>

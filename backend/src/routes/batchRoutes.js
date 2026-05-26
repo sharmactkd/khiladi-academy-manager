@@ -6,6 +6,7 @@ import {
   getBatchById,
   updateBatch,
   deleteBatch,
+  hardDeleteBatch,
 } from "../controllers/batchController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
@@ -33,8 +34,20 @@ router.use(requireResolvedAcademy);
 
 router
   .route("/")
-  .post(createBatchValidator, validateRequest, enforceLimit("batches"), createBatch)
+  .post(
+    createBatchValidator,
+    validateRequest,
+    enforceLimit("batches"),
+    createBatch
+  )
   .get(listBatchesValidator, validateRequest, getBatches);
+
+router.delete(
+  "/:id/hard-delete",
+  batchIdValidator,
+  validateRequest,
+  hardDeleteBatch
+);
 
 router
   .route("/:id")

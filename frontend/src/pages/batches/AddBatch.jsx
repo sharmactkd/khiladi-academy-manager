@@ -24,10 +24,18 @@ const AddBatch = () => {
 
   const onSubmit = async (values) => {
     try {
-      await batchApi.create({
-        ...values,
-        maxStudents: Number(values.maxStudents || 0),
-      });
+   await batchApi.create({
+  batchName: values.batchName,
+  martialArt: values.martialArt,
+  capacity: Number(values.maxStudents || 0),
+  isActive: values.status === "active",
+  notes: values.notes || "",
+  schedule: (values.days || []).map((day) => ({
+    day,
+    startTime: values.startTime,
+    endTime: values.endTime,
+  })),
+});
       toast.success("Batch create ho gaya");
       navigate("/batches");
     } catch (error) {
