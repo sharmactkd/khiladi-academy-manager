@@ -30,13 +30,9 @@ const Students = () => {
         )
       );
 
-      const response = await studentApi.getAll(cleanFilters);
+    const response = await studentApi.getAll(cleanFilters);
 
-      const list = Array.isArray(response.data)
-        ? response.data
-        : response.data?.data || [];
-
-      setStudents(list);
+setStudents(response?.data || []);
     } catch (error) {
       toast.error(error.response?.data?.message || "Students load nahi hue");
     } finally {
@@ -46,12 +42,15 @@ const Students = () => {
 
   const fetchBatches = async () => {
     try {
-      const response = await batchApi.getAll();
+   const response = await batchApi.getAll();
 
-      const list = response.data?.data || [];
-      const activeBatches = list.filter((batch) => batch.isActive);
+const list = Array.isArray(response.data)
+  ? response.data
+  : response.data?.data || [];
 
-      setBatches(activeBatches);
+const activeBatches = list.filter((batch) => batch.isActive);
+
+setBatches(activeBatches);
     } catch {
       setBatches([]);
     }

@@ -17,8 +17,12 @@ const AttendanceSheet = () => {
   useEffect(() => {
     const fetchBatches = async () => {
       try {
-        const response = await batchApi.getAll({ status: "active" });
-        setBatches(response.data?.data?.batches || []);
+     const response = await batchApi.getAll();
+
+const list = response.data?.data || [];
+const activeBatches = list.filter((batch) => batch.isActive);
+
+setBatches(activeBatches);
       } catch {
         toast.error("Batches load nahi hue");
       }
@@ -43,8 +47,8 @@ const AttendanceSheet = () => {
           limit: 100,
         });
 
-        const list = response.data?.data?.students || [];
-        setStudents(list);
+        const list = response?.data || [];
+setStudents(list);
 
         const initialRecords = {};
         list.forEach((student) => {
@@ -160,9 +164,13 @@ const AttendanceSheet = () => {
               <tbody>
                 {students.map((student) => (
                   <tr key={student._id}>
-                    <td>{student.studentCode}</td>
-                    <td>{student.name}</td>
-                    <td>{student.phone || "-"}</td>
+                   <td>{student.admissionNumber || "-"}</td>
+
+<td>
+  {`${student.firstName || ""} ${student.lastName || ""}`.trim() || "-"}
+</td>
+
+<td>{student.phone || "-"}</td>
                     <td>
                       <select
                         value={records[student._id]?.status || "present"}
