@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { Trash2 } from "lucide-react";
 import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
 
 const Students = () => {
+  const navigate = useNavigate();
+
   const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [filters, setFilters] = useState({
     search: "",
     status: "",
@@ -16,36 +20,42 @@ const Students = () => {
     beltRank: "",
   });
 
-const fetchStudents = async () => {
-  try {
-    setLoading(true);
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
 
-    const cleanFilters = Object.fromEntries(
-      Object.entries(filters).filter(([, value]) => String(value || "").trim())
-    );
+      const cleanFilters = Object.fromEntries(
+        Object.entries(filters).filter(([, value]) =>
+          String(value || "").trim()
+        )
+      );
 
-    const response = await studentApi.getAll(cleanFilters);
+      const response = await studentApi.getAll(cleanFilters);
 
-    setStudents(response.data?.data || []);
-  } catch (error) {
-    toast.error(error.response?.data?.message || "Students load nahi hue");
-  } finally {
-    setLoading(false);
-  }
-};
+      const list = Array.isArray(response.data)
+        ? response.data
+        : response.data?.data || [];
 
- const fetchBatches = async () => {
-  try {
-    const response = await batchApi.getAll();
+      setStudents(list);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Students load nahi hue");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const list = response.data?.data || [];
-    const activeBatches = list.filter((batch) => batch.isActive);
+  const fetchBatches = async () => {
+    try {
+      const response = await batchApi.getAll();
 
-    setBatches(activeBatches);
-  } catch {
-    setBatches([]);
-  }
-};
+      const list = response.data?.data || [];
+      const activeBatches = list.filter((batch) => batch.isActive);
+
+      setBatches(activeBatches);
+    } catch {
+      setBatches([]);
+    }
+  };
 
   useEffect(() => {
     fetchBatches();
@@ -56,15 +66,25 @@ const fetchStudents = async () => {
     return () => clearTimeout(timer);
   }, [filters]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Student ko left mark karna hai?")) return;
+  const handleDelete = async (student) => {
+    const fullName = `${student.firstName || ""} ${
+      student.lastName || ""
+    }`.trim();
+
+    const confirmed = window.confirm(
+      `Kya aap sach me "${
+        fullName || student.admissionNumber || "this student"
+      }" student ko delete karna chahte hain?`
+    );
+
+    if (!confirmed) return;
 
     try {
-      await studentApi.remove(id);
-      toast.success("Student left mark ho gaya");
+      await studentApi.remove(student._id);
+      toast.success("Student delete ho gaya");
       fetchStudents();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Student update nahi hua");
+      toast.error(error.response?.data?.message || "Student delete nahi hua");
     }
   };
 
@@ -75,6 +95,7 @@ const fetchStudents = async () => {
           <h1>Students</h1>
           <p>Academy ke students manage karein</p>
         </div>
+
         <Link className="btn btn-primary" to="/students/new">
           Add Student
         </Link>
@@ -85,15 +106,21 @@ const fetchStudents = async () => {
           <input
             placeholder="Search name, phone, code"
             value={filters.search}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, search: e.target.value }))
+            onChange={(event) =>
+              setFilters((prev) => ({
+                ...prev,
+                search: event.target.value,
+              }))
             }
           />
 
           <select
             value={filters.status}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, status: e.target.value }))
+            onChange={(event) =>
+              setFilters((prev) => ({
+                ...prev,
+                status: event.target.value,
+              }))
             }
           >
             <option value="">All Status</option>
@@ -104,8 +131,11 @@ const fetchStudents = async () => {
 
           <select
             value={filters.batch}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, batch: e.target.value }))
+            onChange={(event) =>
+              setFilters((prev) => ({
+                ...prev,
+                batch: event.target.value,
+              }))
             }
           >
             <option value="">All Batches</option>
@@ -119,16 +149,22 @@ const fetchStudents = async () => {
           <input
             placeholder="Martial Art"
             value={filters.martialArt}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, martialArt: e.target.value }))
+            onChange={(event) =>
+              setFilters((prev) => ({
+                ...prev,
+                martialArt: event.target.value,
+              }))
             }
           />
 
           <input
             placeholder="Belt Rank"
             value={filters.beltRank}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, beltRank: e.target.value }))
+            onChange={(event) =>
+              setFilters((prev) => ({
+                ...prev,
+                beltRank: event.target.value,
+              }))
             }
           />
         </div>
@@ -154,33 +190,49 @@ const fetchStudents = async () => {
                   <th>Actions</th>
                 </tr>
               </thead>
-              <tbody>
-              {students.map((student) => {
-  const fullName = `${student.firstName || ""} ${
-    student.lastName || ""
-  }`.trim();
 
-  return (
-    <tr key={student._id}>
-      <td>{student.studentCode || student.admissionNumber || "-"}</td>
-      <td>{student.name || fullName || "-"}</td>
-      <td>{student.phone || "-"}</td>
-      <td>{student.batch?.batchName || "-"}</td>
-      <td>{student.martialArt || "-"}</td>
-      <td>{student.beltRank || "-"}</td>
-      <td>
-        <span className={`badge badge-${student.status}`}>
-          {student.status}
-        </span>
-      </td>
-      <td className="actions">
-        <Link to={`/students/${student._id}`}>View</Link>
-        <Link to={`/students/${student._id}/edit`}>Edit</Link>
-        <button onClick={() => handleDelete(student._id)}>Left</button>
-      </td>
-    </tr>
-  );
-})}
+              <tbody>
+                {students.map((student) => {
+                  const fullName = `${student.firstName || ""} ${
+                    student.lastName || ""
+                  }`.trim();
+
+                  return (
+                    <tr
+                      key={student._id}
+                      onClick={() => navigate(`/students/${student._id}`)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td>{student.studentCode || student.admissionNumber || "-"}</td>
+                      <td>{student.name || fullName || "-"}</td>
+                      <td>{student.phone || "-"}</td>
+                      <td>{student.batch?.batchName || "-"}</td>
+                      <td>{student.martialArt || "-"}</td>
+                      <td>{student.beltRank || "-"}</td>
+                      <td>
+                        <span className={`badge badge-${student.status}`}>
+                          {student.status}
+                        </span>
+                      </td>
+
+                      <td
+                        className="actions"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <Link to={`/students/${student._id}/edit`}>Edit</Link>
+
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          onClick={() => handleDelete(student)}
+                          title="Delete Student"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

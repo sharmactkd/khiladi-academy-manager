@@ -69,8 +69,10 @@ export const createStudent = asyncHandler(async (req, res) => {
 export const getStudents = asyncHandler(async (req, res) => {
   const {
     branch,
+    batch,
     status,
     martialArt,
+    beltRank,
     search,
   } = req.query;
 
@@ -83,12 +85,23 @@ export const getStudents = asyncHandler(async (req, res) => {
     query.branch = branch;
   }
 
+  if (batch) {
+    query.batch = batch;
+  }
+
   if (status) {
     query.status = status;
   }
 
   if (martialArt) {
     query.martialArt = martialArt;
+  }
+
+  if (beltRank) {
+    query.beltRank = {
+      $regex: beltRank,
+      $options: "i",
+    };
   }
 
   if (search) {
@@ -122,6 +135,7 @@ export const getStudents = asyncHandler(async (req, res) => {
 
   const students = await Student.find(query)
     .populate("branch", "branchName branchCode")
+    .populate("batch", "batchName martialArt isActive")
     .sort({ createdAt: -1 });
 
   return successResponse(
@@ -136,7 +150,9 @@ export const getStudentById = asyncHandler(async (req, res) => {
     _id: req.params.id,
     academy: req.academyId,
     ...buildBranchAccessFilter(req.user),
-  }).populate("branch", "branchName branchCode");
+  })
+    .populate("branch", "branchName branchCode")
+    .populate("batch", "batchName martialArt isActive");
 
   if (!student) {
     return errorResponse(res, "Student not found", 404);

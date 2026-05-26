@@ -17,7 +17,7 @@ const StudentProfile = () => {
     const fetchStudent = async () => {
       try {
         const response = await studentApi.getById(id);
-        setStudent(response.data?.data?.student);
+        setStudent(response.data?.data || null);
       } catch (error) {
         toast.error(error.response?.data?.message || "Student load nahi hua");
       } finally {

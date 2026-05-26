@@ -70,19 +70,28 @@ const onSubmit = async (values) => {
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ");
 
-    const payload = {
-      ...values,
-
-      firstName,
-      lastName,
-      dateOfBirth: values.dob,
-      admissionNumber: values.admissionNumber || values.studentCode,
-
-      emergencyContact: {
-        name: values.emergencyContactName || "",
-        phone: values.emergencyContactPhone || "",
-      },
-    };
+ const payload = {
+  admissionNumber: values.admissionNumber,
+  firstName,
+  lastName,
+  gender: values.gender,
+  dateOfBirth: values.dob,
+  batch: values.batch || undefined,
+  phone: values.phone || "",
+  email: values.email || "",
+  address: values.address || "",
+  city: values.city || "",
+  state: values.state || "",
+  martialArt: values.martialArt || "Taekwondo",
+  beltRank: values.beltRank || "",
+  joiningDate: values.joiningDate || undefined,
+  status: values.status || "active",
+  emergencyContact: {
+    name: values.emergencyContactName || "",
+    phone: values.emergencyContactPhone || "",
+  },
+  notes: values.medicalNotes || "",
+};
 
     await studentApi.create(payload);
 

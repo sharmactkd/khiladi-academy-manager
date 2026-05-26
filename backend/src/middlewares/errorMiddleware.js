@@ -22,11 +22,20 @@ export const errorHandler = (error, req, res, next) => {
     }));
   }
 
-  if (error.code === 11000) {
-    statusCode = 409;
-    const field = Object.keys(error.keyValue || {})[0] || "field";
+if (error.code === 11000) {
+  statusCode = 409;
+
+  const fields = Object.keys(error.keyValue || {});
+
+  if (fields.includes("academy") && fields.includes("admissionNumber")) {
+    message = "Admission number already exists";
+  } else if (fields.includes("owner")) {
+    message = "Academy already exists for this user";
+  } else {
+    const field = fields[0] || "field";
     message = `${field} already exists`;
   }
+}
 
   if (error.name === "CastError") {
     statusCode = 400;

@@ -27,13 +27,14 @@ const EditStudent = () => {
           batchApi.getAll({ status: "active" }),
         ]);
 
-        const student = studentRes.data?.data?.student;
-        setBatches(batchRes.data?.data?.batches || []);
+        const student = studentRes.data?.data || null;
+        const batchList = batchRes.data?.data || [];
+setBatches(batchList.filter((batch) => batch.isActive));
 
         reset({
           ...student,
           batch: student?.batch?._id || "",
-          dob: toDateInput(student?.dob),
+          dob: toDateInput(student?.dateOfBirth),
           joiningDate: toDateInput(student?.joiningDate),
         });
       } catch (error) {

@@ -29,27 +29,37 @@ export const studentIdValidator = [
 ];
 
 export const createStudentValidator = [
-  body("studentCode")
+  body("admissionNumber")
     .trim()
     .notEmpty()
-    .withMessage("Student code is required")
+    .withMessage("Admission number is required")
     .isLength({ max: 40 })
-    .withMessage("Student code cannot exceed 40 characters"),
+    .withMessage("Admission number cannot exceed 40 characters"),
 
-  body("name")
+  body("firstName")
     .trim()
     .notEmpty()
-    .withMessage("Student name is required")
+    .withMessage("First name is required")
     .isLength({ min: 2, max: 100 })
-    .withMessage("Student name must be between 2 and 100 characters"),
+    .withMessage("First name must be between 2 and 100 characters"),
+
+  body("lastName")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("Last name cannot exceed 100 characters"),
+
+  body("dateOfBirth")
+    .notEmpty()
+    .withMessage("DOB is required")
+    .isISO8601()
+    .withMessage("DOB must be a valid date"),
 
   body("batch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
-  body("gender").optional().isIn(["male", "female", "other"]),
-  body("dob").optional({ nullable: true, checkFalsy: true }).isISO8601(),
+  body("gender").isIn(["male", "female", "other"]).withMessage("Invalid gender"),
   body("email").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
 
   phoneValidator("phone", "Phone"),
-  
   phoneValidator("emergencyContactPhone", "Emergency contact phone"),
 
   body("status").optional().isIn(["active", "inactive", "left"]),

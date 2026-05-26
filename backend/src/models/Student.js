@@ -39,6 +39,13 @@ const studentSchema = new mongoose.Schema(
       index: true,
     },
 
+batch: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Batch",
+  default: null,
+  index: true,
+},
+    
     admissionNumber: {
       type: String,
       trim: true,
