@@ -49,7 +49,7 @@ export const createStudentValidator = [
   body("email").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
 
   phoneValidator("phone", "Phone"),
-  phoneValidator("parentPhone", "Parent phone"),
+  
   phoneValidator("emergencyContactPhone", "Emergency contact phone"),
 
   body("status").optional().isIn(["active", "inactive", "left"]),
@@ -65,7 +65,7 @@ export const updateStudentValidator = [
   body("email").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
 
   phoneValidator("phone", "Phone"),
-  phoneValidator("parentPhone", "Parent phone"),
+  
   phoneValidator("emergencyContactPhone", "Emergency contact phone"),
 
   body("status").optional().isIn(["active", "inactive", "left"]),

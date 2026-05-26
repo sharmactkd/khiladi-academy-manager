@@ -135,7 +135,14 @@ const onSubmit = async (values) => {
 
           <label>
             Admission Number
-            <input {...register("admissionNumber")} />
+            <input
+  {...register("admissionNumber", {
+    required: "Admission number required",
+  })}
+/>
+{errors.admissionNumber && (
+  <small>{errors.admissionNumber.message}</small>
+)}
           </label>
 
           <label>
@@ -149,7 +156,8 @@ const onSubmit = async (values) => {
 
           <label>
             DOB
-            <input type="date" {...register("dob")} />
+            <input type="date" {...register("dob", { required: "DOB required" })} />
+{errors.dob && <small>{errors.dob.message}</small>}
           </label>
 
           <label>
