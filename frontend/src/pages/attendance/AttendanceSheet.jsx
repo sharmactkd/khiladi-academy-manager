@@ -80,30 +80,45 @@ setStudents(list);
     }));
   };
 
-  const handleSubmit = async () => {
-    if (!batch) {
-      toast.error("Batch select karein");
-      return;
-    }
+ const handleSubmit = async () => {
+  if (!batch) {
+    toast.error("Batch select karein");
+    return;
+  }
 
-    if (!date) {
-      toast.error("Date select karein");
-      return;
-    }
+  if (!date) {
+    toast.error("Date select karein");
+    return;
+  }
 
-    const payload = {
-      batch,
-      date,
-      records: Object.values(records),
-    };
-
-    try {
-      await attendanceApi.mark(payload);
-      toast.success("Attendance marked successfully");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Attendance save nahi hui");
-    }
+  const payload = {
+    batch,
+    date,
+    records: Object.values(records),
   };
+
+  if (!payload.records.length) {
+    toast.error("Attendance records empty hain");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const response = await attendanceApi.mark(payload);
+
+    if (response?.data?.success) {
+      toast.success("Attendance marked successfully");
+      return;
+    }
+
+    toast.success("Attendance saved");
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Attendance save nahi hui");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="page">
@@ -112,9 +127,13 @@ setStudents(list);
           <h1>Attendance</h1>
           <p>Batch wise daily attendance mark karein</p>
         </div>
-        <button className="btn btn-primary" onClick={handleSubmit}>
-          Save Attendance
-        </button>
+       <button
+  className="btn btn-primary"
+  onClick={handleSubmit}
+  disabled={loading || !batch}
+>
+  {loading ? "Saving..." : "Save Attendance"}
+</button>
       </div>
 
       <div className="card">

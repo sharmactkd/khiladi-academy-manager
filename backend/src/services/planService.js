@@ -154,7 +154,13 @@ export const getFreePlan = async () => {
   return plan;
 };
 
-export const getEffectiveSubscription = async ({ academyId }) => {
+export const getEffectiveSubscription = async ({ academyId } = {}) => {
+  if (!academyId) {
+    const error = new Error("Academy is required for subscription lookup");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const now = new Date();
 
   const subscription = await Subscription.findOne({
@@ -180,12 +186,18 @@ export const getEffectiveSubscription = async ({ academyId }) => {
   };
 };
 
-export const getEffectivePlan = async ({ academyId }) => {
+export const getEffectivePlan = async ({ academyId } = {}) => {
   const subscription = await getEffectiveSubscription({ academyId });
   return subscription.plan;
 };
 
-export const hasFeature = async ({ academyId, featureName }) => {
+export const hasFeature = async ({ academyId, featureName } = {}) => {
+  if (!academyId) {
+    const error = new Error("Academy is required for feature check");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const plan = await getEffectivePlan({ academyId });
   return Boolean(plan?.limits?.[featureName]);
 };
@@ -194,7 +206,19 @@ export const isLimitUnlimited = (limit) => {
   return limit === "unlimited";
 };
 
-export const getPlanLimit = async ({ academyId, resourceName }) => {
+export const getPlanLimit = async ({ academyId, resourceName } = {}) => {
+  if (!academyId) {
+    const error = new Error("Academy is required for plan limit check");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!resourceName) {
+    const error = new Error("Resource name is required for plan limit check");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const plan = await getEffectivePlan({ academyId });
   return plan?.limits?.[resourceName] ?? 0;
 };

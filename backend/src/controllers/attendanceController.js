@@ -82,7 +82,7 @@ export const markAttendance = asyncHandler(async (req, res) => {
     }
   )
     .populate("batch", "batchName martialArt")
-    .populate("records.student", "name studentCode phone");
+    .populate("records.student", "firstName lastName admissionNumber phone");
 
   return successResponse(res, "Attendance marked successfully", {
     attendance,
@@ -100,7 +100,7 @@ export const getAttendance = asyncHandler(async (req, res) => {
   const attendance = await Attendance.find(filter)
     .sort({ date: -1 })
     .populate("batch", "batchName martialArt")
-    .populate("records.student", "name studentCode phone");
+    .populate("records.student", "firstName lastName admissionNumber phone");
 
   return successResponse(res, "Attendance fetched successfully", {
     attendance,
@@ -168,7 +168,7 @@ export const getBatchAttendance = asyncHandler(async (req, res) => {
 
   const attendance = await Attendance.find(filter)
     .sort({ date: -1 })
-    .populate("records.student", "name studentCode phone");
+    .populate("records.student", "firstName lastName admissionNumber phone");
 
   return successResponse(res, "Batch attendance fetched successfully", {
     batch,

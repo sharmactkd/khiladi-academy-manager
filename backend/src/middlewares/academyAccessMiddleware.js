@@ -2,14 +2,22 @@ import Academy from "../models/Academy.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { errorResponse } from "../utils/apiResponse.js";
 
+const getRequestedAcademyId = (req) => {
+  return (
+    req.headers?.["x-academy-id"] ||
+    req.query?.academyId ||
+    req.body?.academyId ||
+    null
+  );
+};
+
 export const resolveUserAcademy = asyncHandler(async (req, res, next) => {
   if (!req.user) {
     return errorResponse(res, "Authentication required", 401);
   }
 
   if (req.user.role === "super_admin") {
-    const academyId =
-      req.headers["x-academy-id"] || req.query.academyId || req.body.academyId;
+    const academyId = getRequestedAcademyId(req);
 
     if (academyId) {
       const academy = await Academy.findById(academyId);
@@ -18,6 +26,14 @@ export const resolveUserAcademy = asyncHandler(async (req, res, next) => {
         return errorResponse(res, "Academy not found", 404);
       }
 
+      req.academy = academy;
+      req.academyId = academy._id;
+      return next();
+    }
+
+    const academy = await Academy.findOne({ owner: req.user._id });
+
+    if (academy) {
       req.academy = academy;
       req.academyId = academy._id;
       return next();

@@ -17,13 +17,13 @@ const LineChartCard = ({
   height = 280,
 }) => {
   return (
-    <div className="chart-card">
+    <div className="chart-card" style={{ minWidth: 0 }}>
       <div className="chart-card__header">
         <h3>{title}</h3>
       </div>
 
-      <div style={{ width: "100%", height }}>
-        <ResponsiveContainer>
+      <div style={{ width: "100%", minWidth: 0, height, minHeight: height }}>
+        <ResponsiveContainer width="100%" height={height}>
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey={xKey} />
