@@ -47,7 +47,9 @@ const Sidebar = () => {
             <NavLink to="/attendance">Attendance</NavLink>
             <NavLink to="/attendance/monthly-register">Monthly Attendance</NavLink>
             <NavLink to="/students">Students</NavLink>
-            <NavLink to="/branches">Branches</NavLink>
+           
+                 <NavLink to="/fees">Fees</NavLink>
+                  <NavLink to="/branches">Branches</NavLink>
             <NavLink to="/batches">Batches</NavLink>
             
 
@@ -82,12 +84,7 @@ const Sidebar = () => {
           </>
         )}
 
-        {canManageFees && (
-          <>
-            <div className="sidebar-section-title">Finance</div>
-            <NavLink to="/fees">Fees</NavLink>
-          </>
-        )}
+       
 
           {canManageBilling && (
           <>

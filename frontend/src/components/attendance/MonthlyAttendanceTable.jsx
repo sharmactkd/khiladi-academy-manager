@@ -22,13 +22,14 @@ const recalculateRow = (row, days) => {
   };
 };
 
-const formatDate = (value) => {
-  if (!value) return "-";
+const toDateInputValue = (value) => {
+  if (!value) return "";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
 
-  return date.toLocaleDateString("en-GB");
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toISOString().slice(0, 10);
 };
 
 const MonthlyAttendanceTable = ({
@@ -40,6 +41,19 @@ const MonthlyAttendanceTable = ({
   const safeRows = useMemo(() => {
     return Array.isArray(rows) ? rows : [];
   }, [rows]);
+
+  const updateRowField = (rowIndex, field, value) => {
+    const nextRows = safeRows.map((row, index) => {
+      if (index !== rowIndex) return row;
+
+      return {
+        ...row,
+        [field]: value,
+      };
+    });
+
+    onRowsChange(nextRows);
+  };
 
   const updateCell = (rowIndex, dateKey, value) => {
     const nextRows = safeRows.map((row, index) => {
@@ -80,11 +94,17 @@ const MonthlyAttendanceTable = ({
       <table className="monthly-register-table">
         <thead>
           <tr>
-            <th className="sticky-col sticky-no" rowSpan="2">No.</th>
-            <th className="sticky-col sticky-name" rowSpan="2">NAME</th>
-            <th className="sticky-col sticky-contact" rowSpan="2">Contact</th>
-            <th rowSpan="2">Due Date</th>
-            <th rowSpan="2">Fee Paid</th>
+            <th className="sticky-col sticky-no" rowSpan="2">
+              No.
+            </th>
+            <th className="sticky-col sticky-name" rowSpan="2">
+              NAME
+            </th>
+            <th className="sticky-col sticky-contact" rowSpan="2">
+              Contact
+            </th>
+            <th rowSpan="2">Fee Due Date</th>
+            <th rowSpan="2">Fee Paid Date</th>
             <th rowSpan="2">Fee Status</th>
 
             {days.map((day) => (
@@ -101,11 +121,21 @@ const MonthlyAttendanceTable = ({
               </th>
             ))}
 
-            <th className="sticky-summary" rowSpan="2">ABSENT</th>
-            <th className="sticky-summary sticky-summary-2" rowSpan="2">PRESENT</th>
-            <th className="sticky-summary sticky-summary-3" rowSpan="2">LEAVE</th>
-            <th className="sticky-summary sticky-summary-4" rowSpan="2">LATE</th>
-            <th className="sticky-summary sticky-summary-5" rowSpan="2">%</th>
+            <th className="sticky-summary" rowSpan="2">
+              ABSENT
+            </th>
+            <th className="sticky-summary sticky-summary-2" rowSpan="2">
+              PRESENT
+            </th>
+            <th className="sticky-summary sticky-summary-3" rowSpan="2">
+              LEAVE
+            </th>
+            <th className="sticky-summary sticky-summary-4" rowSpan="2">
+              LATE
+            </th>
+            <th className="sticky-summary sticky-summary-5" rowSpan="2">
+              %
+            </th>
           </tr>
 
           <tr>
@@ -128,15 +158,40 @@ const MonthlyAttendanceTable = ({
         <tbody>
           {safeRows.map((row, rowIndex) => (
             <tr key={row.studentId || rowIndex}>
-              <td className="sticky-col sticky-no">{row.no || rowIndex + 1}</td>
+              <td className="sticky-col sticky-no">
+                {row.no || rowIndex + 1}
+              </td>
+
               <td className="sticky-col sticky-name monthly-register__name">
                 {row.name || "-"}
               </td>
+
               <td className="sticky-col sticky-contact">
                 {row.contact || "-"}
               </td>
-              <td>{formatDate(row.feePaidDate)}</td>
-              <td>{row.feePaid || "-"}</td>
+
+              <td>
+                <input
+                  type="date"
+                  className="monthly-register-date-input"
+                  value={toDateInputValue(row.feeDueDate)}
+                  onChange={(event) =>
+                    updateRowField(rowIndex, "feeDueDate", event.target.value)
+                  }
+                />
+              </td>
+
+              <td>
+  <input
+    type="date"
+    className="monthly-register-date-input"
+    value={toDateInputValue(row.feePaidDate)}
+    onChange={(event) =>
+      updateRowField(rowIndex, "feePaidDate", event.target.value)
+    }
+  />
+</td>
+
               <td
                 className={
                   String(row.feeStatus || "").toLowerCase() === "paid"
@@ -159,7 +214,9 @@ const MonthlyAttendanceTable = ({
                 >
                   <AttendanceCell
                     value={row.attendance?.[day.dateKey] || ""}
-                    onChange={(value) => updateCell(rowIndex, day.dateKey, value)}
+                    onChange={(value) =>
+                      updateCell(rowIndex, day.dateKey, value)
+                    }
                   />
                 </td>
               ))}

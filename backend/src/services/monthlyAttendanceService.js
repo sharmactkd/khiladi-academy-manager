@@ -164,7 +164,7 @@ const students = await Student.find({
   status: "active",
 })
   .select(
-  "admissionNumber firstName lastName phone status dateOfJoining createdAt"
+  "admissionNumber firstName lastName phone status joiningDate createdAt"
 )
   .sort({ firstName: 1, lastName: 1, admissionNumber: 1 })
   .lean();
@@ -214,7 +214,7 @@ const students = await Student.find({
       admissionNumber: student.admissionNumber || "",
       name: getStudentName(student),
       contact: student.phone || "-",
-      feeDueDate: student.dateOfJoining || student.createdAt || null,
+      feeDueDate: student.joiningDate || student.createdAt || null,
       feePaid: fee?.amountPaid ?? fee?.amount ?? 0,
       feeStatus: fee?.status || "due",
       attendance,
