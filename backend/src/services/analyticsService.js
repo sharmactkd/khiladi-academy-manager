@@ -10,7 +10,12 @@ import GeneratedCertificate from "../models/GeneratedCertificate.js";
 import GeneratedIdCard from "../models/GeneratedIdCard.js";
 import SkillAssessment from "../models/SkillAssessment.js";
 
-const objectId = (id) => new mongoose.Types.ObjectId(id);
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(String(id || ""));
+
+const objectId = (id) => {
+  if (!isValidObjectId(id)) return null;
+  return new mongoose.Types.ObjectId(id);
+};
 
 const startOfDay = (date = new Date()) => {
   const value = new Date(date);
@@ -24,16 +29,64 @@ const endOfDay = (date = new Date()) => {
   return value;
 };
 
+const requireAcademyId = (academyId) => {
+  const academyObjectId = objectId(academyId);
+
+  if (!academyObjectId) {
+    const error = new Error(
+      "Academy is required for analytics. Please select or create an academy."
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return academyObjectId;
+};
+
+const getAssistantBranchIds = (user) => {
+  const rawBranches = [
+    user?.branch,
+    user?.branchId,
+    user?.assignedBranch,
+    ...(Array.isArray(user?.branches) ? user.branches : []),
+    ...(Array.isArray(user?.assignedBranches) ? user.assignedBranches : []),
+  ].filter(Boolean);
+
+  return rawBranches
+    .filter((id) => isValidObjectId(id))
+    .map((id) => objectId(id));
+};
+
+const applyAssistantBranchScope = (filters, user) => {
+  if (user?.role !== "assistant_coach") return filters;
+
+  const assignedBranches = getAssistantBranchIds(user);
+
+  if (assignedBranches.length) {
+    return {
+      ...filters,
+      branch: { $in: assignedBranches },
+    };
+  }
+
+  return {
+    ...filters,
+    branch: { $in: [] },
+  };
+};
+
 export const buildAnalyticsFilters = ({ academyId, query = {}, user }) => {
-  const filters = {
-    academy: objectId(academyId),
+  const academyObjectId = requireAcademyId(academyId);
+
+  let filters = {
+    academy: academyObjectId,
   };
 
-  if (query.branch) {
+  if (query.branch && isValidObjectId(query.branch)) {
     filters.branch = objectId(query.branch);
   }
 
-  if (query.batch) {
+  if (query.batch && isValidObjectId(query.batch)) {
     filters.batch = objectId(query.batch);
   }
 
@@ -49,25 +102,7 @@ export const buildAnalyticsFilters = ({ academyId, query = {}, user }) => {
     }
   }
 
-  if (user?.role === "assistant_coach") {
-    const assignedBranches = [
-      user.branch,
-      user.branchId,
-      user.assignedBranch,
-      ...(Array.isArray(user.branches) ? user.branches : []),
-      ...(Array.isArray(user.assignedBranches) ? user.assignedBranches : []),
-    ].filter(Boolean);
-
-    if (assignedBranches.length) {
-      filters.branch = {
-        $in: assignedBranches
-          .filter((id) => mongoose.Types.ObjectId.isValid(id))
-          .map((id) => objectId(id)),
-      };
-    } else {
-      filters.branch = { $in: [] };
-    }
-  }
+  filters = applyAssistantBranchScope(filters, user);
 
   return filters;
 };
@@ -96,9 +131,67 @@ const formatMonthResults = (items = []) =>
     value: item.count || item.total || 0,
   }));
 
-export const getDashboardAnalytics = async ({ academyId, query, user }) => {
+const buildBranchScopedBatchIds = async ({ academyId, query = {}, user }) => {
+  const academyObjectId = requireAcademyId(academyId);
+
+  const batchMatch = {
+    academy: academyObjectId,
+  };
+
+  if (query.batch && isValidObjectId(query.batch)) {
+    batchMatch._id = objectId(query.batch);
+  }
+
+  if (query.branch && isValidObjectId(query.branch)) {
+    batchMatch.branch = objectId(query.branch);
+  }
+
+  if (user?.role === "assistant_coach") {
+    const assignedBranches = getAssistantBranchIds(user);
+
+    if (assignedBranches.length) {
+      batchMatch.branch = { $in: assignedBranches };
+    } else {
+      return [];
+    }
+  }
+
+  const batches = await Batch.find(batchMatch).select("_id").lean();
+
+  return batches.map((batch) => batch._id);
+};
+
+const buildAttendanceMatch = async ({ academyId, query = {}, user }) => {
+  const academyObjectId = requireAcademyId(academyId);
+
+  const match = {
+    academy: academyObjectId,
+  };
+
+  const dateFilter = buildDateFilter({
+    fromDate: query.fromDate,
+    toDate: query.toDate,
+    field: "date",
+  });
+
+  Object.assign(match, dateFilter);
+
+  const needsBatchResolution =
+    Boolean(query.branch) || Boolean(query.batch) || user?.role === "assistant_coach";
+
+  if (needsBatchResolution) {
+    const batchIds = await buildBranchScopedBatchIds({ academyId, query, user });
+    match.batch = { $in: batchIds };
+  }
+
+  return match;
+};
+
+export const getDashboardAnalytics = async ({ academyId, query = {}, user }) => {
+  const academyObjectId = requireAcademyId(academyId);
+
   const base = buildAnalyticsFilters({ academyId, query, user });
-  const branchBase = { academy: objectId(academyId) };
+  const branchBase = { academy: academyObjectId };
 
   if (base.branch) branchBase.branch = base.branch;
 
@@ -109,6 +202,16 @@ export const getDashboardAnalytics = async ({ academyId, query, user }) => {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
+  const todayAttendanceMatch = await buildAttendanceMatch({
+    academyId,
+    query: {
+      ...query,
+      fromDate: todayStart,
+      toDate: todayEnd,
+    },
+    user,
+  });
+
   const [
     totalStudents,
     activeStudents,
@@ -117,8 +220,7 @@ export const getDashboardAnalytics = async ({ academyId, query, user }) => {
     totalBatches,
     monthlyFees,
     pendingFees,
-    todayAttendanceCount,
-    presentToday,
+    todayAttendanceAgg,
     upcomingBeltTests,
     recentAdmissions,
     recentPayments,
@@ -163,16 +265,16 @@ export const getDashboardAnalytics = async ({ academyId, query, user }) => {
       },
     ]),
 
-    Attendance.countDocuments({
-      ...branchBase,
-      date: { $gte: todayStart, $lte: todayEnd },
-    }),
-
-    Attendance.countDocuments({
-      ...branchBase,
-      date: { $gte: todayStart, $lte: todayEnd },
-      status: "present",
-    }),
+    Attendance.aggregate([
+      { $match: todayAttendanceMatch },
+      { $unwind: "$records" },
+      {
+        $group: {
+          _id: "$records.status",
+          count: { $sum: 1 },
+        },
+      },
+    ]),
 
     BeltTest.countDocuments({
       ...branchBase,
@@ -205,6 +307,14 @@ export const getDashboardAnalytics = async ({ academyId, query, user }) => {
     GeneratedIdCard.countDocuments(branchBase),
   ]);
 
+  const todayAttendanceCount = todayAttendanceAgg.reduce(
+    (sum, item) => sum + (item.count || 0),
+    0
+  );
+
+  const presentToday =
+    todayAttendanceAgg.find((item) => item._id === "present")?.count || 0;
+
   const todayAttendancePercentage =
     todayAttendanceCount > 0
       ? Math.round((presentToday / todayAttendanceCount) * 100)
@@ -232,33 +342,37 @@ export const getDashboardAnalytics = async ({ academyId, query, user }) => {
   };
 };
 
-export const getStudentAnalytics = async ({ academyId, query, user }) => {
+export const getStudentAnalytics = async ({ academyId, query = {}, user }) => {
   const base = buildAnalyticsFilters({ academyId, query, user });
   delete base.batch;
 
-  const [admissionsByMonth, statusDistribution, beltDistribution, martialArtDistribution] =
-    await Promise.all([
-      Student.aggregate([
-        { $match: base },
-        { $group: { _id: monthGroup, count: { $sum: 1 } } },
-        { $sort: { "_id.year": 1, "_id.month": 1 } },
-      ]),
+  const [
+    admissionsByMonth,
+    statusDistribution,
+    beltDistribution,
+    martialArtDistribution,
+  ] = await Promise.all([
+    Student.aggregate([
+      { $match: base },
+      { $group: { _id: monthGroup, count: { $sum: 1 } } },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]),
 
-      Student.aggregate([
-        { $match: base },
-        { $group: { _id: "$status", count: { $sum: 1 } } },
-      ]),
+    Student.aggregate([
+      { $match: base },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]),
 
-      Student.aggregate([
-        { $match: base },
-        { $group: { _id: "$beltRank", count: { $sum: 1 } } },
-      ]),
+    Student.aggregate([
+      { $match: base },
+      { $group: { _id: "$beltRank", count: { $sum: 1 } } },
+    ]),
 
-      Student.aggregate([
-        { $match: base },
-        { $group: { _id: "$martialArt", count: { $sum: 1 } } },
-      ]),
-    ]);
+    Student.aggregate([
+      { $match: base },
+      { $group: { _id: "$martialArt", count: { $sum: 1 } } },
+    ]),
+  ]);
 
   return {
     admissionsByMonth: formatMonthResults(admissionsByMonth),
@@ -268,28 +382,20 @@ export const getStudentAnalytics = async ({ academyId, query, user }) => {
   };
 };
 
-export const getAttendanceAnalytics = async ({ academyId, query, user }) => {
-  const base = buildAnalyticsFilters({ academyId, query, user });
-  const dateFilter = buildDateFilter({
-    fromDate: query.fromDate,
-    toDate: query.toDate,
-    field: "date",
-  });
+export const getAttendanceAnalytics = async ({ academyId, query = {}, user }) => {
+  const match = await buildAttendanceMatch({ academyId, query, user });
 
-  delete base.createdAt;
-
-  const match = { ...base, ...dateFilter };
-
-  const [dailyTrend, batchComparison, absentCount] = await Promise.all([
+  const [dailyTrend, batchComparison, absentAgg] = await Promise.all([
     Attendance.aggregate([
       { $match: match },
+      { $unwind: "$records" },
       {
         $group: {
           _id: {
             year: { $year: "$date" },
             month: { $month: "$date" },
             day: { $dayOfMonth: "$date" },
-            status: "$status",
+            status: "$records.status",
           },
           count: { $sum: 1 },
         },
@@ -299,31 +405,61 @@ export const getAttendanceAnalytics = async ({ academyId, query, user }) => {
 
     Attendance.aggregate([
       { $match: match },
+      { $unwind: "$records" },
       {
         $group: {
           _id: {
             batch: "$batch",
-            status: "$status",
+            status: "$records.status",
           },
           count: { $sum: 1 },
         },
       },
+      {
+        $lookup: {
+          from: "batches",
+          localField: "_id.batch",
+          foreignField: "_id",
+          as: "batchInfo",
+        },
+      },
+      {
+        $addFields: {
+          batchName: {
+            $ifNull: [{ $arrayElemAt: ["$batchInfo.batchName", 0] }, "Unknown Batch"],
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          count: 1,
+          batchName: 1,
+        },
+      },
     ]),
 
-    Attendance.countDocuments({
-      ...match,
-      status: "absent",
-    }),
+    Attendance.aggregate([
+      { $match: match },
+      { $unwind: "$records" },
+      { $match: { "records.status": "absent" } },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+        },
+      },
+    ]),
   ]);
 
   return {
     dailyAttendanceTrend: dailyTrend,
     batchAttendanceComparison: batchComparison,
-    absentStudentsCount: absentCount,
+    absentStudentsCount: absentAgg?.[0]?.count || 0,
   };
 };
 
-export const getFeeAnalytics = async ({ academyId, query, user }) => {
+export const getFeeAnalytics = async ({ academyId, query = {}, user }) => {
   if (user?.role === "assistant_coach") {
     const error = new Error("Assistant coach cannot access fee analytics");
     error.statusCode = 403;
@@ -381,7 +517,7 @@ export const getFeeAnalytics = async ({ academyId, query, user }) => {
   };
 };
 
-export const getPerformanceAnalytics = async ({ academyId, query, user }) => {
+export const getPerformanceAnalytics = async ({ academyId, query = {}, user }) => {
   const base = buildAnalyticsFilters({ academyId, query, user });
   delete base.batch;
 
