@@ -40,25 +40,16 @@ const Sidebar = () => {
           </>
         )}
 
-        {canManageBilling && (
-          <>
-            <div className="sidebar-section-title">SaaS Billing</div>
-            <NavLink to="/plans">Plans</NavLink>
-            <NavLink to="/billing">Billing</NavLink>
-            <NavLink to="/billing/invoices">Invoices</NavLink>
-            <NavLink to="/billing/payments">Payments</NavLink>
-          </>
-        )}
-
+      
         {canManageAcademy && (
           <>
-            <NavLink to="/onboarding/create-academy">Academy Profile</NavLink>
-
-            <div className="sidebar-section-title">Academy</div>
-            <NavLink to="/branches">Branches</NavLink>
-            <NavLink to="/students">Students</NavLink>
-            <NavLink to="/batches">Batches</NavLink>
+                       <div className="sidebar-section-title">Academy</div>
             <NavLink to="/attendance">Attendance</NavLink>
+            <NavLink to="/attendance/monthly-register">Monthly Attendance</NavLink>
+            <NavLink to="/students">Students</NavLink>
+            <NavLink to="/branches">Branches</NavLink>
+            <NavLink to="/batches">Batches</NavLink>
+            
 
             <div className="sidebar-section-title">Analytics</div>
             <NavLink to="/analytics">Dashboard Analytics</NavLink>
@@ -98,6 +89,17 @@ const Sidebar = () => {
           </>
         )}
 
+          {canManageBilling && (
+          <>
+            <div className="sidebar-section-title">SaaS Billing</div>
+            <NavLink to="/plans">Plans</NavLink>
+            <NavLink to="/billing">Billing</NavLink>
+            <NavLink to="/billing/invoices">Invoices</NavLink>
+            <NavLink to="/billing/payments">Payments</NavLink>
+          </>
+        )}
+
+ <NavLink to="/onboarding/create-academy">Academy Profile</NavLink>
         {user?.role === "super_admin" && (
           <>
             <div className="sidebar-section-title">Admin</div>

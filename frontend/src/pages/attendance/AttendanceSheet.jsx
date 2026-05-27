@@ -23,6 +23,10 @@ const list = response.data?.data || [];
 const activeBatches = list.filter((batch) => batch.isActive);
 
 setBatches(activeBatches);
+
+if (activeBatches.length) {
+  setBatch((prev) => prev || activeBatches[0]._id);
+}
       } catch {
         toast.error("Batches load nahi hue");
       }
@@ -138,17 +142,24 @@ setStudents(list);
 
       <div className="card">
         <div className="grid grid-2">
-          <label>
-            Batch
-            <select value={batch} onChange={(e) => setBatch(e.target.value)}>
-              <option value="">Select Batch</option>
-              {batches.map((item) => (
-                <option key={item._id} value={item._id}>
-                  {item.batchName} - {item.martialArt}
-                </option>
-              ))}
-            </select>
-          </label>
+         <div className="batch-toggle-section">
+  <span className="batch-toggle-label">Batch</span>
+
+  <div className="batch-toggle-group">
+    {batches.map((item) => (
+      <button
+        key={item._id}
+        type="button"
+        className={`batch-toggle-btn ${
+          batch === item._id ? "active" : ""
+        }`}
+        onClick={() => setBatch(item._id)}
+      >
+        {item.batchName} - {item.martialArt}
+      </button>
+    ))}
+  </div>
+</div>
 
           <label>
             Date

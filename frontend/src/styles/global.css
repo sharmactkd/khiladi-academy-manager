@@ -1407,3 +1407,344 @@ button:disabled,
 .sidebar-footer .btn {
   width: 100%;
 }
+
+.monthly-register-page {
+  max-width: 100%;
+}
+
+.monthly-register-header {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.monthly-register-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.monthly-register-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.5fr) minmax(140px, 0.5fr) minmax(140px, 0.5fr) auto;
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.monthly-register-toolbar label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.monthly-register-title {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #0b2f78;
+  color: #ffffff;
+  border-radius: 14px 14px 0 0;
+  font-size: 18px;
+  letter-spacing: 0.3px;
+}
+
+.monthly-register-table-wrap {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid #d9e2f2;
+  border-radius: 0 0 14px 14px;
+  background: #ffffff;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+  max-height: calc(100vh - 280px);
+}
+
+.monthly-register-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1900px;
+  width: max-content;
+  font-size: 13px;
+}
+
+.monthly-register-table th,
+.monthly-register-table td {
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  white-space: nowrap;
+  text-align: center;
+  background: #ffffff;
+}
+
+.monthly-register-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #f3f6fb;
+  color: #111827;
+  font-weight: 800;
+}
+
+.monthly-register-table thead tr:nth-child(2) th {
+  top: 35px;
+  z-index: 19;
+}
+
+.sticky-col {
+  position: sticky;
+  z-index: 15;
+  background: #ffffff !important;
+}
+
+.monthly-register-table thead .sticky-col {
+  z-index: 30;
+  background: #f3f6fb !important;
+}
+
+.sticky-no {
+  left: 0;
+  min-width: 56px;
+  width: 56px;
+}
+
+.sticky-name {
+  left: 56px;
+  min-width: 220px;
+  width: 220px;
+  text-align: left !important;
+}
+
+.sticky-contact {
+  left: 276px;
+  min-width: 130px;
+  width: 130px;
+}
+
+.monthly-register__name {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.day-heading,
+.day-number {
+  min-width: 42px;
+  width: 42px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.day-heading--sunday,
+.day-number--sunday,
+.attendance-day-cell--sunday {
+  background: #082a66 !important;
+  color: #ffffff !important;
+}
+
+.day-heading--saturday,
+.day-number--saturday,
+.attendance-day-cell--saturday {
+  background: #eef4ff !important;
+}
+
+.day-heading--today,
+.day-number--today,
+.attendance-day-cell--today {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.attendance-day-cell {
+  padding: 4px !important;
+}
+
+.attendance-cell {
+  width: 34px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 800;
+  cursor: pointer;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.attendance-cell:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
+.attendance-cell--P {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.attendance-cell--A {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.attendance-cell--L {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.attendance-cell--LT {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.attendance-cell--blank {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.sticky-summary {
+  position: sticky;
+  right: 256px;
+  z-index: 16;
+  background: #ffffff !important;
+  min-width: 64px;
+  width: 64px;
+  font-weight: 900;
+}
+
+.sticky-summary-2 {
+  right: 192px;
+}
+
+.sticky-summary-3 {
+  right: 128px;
+}
+
+.sticky-summary-4 {
+  right: 64px;
+}
+
+.sticky-summary-5 {
+  right: 0;
+}
+
+.monthly-register-table thead .sticky-summary {
+  z-index: 31;
+  background: #f3f6fb !important;
+}
+
+.monthly-register__summary {
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.monthly-register__summary--absent {
+  color: #991b1b;
+}
+
+.monthly-register__summary--present {
+  color: #166534;
+}
+
+.fee-status {
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.fee-status--paid {
+  color: #166534;
+}
+
+.fee-status--due {
+  color: #dc2626;
+}
+
+.monthly-register__empty {
+  padding: 30px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #64748b;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .monthly-register-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .monthly-register-actions {
+    width: 100%;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+
+  .sidebar,
+  .page-header,
+  .monthly-register-toolbar,
+  .monthly-register-actions {
+    display: none !important;
+  }
+
+  .page {
+    padding: 0 !important;
+  }
+
+  .monthly-register-table-wrap {
+    max-height: none;
+    overflow: visible;
+    box-shadow: none;
+  }
+
+  .monthly-register-table {
+    font-size: 9px;
+    min-width: 100%;
+  }
+
+  .monthly-register-table th,
+  .monthly-register-table td {
+    padding: 4px;
+  }
+}
+
+.batch-toggle-section {
+  display: grid;
+  gap: 10px;
+}
+
+.batch-toggle-label {
+  font-weight: 800;
+  color: #111827;
+}
+
+.batch-toggle-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.batch-toggle-btn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.batch-toggle-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.batch-toggle-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.22);
+}

@@ -23,6 +23,7 @@ import EditBatch from "../pages/batches/EditBatch.jsx";
 import BatchDetail from "../pages/batches/BatchDetail.jsx";
 
 import AttendanceSheet from "../pages/attendance/AttendanceSheet.jsx";
+import MonthlyAttendanceRegister from "../pages/attendance/MonthlyAttendanceRegister.jsx";
 import StudentAttendanceHistory from "../pages/attendance/StudentAttendanceHistory.jsx";
 import BatchAttendanceHistory from "../pages/attendance/BatchAttendanceHistory.jsx";
 
@@ -194,6 +195,7 @@ const AppRoutes = () => {
             <Route path="/batches/:id/edit" element={<EditBatch />} />
 
             <Route path="/attendance" element={<AttendanceSheet />} />
+            <Route path="/attendance/monthly-register" element={<MonthlyAttendanceRegister />} />
             <Route path="/attendance/student/:studentId" element={<StudentAttendanceHistory />} />
             <Route path="/attendance/batch/:batchId" element={<BatchAttendanceHistory />} />
 

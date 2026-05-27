@@ -3,6 +3,10 @@ import Batch from "../models/Batch.js";
 import Student from "../models/Student.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
+import {
+  getMonthlyAttendanceRegister,
+  saveMonthlyAttendanceRegister,
+} from "../services/monthlyAttendanceService.js";
 
 const startOfDay = (value) => {
   const date = new Date(value);
@@ -38,7 +42,7 @@ export const markAttendance = asyncHandler(async (req, res) => {
     return errorResponse(res, "Batch not found in your academy", 404);
   }
 
-  const studentIds = records.map((record) => record.student);
+  const studentIds = (records || []).map((record) => record.student);
 
   const students = await Student.find({
     _id: { $in: studentIds },
@@ -174,4 +178,32 @@ export const getBatchAttendance = asyncHandler(async (req, res) => {
     batch,
     attendance,
   });
+});
+
+export const getMonthlyRegister = asyncHandler(async (req, res) => {
+  const { batch, month, year } = req.query;
+
+  const data = await getMonthlyAttendanceRegister({
+    academyId: req.academyId,
+    batchId: batch,
+    month,
+    year,
+  });
+
+  return successResponse(res, "Monthly attendance register fetched", data);
+});
+
+export const saveMonthlyRegister = asyncHandler(async (req, res) => {
+  const { batch, month, year, rows } = req.body;
+
+  const data = await saveMonthlyAttendanceRegister({
+    academyId: req.academyId,
+    batchId: batch,
+    month,
+    year,
+    rows,
+    userId: req.user._id,
+  });
+
+  return successResponse(res, "Monthly attendance register saved", data);
 });
