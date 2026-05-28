@@ -104,6 +104,8 @@ app.use("/api/batches", batchRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/fee-plans", feePlanRoutes);
 app.use("/api/fee-payments", feePaymentRoutes);
+app.use("/api/fees/plans", feePlanRoutes);
+app.use("/api/fees", feePaymentRoutes);
 
 app.use("/api/belt-tests", beltTestRoutes);
 app.use("/api/championship-records", championshipRecordRoutes);

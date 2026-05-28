@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { studentApi } from "../../api/studentApi.js";
 
+
 const getStudentName = (student) => {
   const fullName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
   return fullName || student?.name || "Student";
@@ -132,6 +133,71 @@ const StudentProfile = () => {
           </Link>
         </div>
       </div>
+
+      <div className="card">
+  <div className="page-header">
+    <div>
+      <h2>Fees</h2>
+      <p>Student fee summary</p>
+    </div>
+
+    <Link
+      className="btn btn-primary"
+      to={`/fees/student/${student._id}`}
+    >
+      View Fee History
+    </Link>
+  </div>
+
+  <div className="grid grid-4">
+    <div className="stat-card">
+      <span>Monthly Fee</span>
+
+      <strong>
+        ₹
+        {Number(
+          student.monthlyFeeOverride || 0
+        ).toLocaleString("en-IN")}
+      </strong>
+    </div>
+
+    <div className="stat-card">
+      <span>Fee Due Day</span>
+
+      <strong>
+        {student.feeDueDay || "-"}
+      </strong>
+    </div>
+
+    <div className="stat-card">
+      <span>Scholarship</span>
+
+      <strong>
+        ₹
+        {Number(
+          student.scholarshipAmount || 0
+        ).toLocaleString("en-IN")}
+      </strong>
+    </div>
+
+    <div className="stat-card">
+      <span>Discount %</span>
+
+      <strong>
+        {student.discountPercent || 0}%
+      </strong>
+    </div>
+  </div>
+
+  <div style={{ marginTop: "16px" }}>
+    <Link
+      className="btn btn-primary"
+      to={`/fees/collect?student=${student._id}`}
+    >
+      Collect Fee
+    </Link>
+  </div>
+</div>
     </div>
   );
 };

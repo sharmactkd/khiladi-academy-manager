@@ -1,215 +1,327 @@
-import FeePayment from "../models/FeePayment.js";
-import FeePlan from "../models/FeePlan.js";
 import Student from "../models/Student.js";
+import FeePayment from "../models/FeePayment.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
+import {
+  buildStudentFeeStatus,
+  collectStudentFee,
+  getMonthYearNow,
+} from "../services/feeService.js";
 
-const safeFields = [
-  "student",
-  "feePlan",
-  "amount",
-  "discount",
-  "month",
-  "dueDate",
-  "paidDate",
-  "status",
-  "paymentMode",
-  "receiptNumber",
-  "note",
-];
+const getStudentName = (student) =>
+  `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
 
-const buildPayload = (body) => {
-  const payload = {};
-  safeFields.forEach((field) => {
-    if (Object.prototype.hasOwnProperty.call(body, field)) {
-      payload[field] = body[field] || undefined;
-    }
-  });
-  return payload;
+const getMonthYearFromQuery = (query) => {
+  const now = getMonthYearNow();
+
+  return {
+    month: Number(query.month || query.feeMonth || now.month),
+    year: Number(query.year || query.feeYear || now.year),
+  };
 };
 
-const generateReceiptNumber = async (academyId) => {
-  const prefix = `RCPT-${new Date().getFullYear()}`;
-  const count = await FeePayment.countDocuments({ academy: academyId });
-  return `${prefix}-${String(count + 1).padStart(5, "0")}`;
-};
-
-const validateStudent = async ({ academyId, studentId }) => {
-  return Student.findOne({
-    _id: studentId,
+const getActiveStudents = async (academyId, query = {}) => {
+  const filter = {
     academy: academyId,
-  });
-};
+    status: "active",
+  };
 
-const validateFeePlan = async ({ academyId, feePlanId }) => {
-  if (!feePlanId) return null;
-
-  return FeePlan.findOne({
-    _id: feePlanId,
-    academy: academyId,
-  });
-};
-
-export const createFeePayment = asyncHandler(async (req, res) => {
-  const payload = buildPayload(req.body);
-
-  const student = await validateStudent({
-    academyId: req.academyId,
-    studentId: payload.student,
-  });
-
-  if (!student) {
-    return errorResponse(res, "Student not found in your academy", 404);
+  if (query.batch) {
+    filter.batch = query.batch;
   }
 
-  if (payload.feePlan) {
-    const feePlan = await validateFeePlan({
+  if (query.search) {
+    filter.$or = [
+      { firstName: { $regex: query.search, $options: "i" } },
+      { lastName: { $regex: query.search, $options: "i" } },
+      { admissionNumber: { $regex: query.search, $options: "i" } },
+      { phone: { $regex: query.search, $options: "i" } },
+    ];
+  }
+
+  return Student.find(filter)
+    .populate("batch", "batchName martialArt isActive")
+    .sort({ firstName: 1, lastName: 1 });
+};
+
+export const getFeesDashboard = asyncHandler(async (req, res) => {
+  const { month, year } = getMonthYearFromQuery(req.query);
+
+  const payments = await FeePayment.find({
+    academy: req.academyId,
+    status: { $ne: "cancelled" },
+  })
+    .populate("student", "firstName lastName admissionNumber phone")
+    .populate("batch", "batchName")
+    .sort({ paymentDate: -1 });
+
+  const thisMonthPayments = payments.filter(
+    (payment) =>
+      Number(payment.feeMonth) === month && Number(payment.feeYear) === year
+  );
+
+  const totalCollection = payments.reduce(
+    (sum, payment) => sum + Number(payment.amountPaid || 0),
+    0
+  );
+
+  const thisMonthCollection = thisMonthPayments.reduce(
+    (sum, payment) => sum + Number(payment.amountPaid || 0),
+    0
+  );
+
+  const students = await getActiveStudents(req.academyId);
+  const statuses = await Promise.all(
+    students.map((student) =>
+      buildStudentFeeStatus({
+        academyId: req.academyId,
+        student,
+        month,
+        year,
+      })
+    )
+  );
+
+  const pendingAmount = statuses.reduce(
+    (sum, item) => sum + Number(item.pendingAmount || 0),
+    0
+  );
+
+  const summary = statuses.reduce(
+    (acc, item) => {
+      acc[item.status] = (acc[item.status] || 0) + 1;
+      return acc;
+    },
+    {
+      paid: 0,
+      due: 0,
+      partial: 0,
+      overdue: 0,
+    }
+  );
+
+  const recentPayments = payments.slice(0, 10).map((payment) => ({
+    _id: payment._id,
+    studentName: getStudentName(payment.student),
+    admissionNumber: payment.student?.admissionNumber || "",
+    amountPaid: payment.amountPaid,
+    paymentDate: payment.paymentDate,
+    paymentMode: payment.paymentMode,
+    receiptNumber: payment.receiptNumber,
+    status: payment.status,
+  }));
+
+  return successResponse(res, "Fees dashboard fetched successfully", {
+    month,
+    year,
+    totalCollection,
+    thisMonthCollection,
+    pendingAmount,
+    overdueStudents: summary.overdue,
+    summary,
+    recentPayments,
+  });
+});
+
+export const getStudentsFeeStatus = asyncHandler(async (req, res) => {
+  const { month, year } = getMonthYearFromQuery(req.query);
+
+  const students = await getActiveStudents(req.academyId, req.query);
+
+  const data = await Promise.all(
+    students.map((student) =>
+      buildStudentFeeStatus({
+        academyId: req.academyId,
+        student,
+        month,
+        year,
+      })
+    )
+  );
+
+  const filteredData = req.query.status
+    ? data.filter((item) => item.status === req.query.status)
+    : data;
+
+  return successResponse(res, "Students fee status fetched successfully", {
+    month,
+    year,
+    students: filteredData,
+  });
+});
+
+export const collectFee = asyncHandler(async (req, res) => {
+  try {
+    const feePayment = await collectStudentFee({
       academyId: req.academyId,
-      feePlanId: payload.feePlan,
+      userId: req.user._id,
+      payload: req.body,
     });
 
-    if (!feePlan) {
-      return errorResponse(res, "Fee plan not found in your academy", 404);
-    }
+    const populatedPayment = await FeePayment.findById(feePayment._id)
+      .populate("student", "firstName lastName admissionNumber phone email")
+      .populate("batch", "batchName martialArt")
+      .populate("feePlan", "name monthlyAmount amount dueDay");
+
+    return successResponse(
+      res,
+      "Fee collected successfully",
+      populatedPayment,
+      201
+    );
+  } catch (error) {
+    return errorResponse(res, error.message || "Fee collection failed", 400);
   }
+});
 
-  if (!payload.receiptNumber) {
-    payload.receiptNumber = await generateReceiptNumber(req.academyId);
-  }
+export const getPendingFees = asyncHandler(async (req, res) => {
+  const { month, year } = getMonthYearFromQuery(req.query);
 
-  const feePayment = await FeePayment.create({
-    ...payload,
-    academy: req.academyId,
-    collectedBy: req.user._id,
-    updatedBy: req.user._id,
-  });
+  const students = await getActiveStudents(req.academyId, req.query);
 
-  return successResponse(
-    res,
-    "Fee payment created successfully",
-    { feePayment },
-    201
+  const data = await Promise.all(
+    students.map((student) =>
+      buildStudentFeeStatus({
+        academyId: req.academyId,
+        student,
+        month,
+        year,
+      })
+    )
   );
+
+  const pending = data.filter((item) =>
+    ["due", "partial", "overdue"].includes(item.status)
+  );
+
+  return successResponse(res, "Pending fees fetched successfully", {
+    month,
+    year,
+    students: pending,
+  });
 });
 
 export const getFeePayments = asyncHandler(async (req, res) => {
-  const filter = {};
-  if (req.academyId) filter.academy = req.academyId;
+  const query = {
+    academy: req.academyId,
+  };
 
-  if (req.query.student) filter.student = req.query.student;
-  if (req.query.status) filter.status = req.query.status;
-  if (req.query.month) filter.month = req.query.month;
+  if (req.query.student) query.student = req.query.student;
+  if (req.query.batch) query.batch = req.query.batch;
+  if (req.query.status) query.status = req.query.status;
+  if (req.query.paymentMode) query.paymentMode = req.query.paymentMode;
+  if (req.query.month) query.feeMonth = Number(req.query.month);
+  if (req.query.year) query.feeYear = Number(req.query.year);
 
-  const feePayments = await FeePayment.find(filter)
-    .sort({ createdAt: -1 })
-    .populate("student", "name studentCode phone batch")
-    .populate("feePlan", "name amount billingCycle");
+  const payments = await FeePayment.find(query)
+    .populate("student", "firstName lastName admissionNumber phone email")
+    .populate("batch", "batchName martialArt")
+    .populate("feePlan", "name monthlyAmount amount dueDay")
+    .sort({ paymentDate: -1, createdAt: -1 });
 
-  return successResponse(res, "Fee payments fetched successfully", {
-    feePayments,
-  });
+  return successResponse(res, "Fee payments fetched successfully", payments);
 });
 
 export const getStudentFeePayments = asyncHandler(async (req, res) => {
-  const student = await validateStudent({
-    academyId: req.academyId,
-    studentId: req.params.studentId,
-  });
+  const student = await Student.findOne({
+    _id: req.params.studentId,
+    academy: req.academyId,
+  }).populate("batch", "batchName martialArt isActive");
 
   if (!student) {
     return errorResponse(res, "Student not found", 404);
   }
 
-  const feePayments = await FeePayment.find({
+  const payments = await FeePayment.find({
     academy: req.academyId,
     student: student._id,
+    status: { $ne: "cancelled" },
   })
-    .sort({ createdAt: -1 })
-    .populate("feePlan", "name amount billingCycle");
+    .populate("batch", "batchName martialArt")
+    .populate("feePlan", "name monthlyAmount amount dueDay")
+    .sort({ feeYear: -1, feeMonth: -1, paymentDate: -1 });
+
+  const { month, year } = getMonthYearNow();
+  const currentStatus = await buildStudentFeeStatus({
+    academyId: req.academyId,
+    student,
+    month,
+    year,
+  });
 
   return successResponse(res, "Student fee history fetched successfully", {
     student,
-    feePayments,
+    currentStatus,
+    payments,
   });
 });
 
 export const getFeePaymentById = asyncHandler(async (req, res) => {
-  const filter = { _id: req.params.id };
-  if (req.academyId) filter.academy = req.academyId;
+  const payment = await FeePayment.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+  })
+    .populate("student", "firstName lastName admissionNumber phone email address")
+    .populate("batch", "batchName martialArt")
+    .populate("feePlan", "name monthlyAmount amount dueDay")
+    .populate("collectedBy", "name email");
 
-  const feePayment = await FeePayment.findOne(filter)
-    .populate("student", "name studentCode phone parentName parentPhone")
-    .populate("feePlan", "name amount billingCycle");
-
-  if (!feePayment) {
+  if (!payment) {
     return errorResponse(res, "Fee payment not found", 404);
   }
 
-  return successResponse(res, "Fee payment fetched successfully", {
-    feePayment,
-  });
+  return successResponse(res, "Fee payment fetched successfully", payment);
 });
 
 export const updateFeePayment = asyncHandler(async (req, res) => {
-  const filter = { _id: req.params.id };
-  if (req.academyId) filter.academy = req.academyId;
+  const payment = await FeePayment.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+  });
 
-  const feePayment = await FeePayment.findOne(filter);
-
-  if (!feePayment) {
+  if (!payment) {
     return errorResponse(res, "Fee payment not found", 404);
   }
 
-  const payload = buildPayload(req.body);
+  const allowedFields = [
+    "amount",
+    "discount",
+    "amountPaid",
+    "paymentDate",
+    "paymentMode",
+    "notes",
+    "note",
+    "dueDate",
+    "status",
+  ];
 
-  if (payload.student) {
-    const student = await validateStudent({
-      academyId: feePayment.academy,
-      studentId: payload.student,
-    });
-
-    if (!student) {
-      return errorResponse(res, "Student not found in your academy", 404);
+  allowedFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+      payment[field] = req.body[field];
     }
-  }
-
-  if (payload.feePlan) {
-    const feePlan = await validateFeePlan({
-      academyId: feePayment.academy,
-      feePlanId: payload.feePlan,
-    });
-
-    if (!feePlan) {
-      return errorResponse(res, "Fee plan not found in your academy", 404);
-    }
-  }
-
-  Object.assign(feePayment, payload, {
-    updatedBy: req.user._id,
   });
 
-  await feePayment.save();
+  payment.updatedBy = req.user._id;
 
-  return successResponse(res, "Fee payment updated successfully", {
-    feePayment,
-  });
+  await payment.save();
+
+  return successResponse(res, "Fee payment updated successfully", payment);
 });
 
 export const deleteFeePayment = asyncHandler(async (req, res) => {
-  const filter = { _id: req.params.id };
-  if (req.academyId) filter.academy = req.academyId;
+  const payment = await FeePayment.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+  });
 
-  const feePayment = await FeePayment.findOne(filter);
-
-  if (!feePayment) {
+  if (!payment) {
     return errorResponse(res, "Fee payment not found", 404);
   }
 
-  feePayment.status = "cancelled";
-  feePayment.updatedBy = req.user._id;
-  await feePayment.save();
+  payment.status = "cancelled";
+  payment.updatedBy = req.user._id;
 
-  return successResponse(res, "Fee payment cancelled successfully", {
-    feePayment,
-  });
+  await payment.save();
+
+  return successResponse(res, "Fee payment cancelled successfully", payment);
 });

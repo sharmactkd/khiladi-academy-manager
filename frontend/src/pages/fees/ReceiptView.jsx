@@ -1,68 +1,154 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { feePaymentApi } from "../../api/feeApi.js";
 
+const currency = (value) =>
+  `₹${Number(value || 0).toLocaleString("en-IN")}`;
+
+const getStudentName = (student) =>
+  `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
+
 const ReceiptView = () => {
   const { paymentId } = useParams();
+
   const [payment, setPayment] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchReceipt = async () => {
+    try {
+      setLoading(true);
+
+      const response = await feePaymentApi.getReceipt(paymentId);
+      setPayment(response.data?.data || null);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Receipt load nahi hui");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPayment = async () => {
-      try {
-        const response = await feePaymentApi.getById(paymentId);
-        setPayment(response.data?.data?.feePayment);
-      } catch (error) {
-        toast.error(error.response?.data?.message || "Receipt load nahi hui");
-      }
-    };
-
-    fetchPayment();
+    fetchReceipt();
   }, [paymentId]);
 
-  if (!payment) return <p>Loading receipt...</p>;
+  const handlePrint = () => {
+    window.print();
+  };
+
+  if (loading) return <p>Loading receipt...</p>;
+  if (!payment) return <p>Receipt not found.</p>;
 
   return (
     <div className="page">
-      <div className="page-header">
+      <div className="page-header no-print">
         <div>
           <h1>Fee Receipt</h1>
-          <p>{payment.receiptNumber || payment._id}</p>
+          <p>{payment.receiptNumber || "-"}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => window.print()}>
-          Print
-        </button>
+
+        <div className="actions">
+          <button className="btn btn-primary" onClick={handlePrint}>
+            Print Receipt
+          </button>
+
+          <button
+            className="btn"
+            onClick={() => toast("WhatsApp share placeholder hai")}
+          >
+            WhatsApp Share
+          </button>
+
+          <Link className="btn" to="/fees/payments">
+            Back
+          </Link>
+        </div>
       </div>
 
       <div className="card receipt-card">
-        <h2>KHILADI Academy Manager</h2>
-        <p>Fee Payment Receipt</p>
+        <div className="receipt-header">
+          <div>
+            <h2>KHILADI Academy Manager</h2>
+            <p>Official Fee Receipt</p>
+          </div>
+
+          <div>
+            <strong>Receipt No.</strong>
+            <p>{payment.receiptNumber || "-"}</p>
+          </div>
+        </div>
 
         <hr />
 
         <div className="details-grid">
-          <p><strong>Receipt No:</strong> {payment.receiptNumber || "-"}</p>
-          <p><strong>Student:</strong> {payment.student?.name || "-"}</p>
-          <p><strong>Student Code:</strong> {payment.student?.studentCode || "-"}</p>
-          <p><strong>Phone:</strong> {payment.student?.phone || "-"}</p>
-          <p><strong>Month:</strong> {payment.month}</p>
-          <p><strong>Fee Plan:</strong> {payment.feePlan?.name || "-"}</p>
-          <p><strong>Amount:</strong> ₹{payment.amount}</p>
-          <p><strong>Discount:</strong> ₹{payment.discount}</p>
-          <p><strong>Final Amount:</strong> ₹{payment.finalAmount}</p>
-          <p><strong>Status:</strong> {payment.status}</p>
-          <p><strong>Payment Mode:</strong> {payment.paymentMode}</p>
           <p>
-            <strong>Paid Date:</strong>{" "}
-            {payment.paidDate
-              ? new Date(payment.paidDate).toLocaleDateString()
+            <strong>Student:</strong> {getStudentName(payment.student) || "-"}
+          </p>
+          <p>
+            <strong>Admission No:</strong>{" "}
+            {payment.student?.admissionNumber || "-"}
+          </p>
+          <p>
+            <strong>Phone:</strong> {payment.student?.phone || "-"}
+          </p>
+          <p>
+            <strong>Batch:</strong> {payment.batch?.batchName || "-"}
+          </p>
+          <p>
+            <strong>Fee Month:</strong> {payment.feeMonth}/{payment.feeYear}
+          </p>
+          <p>
+            <strong>Payment Date:</strong>{" "}
+            {payment.paymentDate
+              ? new Date(payment.paymentDate).toLocaleDateString()
               : "-"}
+          </p>
+          <p>
+            <strong>Payment Mode:</strong> {payment.paymentMode || "-"}
+          </p>
+          <p>
+            <strong>Status:</strong> {payment.status || "-"}
           </p>
         </div>
 
-        <hr />
+        <div className="receipt-total-box">
+          <p>
+            <span>Monthly Fee</span>
+            <strong>{currency(payment.amount)}</strong>
+          </p>
+          <p>
+            <span>Discount</span>
+            <strong>{currency(payment.discount)}</strong>
+          </p>
+          <p>
+            <span>Final Payable</span>
+            <strong>{currency(payment.finalAmount)}</strong>
+          </p>
+          <p>
+            <span>Amount Paid</span>
+            <strong>{currency(payment.amountPaid)}</strong>
+          </p>
+          <p>
+            <span>Pending</span>
+            <strong>{currency(payment.pendingAmount)}</strong>
+          </p>
+        </div>
 
-        <p><strong>Note:</strong> {payment.note || "-"}</p>
+        <p>
+          <strong>Notes:</strong> {payment.notes || payment.note || "-"}
+        </p>
+
+        <div className="receipt-footer">
+          <div>
+            <p>Received By</p>
+            <strong>{payment.collectedBy?.name || "-"}</strong>
+          </div>
+
+          <div>
+            <p>Authorized Signature</p>
+            <strong>________________</strong>
+          </div>
+        </div>
       </div>
     </div>
   );

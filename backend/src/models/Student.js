@@ -39,13 +39,13 @@ const studentSchema = new mongoose.Schema(
       index: true,
     },
 
-batch: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "Batch",
-  default: null,
-  index: true,
-},
-    
+    batch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      default: null,
+      index: true,
+    },
+
     admissionNumber: {
       type: String,
       trim: true,
@@ -132,6 +132,32 @@ batch: {
       index: true,
     },
 
+    monthlyFeeOverride: {
+      type: Number,
+      default: null,
+      min: [0, "Monthly fee override cannot be negative"],
+    },
+
+    feeDueDay: {
+      type: Number,
+      default: null,
+      min: [1, "Fee due day must be between 1 and 31"],
+      max: [31, "Fee due day must be between 1 and 31"],
+    },
+
+    scholarshipAmount: {
+      type: Number,
+      default: 0,
+      min: [0, "Scholarship amount cannot be negative"],
+    },
+
+    discountPercent: {
+      type: Number,
+      default: 0,
+      min: [0, "Discount percent cannot be negative"],
+      max: [100, "Discount percent cannot exceed 100"],
+    },
+
     profilePhoto: {
       type: String,
       default: "",
@@ -178,6 +204,11 @@ studentSchema.index(
 studentSchema.index({
   academy: 1,
   branch: 1,
+});
+
+studentSchema.index({
+  academy: 1,
+  batch: 1,
 });
 
 studentSchema.index({

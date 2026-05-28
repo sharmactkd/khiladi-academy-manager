@@ -37,6 +37,7 @@ router
 router
   .route("/:id")
   .get(feePlanIdValidator, validateRequest, getFeePlanById)
+  .put(updateFeePlanValidator, validateRequest, updateFeePlan)
   .patch(updateFeePlanValidator, validateRequest, updateFeePlan)
   .delete(feePlanIdValidator, validateRequest, deleteFeePlan);
 

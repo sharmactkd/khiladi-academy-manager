@@ -1,35 +1,103 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+
 import { feePaymentApi } from "../../api/feeApi.js";
 
+const currency = (value) =>
+  `₹${Number(value || 0).toLocaleString("en-IN")}`;
+
 const PendingFees = () => {
-  const [payments, setPayments] = useState([]);
+  const now = new Date();
+
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [filters, setFilters] = useState({
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+  });
+
+  const fetchPending = async () => {
+    try {
+      setLoading(true);
+
+      const response = await feePaymentApi.getPending(filters);
+
+      setStudents(response.data?.data?.students || []);
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          "Pending fees load nahi hui"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPending = async () => {
-      try {
-        const response = await feePaymentApi.getAll({ status: "pending" });
-        setPayments(response.data?.data?.feePayments || []);
-      } catch (error) {
-        toast.error(error.response?.data?.message || "Pending fees load nahi hui");
-      }
-    };
-
     fetchPending();
-  }, []);
+  }, [filters.month, filters.year]);
 
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Pending Fees</h1>
-          <p>Pending student payments</p>
+          <h1>Pending / Overdue Fees</h1>
+          <p>Due, partial aur overdue students list</p>
+        </div>
+
+        <Link className="btn btn-primary" to="/fees/collect">
+          Collect Fee
+        </Link>
+      </div>
+
+      <div className="card">
+        <div className="grid grid-2">
+          <label>
+            Month
+            <select
+              value={filters.month}
+              onChange={(event) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  month: Number(event.target.value),
+                }))
+              }
+            >
+              {Array.from({ length: 12 }, (_, index) => (
+                <option key={index + 1} value={index + 1}>
+                  {new Date(2000, index, 1).toLocaleString(
+                    "en-US",
+                    {
+                      month: "long",
+                    }
+                  )}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Year
+            <input
+              type="number"
+              value={filters.year}
+              onChange={(event) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  year: Number(event.target.value),
+                }))
+              }
+            />
+          </label>
         </div>
       </div>
 
       <div className="card">
-        {payments.length === 0 ? (
+        {loading ? (
+          <p>Loading pending fees...</p>
+        ) : students.length === 0 ? (
           <p>No pending fees found.</p>
         ) : (
           <div className="table-wrap">
@@ -38,32 +106,70 @@ const PendingFees = () => {
                 <tr>
                   <th>Student</th>
                   <th>Phone</th>
-                  <th>Month</th>
-                  <th>Amount</th>
+                  <th>Batch</th>
                   <th>Due Date</th>
-                  <th>Receipt</th>
+                  <th>Payable</th>
+                  <th>Paid</th>
+                  <th>Pending</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
+
               <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment._id}>
+                {students.map((item) => (
+                  <tr key={item.student?._id}>
                     <td>
-                      <Link to={`/fees/student/${payment.student?._id}`}>
-                        {payment.student?.name || "-"}
-                      </Link>
+                      {item.student?.name}
+                      <br />
+                      <small>
+                        {item.student?.admissionNumber}
+                      </small>
                     </td>
-                    <td>{payment.student?.phone || "-"}</td>
-                    <td>{payment.month}</td>
-                    <td>₹{payment.finalAmount}</td>
+
+                    <td>{item.student?.phone || "-"}</td>
+
                     <td>
-                      {payment.dueDate
-                        ? new Date(payment.dueDate).toLocaleDateString()
+                      {item.student?.batch?.batchName || "-"}
+                    </td>
+
+                    <td>
+                      {item.dueDate
+                        ? new Date(
+                            item.dueDate
+                          ).toLocaleDateString()
                         : "-"}
                     </td>
+
+                    <td>{currency(item.payableAmount)}</td>
+                    <td>{currency(item.paidAmount)}</td>
+                    <td>{currency(item.pendingAmount)}</td>
+
                     <td>
-                      <Link to={`/fees/receipt/${payment._id}`}>
-                        View
+                      <span
+                        className={`badge badge-${item.status}`}
+                      >
+                        {item.status}
+                      </span>
+                    </td>
+
+                    <td className="actions">
+                      <Link
+                        to={`/fees/collect?student=${item.student?._id}&month=${filters.month}&year=${filters.year}`}
+                      >
+                        Collect
                       </Link>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          toast(
+                            "Reminder feature placeholder hai"
+                          )
+                        }
+                      >
+                        Reminder
+                      </button>
                     </td>
                   </tr>
                 ))}

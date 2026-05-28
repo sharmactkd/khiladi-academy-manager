@@ -7,8 +7,10 @@ import ResetPassword from "../pages/auth/ResetPassword.jsx";
 
 import OwnerDashboard from "../pages/dashboard/OwnerDashboard.jsx";
 import CreateAcademy from "../pages/onboarding/CreateAcademy.jsx";
+
 import Users from "../pages/admin/Users.jsx";
 import AdminGrants from "../pages/admin/AdminGrants.jsx";
+
 import Unauthorized from "../pages/errors/Unauthorized.jsx";
 import NotFound from "../pages/errors/NotFound.jsx";
 
@@ -33,6 +35,8 @@ import CollectFee from "../pages/fees/CollectFee.jsx";
 import PendingFees from "../pages/fees/PendingFees.jsx";
 import StudentFeeHistory from "../pages/fees/StudentFeeHistory.jsx";
 import ReceiptView from "../pages/fees/ReceiptView.jsx";
+import AllStudentsFeeStatus from "../pages/fees/AllStudentsFeeStatus.jsx";
+import PaymentHistory from "../pages/fees/PaymentHistory.jsx";
 
 import BeltTests from "../pages/beltTests/BeltTests.jsx";
 import AddBeltTest from "../pages/beltTests/AddBeltTest.jsx";
@@ -73,18 +77,20 @@ import AnnouncementDetail from "../pages/announcements/AnnouncementDetail.jsx";
 import MyAnnouncements from "../pages/announcements/MyAnnouncements.jsx";
 
 import Notifications from "../pages/notifications/Notifications.jsx";
+
 import CommunicationLogs from "../pages/communication/CommunicationLogs.jsx";
+
 import FeeReminder from "../pages/reminders/FeeReminder.jsx";
 import AttendanceReminder from "../pages/reminders/AttendanceReminder.jsx";
 
 import Plans from "../pages/plans/Plans.jsx";
+
 import BillingDashboard from "../pages/billing/BillingDashboard.jsx";
 import Checkout from "../pages/billing/Checkout.jsx";
 import PaymentSuccess from "../pages/billing/PaymentSuccess.jsx";
 import PaymentFailed from "../pages/billing/PaymentFailed.jsx";
 import Invoices from "../pages/billing/Invoices.jsx";
 import InvoiceDetail from "../pages/billing/InvoiceDetail.jsx";
-import PaymentHistory from "../pages/billing/PaymentHistory.jsx";
 
 import Branches from "../pages/branches/Branches.jsx";
 import AddBranch from "../pages/branches/AddBranch.jsx";
@@ -106,6 +112,7 @@ import SkillAssessments from "../pages/skills/SkillAssessments.jsx";
 import StudentSkillProfile from "../pages/skills/StudentSkillProfile.jsx";
 
 import SmartTimeline from "../pages/smartTimeline/SmartTimeline.jsx";
+
 import StudentPerformance from "../pages/performance/StudentPerformance.jsx";
 
 import TournamentIntegration from "../pages/tournamentIntegration/TournamentIntegration.jsx";
@@ -116,153 +123,582 @@ import StudentTournamentHistory from "../pages/tournamentIntegration/StudentTour
 
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import RoleRoute from "./RoleRoute.jsx";
+
 import DashboardLayout from "../layouts/DashboardLayout.jsx";
 
-const managementRoles = ["super_admin", "academy_owner", "assistant_coach"];
-const ownerRoles = ["super_admin", "academy_owner"];
-const feeRoles = ["super_admin", "academy_owner"];
-const parentPortalRoles = ["parent", "student"];
-const billingRoles = ["super_admin", "academy_owner"];
+const managementRoles = [
+  "super_admin",
+  "academy_owner",
+  "assistant_coach",
+];
+
+const ownerRoles = [
+  "super_admin",
+  "academy_owner",
+];
+
+const feeRoles = [
+  "super_admin",
+  "academy_owner",
+];
+
+const parentPortalRoles = [
+  "parent",
+  "student",
+];
+
+const billingRoles = [
+  "super_admin",
+  "academy_owner",
+];
 
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="/"
+        element={<Navigate to="/dashboard" replace />}
+      />
 
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route
+        path="/forgot-password"
+        element={<ForgotPassword />}
+      />
+      <Route
+        path="/reset-password"
+        element={<ResetPassword />}
+      />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
-          <Route path="/dashboard" element={<OwnerDashboard />} />
+          <Route
+            path="/dashboard"
+            element={<OwnerDashboard />}
+          />
 
-          <Route element={<RoleRoute allowedRoles={billingRoles} />}>
+          {/* BILLING */}
+
+          <Route
+            element={
+              <RoleRoute allowedRoles={billingRoles} />
+            }
+          >
             <Route path="/plans" element={<Plans />} />
-            <Route path="/billing" element={<BillingDashboard />} />
-            <Route path="/billing/checkout/:planCode" element={<Checkout />} />
-            <Route path="/billing/success" element={<PaymentSuccess />} />
-            <Route path="/billing/failed" element={<PaymentFailed />} />
-            <Route path="/billing/invoices" element={<Invoices />} />
-            <Route path="/billing/invoices/:id" element={<InvoiceDetail />} />
-            <Route path="/billing/payments" element={<PaymentHistory />} />
+
+            <Route
+              path="/billing"
+              element={<BillingDashboard />}
+            />
+
+            <Route
+              path="/billing/checkout/:planCode"
+              element={<Checkout />}
+            />
+
+            <Route
+              path="/billing/success"
+              element={<PaymentSuccess />}
+            />
+
+            <Route
+              path="/billing/failed"
+              element={<PaymentFailed />}
+            />
+
+            <Route
+              path="/billing/invoices"
+              element={<Invoices />}
+            />
+
+            <Route
+              path="/billing/invoices/:id"
+              element={<InvoiceDetail />}
+            />
           </Route>
 
-          <Route path="/onboarding/create-academy" element={<CreateAcademy />} />
+          {/* ONBOARDING */}
 
-          <Route element={<RoleRoute allowedRoles={parentPortalRoles} />}>
-            <Route path="/parent" element={<ParentDashboard />} />
-            <Route path="/parent/students/:studentId" element={<ParentStudentProfile />} />
-            <Route path="/parent/students/:studentId/attendance" element={<ParentStudentAttendance />} />
-            <Route path="/parent/students/:studentId/fees" element={<ParentStudentFees />} />
-            <Route path="/parent/students/:studentId/progress" element={<ParentStudentProgress />} />
-            <Route path="/parent/students/:studentId/documents" element={<ParentStudentDocuments />} />
-            <Route path="/my-announcements" element={<MyAnnouncements />} />
+          <Route
+            path="/onboarding/create-academy"
+            element={<CreateAcademy />}
+          />
+
+          {/* PARENT PORTAL */}
+
+          <Route
+            element={
+              <RoleRoute
+                allowedRoles={parentPortalRoles}
+              />
+            }
+          >
+            <Route
+              path="/parent"
+              element={<ParentDashboard />}
+            />
+
+            <Route
+              path="/parent/students/:studentId"
+              element={<ParentStudentProfile />}
+            />
+
+            <Route
+              path="/parent/students/:studentId/attendance"
+              element={<ParentStudentAttendance />}
+            />
+
+            <Route
+              path="/parent/students/:studentId/fees"
+              element={<ParentStudentFees />}
+            />
+
+            <Route
+              path="/parent/students/:studentId/progress"
+              element={<ParentStudentProgress />}
+            />
+
+            <Route
+              path="/parent/students/:studentId/documents"
+              element={<ParentStudentDocuments />}
+            />
+
+            <Route
+              path="/my-announcements"
+              element={<MyAnnouncements />}
+            />
           </Route>
 
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/announcements/:id" element={<AnnouncementDetail />} />
+          {/* COMMON */}
 
-          <Route element={<RoleRoute allowedRoles={managementRoles} />}>
-            <Route path="/branches" element={<Branches />} />
-            <Route path="/branches/:id" element={<BranchDetail />} />
+          <Route
+            path="/notifications"
+            element={<Notifications />}
+          />
 
-            <Route path="/analytics" element={<AnalyticsDashboard />} />
-            <Route path="/analytics/students" element={<StudentAnalytics />} />
-            <Route path="/analytics/attendance" element={<AttendanceAnalytics />} />
-            <Route path="/analytics/performance" element={<PerformanceAnalytics />} />
+          <Route
+            path="/announcements/:id"
+            element={<AnnouncementDetail />}
+          />
 
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/reports/preview" element={<ReportPreview />} />
+          {/* MANAGEMENT */}
+
+          <Route
+            element={
+              <RoleRoute
+                allowedRoles={managementRoles}
+              />
+            }
+          >
+            {/* BRANCHES */}
+
+            <Route
+              path="/branches"
+              element={<Branches />}
+            />
+
+            <Route
+              path="/branches/:id"
+              element={<BranchDetail />}
+            />
+
+            {/* ANALYTICS */}
+
+            <Route
+              path="/analytics"
+              element={<AnalyticsDashboard />}
+            />
+
+            <Route
+              path="/analytics/students"
+              element={<StudentAnalytics />}
+            />
+
+            <Route
+              path="/analytics/attendance"
+              element={<AttendanceAnalytics />}
+            />
+
+            <Route
+              path="/analytics/fees"
+              element={<FeesAnalytics />}
+            />
+
+            <Route
+              path="/analytics/performance"
+              element={<PerformanceAnalytics />}
+            />
+
+            {/* REPORTS */}
+
+            <Route
+              path="/reports"
+              element={<Reports />}
+            />
+
+            <Route
+              path="/reports/preview"
+              element={<ReportPreview />}
+            />
+
+            {/* SKILLS */}
 
             <Route path="/skills" element={<Skills />} />
-            <Route path="/skill-assessments" element={<SkillAssessments />} />
 
-            <Route path="/students" element={<Students />} />
-            <Route path="/students/new" element={<AddStudent />} />
-            <Route path="/students/:id" element={<StudentProfile />} />
-            <Route path="/students/:id/edit" element={<EditStudent />} />
+            <Route
+              path="/skill-assessments"
+              element={<SkillAssessments />}
+            />
 
-            <Route path="/students/:studentId/skills" element={<StudentSkillProfile />} />
-            <Route path="/students/:studentId/smart-timeline" element={<SmartTimeline />} />
-            <Route path="/students/:studentId/performance" element={<StudentPerformance />} />
-            <Route path="/students/:studentId/tournament-history" element={<StudentTournamentHistory />} />
+            {/* STUDENTS */}
 
-            <Route path="/batches" element={<Batches />} />
-            <Route path="/batches/new" element={<AddBatch />} />
-            <Route path="/batches/:id" element={<BatchDetail />} />
-            <Route path="/batches/:id/edit" element={<EditBatch />} />
+            <Route
+              path="/students"
+              element={<Students />}
+            />
 
-            <Route path="/attendance" element={<AttendanceSheet />} />
-            <Route path="/attendance/monthly-register" element={<MonthlyAttendanceRegister />} />
-            <Route path="/attendance/student/:studentId" element={<StudentAttendanceHistory />} />
-            <Route path="/attendance/batch/:batchId" element={<BatchAttendanceHistory />} />
+            <Route
+              path="/students/new"
+              element={<AddStudent />}
+            />
 
-            <Route path="/belt-tests" element={<BeltTests />} />
-            <Route path="/belt-tests/new" element={<AddBeltTest />} />
-            <Route path="/belt-tests/:id/edit" element={<EditBeltTest />} />
-            <Route path="/students/:studentId/belt-history" element={<StudentBeltHistory />} />
+            <Route
+              path="/students/:id"
+              element={<StudentProfile />}
+            />
 
-            <Route path="/championship-records" element={<ChampionshipRecords />} />
-            <Route path="/championship-records/new" element={<AddChampionshipRecord />} />
-            <Route path="/championship-records/:id/edit" element={<EditChampionshipRecord />} />
-            <Route path="/students/:studentId/championship-history" element={<StudentChampionshipHistory />} />
+            <Route
+              path="/students/:id/edit"
+              element={<EditStudent />}
+            />
 
-            <Route path="/students/:studentId/timeline" element={<StudentTimeline />} />
+            <Route
+              path="/students/:studentId/skills"
+              element={<StudentSkillProfile />}
+            />
 
-            <Route path="/id-card-templates" element={<IdCardTemplates />} />
-            <Route path="/id-cards/generate" element={<GenerateIdCard />} />
-            <Route path="/id-cards/:id/print" element={<PrintIdCard />} />
-            <Route path="/students/:studentId/id-cards" element={<StudentIdCards />} />
+            <Route
+              path="/students/:studentId/smart-timeline"
+              element={<SmartTimeline />}
+            />
 
-            <Route path="/certificate-templates" element={<CertificateTemplates />} />
-            <Route path="/certificates/generate" element={<GenerateCertificate />} />
-            <Route path="/certificates/:id/print" element={<PrintCertificate />} />
-            <Route path="/students/:studentId/certificates" element={<StudentCertificates />} />
+            <Route
+              path="/students/:studentId/performance"
+              element={<StudentPerformance />}
+            />
 
-            <Route path="/parent-links" element={<ParentLinks />} />
-            <Route path="/parent-links/new" element={<CreateParentLink />} />
-            <Route path="/students/:studentId/parent-links" element={<StudentParentLinks />} />
+            <Route
+              path="/students/:studentId/tournament-history"
+              element={<StudentTournamentHistory />}
+            />
 
-            <Route path="/announcements" element={<Announcements />} />
-            <Route path="/announcements/new" element={<CreateAnnouncement />} />
+            {/* BATCHES */}
 
-            <Route path="/communication-logs" element={<CommunicationLogs />} />
-            <Route path="/reminders/attendance" element={<AttendanceReminder />} />
+            <Route
+              path="/batches"
+              element={<Batches />}
+            />
 
-            <Route path="/tournament-sync/entries/new" element={<SubmitTournamentEntry />} />
-            <Route path="/tournament-sync/entries" element={<SyncedTournamentEntries />} />
-            <Route path="/tournament-sync/results/import" element={<ImportTournamentResults />} />
+            <Route
+              path="/batches/new"
+              element={<AddBatch />}
+            />
+
+            <Route
+              path="/batches/:id"
+              element={<BatchDetail />}
+            />
+
+            <Route
+              path="/batches/:id/edit"
+              element={<EditBatch />}
+            />
+
+            {/* ATTENDANCE */}
+
+            <Route
+              path="/attendance"
+              element={<AttendanceSheet />}
+            />
+
+            <Route
+              path="/attendance/monthly-register"
+              element={<MonthlyAttendanceRegister />}
+            />
+
+            <Route
+              path="/attendance/student/:studentId"
+              element={<StudentAttendanceHistory />}
+            />
+
+            <Route
+              path="/attendance/batch/:batchId"
+              element={<BatchAttendanceHistory />}
+            />
+
+            {/* FEES */}
+
+            <Route
+              element={
+                <RoleRoute allowedRoles={feeRoles} />
+              }
+            >
+              <Route
+                path="/fees"
+                element={<FeesDashboard />}
+              />
+
+              <Route
+                path="/fees/students-status"
+                element={<AllStudentsFeeStatus />}
+              />
+
+              <Route
+                path="/fees/plans"
+                element={<FeePlans />}
+              />
+
+              <Route
+                path="/fees/collect"
+                element={<CollectFee />}
+              />
+
+              <Route
+                path="/fees/pending"
+                element={<PendingFees />}
+              />
+
+              <Route
+                path="/fees/payments"
+                element={<PaymentHistory />}
+              />
+
+              <Route
+                path="/fees/student/:studentId"
+                element={<StudentFeeHistory />}
+              />
+
+              <Route
+                path="/fees/receipt/:paymentId"
+                element={<ReceiptView />}
+              />
+
+              <Route
+                path="/reminders/fee"
+                element={<FeeReminder />}
+              />
+            </Route>
+
+            {/* BELT TESTS */}
+
+            <Route
+              path="/belt-tests"
+              element={<BeltTests />}
+            />
+
+            <Route
+              path="/belt-tests/new"
+              element={<AddBeltTest />}
+            />
+
+            <Route
+              path="/belt-tests/:id/edit"
+              element={<EditBeltTest />}
+            />
+
+            <Route
+              path="/students/:studentId/belt-history"
+              element={<StudentBeltHistory />}
+            />
+
+            {/* CHAMPIONSHIPS */}
+
+            <Route
+              path="/championship-records"
+              element={<ChampionshipRecords />}
+            />
+
+            <Route
+              path="/championship-records/new"
+              element={<AddChampionshipRecord />}
+            />
+
+            <Route
+              path="/championship-records/:id/edit"
+              element={<EditChampionshipRecord />}
+            />
+
+            <Route
+              path="/students/:studentId/championship-history"
+              element={<StudentChampionshipHistory />}
+            />
+
+            {/* TIMELINE */}
+
+            <Route
+              path="/students/:studentId/timeline"
+              element={<StudentTimeline />}
+            />
+
+            {/* ID CARDS */}
+
+            <Route
+              path="/id-card-templates"
+              element={<IdCardTemplates />}
+            />
+
+            <Route
+              path="/id-cards/generate"
+              element={<GenerateIdCard />}
+            />
+
+            <Route
+              path="/id-cards/:id/print"
+              element={<PrintIdCard />}
+            />
+
+            <Route
+              path="/students/:studentId/id-cards"
+              element={<StudentIdCards />}
+            />
+
+            {/* CERTIFICATES */}
+
+            <Route
+              path="/certificate-templates"
+              element={<CertificateTemplates />}
+            />
+
+            <Route
+              path="/certificates/generate"
+              element={<GenerateCertificate />}
+            />
+
+            <Route
+              path="/certificates/:id/print"
+              element={<PrintCertificate />}
+            />
+
+            <Route
+              path="/students/:studentId/certificates"
+              element={<StudentCertificates />}
+            />
+
+            {/* PARENT LINKS */}
+
+            <Route
+              path="/parent-links"
+              element={<ParentLinks />}
+            />
+
+            <Route
+              path="/parent-links/new"
+              element={<CreateParentLink />}
+            />
+
+            <Route
+              path="/students/:studentId/parent-links"
+              element={<StudentParentLinks />}
+            />
+
+            {/* ANNOUNCEMENTS */}
+
+            <Route
+              path="/announcements"
+              element={<Announcements />}
+            />
+
+            <Route
+              path="/announcements/new"
+              element={<CreateAnnouncement />}
+            />
+
+            {/* COMMUNICATION */}
+
+            <Route
+              path="/communication-logs"
+              element={<CommunicationLogs />}
+            />
+
+            <Route
+              path="/reminders/attendance"
+              element={<AttendanceReminder />}
+            />
+
+            {/* TOURNAMENT */}
+
+            <Route
+              path="/tournament-sync/entries/new"
+              element={<SubmitTournamentEntry />}
+            />
+
+            <Route
+              path="/tournament-sync/entries"
+              element={<SyncedTournamentEntries />}
+            />
+
+            <Route
+              path="/tournament-sync/results/import"
+              element={<ImportTournamentResults />}
+            />
           </Route>
 
-          <Route element={<RoleRoute allowedRoles={ownerRoles} />}>
-            <Route path="/branches/new" element={<AddBranch />} />
-            <Route path="/branches/:id/edit" element={<EditBranch />} />
-            <Route path="/skills/new" element={<AddSkill />} />
-            <Route path="/integrations/tournament" element={<TournamentIntegration />} />
+          {/* OWNER */}
+
+          <Route
+            element={
+              <RoleRoute allowedRoles={ownerRoles} />
+            }
+          >
+            <Route
+              path="/branches/new"
+              element={<AddBranch />}
+            />
+
+            <Route
+              path="/branches/:id/edit"
+              element={<EditBranch />}
+            />
+
+            <Route
+              path="/skills/new"
+              element={<AddSkill />}
+            />
+
+            <Route
+              path="/integrations/tournament"
+              element={<TournamentIntegration />}
+            />
           </Route>
 
-          <Route element={<RoleRoute allowedRoles={feeRoles} />}>
-            <Route path="/analytics/fees" element={<FeesAnalytics />} />
+          {/* SUPER ADMIN */}
 
-            <Route path="/fees" element={<FeesDashboard />} />
-            <Route path="/fees/plans" element={<FeePlans />} />
-            <Route path="/fees/collect" element={<CollectFee />} />
-            <Route path="/fees/pending" element={<PendingFees />} />
-            <Route path="/fees/student/:studentId" element={<StudentFeeHistory />} />
-            <Route path="/fees/receipt/:paymentId" element={<ReceiptView />} />
-            <Route path="/reminders/fee" element={<FeeReminder />} />
-          </Route>
+          <Route
+            element={
+              <RoleRoute
+                allowedRoles={["super_admin"]}
+              />
+            }
+          >
+            <Route
+              path="/admin/users"
+              element={<Users />}
+            />
 
-          <Route element={<RoleRoute allowedRoles={["super_admin"]} />}>
-            <Route path="/admin/users" element={<Users />} />
-            <Route path="/admin/grants" element={<AdminGrants />} />
+            <Route
+              path="/admin/grants"
+              element={<AdminGrants />}
+            />
           </Route>
         </Route>
       </Route>
 
-      <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route
+        path="/unauthorized"
+        element={<Unauthorized />}
+      />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

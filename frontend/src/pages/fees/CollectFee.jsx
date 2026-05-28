@@ -1,67 +1,134 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { studentApi } from "../../api/studentApi.js";
-import { feePlanApi, feePaymentApi } from "../../api/feeApi.js";
 
-const currentMonth = new Date().toISOString().slice(0, 7);
+import { studentApi } from "../../api/studentApi.js";
+import { feePaymentApi } from "../../api/feeApi.js";
+
+const paymentModes = [
+  "cash",
+  "upi",
+  "bank",
+  "card",
+  "online",
+  "other",
+];
+
+const monthOptions = Array.from({ length: 12 }, (_, index) => ({
+  value: index + 1,
+  label: new Date(2000, index, 1).toLocaleString("en-US", {
+    month: "long",
+  }),
+}));
+
+const currency = (value) =>
+  `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
 const CollectFee = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const now = new Date();
+
   const [students, setStudents] = useState([]);
-  const [plans, setPlans] = useState([]);
-  const { register, handleSubmit, reset, watch, setValue } = useForm({
+  const [saving, setSaving] = useState(false);
+  const [loadingStudents, setLoadingStudents] = useState(true);
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
-      month: currentMonth,
-      status: "paid",
-      paymentMode: "cash",
+      student: searchParams.get("student") || "",
+      feeMonth:
+        Number(searchParams.get("month")) || now.getMonth() + 1,
+      feeYear:
+        Number(searchParams.get("year")) || now.getFullYear(),
+      amount: "",
       discount: 0,
+      amountPaid: "",
+      paymentDate: new Date().toISOString().slice(0, 10),
+      paymentMode: "cash",
+      notes: "",
     },
   });
 
-  const selectedPlan = watch("feePlan");
+  const selectedStudentId = watch("student");
   const amount = Number(watch("amount") || 0);
   const discount = Number(watch("discount") || 0);
+  const amountPaid = Number(watch("amountPaid") || 0);
+
+  const finalPayable = Math.max(amount - discount, 0);
+  const pendingAmount = Math.max(finalPayable - amountPaid, 0);
+
+  const selectedStudent = useMemo(
+    () =>
+      students.find((student) => student._id === selectedStudentId),
+    [students, selectedStudentId]
+  );
+
+  const fetchStudents = async () => {
+    try {
+      setLoadingStudents(true);
+
+      const response = await studentApi.getAll({
+        status: "active",
+      });
+
+      const list = response.data?.data || [];
+      setStudents(Array.isArray(list) ? list : []);
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Students load nahi hue"
+      );
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [studentRes, planRes] = await Promise.all([
-          studentApi.getAll({ status: "active", limit: 100 }),
-          feePlanApi.getAll({ isActive: true }),
-        ]);
-
-        setStudents(studentRes.data?.data?.students || []);
-        setPlans(planRes.data?.data?.feePlans || []);
-      } catch {
-        toast.error("Students/fee plans load nahi hue");
-      }
-    };
-
-    fetchData();
+    fetchStudents();
   }, []);
 
   useEffect(() => {
-    const plan = plans.find((item) => item._id === selectedPlan);
-    if (plan) setValue("amount", plan.amount);
-  }, [selectedPlan, plans, setValue]);
+    if (!selectedStudent) return;
+
+    const overrideAmount =
+      Number(selectedStudent.monthlyFeeOverride || 0) || 0;
+
+    if (overrideAmount > 0) {
+      setValue("amount", overrideAmount);
+      setValue("amountPaid", overrideAmount);
+    }
+  }, [selectedStudent, setValue]);
 
   const onSubmit = async (values) => {
     try {
-      await feePaymentApi.create({
+      setSaving(true);
+
+      await feePaymentApi.collect({
         ...values,
         amount: Number(values.amount || 0),
         discount: Number(values.discount || 0),
+        amountPaid: Number(values.amountPaid || 0),
+        feeMonth: Number(values.feeMonth),
+        feeYear: Number(values.feeYear),
       });
 
-      toast.success("Fee collect ho gayi");
-      reset({
-        month: currentMonth,
-        status: "paid",
-        paymentMode: "cash",
-        discount: 0,
-      });
+      toast.success("Fee collected successfully");
+
+      navigate("/fees/payments");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Fee collect nahi hui");
+      toast.error(
+        error.response?.data?.message || "Fee collect nahi hui"
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -70,103 +137,183 @@ const CollectFee = () => {
       <div className="page-header">
         <div>
           <h1>Collect Fee</h1>
-          <p>Student fee payment record karein</p>
+          <p>Student fee collect karein aur receipt generate karein</p>
         </div>
+
+        <Link className="btn" to="/fees/payments">
+          Payment History
+        </Link>
       </div>
 
       <form className="card form" onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-3">
           <label>
-            Student
-            <select {...register("student", { required: true })}>
-              <option value="">Select Student</option>
-              {students.map((student) => (
-                <option key={student._id} value={student._id}>
-                  {student.name} - {student.studentCode}
+            Student *
+            <select
+              {...register("student", {
+                required: "Student required",
+              })}
+            >
+              <option value="">
+                {loadingStudents
+                  ? "Loading students..."
+                  : "Select Student"}
+              </option>
+
+              {students.map((student) => {
+                const fullName = `${student.firstName || ""} ${
+                  student.lastName || ""
+                }`.trim();
+
+                return (
+                  <option key={student._id} value={student._id}>
+                    {fullName} ({student.admissionNumber})
+                  </option>
+                );
+              })}
+            </select>
+
+            {errors.student && (
+              <small>{errors.student.message}</small>
+            )}
+          </label>
+
+          <label>
+            Month *
+            <select
+              {...register("feeMonth", {
+                required: "Month required",
+              })}
+            >
+              {monthOptions.map((month) => (
+                <option key={month.value} value={month.value}>
+                  {month.label}
                 </option>
               ))}
             </select>
           </label>
 
           <label>
-            Fee Plan
-            <select {...register("feePlan")}>
-              <option value="">No Plan</option>
-              {plans.map((plan) => (
-                <option key={plan._id} value={plan._id}>
-                  {plan.name} - ₹{plan.amount}
+            Year *
+            <input
+              type="number"
+              {...register("feeYear", {
+                required: "Year required",
+              })}
+            />
+          </label>
+
+          <label>
+            Monthly Fee *
+            <input
+              type="number"
+              step="0.01"
+              {...register("amount", {
+                required: "Amount required",
+                min: 0,
+              })}
+            />
+          </label>
+
+          <label>
+            Discount / Scholarship
+            <input
+              type="number"
+              step="0.01"
+              {...register("discount")}
+            />
+          </label>
+
+          <label>
+            Final Payable
+            <input value={currency(finalPayable)} disabled />
+          </label>
+
+          <label>
+            Amount Paid *
+            <input
+              type="number"
+              step="0.01"
+              {...register("amountPaid", {
+                required: "Amount paid required",
+                min: 0,
+              })}
+            />
+          </label>
+
+          <label>
+            Pending Amount
+            <input value={currency(pendingAmount)} disabled />
+          </label>
+
+          <label>
+            Payment Date *
+            <input
+              type="date"
+              {...register("paymentDate", {
+                required: "Payment date required",
+              })}
+            />
+          </label>
+
+          <label>
+            Payment Mode *
+            <select
+              {...register("paymentMode", {
+                required: "Payment mode required",
+              })}
+            >
+              {paymentModes.map((mode) => (
+                <option key={mode} value={mode}>
+                  {mode.toUpperCase()}
                 </option>
               ))}
             </select>
-          </label>
-
-          <label>
-            Month
-            <input type="month" {...register("month", { required: true })} />
-          </label>
-
-          <label>
-            Amount
-            <input type="number" min="0" {...register("amount")} />
-          </label>
-
-          <label>
-            Discount
-            <input type="number" min="0" {...register("discount")} />
-          </label>
-
-          <label>
-            Final Amount
-            <input value={Math.max(amount - discount, 0)} readOnly />
           </label>
 
           <label>
             Status
-            <select {...register("status")}>
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-              <option value="partial">Partial</option>
-              <option value="overdue">Overdue</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </label>
-
-          <label>
-            Payment Mode
-            <select {...register("paymentMode")}>
-              <option value="cash">Cash</option>
-              <option value="upi">UPI</option>
-              <option value="bank">Bank</option>
-              <option value="online">Online</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
-
-          <label>
-            Due Date
-            <input type="date" {...register("dueDate")} />
-          </label>
-
-          <label>
-            Paid Date
-            <input type="date" {...register("paidDate")} />
-          </label>
-
-          <label>
-            Receipt Number
             <input
-              placeholder="Auto generate if blank"
-              {...register("receiptNumber")}
+              disabled
+              value={
+                pendingAmount <= 0
+                  ? "Paid"
+                  : amountPaid > 0
+                    ? "Partial"
+                    : "Due"
+              }
+            />
+          </label>
+
+          <label>
+            Batch
+            <input
+              disabled
+              value={selectedStudent?.batch?.batchName || "-"}
             />
           </label>
         </div>
 
         <label>
-          Note
-          <textarea {...register("note")} />
+          Notes
+          <textarea {...register("notes")} />
         </label>
 
-        <button className="btn btn-primary">Save Payment</button>
+        <div className="form-actions">
+          <button
+            type="button"
+            onClick={() => reset()}
+          >
+            Reset
+          </button>
+
+          <button
+            className="btn btn-primary"
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Collect Fee"}
+          </button>
+        </div>
       </form>
     </div>
   );

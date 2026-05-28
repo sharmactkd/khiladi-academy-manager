@@ -1764,3 +1764,60 @@ button:disabled,
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
+
+.receipt-card {
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+.receipt-header,
+.receipt-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.receipt-total-box {
+  margin: 24px 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.receipt-total-box p {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.receipt-total-box p:last-child {
+  border-bottom: 0;
+}
+
+@media print {
+  .sidebar,
+  .topbar,
+  .no-print,
+  .page-header.no-print,
+  button,
+  a {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  .page {
+    padding: 0 !important;
+  }
+
+  .card,
+  .receipt-card {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
