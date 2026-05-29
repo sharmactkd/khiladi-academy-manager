@@ -19,6 +19,7 @@ const AddBatch = () => {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -27,7 +28,6 @@ const AddBatch = () => {
       monthlyFee: 0,
       quarterlyFee: 0,
       annualFee: 0,
-      feeDueDay: 10,
     },
   });
 
@@ -43,7 +43,6 @@ const AddBatch = () => {
         monthlyFee: Number(values.monthlyFee || 0),
         quarterlyFee: Number(values.quarterlyFee || 0),
         annualFee: Number(values.annualFee || 0),
-        feeDueDay: Number(values.feeDueDay || 10),
 
         schedule: (values.days || []).map((day) => ({
           day,
@@ -121,7 +120,7 @@ const AddBatch = () => {
             Student-specific fee override ho to wo priority lega.
           </p>
 
-          <div className="grid grid-4">
+          <div className="grid grid-3">
             <label>
               Monthly Fee
               <input
@@ -151,21 +150,69 @@ const AddBatch = () => {
                 {...register("annualFee")}
               />
             </label>
-
-            <label>
-              Fee Due Day
-              <input
-                type="number"
-                min="1"
-                max="31"
-                {...register("feeDueDay")}
-              />
-            </label>
           </div>
         </div>
 
         <div className="card subtle-card">
           <h3>Training Days</h3>
+
+          <div className="actions" style={{ marginBottom: "16px", flexWrap: "wrap" }}>
+            <button type="button" onClick={() => setValue("days", DAYS)}>
+              All Days
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setValue("days", [
+                  "monday",
+                  "tuesday",
+                  "wednesday",
+                  "thursday",
+                  "friday",
+                  "saturday",
+                ])
+              }
+            >
+              Week Days (Only Sunday off)
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setValue("days", [
+                  "monday",
+                  "tuesday",
+                  "wednesday",
+                  "thursday",
+                  "friday",
+                ])
+              }
+            >
+              Week Days (Saturday - Sunday off)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setValue("days", ["monday", "wednesday", "friday"])}
+            >
+              M W F
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setValue("days", ["tuesday", "thursday", "saturday"])
+              }
+            >
+              T T S
+            </button>
+
+            <button type="button" onClick={() => setValue("days", [])}>
+              Clear
+            </button>
+          </div>
+
           <div className="checkbox-grid">
             {DAYS.map((day) => (
               <label key={day}>

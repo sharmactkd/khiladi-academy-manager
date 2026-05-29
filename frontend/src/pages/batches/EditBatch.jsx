@@ -19,7 +19,13 @@ const EditBatch = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
 
-  const { register, handleSubmit, reset } = useForm({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
       batchName: "",
       martialArt: "",
@@ -28,6 +34,9 @@ const EditBatch = () => {
       maxStudents: 0,
       status: "active",
       days: [],
+      monthlyFee: 0,
+      quarterlyFee: 0,
+      annualFee: 0,
       notes: "",
     },
   });
@@ -51,6 +60,9 @@ const EditBatch = () => {
           maxStudents: batch.capacity || 0,
           status: batch.isActive ? "active" : "inactive",
           days: batch.schedule?.map((item) => item.day) || [],
+          monthlyFee: batch.monthlyFee || 0,
+          quarterlyFee: batch.quarterlyFee || 0,
+          annualFee: batch.annualFee || 0,
           notes: batch.notes || "",
         });
       } catch (error) {
@@ -71,6 +83,11 @@ const EditBatch = () => {
         capacity: Number(values.maxStudents || 0),
         isActive: values.status === "active",
         notes: values.notes || "",
+
+        monthlyFee: Number(values.monthlyFee || 0),
+        quarterlyFee: Number(values.quarterlyFee || 0),
+        annualFee: Number(values.annualFee || 0),
+
         schedule: (values.days || []).map((day) => ({
           day,
           startTime: values.startTime,
@@ -100,12 +117,22 @@ const EditBatch = () => {
         <div className="grid grid-2">
           <label>
             Batch Name
-            <input {...register("batchName", { required: true })} />
+            <input
+              {...register("batchName", {
+                required: "Batch name required",
+              })}
+            />
+            {errors.batchName && <small>{errors.batchName.message}</small>}
           </label>
 
           <label>
             Martial Art
-            <input {...register("martialArt", { required: true })} />
+            <input
+              {...register("martialArt", {
+                required: "Martial art required",
+              })}
+            />
+            {errors.martialArt && <small>{errors.martialArt.message}</small>}
           </label>
 
           <label>
@@ -133,7 +160,105 @@ const EditBatch = () => {
         </div>
 
         <div className="card subtle-card">
+          <h3>Batch Fees</h3>
+          <p>
+            Ye fees is batch ke sabhi students ke liye default use hogi.
+            Student-specific fee override ho to wo priority lega.
+          </p>
+
+          <div className="grid grid-3">
+            <label>
+              Monthly Fee
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                {...register("monthlyFee")}
+              />
+            </label>
+
+            <label>
+              Quarterly Fee
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                {...register("quarterlyFee")}
+              />
+            </label>
+
+            <label>
+              Annual Fee
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                {...register("annualFee")}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="card subtle-card">
           <h3>Training Days</h3>
+
+          <div className="actions" style={{ marginBottom: "16px", flexWrap: "wrap" }}>
+            <button type="button" onClick={() => setValue("days", DAYS)}>
+              All Days
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setValue("days", [
+                  "monday",
+                  "tuesday",
+                  "wednesday",
+                  "thursday",
+                  "friday",
+                  "saturday",
+                ])
+              }
+            >
+              Week Days (Only Sunday off)
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setValue("days", [
+                  "monday",
+                  "tuesday",
+                  "wednesday",
+                  "thursday",
+                  "friday",
+                ])
+              }
+            >
+              Week Days (Saturday - Sunday off)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setValue("days", ["monday", "wednesday", "friday"])}
+            >
+              M W F
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setValue("days", ["tuesday", "thursday", "saturday"])
+              }
+            >
+              T T S
+            </button>
+
+            <button type="button" onClick={() => setValue("days", [])}>
+              Clear
+            </button>
+          </div>
+
           <div className="checkbox-grid">
             {DAYS.map((day) => (
               <label key={day}>

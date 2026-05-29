@@ -39,10 +39,7 @@ const feeValidators = [
     .isFloat({ min: 0 })
     .withMessage("Annual fee must be a valid non-negative number"),
 
-  body("feeDueDay")
-    .optional()
-    .isInt({ min: 1, max: 31 })
-    .withMessage("Fee due day must be between 1 and 31"),
+ 
 ];
 
 export const batchIdValidator = [

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { feePaymentApi } from "../../api/feeApi.js";
 
@@ -7,6 +7,7 @@ const currency = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
 const FeesDashboard = () => {
+  const navigate = useNavigate();
   const now = new Date();
 
   const [filters, setFilters] = useState({
@@ -210,7 +211,13 @@ const FeesDashboard = () => {
 
                   <tbody>
                     {data.recentPayments.map((payment) => (
-                      <tr key={payment._id}>
+                      <tr
+                        key={payment._id}
+                        onClick={() =>
+                          payment._id && navigate(`/fees/receipt/${payment._id}`)
+                        }
+                        style={{ cursor: "pointer" }}
+                      >
                         <td>{payment.receiptNumber || "-"}</td>
                         <td>
                           {payment.studentName || "-"}
@@ -265,7 +272,14 @@ const FeesDashboard = () => {
 
                   <tbody>
                     {dueStudents.map((item) => (
-                      <tr key={item.student?._id}>
+                      <tr
+                        key={item.student?._id}
+                        onClick={() =>
+                          item.student?._id &&
+                          navigate(`/fees/student/${item.student._id}`)
+                        }
+                        style={{ cursor: "pointer" }}
+                      >
                         <td>
                           {item.student?.name || "-"}
                           <br />
@@ -285,7 +299,7 @@ const FeesDashboard = () => {
                             {item.status}
                           </span>
                         </td>
-                        <td>
+                        <td onClick={(event) => event.stopPropagation()}>
                           <Link
                             to={`/fees/collect?student=${item.student?._id}&month=${filters.month}&year=${filters.year}`}
                           >
@@ -326,7 +340,14 @@ const FeesDashboard = () => {
 
                   <tbody>
                     {paidStudents.map((item) => (
-                      <tr key={item.student?._id}>
+                      <tr
+                        key={item.student?._id}
+                        onClick={() =>
+                          item.student?._id &&
+                          navigate(`/fees/student/${item.student._id}`)
+                        }
+                        style={{ cursor: "pointer" }}
+                      >
                         <td>
                           {item.student?.name || "-"}
                           <br />
@@ -340,7 +361,7 @@ const FeesDashboard = () => {
                             : "-"}
                         </td>
                         <td>{item.paymentMode || "-"}</td>
-                        <td>
+                        <td onClick={(event) => event.stopPropagation()}>
                           {item.paymentId ? (
                             <Link to={`/fees/receipt/${item.paymentId}`}>
                               Receipt

@@ -1,242 +1,206 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { Trash2 } from "lucide-react";
 import { batchApi } from "../../api/batchApi.js";
 
-const DAYS = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-];
+const formatTime = (time) => {
+  if (!time) return "-";
 
-const EditBatch = () => {
-  const { id } = useParams();
+  const [hours, minutes] = time.split(":");
+
+  const date = new Date();
+  date.setHours(Number(hours));
+  date.setMinutes(Number(minutes));
+
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+const Batches = () => {
   const navigate = useNavigate();
+  const [batches, setBatches] = useState([]);
+  const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      batchName: "",
-      martialArt: "",
-      startTime: "",
-      endTime: "",
-      maxStudents: 0,
-      status: "active",
-      days: [],
-      monthlyFee: 0,
-      quarterlyFee: 0,
-      annualFee: 0,
-      feeDueDay: 10,
-      notes: "",
-    },
-  });
-
-  useEffect(() => {
-    const fetchBatch = async () => {
-      try {
-        const response = await batchApi.getById(id);
-        const batch = response.data?.data;
-
-        if (!batch) {
-          toast.error("Batch not found");
-          return;
-        }
-
-        reset({
-          batchName: batch.batchName || "",
-          martialArt: batch.martialArt || "",
-          startTime: batch.schedule?.[0]?.startTime || "",
-          endTime: batch.schedule?.[0]?.endTime || "",
-          maxStudents: batch.capacity || 0,
-          status: batch.isActive ? "active" : "inactive",
-          days: batch.schedule?.map((item) => item.day) || [],
-          monthlyFee: batch.monthlyFee || 0,
-          quarterlyFee: batch.quarterlyFee || 0,
-          annualFee: batch.annualFee || 0,
-          feeDueDay: batch.feeDueDay || 10,
-          notes: batch.notes || "",
-        });
-      } catch (error) {
-        toast.error(error.response?.data?.message || "Batch load nahi hua");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBatch();
-  }, [id, reset]);
-
-  const onSubmit = async (values) => {
+  const fetchBatches = async () => {
     try {
-      await batchApi.update(id, {
-        batchName: values.batchName,
-        martialArt: values.martialArt,
-        capacity: Number(values.maxStudents || 0),
-        isActive: values.status === "active",
-        notes: values.notes || "",
+      setLoading(true);
 
-        monthlyFee: Number(values.monthlyFee || 0),
-        quarterlyFee: Number(values.quarterlyFee || 0),
-        annualFee: Number(values.annualFee || 0),
-        feeDueDay: Number(values.feeDueDay || 10),
+      const response = await batchApi.getAll();
+      const list = response.data?.data || [];
 
-        schedule: (values.days || []).map((day) => ({
-          day,
-          startTime: values.startTime,
-          endTime: values.endTime,
-        })),
-      });
+      const filteredList =
+        status === "active"
+          ? list.filter((batch) => batch.isActive)
+          : status === "inactive"
+            ? list.filter((batch) => !batch.isActive)
+            : list;
 
-      toast.success("Batch update ho gaya");
-      navigate(`/batches/${id}`);
+      setBatches(filteredList);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Batch update nahi hua");
+      toast.error(error.response?.data?.message || "Batches load nahi hue");
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) return <p>Loading batch...</p>;
+  useEffect(() => {
+    fetchBatches();
+  }, [status]);
+
+  const handleToggleStatus = async (batch) => {
+    try {
+      if (batch.isActive) {
+        if (!window.confirm("Batch ko inactive karna hai?")) return;
+
+        await batchApi.remove(batch._id);
+        toast.success("Batch inactive ho gaya");
+      } else {
+        await batchApi.update(batch._id, {
+          isActive: true,
+        });
+        toast.success("Batch active ho gaya");
+      }
+
+      fetchBatches();
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Batch status update nahi hua"
+      );
+    }
+  };
+
+  const handleDelete = async (batch) => {
+    const confirmed = window.confirm(
+      `Kya aap sach me "${batch.batchName}" batch ko permanently delete karna chahte hain?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await batchApi.remove(batch._id);
+      toast.success("Batch delete ho gaya");
+      fetchBatches();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Batch delete nahi hua");
+    }
+  };
 
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Edit Batch</h1>
-          <p>Batch details update karein</p>
+          <h1>Batches</h1>
+          <p>Classes aur training batches manage karein</p>
         </div>
+
+      <div className="actions">
+  <Link className="btn btn-primary" to="/students/new">
+    Add Student
+  </Link>
+
+  <Link className="btn btn-primary" to="/batches/new">
+    Add Batch
+  </Link>
+</div>
       </div>
 
-      <form className="card form" onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-2">
-          <label>
-            Batch Name
-            <input
-              {...register("batchName", {
-                required: "Batch name required",
-              })}
-            />
-            {errors.batchName && <small>{errors.batchName.message}</small>}
-          </label>
+      <div className="card">
+        <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
 
-          <label>
-            Martial Art
-            <input
-              {...register("martialArt", {
-                required: "Martial art required",
-              })}
-            />
-            {errors.martialArt && <small>{errors.martialArt.message}</small>}
-          </label>
+      <div className="card">
+        {loading ? (
+          <p>Loading batches...</p>
+        ) : batches.length === 0 ? (
+          <p>No batches found.</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Batch</th>
+                  <th>Martial Art</th>
+                  <th>Days</th>
+                  <th>Time</th>
+                  <th>Students</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
 
-          <label>
-            Start Time
-            <input type="time" {...register("startTime")} />
-          </label>
+              <tbody>
+                {batches.map((batch) => (
+                  <tr
+                    key={batch._id}
+                    onClick={() => navigate(`/batches/${batch._id}`)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <td>{batch.batchName}</td>
+                    <td>{batch.martialArt}</td>
+                    <td>
+                      {batch.schedule?.map((item) => item.day).join(", ") ||
+                        "-"}
+                    </td>
+                  <td>
+  {formatTime(batch.schedule?.[0]?.startTime)} -{" "}
+  {formatTime(batch.schedule?.[0]?.endTime)}
+</td>
+                    <td>
+                      {batch.students?.length || 0} / {batch.capacity || 0}
+                    </td>
+                    <td>
+                      <span
+                        className={`badge badge-${
+                          batch.isActive ? "active" : "inactive"
+                        }`}
+                      >
+                        {batch.isActive ? "active" : "inactive"}
+                      </span>
+                    </td>
 
-          <label>
-            End Time
-            <input type="time" {...register("endTime")} />
-          </label>
+                    <td
+                      className="actions"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <Link to={`/batches/${batch._id}/edit`}>Edit</Link>
 
-          <label>
-            Max Students
-            <input type="number" min="0" {...register("maxStudents")} />
-          </label>
+                      <button
+                        type="button"
+                        className={`btn ${
+                          batch.isActive ? "btn-danger" : "btn-success"
+                        }`}
+                        onClick={() => handleToggleStatus(batch)}
+                      >
+                        {batch.isActive ? "Inactive" : "Active"}
+                      </button>
 
-          <label>
-            Status
-            <select {...register("status")}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="card subtle-card">
-          <h3>Batch Fees</h3>
-          <p>
-            Ye fees is batch ke sabhi students ke liye default use hogi.
-            Student-specific fee override ho to wo priority lega.
-          </p>
-
-          <div className="grid grid-4">
-            <label>
-              Monthly Fee
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                {...register("monthlyFee")}
-              />
-            </label>
-
-            <label>
-              Quarterly Fee
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                {...register("quarterlyFee")}
-              />
-            </label>
-
-            <label>
-              Annual Fee
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                {...register("annualFee")}
-              />
-            </label>
-
-            <label>
-              Fee Due Day
-              <input
-                type="number"
-                min="1"
-                max="31"
-                {...register("feeDueDay")}
-              />
-            </label>
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={() => handleDelete(batch)}
+                        title="Delete Batch"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-
-        <div className="card subtle-card">
-          <h3>Training Days</h3>
-          <div className="checkbox-grid">
-            {DAYS.map((day) => (
-              <label key={day}>
-                <input type="checkbox" value={day} {...register("days")} />
-                {day}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <label>
-          Notes
-          <textarea {...register("notes")} />
-        </label>
-
-        <div className="form-actions">
-          <button type="button" onClick={() => navigate(`/batches/${id}`)}>
-            Cancel
-          </button>
-          <button className="btn btn-primary">Update Batch</button>
-        </div>
-      </form>
+        )}
+      </div>
     </div>
   );
 };
 
-export default EditBatch;
+export default Batches;

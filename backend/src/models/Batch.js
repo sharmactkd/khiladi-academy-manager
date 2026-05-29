@@ -99,12 +99,7 @@ const batchSchema = new mongoose.Schema(
       min: [0, "Annual fee cannot be negative"],
     },
 
-    feeDueDay: {
-      type: Number,
-      default: 10,
-      min: [1, "Fee due day must be between 1 and 31"],
-      max: [31, "Fee due day must be between 1 and 31"],
-    },
+   
 
     isActive: {
       type: Boolean,

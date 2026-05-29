@@ -135,7 +135,7 @@ export const getStudents = asyncHandler(async (req, res) => {
 
   const students = await Student.find(query)
     .populate("branch", "branchName branchCode")
-    .populate("batch", "batchName martialArt isActive")
+  .populate("batch", "batchName martialArt isActive monthlyFee quarterlyFee annualFee")
     .sort({ createdAt: -1 });
 
   return successResponse(

@@ -34,6 +34,7 @@ const CollectFee = () => {
   const [students, setStudents] = useState([]);
   const [saving, setSaving] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(true);
+const studentIdFromUrl = searchParams.get("student") || "";
 
   const {
     register,
@@ -99,16 +100,28 @@ setStudents(Array.isArray(list) ? list : []);
   }, []);
 
   useEffect(() => {
-    if (!selectedStudent) return;
+  if (!studentIdFromUrl) return;
+  if (!students.length) return;
 
-    const overrideAmount =
-      Number(selectedStudent.monthlyFeeOverride || 0) || 0;
+  const exists = students.some(
+    (student) => student._id === studentIdFromUrl
+  );
 
-    if (overrideAmount > 0) {
-      setValue("amount", overrideAmount);
-      setValue("amountPaid", overrideAmount);
-    }
-  }, [selectedStudent, setValue]);
+  if (exists) {
+    setValue("student", studentIdFromUrl);
+  }
+}, [studentIdFromUrl, students, setValue]);
+  useEffect(() => {
+  if (!selectedStudent) return;
+
+  const studentFee = Number(selectedStudent.monthlyFeeOverride || 0);
+  const batchFee = Number(selectedStudent.batch?.monthlyFee || 0);
+
+  const finalMonthlyFee = studentFee > 0 ? studentFee : batchFee;
+
+  setValue("amount", finalMonthlyFee);
+  setValue("amountPaid", finalMonthlyFee);
+}, [selectedStudent, setValue]);
 
   const onSubmit = async (values) => {
     try {
