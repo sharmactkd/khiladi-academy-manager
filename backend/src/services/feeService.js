@@ -361,27 +361,31 @@ export const collectStudentFee = async ({
     return existing;
   }
 
-  return FeePayment.create({
-    academy: academyId,
-    student: student._id,
-    batch: student.batch?._id || student.batch || null,
-    feePlan: feeConfig.feePlan?._id || null,
-    feeMonth,
-    feeYear,
-    month: buildFeeMonthKey(feeMonth, feeYear),
-    amount,
-    discount,
-    finalAmount,
-    amountPaid,
-    pendingAmount: Math.max(finalAmount - amountPaid, 0),
-    dueDate,
-    paymentDate: payload.paymentDate || new Date(),
-    paidDate: amountPaid >= finalAmount ? payload.paymentDate || new Date() : null,
-    paymentMode: payload.paymentMode || "cash",
-    receiptNumber,
-    notes: payload.notes || payload.note || "",
-    note: payload.notes || payload.note || "",
-    collectedBy: userId,
-    updatedBy: userId,
-  });
+ const feePayment = new FeePayment({
+  academy: academyId,
+  student: student._id,
+  batch: student.batch?._id || student.batch || null,
+  feePlan: feeConfig.feePlan?._id || null,
+  feeMonth,
+  feeYear,
+  month: buildFeeMonthKey(feeMonth, feeYear),
+  amount,
+  discount,
+  finalAmount,
+  amountPaid,
+  pendingAmount: Math.max(finalAmount - amountPaid, 0),
+  dueDate,
+  paymentDate: payload.paymentDate || new Date(),
+  paidDate: amountPaid >= finalAmount ? payload.paymentDate || new Date() : null,
+  paymentMode: payload.paymentMode || "cash",
+  receiptNumber,
+  notes: payload.notes || payload.note || "",
+  note: payload.notes || payload.note || "",
+  collectedBy: userId,
+  updatedBy: userId,
+});
+
+await feePayment.save();
+
+return feePayment;
 };

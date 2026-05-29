@@ -208,18 +208,19 @@ const students = await Student.find({
     const attendance = attendanceByStudent.get(String(student._id)) || {};
     const counts = calculateCounts(attendance);
 
-    return {
-      no: index + 1,
-      studentId: student._id,
-      admissionNumber: student.admissionNumber || "",
-      name: getStudentName(student),
-      contact: student.phone || "-",
-      feeDueDate: student.joiningDate || student.createdAt || null,
-      feePaid: fee?.amountPaid ?? fee?.amount ?? 0,
-      feeStatus: fee?.status || "due",
-      attendance,
-      ...counts,
-    };
+  return {
+  no: index + 1,
+  studentId: student._id,
+  admissionNumber: student.admissionNumber || "",
+  name: getStudentName(student),
+  contact: student.phone || "-",
+  feeDueDate: student.joiningDate || student.createdAt || null,
+  feePaidDate: fee?.paidDate || fee?.paymentDate || null,
+  feePaid: fee?.amountPaid ?? fee?.amount ?? 0,
+  feeStatus: fee?.status || "due",
+  attendance,
+  ...counts,
+};
   });
 
   return {

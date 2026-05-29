@@ -127,25 +127,36 @@ setStudents(Array.isArray(list) ? list : []);
     try {
       setSaving(true);
 
-      await feePaymentApi.collect({
-        ...values,
-        amount: Number(values.amount || 0),
-        discount: Number(values.discount || 0),
-        amountPaid: Number(values.amountPaid || 0),
-        feeMonth: Number(values.feeMonth),
-        feeYear: Number(values.feeYear),
-      });
+   await feePaymentApi.collect({
+  ...values,
+  amount: Number(values.amount || 0),
+  discount: Number(values.discount || 0),
+  amountPaid: Number(values.amountPaid || 0),
+  feeMonth: Number(values.feeMonth),
+  feeYear: Number(values.feeYear),
+  paymentDate: values.paymentDate
+    ? new Date(values.paymentDate).toISOString()
+    : new Date().toISOString(),
+});
 
       toast.success("Fee collected successfully");
 
       navigate("/fees/payments");
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Fee collect nahi hui"
-      );
-    } finally {
-      setSaving(false);
-    }
+   } catch (error) {
+  console.log("Collect fee error:", error.response?.data);
+
+  const details = error.response?.data?.data;
+
+  if (Array.isArray(details) && details.length > 0) {
+    toast.error(details.map((item) => item.message).join(", "));
+  } else {
+    toast.error(
+      error.response?.data?.message || "Fee collect nahi hui"
+    );
+  }
+} finally {
+  setSaving(false);
+}
   };
 
   return (

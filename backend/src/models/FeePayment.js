@@ -162,7 +162,7 @@ feePaymentSchema.index(
   { unique: true }
 );
 
-feePaymentSchema.pre("validate", function (next) {
+feePaymentSchema.pre("validate", function () {
   const amount = Number(this.amount || 0);
   const discount = Number(this.discount || 0);
   const amountPaid = Number(this.amountPaid || 0);
@@ -194,8 +194,6 @@ feePaymentSchema.pre("validate", function (next) {
       this.status = "due";
     }
   }
-
-  next();
 });
 
 const FeePayment = mongoose.model("FeePayment", feePaymentSchema);
