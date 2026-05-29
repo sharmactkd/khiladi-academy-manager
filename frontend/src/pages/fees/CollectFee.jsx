@@ -76,12 +76,15 @@ const CollectFee = () => {
     try {
       setLoadingStudents(true);
 
-      const response = await studentApi.getAll({
-        status: "active",
-      });
+     const response = await studentApi.getAll({
+  status: "active",
+});
 
-      const list = response.data?.data || [];
-      setStudents(Array.isArray(list) ? list : []);
+const list = Array.isArray(response?.data)
+  ? response.data
+  : response?.data?.students || response?.data?.data || [];
+
+setStudents(Array.isArray(list) ? list : []);
     } catch (error) {
       toast.error(
         error.response?.data?.message || "Students load nahi hue"

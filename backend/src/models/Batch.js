@@ -81,6 +81,31 @@ const batchSchema = new mongoose.Schema(
       min: 0,
     },
 
+    monthlyFee: {
+      type: Number,
+      default: 0,
+      min: [0, "Monthly fee cannot be negative"],
+    },
+
+    quarterlyFee: {
+      type: Number,
+      default: 0,
+      min: [0, "Quarterly fee cannot be negative"],
+    },
+
+    annualFee: {
+      type: Number,
+      default: 0,
+      min: [0, "Annual fee cannot be negative"],
+    },
+
+    feeDueDay: {
+      type: Number,
+      default: 10,
+      min: [1, "Fee due day must be between 1 and 31"],
+      max: [31, "Fee due day must be between 1 and 31"],
+    },
+
     isActive: {
       type: Boolean,
       default: true,
@@ -118,6 +143,11 @@ batchSchema.index({
 batchSchema.index({
   academy: 1,
   batchName: 1,
+});
+
+batchSchema.index({
+  academy: 1,
+  isActive: 1,
 });
 
 const Batch = mongoose.model("Batch", batchSchema);

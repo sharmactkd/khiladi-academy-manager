@@ -37,6 +37,7 @@ export const buildDueDate = (month, year, dueDay = 10) => {
 export const generateReceiptNumber = async (academyId) => {
   const year = new Date().getFullYear();
   const prefix = `KAM-${year}`;
+
   const count = await FeePayment.countDocuments({
     academy: academyId,
     receiptNumber: {
@@ -60,7 +61,7 @@ export const validateStudentInAcademy = async (academyId, studentId) => {
   return Student.findOne({
     _id: studentId,
     academy: academyId,
-  }).populate("batch", "batchName martialArt isActive");
+  }).populate("batch", "batchName martialArt isActive monthlyFee quarterlyFee annualFee feeDueDay");
 };
 
 export const validateBatchInAcademy = async (academyId, batchId) => {
@@ -111,20 +112,64 @@ export const getAcademyDefaultFeeAmount = async (academyId) => {
   );
 };
 
+export const getBatchMonthlyFeeAmount = async (student) => {
+  if (!student?.batch) return 0;
+
+  if (typeof student.batch === "object" && student.batch.monthlyFee !== undefined) {
+    return Number(student.batch.monthlyFee || 0);
+  }
+
+  const batch = await Batch.findOne({
+    _id: student.batch,
+    academy: student.academy,
+  }).select("monthlyFee");
+
+  return Number(batch?.monthlyFee || 0);
+};
+
+export const getBatchFeeDueDay = async (student) => {
+  if (!student?.batch) return null;
+
+  if (typeof student.batch === "object" && student.batch.feeDueDay !== undefined) {
+    return Number(student.batch.feeDueDay || 10);
+  }
+
+  const batch = await Batch.findOne({
+    _id: student.batch,
+    academy: student.academy,
+  }).select("feeDueDay");
+
+  return batch?.feeDueDay || null;
+};
+
 export const resolveStudentFeeConfig = async (student) => {
   const feePlan = await getActiveFeePlanForStudent(student);
   const academyDefaultAmount = await getAcademyDefaultFeeAmount(student.academy);
+  const batchMonthlyAmount = await getBatchMonthlyFeeAmount(student);
+  const batchDueDay = await getBatchFeeDueDay(student);
 
-  const baseAmount =
+  const hasStudentOverride =
     student.monthlyFeeOverride !== null &&
-    student.monthlyFeeOverride !== undefined
-      ? Number(student.monthlyFeeOverride || 0)
-      : feePlan
+    student.monthlyFeeOverride !== undefined &&
+    Number(student.monthlyFeeOverride) > 0;
+
+  const hasBatchFee = Number(batchMonthlyAmount || 0) > 0;
+
+  const hasFeePlanAmount =
+    feePlan &&
+    Number(feePlan.monthlyAmount || feePlan.amount || 0) > 0;
+
+  const baseAmount = hasStudentOverride
+    ? Number(student.monthlyFeeOverride || 0)
+    : hasBatchFee
+      ? Number(batchMonthlyAmount || 0)
+      : hasFeePlanAmount
         ? Number(feePlan.monthlyAmount || feePlan.amount || 0)
         : academyDefaultAmount;
 
   const dueDay =
     student.feeDueDay ||
+    batchDueDay ||
     feePlan?.dueDay ||
     10;
 
@@ -136,6 +181,7 @@ export const resolveStudentFeeConfig = async (student) => {
   return {
     feePlan,
     baseAmount,
+    batchMonthlyAmount,
     dueDay,
     scholarshipAmount,
     discountPercent,
@@ -242,6 +288,7 @@ export const buildStudentFeeStatus = async ({
     monthKey: buildFeeMonthKey(month, year),
     monthName: getMonthName(month),
     monthlyFee: feeConfig.baseAmount,
+    batchMonthlyFee: feeConfig.batchMonthlyAmount,
     discount: feeConfig.discount,
     payableAmount: feeConfig.finalAmount,
     paidAmount: paymentSummary.amountPaid,
