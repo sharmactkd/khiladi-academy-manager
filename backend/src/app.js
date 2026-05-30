@@ -76,6 +76,9 @@ if (!env.isProduction) {
   app.use(morgan("dev"));
 }
 
+
+app.use("/uploads", express.static("uploads"));
+
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { studentApi } from "../../api/studentApi.js";
+import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
 
 
 const getStudentName = (student) => {
@@ -9,24 +10,6 @@ const getStudentName = (student) => {
   return fullName || student?.name || "Student";
 };
 
-const getApiOrigin = () => {
-  const apiUrl =
-    import.meta.env.VITE_API_URL ||
-    import.meta.env.VITE_API_BASE_URL ||
-    "http://localhost:5000/api";
-
-  return apiUrl.replace(/\/api\/?$/, "").replace(/\/$/, "");
-};
-
-const getStudentPhotoUrl = (student) => {
-  const photo = student?.profilePhoto || student?.photo || "";
-
-  if (!photo) return "/default-avatar.png";
-
-  if (photo.startsWith("http")) return photo;
-
-  return `${getApiOrigin()}${photo.startsWith("/") ? photo : `/${photo}`}`;
-};
 
 const StudentProfile = () => {
   const { id } = useParams();
@@ -36,7 +19,7 @@ const StudentProfile = () => {
   useEffect(() => {
     const fetchStudent = async () => {
       try {
-     const response = await studentApi.getById(id);
+ const response = await studentApi.getById(id);
 
 console.log("Student Response:", response);
 console.log("Student Data:", response?.data);
@@ -88,12 +71,26 @@ setStudent(response?.data || null);
       <div className="card">
         <h2>Student Details</h2>
 
-<div className="student-profile-photo">
+<div
+  style={{
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: "24px",
+  }}
+>
   <img
     src={getStudentPhotoUrl(student)}
     alt={getStudentName(student)}
     onError={(event) => {
       event.currentTarget.src = "/default-avatar.png";
+    }}
+    style={{
+      width: "160px",
+      height: "200px",
+      objectFit: "cover",
+      borderRadius: "12px",
+      border: "1px solid #d1d5db",
+      background: "#fff",
     }}
   />
 </div>

@@ -1,5 +1,9 @@
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import {
+  getFileUrl,
+  getStudentPhotoUrl,
+} from "../../utils/fileUrl.js";
 
 const getStudentName = (student) => {
   const fullName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
@@ -8,10 +12,6 @@ const getStudentName = (student) => {
 
 const getStudentCode = (student) => {
   return student?.studentCode || student?.admissionNumber || "-";
-};
-
-const getStudentPhoto = (student) => {
-  return student?.profilePhoto || student?.photo || "";
 };
 
 const IdCardPreview = ({ idCard }) => {
@@ -38,7 +38,9 @@ const IdCardPreview = ({ idCard }) => {
 
   const student = idCard.student || {};
   const template = idCard.template || {};
-  const studentPhoto = getStudentPhoto(student);
+
+  const studentPhotoUrl = getStudentPhotoUrl(student, "");
+  const logoUrl = getFileUrl(template.logo, "");
 
   return (
     <div
@@ -49,18 +51,31 @@ const IdCardPreview = ({ idCard }) => {
       }}
     >
       <div className="id-card-header">
-        {template.logo ? <img src={template.logo} alt="Academy Logo" /> : null}
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt="Academy Logo"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        ) : null}
 
         <div>
           <h2>STUDENT ID CARD</h2>
-          
         </div>
       </div>
 
       <div className="id-card-body">
         <div className="id-card-photo">
-          {studentPhoto ? (
-            <img src={studentPhoto} alt={getStudentName(student)} />
+          {studentPhotoUrl ? (
+            <img
+              src={studentPhotoUrl}
+              alt={getStudentName(student)}
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
+            />
           ) : (
             "PHOTO"
           )}

@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
+import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
 
 const onlyDigits = (value) => String(value || "").replace(/\D/g, "");
 
@@ -21,13 +22,22 @@ const toDateInput = (value) => {
   return new Date(value).toISOString().slice(0, 10);
 };
 
+const appendFormDataValue = (formData, key, value) => {
+  if (value === undefined || value === null) return;
+  formData.append(key, value);
+};
+
 const EditStudent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [batches, setBatches] = useState([]);
+  const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState("");
 
   const { register, handleSubmit, reset, setValue } = useForm({
     defaultValues: {
@@ -61,7 +71,8 @@ const EditStudent = () => {
           batchApi.getAll(),
         ]);
 
-        const student = studentRes?.data || null;
+        const studentData = studentRes?.data || null;
+        setStudent(studentData);
 
         const batchList = Array.isArray(batchRes.data)
           ? batchRes.data
@@ -70,28 +81,34 @@ const EditStudent = () => {
         setBatches(batchList.filter((batch) => batch.isActive));
 
         reset({
-          admissionNumber: student?.admissionNumber || "",
-          name: `${student?.firstName || ""} ${student?.lastName || ""}`.trim(),
-          batch: student?.batch?._id || student?.batch || "",
-          status: student?.status || "active",
-          gender: student?.gender || "other",
-          dob: toDateInput(student?.dateOfBirth),
-          phone: formatPhone(student?.phone || ""),
-          email: student?.email || "",
-          parentName: student?.parentName || "",
-          parentPhone: formatPhone(student?.parentPhone || ""),
-          martialArt: student?.martialArt || "",
-          beltRank: student?.beltRank || "",
-          joiningDate: toDateInput(student?.joiningDate),
-          city: student?.city || "",
-          state: student?.state || "",
-          address: student?.address || "",
-          medicalNotes: student?.notes || "",
-          emergencyContactName: student?.emergencyContact?.name || "",
+          admissionNumber: studentData?.admissionNumber || "",
+          name: `${studentData?.firstName || ""} ${
+            studentData?.lastName || ""
+          }`.trim(),
+          batch: studentData?.batch?._id || studentData?.batch || "",
+          status: studentData?.status || "active",
+          gender: studentData?.gender || "other",
+          dob: toDateInput(studentData?.dateOfBirth),
+          phone: formatPhone(studentData?.phone || ""),
+          email: studentData?.email || "",
+          parentName: studentData?.parentName || "",
+          parentPhone: formatPhone(studentData?.parentPhone || ""),
+          martialArt: studentData?.martialArt || "",
+          beltRank: studentData?.beltRank || "",
+          joiningDate: toDateInput(studentData?.joiningDate),
+          city: studentData?.city || "",
+          state: studentData?.state || "",
+          address: studentData?.address || "",
+          medicalNotes: studentData?.notes || "",
+          emergencyContactName: studentData?.emergencyContact?.name || "",
           emergencyContactPhone: formatPhone(
-            student?.emergencyContact?.phone || ""
+            studentData?.emergencyContact?.phone || ""
           ),
         });
+
+        setProfilePhotoPreview(
+          studentData?.profilePhoto ? getStudentPhotoUrl(studentData) : ""
+        );
       } catch (error) {
         toast.error(error.response?.data?.message || "Student load nahi hua");
       } finally {
@@ -111,11 +128,38 @@ const EditStudent = () => {
     });
   };
 
+  const handleProfilePhotoChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setProfilePhoto(null);
+      setProfilePhotoPreview(student ? getStudentPhotoUrl(student) : "");
+      return;
+    }
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only JPG, PNG and WEBP image allowed");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Photo size 2MB se kam honi chahiye");
+      event.target.value = "";
+      return;
+    }
+
+    setProfilePhoto(file);
+    setProfilePhotoPreview(URL.createObjectURL(file));
+  };
+
   const onSubmit = async (values) => {
     try {
       setSaving(true);
 
-      const nameParts = String(values.name || "").trim().split(" ");
+      const nameParts = String(values.name || "").trim().split(/\s+/);
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ");
 
@@ -123,7 +167,7 @@ const EditStudent = () => {
         admissionNumber: values.admissionNumber,
         firstName,
         lastName,
-        batch: values.batch || null,
+        batch: values.batch || "",
         status: values.status || "active",
         gender: values.gender || "other",
         dateOfBirth: values.dob,
@@ -131,18 +175,26 @@ const EditStudent = () => {
         email: values.email || "",
         martialArt: values.martialArt || "Taekwondo",
         beltRank: values.beltRank || "",
-        joiningDate: values.joiningDate || undefined,
+        joiningDate: values.joiningDate || "",
         city: values.city || "",
         state: values.state || "",
         address: values.address || "",
         notes: values.medicalNotes || "",
-        emergencyContact: {
-          name: values.emergencyContactName || "",
-          phone: values.emergencyContactPhone || "",
-        },
+        emergencyContactName: values.emergencyContactName || "",
+        emergencyContactPhone: values.emergencyContactPhone || "",
       };
 
-      await studentApi.update(id, payload);
+      const formData = new FormData();
+
+      Object.entries(payload).forEach(([key, value]) => {
+        appendFormDataValue(formData, key, value);
+      });
+
+      if (profilePhoto) {
+        formData.append("profilePhoto", profilePhoto);
+      }
+
+      await studentApi.update(id, formData);
 
       toast.success("Student update ho gaya");
       navigate(`/students/${id}`);
@@ -212,6 +264,15 @@ const EditStudent = () => {
           </label>
 
           <label>
+            Passport Size Photo
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              onChange={handleProfilePhotoChange}
+            />
+          </label>
+
+          <label>
             Phone
             <input
               {...register("phone")}
@@ -268,6 +329,26 @@ const EditStudent = () => {
             <input {...register("state")} />
           </label>
         </div>
+
+        {profilePhotoPreview && (
+          <div className="card" style={{ maxWidth: "220px" }}>
+            <p style={{ marginTop: 0 }}>Photo Preview</p>
+            <img
+              src={profilePhotoPreview}
+              alt="Student preview"
+              onError={(event) => {
+                event.currentTarget.src = "/default-avatar.png";
+              }}
+              style={{
+                width: "120px",
+                height: "150px",
+                objectFit: "cover",
+                borderRadius: "8px",
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
+        )}
 
         <label>
           Address
