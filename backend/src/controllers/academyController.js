@@ -14,9 +14,15 @@ const SAFE_ACADEMY_UPDATE_FIELDS = [
   "city",
   "state",
   "country",
+  "pincode",
   "branchesEnabled",
   "settings",
 ];
+
+const getUploadedFilePath = (file) => {
+  if (!file) return "";
+  return `/${file.path.replace(/\\/g, "/")}`;
+};
 
 const buildSafeUpdatePayload = (body) => {
   const payload = {};
@@ -68,11 +74,13 @@ export const createAcademy = asyncHandler(async (req, res) => {
     return errorResponse(res, "This owner already has an academy", 409);
   }
 
+  const logo = getUploadedFilePath(req.file) || req.body.logo || "";
+
   const academy = await Academy.create({
     owner: ownerId,
     academyName: req.body.academyName,
     martialArts: req.body.martialArts,
-    logo: req.body.logo,
+    logo,
     countryCode: req.body.countryCode || "+91",
     phone: req.body.phone,
     email: req.body.email,
@@ -80,6 +88,7 @@ export const createAcademy = asyncHandler(async (req, res) => {
     city: req.body.city,
     state: req.body.state,
     country: req.body.country || "India",
+    pincode: req.body.pincode,
     branchesEnabled: req.body.branchesEnabled,
     settings: req.body.settings,
   });
@@ -120,6 +129,10 @@ export const updateMyAcademy = asyncHandler(async (req, res) => {
   }
 
   const safePayload = buildSafeUpdatePayload(req.body);
+
+  if (req.file) {
+    safePayload.logo = getUploadedFilePath(req.file);
+  }
 
   Object.assign(academy, safePayload);
 

@@ -1,6 +1,19 @@
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 
+const getStudentName = (student) => {
+  const fullName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
+  return student?.name || fullName || "-";
+};
+
+const getStudentCode = (student) => {
+  return student?.studentCode || student?.admissionNumber || "-";
+};
+
+const getStudentPhoto = (student) => {
+  return student?.profilePhoto || student?.photo || "";
+};
+
 const IdCardPreview = ({ idCard }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState("");
 
@@ -25,6 +38,7 @@ const IdCardPreview = ({ idCard }) => {
 
   const student = idCard.student || {};
   const template = idCard.template || {};
+  const studentPhoto = getStudentPhoto(student);
 
   return (
     <div
@@ -36,23 +50,28 @@ const IdCardPreview = ({ idCard }) => {
     >
       <div className="id-card-header">
         {template.logo ? <img src={template.logo} alt="Academy Logo" /> : null}
+
         <div>
           <h2>STUDENT ID CARD</h2>
-          <p>{template.templateName || "Academy ID Card"}</p>
+          
         </div>
       </div>
 
       <div className="id-card-body">
         <div className="id-card-photo">
-          {student.photo ? <img src={student.photo} alt={student.name} /> : "PHOTO"}
+          {studentPhoto ? (
+            <img src={studentPhoto} alt={getStudentName(student)} />
+          ) : (
+            "PHOTO"
+          )}
         </div>
 
         <div className="id-card-details">
-          <h3>{student.name}</h3>
-          <p>Code: {student.studentCode || "-"}</p>
+          <h3>{getStudentName(student)}</h3>
+          <p>Code: {getStudentCode(student)}</p>
           <p>Belt: {student.beltRank || "-"}</p>
           <p>Phone: {student.phone || "-"}</p>
-          <p>Card No: {idCard.cardNumber}</p>
+          <p>Card No: {idCard.cardNumber || "-"}</p>
           <p>
             Valid Till:{" "}
             {idCard.validTill
@@ -64,7 +83,7 @@ const IdCardPreview = ({ idCard }) => {
 
       <div className="id-card-footer">
         {qrCodeUrl ? <img src={qrCodeUrl} alt="QR Code" /> : null}
-        <span>Status: {idCard.status}</span>
+        <span>Status: {idCard.status || "-"}</span>
       </div>
     </div>
   );

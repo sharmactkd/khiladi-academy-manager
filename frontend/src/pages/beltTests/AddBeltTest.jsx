@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { beltTestApi } from "../../api/beltTestApi.js";
 import { studentApi } from "../../api/studentApi.js";
 
@@ -15,29 +15,84 @@ const initialForm = {
   certificateUrl: "",
 };
 
+const normalizeList = (response, nestedKey) => {
+  const data = response?.data;
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.data?.[nestedKey])) return data.data[nestedKey];
+  if (Array.isArray(data?.[nestedKey])) return data[nestedKey];
+
+  return [];
+};
+
+const getStudentName = (student) => {
+  const fullName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
+  return student.name || fullName || "Student";
+};
+
+const getStudentCode = (student) =>
+  student.studentCode || student.admissionNumber || "-";
+
 const AddBeltTest = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const studentIdFromUrl = searchParams.get("student") || "";
 
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState({
+    ...initialForm,
+    student: studentIdFromUrl,
+  });
   const [students, setStudents] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const selectedStudent = useMemo(() => {
+    return students.find((student) => student._id === form.student) || null;
+  }, [students, form.student]);
+
   useEffect(() => {
     const loadStudents = async () => {
       try {
-        const response = await studentApi.getAll({ limit: 100, status: "active" });
-        setStudents(response.data?.data?.students || []);
+        const response = await studentApi.getAll({});
+        const list = normalizeList(response, "students");
+
+        setStudents(list);
+
+        if (studentIdFromUrl) {
+          const matchedStudent = list.find(
+            (student) => String(student._id) === String(studentIdFromUrl)
+          );
+
+          setForm((prev) => ({
+            ...prev,
+            student: studentIdFromUrl,
+            currentBelt: matchedStudent?.beltRank || prev.currentBelt || "",
+          }));
+        }
       } catch {
         setStudents([]);
       }
     };
 
     loadStudents();
-  }, []);
+  }, [studentIdFromUrl]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+
+    if (name === "student") {
+      const nextStudent = students.find((student) => student._id === value);
+
+      setForm((prev) => ({
+        ...prev,
+        student: value,
+        currentBelt: nextStudent?.beltRank || "",
+      }));
+
+      return;
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -48,7 +103,13 @@ const AddBeltTest = () => {
       setSaving(true);
       setError("");
 
-      await beltTestApi.create(form);
+      await beltTestApi.create({
+        ...form,
+        testDate: form.testDate
+          ? new Date(form.testDate).toISOString()
+          : new Date().toISOString(),
+      });
+
       alert("Belt test created successfully");
       navigate("/belt-tests");
     } catch (err) {
@@ -72,11 +133,16 @@ const AddBeltTest = () => {
       <form className="card form-grid" onSubmit={handleSubmit}>
         <label>
           Student
-          <select name="student" value={form.student} onChange={handleChange} required>
+          <select
+            name="student"
+            value={form.student}
+            onChange={handleChange}
+            required
+          >
             <option value="">Select Student</option>
             {students.map((student) => (
               <option key={student._id} value={student._id}>
-                {student.name} ({student.studentCode})
+                {getStudentName(student)} ({getStudentCode(student)})
               </option>
             ))}
           </select>
@@ -88,6 +154,7 @@ const AddBeltTest = () => {
             name="currentBelt"
             value={form.currentBelt}
             onChange={handleChange}
+            placeholder={selectedStudent?.beltRank || ""}
             required
           />
         </label>

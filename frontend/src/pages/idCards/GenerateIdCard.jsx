@@ -4,6 +4,26 @@ import { studentApi } from "../../api/studentApi.js";
 import { idCardApi, idCardTemplateApi } from "../../api/idCardApi.js";
 import IdCardPreview from "../../components/idCards/IdCardPreview.jsx";
 
+const normalizeList = (response, key) => {
+  const data = response?.data;
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.data?.[key])) return data.data[key];
+  if (Array.isArray(data?.[key])) return data[key];
+
+  return [];
+};
+
+const getStudentName = (student) => {
+  const fullName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
+  return student.name || fullName || "Student";
+};
+
+const getStudentCode = (student) => {
+  return student.studentCode || student.admissionNumber || "-";
+};
+
 const GenerateIdCard = () => {
   const navigate = useNavigate();
 
@@ -19,13 +39,17 @@ const GenerateIdCard = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      const [studentResponse, templateResponse] = await Promise.all([
-        studentApi.getAll({ limit: 100, status: "active" }),
-        idCardTemplateApi.getAll(),
-      ]);
+      try {
+        const [studentResponse, templateResponse] = await Promise.all([
+          studentApi.getAll({ status: "active" }),
+          idCardTemplateApi.getAll(),
+        ]);
 
-      setStudents(studentResponse.data?.data?.students || []);
-      setTemplates(templateResponse.data?.data?.templates || []);
+        setStudents(normalizeList(studentResponse, "students"));
+        setTemplates(normalizeList(templateResponse, "templates"));
+      } catch (error) {
+        alert(error.response?.data?.message || "ID card data load nahi hua");
+      }
     };
 
     loadData();
@@ -63,11 +87,17 @@ const GenerateIdCard = () => {
       <form className="card form-grid" onSubmit={handleGenerate}>
         <label>
           Student
-          <select name="student" value={form.student} onChange={handleChange} required>
+          <select
+            name="student"
+            value={form.student}
+            onChange={handleChange}
+            required
+          >
             <option value="">Select Student</option>
+
             {students.map((student) => (
               <option key={student._id} value={student._id}>
-                {student.name} ({student.studentCode})
+                {getStudentName(student)} ({getStudentCode(student)})
               </option>
             ))}
           </select>
@@ -82,9 +112,10 @@ const GenerateIdCard = () => {
             required
           >
             <option value="">Select Template</option>
+
             {templates.map((template) => (
               <option key={template._id} value={template._id}>
-                {template.templateName}
+                {template.templateName || template.name || "Template"}
               </option>
             ))}
           </select>

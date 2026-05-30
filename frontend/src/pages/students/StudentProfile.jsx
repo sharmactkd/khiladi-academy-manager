@@ -9,6 +9,25 @@ const getStudentName = (student) => {
   return fullName || student?.name || "Student";
 };
 
+const getApiOrigin = () => {
+  const apiUrl =
+    import.meta.env.VITE_API_URL ||
+    import.meta.env.VITE_API_BASE_URL ||
+    "http://localhost:5000/api";
+
+  return apiUrl.replace(/\/api\/?$/, "").replace(/\/$/, "");
+};
+
+const getStudentPhotoUrl = (student) => {
+  const photo = student?.profilePhoto || student?.photo || "";
+
+  if (!photo) return "/default-avatar.png";
+
+  if (photo.startsWith("http")) return photo;
+
+  return `${getApiOrigin()}${photo.startsWith("/") ? photo : `/${photo}`}`;
+};
+
 const StudentProfile = () => {
   const { id } = useParams();
   const [student, setStudent] = useState(null);
@@ -17,8 +36,12 @@ const StudentProfile = () => {
   useEffect(() => {
     const fetchStudent = async () => {
       try {
-        const response = await studentApi.getById(id);
-        setStudent(response?.data || null);
+     const response = await studentApi.getById(id);
+
+console.log("Student Response:", response);
+console.log("Student Data:", response?.data);
+
+setStudent(response?.data || null);
       } catch (error) {
         toast.error(error.response?.data?.message || "Student load nahi hua");
       } finally {
@@ -64,6 +87,16 @@ const StudentProfile = () => {
 
       <div className="card">
         <h2>Student Details</h2>
+
+<div className="student-profile-photo">
+  <img
+    src={getStudentPhotoUrl(student)}
+    alt={getStudentName(student)}
+    onError={(event) => {
+      event.currentTarget.src = "/default-avatar.png";
+    }}
+  />
+</div>
 
         <div className="details-grid">
           <p>

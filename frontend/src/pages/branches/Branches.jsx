@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getBranches, deleteBranch } from "../../api/branchApi";
 
 const Branches = () => {
+  const navigate = useNavigate();
+
   const [branches, setBranches] = useState([]);
   const [filters, setFilters] = useState({ search: "", status: "active" });
   const [loading, setLoading] = useState(false);
@@ -104,17 +106,21 @@ const Branches = () => {
             <tbody>
               {branches.length ? (
                 branches.map((branch) => (
-                  <tr key={branch._id}>
+                  <tr
+                    key={branch._id}
+                    onClick={() => navigate(`/branches/${branch._id}`)}
+                    style={{ cursor: "pointer" }}
+                  >
                     <td>{branch.branchName}</td>
                     <td>{branch.branchCode}</td>
                     <td>{branch.city || "-"}</td>
                     <td>{branch.phone || "-"}</td>
                     <td>{branch.isMainBranch ? "Yes" : "No"}</td>
                     <td>{branch.isActive ? "Active" : "Inactive"}</td>
-                    <td>
+                    <td onClick={(event) => event.stopPropagation()}>
                       <div className="table-actions">
-                        <Link to={`/branches/${branch._id}`}>View</Link>
                         <Link to={`/branches/${branch._id}/edit`}>Edit</Link>
+
                         {branch.isActive ? (
                           <button
                             type="button"

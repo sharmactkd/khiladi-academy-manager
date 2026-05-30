@@ -16,10 +16,24 @@ const formatPhone = (value) => {
   return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
 };
 
+const appendFormDataValue = (formData, key, value) => {
+  if (value === undefined || value === null) return;
+
+  if (typeof value === "object" && !(value instanceof File)) {
+    formData.append(key, JSON.stringify(value));
+    return;
+  }
+
+  formData.append(key, value);
+};
+
 const AddStudent = () => {
   const navigate = useNavigate();
+
   const [batches, setBatches] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState("");
 
   const {
     register,
@@ -41,8 +55,10 @@ const AddStudent = () => {
       try {
         const response = await batchApi.getAll();
 
-        const list = response.data?.data || [];
-        const activeBatches = list.filter((batch) => batch.isActive);
+        const list = response.data?.data || response.data?.data?.batches || [];
+        const activeBatches = Array.isArray(list)
+          ? list.filter((batch) => batch.isActive)
+          : [];
 
         setBatches(activeBatches);
       } catch {
@@ -62,48 +78,83 @@ const AddStudent = () => {
     });
   };
 
-const onSubmit = async (values) => {
-  try {
-    setSaving(true);
+  const handleProfilePhotoChange = (event) => {
+    const file = event.target.files?.[0] || null;
 
-    const nameParts = String(values.name || "").trim().split(" ");
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ");
+    if (!file) {
+      setProfilePhoto(null);
+      setProfilePhotoPreview("");
+      return;
+    }
 
- const payload = {
-  admissionNumber: values.admissionNumber,
-  firstName,
-  lastName,
-  gender: values.gender,
-  dateOfBirth: values.dob,
-  batch: values.batch || undefined,
-  phone: values.phone || "",
-  email: values.email || "",
-  address: values.address || "",
-  city: values.city || "",
-  state: values.state || "",
-  martialArt: values.martialArt || "Taekwondo",
-  beltRank: values.beltRank || "",
-  joiningDate: values.joiningDate || undefined,
-  status: values.status || "active",
-  emergencyContact: {
-    name: values.emergencyContactName || "",
-    phone: values.emergencyContactPhone || "",
-  },
-  notes: values.medicalNotes || "",
-};
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
-    await studentApi.create(payload);
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only JPG, PNG and WEBP image allowed");
+      event.target.value = "";
+      return;
+    }
 
-    toast.success("Student add ho gaya");
-    navigate("/students");
-  } catch (error) {
-    toast.error(error.response?.data?.message || "Student add nahi hua");
-    console.log("Student create error:", error.response?.data);
-  } finally {
-    setSaving(false);
-  }
-};
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Photo size 2MB se kam honi chahiye");
+      event.target.value = "";
+      return;
+    }
+
+    setProfilePhoto(file);
+    setProfilePhotoPreview(URL.createObjectURL(file));
+  };
+
+  const onSubmit = async (values) => {
+    try {
+      setSaving(true);
+
+      const nameParts = String(values.name || "").trim().split(/\s+/);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ");
+
+      const payload = {
+        admissionNumber: values.admissionNumber,
+        firstName,
+        lastName,
+        gender: values.gender,
+        dateOfBirth: values.dob,
+        batch: values.batch || "",
+        phone: values.phone || "",
+        email: values.email || "",
+        address: values.address || "",
+        city: values.city || "",
+        state: values.state || "",
+        martialArt: values.martialArt || "Taekwondo",
+        beltRank: values.beltRank || "",
+        joiningDate: values.joiningDate || "",
+        status: values.status || "active",
+        emergencyContactName: values.emergencyContactName || "",
+        emergencyContactPhone: values.emergencyContactPhone || "",
+        notes: values.medicalNotes || "",
+      };
+
+      const formData = new FormData();
+
+      Object.entries(payload).forEach(([key, value]) => {
+        appendFormDataValue(formData, key, value);
+      });
+
+      if (profilePhoto) {
+        formData.append("profilePhoto", profilePhoto);
+      }
+
+      await studentApi.create(formData);
+
+      toast.success("Student add ho gaya");
+      navigate("/students");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Student add nahi hua");
+      console.log("Student create error:", error.response?.data);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="page">
@@ -119,7 +170,9 @@ const onSubmit = async (values) => {
           <label>
             Student Code *
             <input
-              {...register("studentCode", { required: "Student code required" })}
+              {...register("studentCode", {
+                required: "Student code required",
+              })}
             />
             {errors.studentCode && <small>{errors.studentCode.message}</small>}
           </label>
@@ -143,15 +196,15 @@ const onSubmit = async (values) => {
           </label>
 
           <label>
-            Admission Number
+            Admission Number *
             <input
-  {...register("admissionNumber", {
-    required: "Admission number required",
-  })}
-/>
-{errors.admissionNumber && (
-  <small>{errors.admissionNumber.message}</small>
-)}
+              {...register("admissionNumber", {
+                required: "Admission number required",
+              })}
+            />
+            {errors.admissionNumber && (
+              <small>{errors.admissionNumber.message}</small>
+            )}
           </label>
 
           <label>
@@ -164,9 +217,21 @@ const onSubmit = async (values) => {
           </label>
 
           <label>
-            DOB
-            <input type="date" {...register("dob", { required: "DOB required" })} />
-{errors.dob && <small>{errors.dob.message}</small>}
+            DOB *
+            <input
+              type="date"
+              {...register("dob", { required: "DOB required" })}
+            />
+            {errors.dob && <small>{errors.dob.message}</small>}
+          </label>
+
+          <label>
+            Passport Size Photo
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              onChange={handleProfilePhotoChange}
+            />
           </label>
 
           <label>
@@ -227,6 +292,23 @@ const onSubmit = async (values) => {
           </label>
         </div>
 
+        {profilePhotoPreview && (
+          <div className="card" style={{ maxWidth: "220px" }}>
+            <p style={{ marginTop: 0 }}>Photo Preview</p>
+            <img
+              src={profilePhotoPreview}
+              alt="Student preview"
+              style={{
+                width: "120px",
+                height: "150px",
+                objectFit: "cover",
+                borderRadius: "8px",
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
+        )}
+
         <label>
           Address
           <textarea {...register("address")} />
@@ -261,6 +343,7 @@ const onSubmit = async (values) => {
           <button type="button" onClick={() => navigate("/students")}>
             Cancel
           </button>
+
           <button className="btn btn-primary" disabled={saving}>
             {saving ? "Saving..." : "Save Student"}
           </button>

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { championshipRecordApi } from "../../api/championshipRecordApi.js";
 import { studentApi } from "../../api/studentApi.js";
 
@@ -18,29 +18,73 @@ const initialForm = {
   certificateUrl: "",
 };
 
+const normalizeList = (response, nestedKey) => {
+  const data = response?.data;
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.data?.[nestedKey])) return data.data[nestedKey];
+  if (Array.isArray(data?.[nestedKey])) return data[nestedKey];
+
+  return [];
+};
+
+const getStudentName = (student) => {
+  const fullName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
+  return student.name || fullName || "Student";
+};
+
+const getStudentCode = (student) =>
+  student.studentCode || student.admissionNumber || "-";
+
 const AddChampionshipRecord = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const studentIdFromUrl = searchParams.get("student") || "";
 
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState({
+    ...initialForm,
+    student: studentIdFromUrl,
+  });
+
   const [students, setStudents] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const selectedStudent = useMemo(() => {
+    return students.find((student) => student._id === form.student) || null;
+  }, [students, form.student]);
+
   useEffect(() => {
     const loadStudents = async () => {
       try {
-        const response = await studentApi.getAll({ limit: 100, status: "active" });
-        setStudents(response.data?.data?.students || []);
+        const response = await studentApi.getAll({});
+        const list = normalizeList(response, "students");
+
+        setStudents(list);
+
+        if (studentIdFromUrl) {
+          const matchedStudent = list.find(
+            (student) => String(student._id) === String(studentIdFromUrl)
+          );
+
+          setForm((prev) => ({
+            ...prev,
+            student: studentIdFromUrl,
+            weightCategory: matchedStudent?.weightCategory || prev.weightCategory,
+          }));
+        }
       } catch {
         setStudents([]);
       }
     };
 
     loadStudents();
-  }, []);
+  }, [studentIdFromUrl]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -51,7 +95,13 @@ const AddChampionshipRecord = () => {
       setSaving(true);
       setError("");
 
-      await championshipRecordApi.create(form);
+      await championshipRecordApi.create({
+        ...form,
+        date: form.date
+          ? new Date(form.date).toISOString()
+          : new Date().toISOString(),
+      });
+
       alert("Championship record created successfully");
       navigate("/championship-records");
     } catch (err) {
@@ -77,11 +127,16 @@ const AddChampionshipRecord = () => {
       <form className="card form-grid" onSubmit={handleSubmit}>
         <label>
           Student
-          <select name="student" value={form.student} onChange={handleChange} required>
+          <select
+            name="student"
+            value={form.student}
+            onChange={handleChange}
+            required
+          >
             <option value="">Select Student</option>
             {students.map((student) => (
               <option key={student._id} value={student._id}>
-                {student.name} ({student.studentCode})
+                {getStudentName(student)} ({getStudentCode(student)})
               </option>
             ))}
           </select>
@@ -171,6 +226,13 @@ const AddChampionshipRecord = () => {
             onChange={handleChange}
           />
         </label>
+
+        {selectedStudent && (
+          <div className="card full-width">
+            <strong>Selected Student:</strong>{" "}
+            {getStudentName(selectedStudent)} ({getStudentCode(selectedStudent)})
+          </div>
+        )}
 
         <label className="full-width">
           Certificate URL

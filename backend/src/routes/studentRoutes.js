@@ -16,6 +16,7 @@ import {
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
 import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
+import { uploadImage } from "../middlewares/uploadMiddleware.js";
 
 import {
   studentIdValidator,
@@ -33,13 +34,24 @@ router.use(requireResolvedAcademy);
 
 router
   .route("/")
-  .post(createStudentValidator, validateRequest, enforceLimit("students"), createStudent)
+  .post(
+    uploadImage.single("profilePhoto"),
+    createStudentValidator,
+    validateRequest,
+    enforceLimit("students"),
+    createStudent
+  )
   .get(listStudentsValidator, validateRequest, getStudents);
 
 router
   .route("/:id")
   .get(studentIdValidator, validateRequest, getStudentById)
-  .patch(updateStudentValidator, validateRequest, updateStudent)
+  .patch(
+    uploadImage.single("profilePhoto"),
+    updateStudentValidator,
+    validateRequest,
+    updateStudent
+  )
   .delete(studentIdValidator, validateRequest, deleteStudent);
 
 export default router;

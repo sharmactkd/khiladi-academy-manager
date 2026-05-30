@@ -1821,3 +1821,11 @@ button:disabled,
     border: none !important;
   }
 }
+
+.student-profile-photo img {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #e5e7eb;
+}

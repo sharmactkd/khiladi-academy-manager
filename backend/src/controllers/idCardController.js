@@ -75,7 +75,10 @@ export const generateIdCard = asyncHandler(async (req, res) => {
   });
 
   const populatedIdCard = await GeneratedIdCard.findById(idCard._id)
-    .populate("student", "name studentCode phone beltRank photo status dob")
+    .populate(
+  "student",
+  "name firstName lastName admissionNumber studentCode phone beltRank profilePhoto photo status dateOfBirth dob"
+)
     .populate("template");
 
   return successResponse(res, "ID card generated successfully", {
@@ -94,11 +97,15 @@ export const getStudentIdCards = asyncHandler(async (req, res) => {
   }
 
   const idCards = await GeneratedIdCard.find({
-    academy: req.academyId,
-    student: req.params.studentId,
-  })
-    .sort({ issuedDate: -1, createdAt: -1 })
-    .populate("template");
+  academy: req.academyId,
+  student: req.params.studentId,
+})
+  .sort({ issuedDate: -1, createdAt: -1 })
+  .populate(
+    "student",
+    "name firstName lastName admissionNumber studentCode phone beltRank profilePhoto photo status dateOfBirth dob"
+  )
+  .populate("template");
 
   return successResponse(res, "Student ID cards fetched successfully", {
     student,
@@ -111,7 +118,10 @@ export const getIdCardById = asyncHandler(async (req, res) => {
     _id: req.params.id,
     academy: req.academyId,
   })
-    .populate("student", "name studentCode phone beltRank photo status dob")
+    .populate(
+  "student",
+  "name firstName lastName admissionNumber studentCode phone beltRank profilePhoto photo status dateOfBirth dob"
+)
     .populate("template")
     .populate("createdBy", "name email")
     .populate("updatedBy", "name email");

@@ -36,6 +36,9 @@ const CreateAcademy = () => {
   const [countryCodeSearch, setCountryCodeSearch] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
 
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState("");
+
   const [form, setForm] = useState({
     academyName: "",
     martialArts: "Taekwondo",
@@ -46,6 +49,7 @@ const CreateAcademy = () => {
     city: "",
     state: "",
     country: "India",
+    pincode: "",
   });
 
   const [displayPhone, setDisplayPhone] = useState("");
@@ -113,24 +117,55 @@ const CreateAcademy = () => {
     countryCodeOptions.find((country) => country.dialCode === selectedDialCode) ||
     countryCodeOptions.find((country) => country.isoCode === DEFAULT_COUNTRY_ISO);
 
-const handleChange = (event) => {
-  let { name, value } = event.target;
+  const handleChange = (event) => {
+    let { name, value } = event.target;
 
-  if (name === "phone") {
-    value = value.replace(/\D/g, "");
+    if (name === "phone") {
+      value = value.replace(/\D/g, "");
 
-    if (value.length > 4 && value.length <= 6) {
-      value = `${value.slice(0, 4)}-${value.slice(4)}`;
-    } else if (value.length > 6) {
-      value = `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 10)}`;
+      if (value.length > 4 && value.length <= 6) {
+        value = `${value.slice(0, 4)}-${value.slice(4)}`;
+      } else if (value.length > 6) {
+        value = `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(
+          6,
+          10
+        )}`;
+      }
     }
-  }
 
-  setForm((prev) => ({
-    ...prev,
-    [name]: value,
-  }));
-};
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleLogoChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setLogoFile(null);
+      setLogoPreview("");
+      return;
+    }
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      setError("Only JPG, PNG and WEBP logo image allowed");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Logo size 2MB se kam honi chahiye");
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
 
   const handleCountryCodeSelect = (country) => {
     const nextDialCode = country.dialCode;
@@ -221,14 +256,24 @@ const handleChange = (event) => {
     setLoading(true);
 
     try {
-      await academyApi.createAcademy({
-        ...form,
-        phone: displayPhone,
-        martialArts: form.martialArts
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-      });
+      const formData = new FormData();
+
+      formData.append("academyName", form.academyName);
+      formData.append("martialArts", form.martialArts);
+      formData.append("countryCode", form.countryCode);
+      formData.append("phone", displayPhone);
+      formData.append("email", form.email);
+      formData.append("address", form.address);
+      formData.append("city", form.city);
+      formData.append("state", form.state);
+      formData.append("country", form.country);
+      formData.append("pincode", form.pincode);
+
+      if (logoFile) {
+        formData.append("logo", logoFile);
+      }
+
+      await academyApi.createAcademy(formData);
 
       navigate("/dashboard", { replace: true });
     } catch (err) {
@@ -260,6 +305,33 @@ const handleChange = (event) => {
           placeholder="Khiladi Martial Arts Academy"
           required
         />
+
+        <label className="form-field">
+          <span>Academy Logo</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            onChange={handleLogoChange}
+          />
+
+          {logoPreview && (
+            <div style={{ marginTop: "12px" }}>
+              <img
+                src={logoPreview}
+                alt="Academy logo preview"
+                style={{
+                  width: "96px",
+                  height: "96px",
+                  objectFit: "contain",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "12px",
+                  background: "#ffffff",
+                  padding: "8px",
+                }}
+              />
+            </div>
+          )}
+        </label>
 
         <Input
           label="Martial Arts"
@@ -627,6 +699,14 @@ const handleChange = (event) => {
             </select>
           </label>
         </div>
+
+        <Input
+          label="Pincode"
+          name="pincode"
+          value={form.pincode}
+          onChange={handleChange}
+          placeholder="282001"
+        />
 
         <Button type="submit" disabled={loading}>
           {loading ? "Creating..." : "Create Academy"}

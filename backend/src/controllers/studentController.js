@@ -31,29 +31,93 @@ const validateBranch = async (academyId, branchId) => {
   return branch;
 };
 
+const getUploadedFilePath = (file) => {
+  if (!file) return "";
+
+  return `/${file.path.replace(/\\/g, "/")}`;
+};
+
+const normalizeStudentPayload = (body = {}) => {
+  const payload = { ...body };
+
+  if (payload.studentCode && !payload.admissionNumber) {
+    payload.admissionNumber = payload.studentCode;
+  }
+
+  if (payload.name && !payload.firstName) {
+    const nameParts = String(payload.name || "").trim().split(/\s+/);
+    payload.firstName = nameParts[0] || "";
+    payload.lastName = nameParts.slice(1).join(" ");
+  }
+
+  if (payload.dob && !payload.dateOfBirth) {
+    payload.dateOfBirth = payload.dob;
+  }
+
+  if (payload.branch === "") {
+    payload.branch = null;
+  }
+
+  if (payload.batch === "") {
+    payload.batch = null;
+  }
+
+  if (
+    payload.emergencyContactName !== undefined ||
+    payload.emergencyContactPhone !== undefined ||
+    payload.emergencyContactRelation !== undefined
+  ) {
+    payload.emergencyContact = {
+      name:
+        payload.emergencyContactName ||
+        payload.emergencyContact?.name ||
+        "",
+      relation:
+        payload.emergencyContactRelation ||
+        payload.emergencyContact?.relation ||
+        "",
+      phone:
+        payload.emergencyContactPhone ||
+        payload.emergencyContact?.phone ||
+        "",
+    };
+  }
+
+  delete payload.studentCode;
+  delete payload.name;
+  delete payload.dob;
+  delete payload.parentName;
+  delete payload.parentPhone;
+  delete payload.emergencyContactName;
+  delete payload.emergencyContactPhone;
+  delete payload.emergencyContactRelation;
+
+  return payload;
+};
+
 export const createStudent = asyncHandler(async (req, res) => {
   const academyId = req.academyId;
+  const payload = normalizeStudentPayload(req.body);
 
-  if (req.body.branch) {
-    await validateBranch(academyId, req.body.branch);
+  if (payload.branch) {
+    await validateBranch(academyId, payload.branch);
   }
 
   const existing = await Student.findOne({
     academy: academyId,
-    admissionNumber: req.body.admissionNumber,
+    admissionNumber: payload.admissionNumber,
   });
 
   if (existing) {
-    return errorResponse(
-      res,
-      "Admission number already exists",
-      409
-    );
+    return errorResponse(res, "Admission number already exists", 409);
   }
 
+  const profilePhoto = getUploadedFilePath(req.file);
+
   const student = await Student.create({
-    ...req.body,
+    ...payload,
     academy: academyId,
+    profilePhoto,
     createdBy: req.user._id,
     updatedBy: req.user._id,
   });
@@ -135,7 +199,10 @@ export const getStudents = asyncHandler(async (req, res) => {
 
   const students = await Student.find(query)
     .populate("branch", "branchName branchCode")
-  .populate("batch", "batchName martialArt isActive monthlyFee quarterlyFee annualFee")
+    .populate(
+      "batch",
+      "batchName martialArt isActive monthlyFee quarterlyFee annualFee"
+    )
     .sort({ createdAt: -1 });
 
   return successResponse(
@@ -152,7 +219,10 @@ export const getStudentById = asyncHandler(async (req, res) => {
     ...buildBranchAccessFilter(req.user),
   })
     .populate("branch", "branchName branchCode")
-    .populate("batch", "batchName martialArt isActive");
+    .populate(
+      "batch",
+      "batchName martialArt isActive monthlyFee quarterlyFee annualFee"
+    );
 
   if (!student) {
     return errorResponse(res, "Student not found", 404);
@@ -176,13 +246,19 @@ export const updateStudent = asyncHandler(async (req, res) => {
     return errorResponse(res, "Student not found", 404);
   }
 
-  if (req.body.branch) {
-    await validateBranch(req.academyId, req.body.branch);
+  const payload = normalizeStudentPayload(req.body);
+
+  if (payload.branch) {
+    await validateBranch(req.academyId, payload.branch);
   }
 
-  Object.keys(req.body).forEach((key) => {
-    student[key] = req.body[key];
+  Object.keys(payload).forEach((key) => {
+    student[key] = payload[key];
   });
+
+  if (req.file) {
+    student.profilePhoto = getUploadedFilePath(req.file);
+  }
 
   student.updatedBy = req.user._id;
 
