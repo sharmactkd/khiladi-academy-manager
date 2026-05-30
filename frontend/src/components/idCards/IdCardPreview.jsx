@@ -1,9 +1,6 @@
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import {
-  getFileUrl,
-  getStudentPhotoUrl,
-} from "../../utils/fileUrl.js";
+import { getFileUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
 
 const getStudentName = (student) => {
   const fullName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
@@ -38,9 +35,10 @@ const IdCardPreview = ({ idCard }) => {
 
   const student = idCard.student || {};
   const template = idCard.template || {};
+  const academy = idCard.academy || template.academy || {};
 
   const studentPhotoUrl = getStudentPhotoUrl(student, "");
-  const logoUrl = getFileUrl(template.logo, "");
+  const logoUrl = getFileUrl(template.logo || academy.logo, "");
 
   return (
     <div

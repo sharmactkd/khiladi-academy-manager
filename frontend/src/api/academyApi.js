@@ -5,3 +5,5 @@ export const academyApi = {
   getMyAcademy: () => api.get("/academy/my"),
   updateMyAcademy: (payload) => api.patch("/academy/my", payload),
 };
+
+export default academyApi;

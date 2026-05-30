@@ -44,6 +44,7 @@ const Sidebar = () => {
         {canManageAcademy && (
           <>
                        <div className="sidebar-section-title">Academy</div>
+                       <NavLink to="/academy/profile">Academy Profile</NavLink>
             <NavLink to="/attendance">Attendance</NavLink>
             <NavLink to="/attendance/monthly-register">Monthly Attendance</NavLink>
             <NavLink to="/students">Students</NavLink>
@@ -96,7 +97,6 @@ const Sidebar = () => {
           </>
         )}
 
- <NavLink to="/onboarding/create-academy">Academy Profile</NavLink>
         {user?.role === "super_admin" && (
           <>
             <div className="sidebar-section-title">Admin</div>

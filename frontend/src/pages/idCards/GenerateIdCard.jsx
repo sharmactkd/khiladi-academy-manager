@@ -36,10 +36,13 @@ const GenerateIdCard = () => {
     validTill: "",
   });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
+        setLoading(true);
+
         const [studentResponse, templateResponse] = await Promise.all([
           studentApi.getAll({ status: "active" }),
           idCardTemplateApi.getAll(),
@@ -49,6 +52,8 @@ const GenerateIdCard = () => {
         setTemplates(normalizeList(templateResponse, "templates"));
       } catch (error) {
         alert(error.response?.data?.message || "ID card data load nahi hua");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -65,8 +70,10 @@ const GenerateIdCard = () => {
 
     try {
       setSaving(true);
+
       const response = await idCardApi.generate(form);
       setGeneratedCard(response.data?.data?.idCard || null);
+
       alert("ID card generated successfully");
     } catch (err) {
       alert(err.response?.data?.message || "Failed to generate ID card");
@@ -92,8 +99,11 @@ const GenerateIdCard = () => {
             value={form.student}
             onChange={handleChange}
             required
+            disabled={loading}
           >
-            <option value="">Select Student</option>
+            <option value="">
+              {loading ? "Loading students..." : "Select Student"}
+            </option>
 
             {students.map((student) => (
               <option key={student._id} value={student._id}>
@@ -110,8 +120,11 @@ const GenerateIdCard = () => {
             value={form.template}
             onChange={handleChange}
             required
+            disabled={loading}
           >
-            <option value="">Select Template</option>
+            <option value="">
+              {loading ? "Loading templates..." : "Select Template"}
+            </option>
 
             {templates.map((template) => (
               <option key={template._id} value={template._id}>

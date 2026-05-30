@@ -14,6 +14,8 @@ import AdminGrants from "../pages/admin/AdminGrants.jsx";
 import Unauthorized from "../pages/errors/Unauthorized.jsx";
 import NotFound from "../pages/errors/NotFound.jsx";
 
+import AcademyProfile from "../pages/academy/AcademyProfile.jsx";
+
 import Students from "../pages/students/Students.jsx";
 import AddStudent from "../pages/students/AddStudent.jsx";
 import EditStudent from "../pages/students/EditStudent.jsx";
@@ -178,6 +180,7 @@ const AppRoutes = () => {
             element={<OwnerDashboard />}
           />
 
+
           {/* BILLING */}
 
           <Route
@@ -291,6 +294,12 @@ const AppRoutes = () => {
               />
             }
           >
+
+             <Route
+    path="/academy/profile"
+    element={<AcademyProfile />}
+  />
+  
             {/* BRANCHES */}
 
             <Route
