@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { Upload } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
 import { attendanceApi } from "../../api/attendanceApi.js";
 import MonthlyAttendanceTable from "../../components/attendance/MonthlyAttendanceTable.jsx";
+import AttendanceImportModal from "../../components/attendance/AttendanceImportModal.jsx";
 
 const now = new Date();
 
@@ -50,10 +52,17 @@ const MonthlyAttendanceRegister = () => {
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const yearOptions = useMemo(() => {
     const currentYear = now.getFullYear();
-    return Array.from({ length: 8 }, (_, index) => currentYear - 2 + index);
+    const startYear = currentYear - 15;
+    const endYear = currentYear + 5;
+
+    return Array.from(
+      { length: endYear - startYear + 1 },
+      (_, index) => startYear + index
+    );
   }, []);
 
   const formattedRows = useMemo(() => {
@@ -77,21 +86,30 @@ const MonthlyAttendanceRegister = () => {
       if (activeBatches.length) {
         setBatch((prev) => prev || activeBatches[0]._id);
       }
-    } catch {
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        return;
+      }
+
       toast.error("Batches load nahi hue");
     }
   }, []);
 
-  const loadRegister = useCallback(async () => {
-    if (!batch) return;
+  const loadRegister = async (
+    selectedBatchId = batch,
+    selectedMonth = month,
+    selectedYear = year
+  ) => {
+    if (!selectedBatchId) return;
 
     try {
       setLoading(true);
 
       const response = await attendanceApi.getMonthlyRegister({
-        batch,
-        month,
-        year,
+        batch: selectedBatchId,
+        month: selectedMonth,
+        year: selectedYear,
       });
 
       const data = normalizeResponseData(response);
@@ -100,9 +118,13 @@ const MonthlyAttendanceRegister = () => {
       setRows(Array.isArray(data.rows) ? data.rows : []);
       setSelectedBatch(data.batch || null);
     } catch (error) {
-      toast.error(
-        error?.response?.data?.message || "Monthly attendance load nahi hui"
-      );
+      if (error?.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+      } else {
+        toast.error(
+          error?.response?.data?.message || "Monthly attendance load nahi hui"
+        );
+      }
 
       setDays([]);
       setRows([]);
@@ -110,7 +132,7 @@ const MonthlyAttendanceRegister = () => {
     } finally {
       setLoading(false);
     }
-  }, [batch, month, year]);
+  };
 
   const saveRegister = async () => {
     if (!batch) {
@@ -136,11 +158,65 @@ const MonthlyAttendanceRegister = () => {
 
       toast.success("Monthly attendance saved successfully");
     } catch (error) {
-      toast.error(
-        error?.response?.data?.message || "Monthly attendance save nahi hui"
-      );
+      if (error?.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+      } else {
+        toast.error(
+          error?.response?.data?.message || "Monthly attendance save nahi hui"
+        );
+      }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleImportAttendance = async (payload) => {
+    if (!batch) {
+      toast.error("Pehle batch select karein");
+      return;
+    }
+
+    try {
+      const response = await attendanceApi.importOldAttendance({
+        ...payload,
+        fallbackBatch: batch,
+        assignMissingBatch: true,
+      });
+
+      const summary = response?.data?.data || {};
+
+      console.log("ATTENDANCE IMPORT RESPONSE:", response?.data);
+
+    toast.success(
+  `Cells: ${summary.totalAttendanceCells || 0}, Imported: ${
+    summary.imported || 0
+  }, Skipped: ${summary.skipped || 0}, Failed: ${
+    summary.failed || 0
+  }, Unmatched: ${summary.unmatchedStudents?.length || 0}`
+);
+
+      if (summary.unmatchedStudents?.length) {
+        console.warn("UNMATCHED STUDENTS:", summary.unmatchedStudents);
+        toast.error(`${summary.unmatchedStudents.length} students match nahi hue`);
+      }
+
+      if (summary.errors?.length) {
+        console.warn("IMPORT ERRORS:", summary.errors);
+      }
+
+      await loadRegister(batch, month, year);
+    } catch (error) {
+      console.error("ATTENDANCE IMPORT ERROR:", error);
+
+      if (error?.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+      } else {
+        toast.error(
+          error?.response?.data?.message || "Attendance import nahi ho paya"
+        );
+      }
+
+      throw error;
     }
   };
 
@@ -203,12 +279,19 @@ const MonthlyAttendanceRegister = () => {
 
   useEffect(() => {
     if (batch && month && year) {
-      loadRegister();
+      loadRegister(batch, month, year);
     }
-  }, [batch, month, year, loadRegister]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batch, month, year]);
 
   return (
     <div className="page monthly-register-page">
+      <AttendanceImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleImportAttendance}
+      />
+
       <div className="page-header monthly-register-header">
         <div>
           <h1>Monthly Attendance Register</h1>
@@ -218,6 +301,15 @@ const MonthlyAttendanceRegister = () => {
         </div>
 
         <div className="monthly-register-actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setImportModalOpen(true)}
+          >
+            <Upload size={16} />
+            Import Attendance
+          </button>
+
           <button
             type="button"
             className="btn btn-secondary"
@@ -254,7 +346,9 @@ const MonthlyAttendanceRegister = () => {
               <button
                 key={item._id}
                 type="button"
-                className={`batch-toggle-btn ${batch === item._id ? "active" : ""}`}
+                className={`batch-toggle-btn ${
+                  batch === item._id ? "active" : ""
+                }`}
                 onClick={() => setBatch(item._id)}
               >
                 {item.batchName} - {item.martialArt}
@@ -296,8 +390,8 @@ const MonthlyAttendanceRegister = () => {
         <div className="monthly-register-title">
           <strong>{selectedBatch.batchName}</strong>
           <span>
-            {months.find((item) => Number(item.value) === Number(month))?.label}-
-            {String(year).slice(-2)}
+            {months.find((item) => Number(item.value) === Number(month))?.label}
+            -{String(year).slice(-2)}
           </span>
         </div>
       )}

@@ -7,6 +7,7 @@ import {
   getBatchAttendance,
   getMonthlyRegister,
   saveMonthlyRegister,
+  importOldAttendance,
 } from "../controllers/attendanceController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
@@ -33,6 +34,8 @@ router.use(requireResolvedAcademy);
 
 router.get("/monthly-register", getMonthlyRegister);
 router.post("/monthly-register", saveMonthlyRegister);
+
+router.post("/import", importOldAttendance);
 
 router.post("/mark", markAttendanceValidator, validateRequest, markAttendance);
 

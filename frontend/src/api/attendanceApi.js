@@ -11,4 +11,5 @@ export const attendanceApi = {
     api.get("/attendance/monthly-register", { params }),
   saveMonthlyRegister: (payload) =>
     api.post("/attendance/monthly-register", payload),
+  importOldAttendance: (payload) => api.post("/attendance/import", payload),
 };

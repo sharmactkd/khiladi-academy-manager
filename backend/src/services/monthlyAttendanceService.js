@@ -25,6 +25,16 @@ const toObjectId = (value) => {
 
 const pad = (value) => String(value).padStart(2, "0");
 
+const getLocalDateKey = (value) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}`;
+};
+
 const getMonthRange = ({ year, month }) => {
   const numericYear = Number(year);
   const numericMonth = Number(month);
@@ -158,27 +168,42 @@ export const getMonthlyAttendanceRegister = async ({
     year: numericYear,
     month: numericMonth,
   });
-const students = await Student.find({
-  academy: academyObjectId,
-  batch: batchObjectId,
-  status: "active",
-})
-  .select(
-  "admissionNumber firstName lastName phone status joiningDate createdAt"
-)
-  .sort({ firstName: 1, lastName: 1, admissionNumber: 1 })
-  .lean();
+
+  const attendanceDocs = await Attendance.find({
+    academy: academyObjectId,
+    batch: batchObjectId,
+    date: { $gte: start, $lte: end },
+  }).lean();
+
+  const importedOrMarkedStudentIds = [];
+
+  attendanceDocs.forEach((doc) => {
+    (doc.records || []).forEach((record) => {
+      if (record.student) {
+        importedOrMarkedStudentIds.push(record.student);
+      }
+    });
+  });
+
+  const students = await Student.find({
+    academy: academyObjectId,
+    $or: [
+      { batch: batchObjectId },
+      {
+        _id: {
+          $in: importedOrMarkedStudentIds,
+        },
+      },
+    ],
+  })
+    .select(
+      "admissionNumber firstName lastName phone status joiningDate createdAt batch"
+    )
+    .sort({ firstName: 1, lastName: 1, admissionNumber: 1 })
+    .lean();
 
   const studentIds = students.map((student) => student._id);
-
-  const [attendanceDocs, feeMap] = await Promise.all([
-    Attendance.find({
-      academy: academyObjectId,
-      batch: batchObjectId,
-      date: { $gte: start, $lte: end },
-    }).lean(),
-    getLatestFeeMap({ academyId: academyObjectId, studentIds }),
-  ]);
+  const feeMap = await getLatestFeeMap({ academyId: academyObjectId, studentIds });
 
   const attendanceByStudent = new Map();
 
@@ -191,13 +216,13 @@ const students = await Student.find({
   });
 
   attendanceDocs.forEach((doc) => {
-    const dateKey = new Date(doc.date).toISOString().slice(0, 10);
+    const dateKey = getLocalDateKey(doc.date);
 
     (doc.records || []).forEach((record) => {
       const studentId = String(record.student);
       const studentAttendance = attendanceByStudent.get(studentId);
 
-      if (studentAttendance) {
+      if (studentAttendance && dateKey) {
         studentAttendance[dateKey] = toShortStatus(record.status);
       }
     });
@@ -208,19 +233,20 @@ const students = await Student.find({
     const attendance = attendanceByStudent.get(String(student._id)) || {};
     const counts = calculateCounts(attendance);
 
-  return {
-  no: index + 1,
-  studentId: student._id,
-  admissionNumber: student.admissionNumber || "",
-  name: getStudentName(student),
-  contact: student.phone || "-",
-  feeDueDate: student.joiningDate || student.createdAt || null,
-  feePaidDate: fee?.paidDate || fee?.paymentDate || null,
-  feePaid: fee?.amountPaid ?? fee?.amount ?? 0,
-  feeStatus: fee?.status || "due",
-  attendance,
-  ...counts,
-};
+    return {
+      no: index + 1,
+      studentId: student._id,
+      admissionNumber: student.admissionNumber || "",
+      name: getStudentName(student),
+      contact: student.phone || "-",
+      status: student.status || "active",
+      feeDueDate: student.joiningDate || student.createdAt || null,
+      feePaidDate: fee?.paidDate || fee?.paymentDate || null,
+      feePaid: fee?.amountPaid ?? fee?.amount ?? 0,
+      feeStatus: fee?.status || "due",
+      attendance,
+      ...counts,
+    };
   });
 
   return {
@@ -284,8 +310,6 @@ export const saveMonthlyAttendanceRegister = async ({
   const validStudents = await Student.find({
     _id: { $in: studentIds },
     academy: academyObjectId,
-    batch: batchObjectId,
-    status: "active",
   }).select("_id");
 
   const validStudentIds = new Set(validStudents.map((item) => String(item._id)));

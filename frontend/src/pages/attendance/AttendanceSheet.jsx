@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { Upload } from "lucide-react";
 import { batchApi } from "../../api/batchApi.js";
 import { studentApi } from "../../api/studentApi.js";
 import { attendanceApi } from "../../api/attendanceApi.js";
+import AttendanceImportModal from "../../components/attendance/AttendanceImportModal.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -13,20 +15,21 @@ const AttendanceSheet = () => {
   const [date, setDate] = useState(today);
   const [records, setRecords] = useState({});
   const [loading, setLoading] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchBatches = async () => {
       try {
-     const response = await batchApi.getAll();
+        const response = await batchApi.getAll();
 
-const list = response.data?.data || [];
-const activeBatches = list.filter((batch) => batch.isActive);
+        const list = response.data?.data || [];
+        const activeBatches = list.filter((batch) => batch.isActive);
 
-setBatches(activeBatches);
+        setBatches(activeBatches);
 
-if (activeBatches.length) {
-  setBatch((prev) => prev || activeBatches[0]._id);
-}
+        if (activeBatches.length) {
+          setBatch((prev) => prev || activeBatches[0]._id);
+        }
       } catch {
         toast.error("Batches load nahi hue");
       }
@@ -52,7 +55,7 @@ if (activeBatches.length) {
         });
 
         const list = response?.data || [];
-setStudents(list);
+        setStudents(list);
 
         const initialRecords = {};
         list.forEach((student) => {
@@ -84,82 +87,118 @@ setStudents(list);
     }));
   };
 
- const handleSubmit = async () => {
-  if (!batch) {
-    toast.error("Batch select karein");
-    return;
-  }
-
-  if (!date) {
-    toast.error("Date select karein");
-    return;
-  }
-
-  const payload = {
-    batch,
-    date,
-    records: Object.values(records),
-  };
-
-  if (!payload.records.length) {
-    toast.error("Attendance records empty hain");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    const response = await attendanceApi.mark(payload);
-
-    if (response?.data?.success) {
-      toast.success("Attendance marked successfully");
+  const handleSubmit = async () => {
+    if (!batch) {
+      toast.error("Batch select karein");
       return;
     }
 
-    toast.success("Attendance saved");
-  } catch (error) {
-    toast.error(error.response?.data?.message || "Attendance save nahi hui");
-  } finally {
-    setLoading(false);
-  }
-};
+    if (!date) {
+      toast.error("Date select karein");
+      return;
+    }
+
+    const payload = {
+      batch,
+      date,
+      records: Object.values(records),
+    };
+
+    if (!payload.records.length) {
+      toast.error("Attendance records empty hain");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await attendanceApi.mark(payload);
+
+      if (response?.data?.success) {
+        toast.success("Attendance marked successfully");
+        return;
+      }
+
+      toast.success("Attendance saved");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Attendance save nahi hui");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImportAttendance = async (payload) => {
+    try {
+      const response = await attendanceApi.importOldAttendance(payload);
+      const summary = response?.data?.data || {};
+
+      toast.success(
+        `Import complete: ${summary.imported || 0} imported, ${
+          summary.skipped || 0
+        } skipped, ${summary.failed || 0} failed`
+      );
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Attendance import nahi ho paya"
+      );
+      throw error;
+    }
+  };
 
   return (
     <div className="page">
+      <AttendanceImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleImportAttendance}
+      />
+
       <div className="page-header">
         <div>
           <h1>Attendance</h1>
           <p>Batch wise daily attendance mark karein</p>
         </div>
-       <button
-  className="btn btn-primary"
-  onClick={handleSubmit}
-  disabled={loading || !batch}
->
-  {loading ? "Saving..." : "Save Attendance"}
-</button>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setImportModalOpen(true)}
+          >
+            <Upload size={16} />
+            Import Old Attendance
+          </button>
+
+          <button
+            className="btn btn-primary"
+            onClick={handleSubmit}
+            disabled={loading || !batch}
+          >
+            {loading ? "Saving..." : "Save Attendance"}
+          </button>
+        </div>
       </div>
 
       <div className="card">
         <div className="grid grid-2">
-         <div className="batch-toggle-section">
-  <span className="batch-toggle-label">Batch</span>
+          <div className="batch-toggle-section">
+            <span className="batch-toggle-label">Batch</span>
 
-  <div className="batch-toggle-group">
-    {batches.map((item) => (
-      <button
-        key={item._id}
-        type="button"
-        className={`batch-toggle-btn ${
-          batch === item._id ? "active" : ""
-        }`}
-        onClick={() => setBatch(item._id)}
-      >
-        {item.batchName} - {item.martialArt}
-      </button>
-    ))}
-  </div>
-</div>
+            <div className="batch-toggle-group">
+              {batches.map((item) => (
+                <button
+                  key={item._id}
+                  type="button"
+                  className={`batch-toggle-btn ${
+                    batch === item._id ? "active" : ""
+                  }`}
+                  onClick={() => setBatch(item._id)}
+                >
+                  {item.batchName} - {item.martialArt}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <label>
             Date
@@ -194,13 +233,15 @@ setStudents(list);
               <tbody>
                 {students.map((student) => (
                   <tr key={student._id}>
-                   <td>{student.admissionNumber || "-"}</td>
+                    <td>{student.admissionNumber || "-"}</td>
 
-<td>
-  {`${student.firstName || ""} ${student.lastName || ""}`.trim() || "-"}
-</td>
+                    <td>
+                      {`${student.firstName || ""} ${
+                        student.lastName || ""
+                      }`.trim() || "-"}
+                    </td>
 
-<td>{student.phone || "-"}</td>
+                    <td>{student.phone || "-"}</td>
                     <td>
                       <select
                         value={records[student._id]?.status || "present"}
