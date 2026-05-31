@@ -102,6 +102,11 @@ setStudent(response?.data || null);
           <p>
             <strong>Email:</strong> {student.email || "-"}
           </p>
+
+          <p>
+  <strong>School:</strong> {student.schoolName || "-"}
+</p>
+
           <p>
             <strong>Gender:</strong> {student.gender || "-"}
           </p>

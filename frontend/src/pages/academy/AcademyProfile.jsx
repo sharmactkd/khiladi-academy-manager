@@ -40,6 +40,8 @@ const AcademyProfile = () => {
   const handleLogoChange = (event) => {
     const file = event.target.files?.[0] || null;
 
+console.log("Selected logo file:", file);
+
     if (!file) {
       setLogoFile(null);
       setLogoPreview(academy?.logo ? getAcademyLogoUrl(academy) : "");
@@ -87,6 +89,8 @@ const AcademyProfile = () => {
       formData.append("state", academy.state || "");
       formData.append("country", academy.country || "India");
       formData.append("pincode", academy.pincode || "");
+
+      console.log("Logo file before submit:", logoFile);
 
       if (logoFile) {
         formData.append("logo", logoFile);

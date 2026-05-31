@@ -88,6 +88,13 @@ const studentSchema = new mongoose.Schema(
       default: "",
     },
 
+    schoolName: {
+  type: String,
+  trim: true,
+  maxlength: 200,
+  default: "",
+},
+
     address: {
       type: String,
       trim: true,

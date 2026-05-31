@@ -182,6 +182,7 @@ setBatches(activeBatches);
                   <th>Code</th>
                   <th>Name</th>
                   <th>Phone</th>
+                  <th>School</th>
                   <th>Batch</th>
                   <th>Martial Art</th>
                   <th>Belt</th>
@@ -205,6 +206,8 @@ setBatches(activeBatches);
                       <td>{student.studentCode || student.admissionNumber || "-"}</td>
                       <td>{student.name || fullName || "-"}</td>
                       <td>{student.phone || "-"}</td>
+                      <td>{student.schoolName || "-"}</td>
+
                       <td>{student.batch?.batchName || "-"}</td>
                       <td>{student.martialArt || "-"}</td>
                       <td>{student.beltRank || "-"}</td>

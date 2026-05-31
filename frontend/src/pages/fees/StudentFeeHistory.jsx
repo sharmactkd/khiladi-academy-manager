@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { feePaymentApi } from "../../api/feeApi.js";
+import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
 
 const currency = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
@@ -84,24 +85,49 @@ const StudentFeeHistory = () => {
         </div>
       </div>
 
-      <div className="card">
-        <h2>Student Details</h2>
+     <div className="card">
+  <h2>Student Details</h2>
 
-        <div className="details-grid">
-          <p>
-            <strong>Name:</strong> {getStudentName(student) || "-"}
-          </p>
-          <p>
-            <strong>Admission No:</strong> {student?.admissionNumber || "-"}
-          </p>
-          <p>
-            <strong>Phone:</strong> {student?.phone || "-"}
-          </p>
-          <p>
-            <strong>Batch:</strong> {student?.batch?.batchName || "-"}
-          </p>
-        </div>
-      </div>
+  <div
+    style={{
+      display: "flex",
+      gap: "24px",
+      alignItems: "flex-start",
+      flexWrap: "wrap",
+    }}
+  >
+    <img
+      src={getStudentPhotoUrl(student)}
+      alt={getStudentName(student) || "Student"}
+      onError={(event) => {
+        event.currentTarget.src = "/default-avatar.png";
+      }}
+      style={{
+        width: "120px",
+        height: "150px",
+        objectFit: "cover",
+        borderRadius: "10px",
+        border: "1px solid #d1d5db",
+        background: "#ffffff",
+      }}
+    />
+
+    <div className="details-grid" style={{ flex: 1 }}>
+      <p>
+        <strong>Name:</strong> {getStudentName(student) || "-"}
+      </p>
+      <p>
+        <strong>Admission No:</strong> {student?.admissionNumber || "-"}
+      </p>
+      <p>
+        <strong>Phone:</strong> {student?.phone || "-"}
+      </p>
+      <p>
+        <strong>Batch:</strong> {student?.batch?.batchName || "-"}
+      </p>
+    </div>
+  </div>
+</div>
 
       <div className="card">
         <div className="page-header">

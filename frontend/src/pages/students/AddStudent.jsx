@@ -46,6 +46,7 @@ const AddStudent = () => {
       status: "active",
       phone: "",
       parentPhone: "",
+      schoolName: "",
       emergencyContactPhone: "",
     },
   });
@@ -122,6 +123,7 @@ const AddStudent = () => {
         batch: values.batch || "",
         phone: values.phone || "",
         email: values.email || "",
+        schoolName: values.schoolName || "",
         address: values.address || "",
         city: values.city || "",
         state: values.state || "",
@@ -250,6 +252,11 @@ const AddStudent = () => {
             <input type="email" {...register("email")} />
           </label>
 
+<label>
+  School Name
+  <input {...register("schoolName")} placeholder="Enter school name" />
+</label>
+
           <label>
             Parent Name
             <input {...register("parentName")} />
@@ -308,6 +315,7 @@ const AddStudent = () => {
             />
           </div>
         )}
+
 
         <label>
           Address

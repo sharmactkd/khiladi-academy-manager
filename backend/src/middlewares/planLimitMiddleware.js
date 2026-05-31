@@ -5,6 +5,10 @@ import { getResourceUsage } from "../services/usageService.js";
 export const enforceLimit = (resourceName) => {
   return async (req, res, next) => {
     try {
+      if (req.user?.role === "super_admin") {
+        return next();
+      }
+
       if (!req.academyId) {
         return errorResponse(res, "Academy is required", 400);
       }
@@ -19,6 +23,7 @@ export const enforceLimit = (resourceName) => {
       }
 
       const numericLimit = Number(limit || 0);
+
       const currentUsage = await getResourceUsage({
         academyId: req.academyId,
         resourceName,

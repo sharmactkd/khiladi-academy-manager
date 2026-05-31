@@ -49,6 +49,7 @@ const EditStudent = () => {
       dob: "",
       phone: "",
       email: "",
+      schoolName: "",
       parentName: "",
       parentPhone: "",
       martialArt: "",
@@ -91,6 +92,7 @@ const EditStudent = () => {
           dob: toDateInput(studentData?.dateOfBirth),
           phone: formatPhone(studentData?.phone || ""),
           email: studentData?.email || "",
+        schoolName: studentData?.schoolName || "",
           parentName: studentData?.parentName || "",
           parentPhone: formatPhone(studentData?.parentPhone || ""),
           martialArt: studentData?.martialArt || "",
@@ -173,6 +175,7 @@ const EditStudent = () => {
         dateOfBirth: values.dob,
         phone: values.phone || "",
         email: values.email || "",
+        schoolName: values.schoolName || "",
         martialArt: values.martialArt || "Taekwondo",
         beltRank: values.beltRank || "",
         joiningDate: values.joiningDate || "",
@@ -287,6 +290,11 @@ const EditStudent = () => {
             Email
             <input type="email" {...register("email")} />
           </label>
+
+<label>
+  School Name
+  <input {...register("schoolName")} placeholder="Enter school name" />
+</label>
 
           <label>
             Parent Name

@@ -1,11 +1,36 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import { studentApi } from "../../api/studentApi.js";
 import {
   certificateApi,
   certificateTemplateApi,
 } from "../../api/certificateApi.js";
+
 import CertificatePreview from "../../components/certificates/CertificatePreview.jsx";
+
+const normalizeList = (response, nestedKey) => {
+  const data = response?.data;
+
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.data?.[nestedKey])) return data.data[nestedKey];
+  if (Array.isArray(data?.[nestedKey])) return data[nestedKey];
+
+  return [];
+};
+
+const getStudentName = (student) => {
+  const fullName = `${student?.firstName || ""} ${
+    student?.lastName || ""
+  }`.trim();
+
+  return student?.name || fullName || "Student";
+};
+
+const getStudentCode = (student) =>
+  student?.studentCode || student?.admissionNumber || "-";
 
 const GenerateCertificate = () => {
   const navigate = useNavigate();
@@ -13,23 +38,34 @@ const GenerateCertificate = () => {
   const [students, setStudents] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [generatedCertificate, setGeneratedCertificate] = useState(null);
+
   const [form, setForm] = useState({
     student: "",
     template: "",
     certificateType: "custom",
     issueDate: new Date().toISOString().slice(0, 10),
   });
+
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
-      const [studentResponse, templateResponse] = await Promise.all([
-        studentApi.getAll({ limit: 100, status: "active" }),
-        certificateTemplateApi.getAll(),
-      ]);
+      try {
+        setLoading(true);
 
-      setStudents(studentResponse.data?.data?.students || []);
-      setTemplates(templateResponse.data?.data?.templates || []);
+        const [studentResponse, templateResponse] = await Promise.all([
+          studentApi.getAll({ limit: 100, status: "active" }),
+          certificateTemplateApi.getAll(),
+        ]);
+
+        setStudents(normalizeList(studentResponse, "students"));
+        setTemplates(normalizeList(templateResponse, "templates"));
+      } catch (err) {
+        alert(err.response?.data?.message || "Data load nahi hua");
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadData();
@@ -49,7 +85,9 @@ const GenerateCertificate = () => {
 
     try {
       setSaving(true);
+
       const response = await certificateApi.generate(form);
+
       setGeneratedCertificate(response.data?.data?.certificate || null);
       alert("Certificate generated successfully");
     } catch (err) {
@@ -58,6 +96,16 @@ const GenerateCertificate = () => {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="page">
+        <div className="card">
+          <p>Loading students and templates...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -71,11 +119,17 @@ const GenerateCertificate = () => {
       <form className="card form-grid" onSubmit={handleGenerate}>
         <label>
           Student
-          <select name="student" value={form.student} onChange={handleChange} required>
+          <select
+            name="student"
+            value={form.student}
+            onChange={handleChange}
+            required
+          >
             <option value="">Select Student</option>
+
             {students.map((student) => (
               <option key={student._id} value={student._id}>
-                {student.name} ({student.studentCode})
+                {getStudentName(student)} ({getStudentCode(student)})
               </option>
             ))}
           </select>
@@ -90,6 +144,7 @@ const GenerateCertificate = () => {
             required
           >
             <option value="">Select Template</option>
+
             {templates.map((template) => (
               <option key={template._id} value={template._id}>
                 {template.templateName} ({template.certificateType})
@@ -136,6 +191,7 @@ const GenerateCertificate = () => {
           <div className="form-actions">
             <button
               className="btn btn-primary"
+              type="button"
               onClick={() =>
                 navigate(`/certificates/${generatedCertificate._id}/print`)
               }

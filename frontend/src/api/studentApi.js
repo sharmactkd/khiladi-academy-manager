@@ -1,5 +1,11 @@
 import api from "./api.js";
 
+const multipartConfig = {
+  headers: {
+    "Content-Type": "multipart/form-data",
+  },
+};
+
 export const studentApi = {
   getAll: async (params = {}) => {
     const res = await api.get("/students", { params });
@@ -12,12 +18,20 @@ export const studentApi = {
   },
 
   create: async (payload) => {
-    const res = await api.post("/students", payload);
+    const res =
+      payload instanceof FormData
+        ? await api.post("/students", payload, multipartConfig)
+        : await api.post("/students", payload);
+
     return res.data;
   },
 
   update: async (id, payload) => {
-    const res = await api.patch(`/students/${id}`, payload);
+    const res =
+      payload instanceof FormData
+        ? await api.patch(`/students/${id}`, payload, multipartConfig)
+        : await api.patch(`/students/${id}`, payload);
+
     return res.data;
   },
 

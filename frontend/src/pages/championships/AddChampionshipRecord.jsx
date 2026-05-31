@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+
 import { championshipRecordApi } from "../../api/championshipRecordApi.js";
 import { studentApi } from "../../api/studentApi.js";
+import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
 
 const initialForm = {
   student: "",
@@ -21,6 +23,7 @@ const initialForm = {
 const normalizeList = (response, nestedKey) => {
   const data = response?.data;
 
+  if (Array.isArray(response)) return response;
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.data)) return data.data;
   if (Array.isArray(data?.data?.[nestedKey])) return data.data[nestedKey];
@@ -30,16 +33,20 @@ const normalizeList = (response, nestedKey) => {
 };
 
 const getStudentName = (student) => {
-  const fullName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
-  return student.name || fullName || "Student";
+  const fullName = `${student?.firstName || ""} ${
+    student?.lastName || ""
+  }`.trim();
+
+  return student?.name || fullName || "Student";
 };
 
 const getStudentCode = (student) =>
-  student.studentCode || student.admissionNumber || "-";
+  student?.studentCode || student?.admissionNumber || "-";
 
 const AddChampionshipRecord = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
   const studentIdFromUrl = searchParams.get("student") || "";
 
   const [form, setForm] = useState({
@@ -50,9 +57,14 @@ const AddChampionshipRecord = () => {
   const [students, setStudents] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   const selectedStudent = useMemo(() => {
-    return students.find((student) => student._id === form.student) || null;
+    return (
+      students.find(
+        (student) => String(student._id) === String(form.student)
+      ) || null
+    );
   }, [students, form.student]);
 
   useEffect(() => {
@@ -71,7 +83,8 @@ const AddChampionshipRecord = () => {
           setForm((prev) => ({
             ...prev,
             student: studentIdFromUrl,
-            weightCategory: matchedStudent?.weightCategory || prev.weightCategory,
+            weightCategory:
+              matchedStudent?.weightCategory || prev.weightCategory,
           }));
         }
       } catch {
@@ -85,7 +98,10 @@ const AddChampionshipRecord = () => {
   const handleChange = (event) => {
     const { name, value } = event.target;
 
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (event) => {
@@ -134,6 +150,7 @@ const AddChampionshipRecord = () => {
             required
           >
             <option value="">Select Student</option>
+
             {students.map((student) => (
               <option key={student._id} value={student._id}>
                 {getStudentName(student)} ({getStudentCode(student)})
@@ -152,6 +169,43 @@ const AddChampionshipRecord = () => {
           />
         </label>
 
+        {selectedStudent && (
+          <div className="full-width card subtle-card">
+            <h3>Student Photo</h3>
+
+            <button
+              type="button"
+              onClick={() => setShowPhotoModal(true)}
+              style={{
+                border: 0,
+                background: "transparent",
+                padding: 0,
+                cursor: "pointer",
+              }}
+            >
+              <img
+                src={getStudentPhotoUrl(selectedStudent)}
+                alt={getStudentName(selectedStudent)}
+                onError={(event) => {
+                  event.currentTarget.src = "/default-avatar.png";
+                }}
+                style={{
+                  width: "120px",
+                  height: "150px",
+                  objectFit: "cover",
+                  borderRadius: "12px",
+                  border: "1px solid #d1d5db",
+                  background: "#ffffff",
+                }}
+              />
+            </button>
+
+            <p style={{ marginTop: "10px", marginBottom: 0 }}>
+              {getStudentName(selectedStudent)} ({getStudentCode(selectedStudent)})
+            </p>
+          </div>
+        )}
+
         <label>
           Level
           <select name="level" value={form.level} onChange={handleChange}>
@@ -165,7 +219,11 @@ const AddChampionshipRecord = () => {
 
         <label>
           Event Type
-          <select name="eventType" value={form.eventType} onChange={handleChange}>
+          <select
+            name="eventType"
+            value={form.eventType}
+            onChange={handleChange}
+          >
             <option value="kyorugi">Kyorugi</option>
             <option value="poomsae">Poomsae</option>
             <option value="demo">Demo</option>
@@ -227,13 +285,6 @@ const AddChampionshipRecord = () => {
           />
         </label>
 
-        {selectedStudent && (
-          <div className="card full-width">
-            <strong>Selected Student:</strong>{" "}
-            {getStudentName(selectedStudent)} ({getStudentCode(selectedStudent)})
-          </div>
-        )}
-
         <label className="full-width">
           Certificate URL
           <input
@@ -267,6 +318,79 @@ const AddChampionshipRecord = () => {
           </button>
         </div>
       </form>
+
+      {showPhotoModal && selectedStudent && (
+        <div
+          onClick={() => setShowPhotoModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.72)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px",
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "min(520px, 95vw)",
+              background: "#ffffff",
+              borderRadius: "18px",
+              padding: "24px",
+              boxShadow: "0 25px 60px rgba(0,0,0,0.25)",
+            }}
+          >
+            <div className="page-header">
+              <div>
+                <h2>Student Photo</h2>
+                <p>
+                  {getStudentName(selectedStudent)} (
+                  {getStudentCode(selectedStudent)})
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setShowPhotoModal(false)}
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ textAlign: "center", margin: "24px 0" }}>
+              <img
+                src={getStudentPhotoUrl(selectedStudent)}
+                alt={getStudentName(selectedStudent)}
+                onError={(event) => {
+                  event.currentTarget.src = "/default-avatar.png";
+                }}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "420px",
+                  objectFit: "contain",
+                  borderRadius: "14px",
+                  border: "1px solid #e5e7eb",
+                  background: "#ffffff",
+                  padding: "8px",
+                }}
+              />
+            </div>
+
+            <div className="form-actions">
+              <Link
+                className="btn btn-primary"
+                to={`/students/${selectedStudent._id}/edit`}
+              >
+                Change Photo
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

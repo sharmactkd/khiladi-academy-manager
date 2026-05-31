@@ -45,14 +45,24 @@ const Sidebar = () => {
           <>
                        <div className="sidebar-section-title">Academy</div>
                        <NavLink to="/academy/profile">Academy Profile</NavLink>
+                       
+                  <NavLink to="/branches">Branches</NavLink>
+            <NavLink to="/batches">Batches</NavLink>
             <NavLink to="/attendance">Attendance</NavLink>
             <NavLink to="/attendance/monthly-register">Monthly Attendance</NavLink>
             <NavLink to="/students">Students</NavLink>
            
                  <NavLink to="/fees">Fees</NavLink>
-                  <NavLink to="/branches">Branches</NavLink>
-            <NavLink to="/batches">Batches</NavLink>
             
+              <div className="sidebar-section-title">Records</div>
+            <NavLink to="/belt-tests">Belt Tests</NavLink>
+            <NavLink to="/championship-records">Championships</NavLink>
+            
+            <NavLink to="/id-cards/generate">Generate ID Card</NavLink>
+            
+            <NavLink to="/certificates/generate">Generate Certificate</NavLink>
+            <NavLink to="/id-card-templates">ID Card Templates</NavLink>
+            <NavLink to="/certificate-templates">Certificate Templates</NavLink>
 
             <div className="sidebar-section-title">Analytics</div>
             <NavLink to="/analytics">Dashboard Analytics</NavLink>
@@ -67,13 +77,7 @@ const Sidebar = () => {
             {canManageOwnerOnly && <NavLink to="/skills/new">Add Skill</NavLink>}
             <NavLink to="/skill-assessments">Skill Assessments</NavLink>
 
-            <div className="sidebar-section-title">Records</div>
-            <NavLink to="/belt-tests">Belt Tests</NavLink>
-            <NavLink to="/championship-records">Championships</NavLink>
-            <NavLink to="/id-card-templates">ID Card Templates</NavLink>
-            <NavLink to="/id-cards/generate">Generate ID Card</NavLink>
-            <NavLink to="/certificate-templates">Certificate Templates</NavLink>
-            <NavLink to="/certificates/generate">Generate Certificate</NavLink>
+          
 
             <div className="sidebar-section-title">Communication</div>
             <NavLink to="/parent-links">Parent Links</NavLink>

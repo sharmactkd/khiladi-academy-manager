@@ -62,21 +62,60 @@ export const createStudentValidator = [
   phoneValidator("phone", "Phone"),
   phoneValidator("emergencyContactPhone", "Emergency contact phone"),
 
+  body("schoolName")
+  .optional({ checkFalsy: true })
+  .trim()
+  .isLength({ max: 200 })
+  .withMessage("School name cannot exceed 200 characters"),
+  
   body("status").optional().isIn(["active", "inactive", "left"]),
 ];
 
 export const updateStudentValidator = [
   param("id").isMongoId().withMessage("Invalid student ID"),
-  body("studentCode").optional().trim().notEmpty(),
-  body("name").optional().trim().isLength({ min: 2, max: 100 }),
+
+  body("admissionNumber")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 40 })
+    .withMessage("Admission number cannot exceed 40 characters"),
+
+  body("firstName")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage("First name must be between 2 and 100 characters"),
+
+  body("lastName")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("Last name cannot exceed 100 characters"),
+
   body("batch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
   body("gender").optional().isIn(["male", "female", "other"]),
-  body("dob").optional({ nullable: true, checkFalsy: true }).isISO8601(),
+
+  body("dateOfBirth")
+    .optional({ nullable: true, checkFalsy: true })
+    .isISO8601()
+    .withMessage("DOB must be a valid date"),
+
+  body("joiningDate")
+    .optional({ nullable: true, checkFalsy: true })
+    .isISO8601()
+    .withMessage("Joining date must be a valid date"),
+
   body("email").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
 
   phoneValidator("phone", "Phone"),
-  
+  phoneValidator("parentPhone", "Parent phone"),
   phoneValidator("emergencyContactPhone", "Emergency contact phone"),
+
+  body("schoolName")
+  .optional({ checkFalsy: true })
+  .trim()
+  .isLength({ max: 200 })
+  .withMessage("School name cannot exceed 200 characters"),
 
   body("status").optional().isIn(["active", "inactive", "left"]),
 ];
