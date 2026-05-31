@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Trash2 } from "lucide-react";
+import { Download, FileText, Printer, Trash2, Upload } from "lucide-react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
+import StudentImportModal from "../../components/students/StudentImportModal.jsx";
 
 const Students = () => {
   const navigate = useNavigate();
@@ -11,6 +15,9 @@ const Students = () => {
   const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const [filters, setFilters] = useState({
     search: "",
@@ -19,6 +26,20 @@ const Students = () => {
     martialArt: "",
     beltRank: "",
   });
+
+  const allVisibleSelected = useMemo(() => {
+    return (
+      students.length > 0 && students.every((s) => selectedIds.includes(s._id))
+    );
+  }, [students, selectedIds]);
+
+  const selectedStudents = useMemo(() => {
+    return students.filter((student) => selectedIds.includes(student._id));
+  }, [students, selectedIds]);
+
+  const printableStudents = useMemo(() => {
+    return selectedStudents.length > 0 ? selectedStudents : students;
+  }, [selectedStudents, students]);
 
   const fetchStudents = async () => {
     try {
@@ -30,9 +51,9 @@ const Students = () => {
         )
       );
 
-    const response = await studentApi.getAll(cleanFilters);
-
-setStudents(response?.data || []);
+      const response = await studentApi.getAll(cleanFilters);
+      setStudents(response?.data || []);
+      setSelectedIds([]);
     } catch (error) {
       toast.error(error.response?.data?.message || "Students load nahi hue");
     } finally {
@@ -42,15 +63,13 @@ setStudents(response?.data || []);
 
   const fetchBatches = async () => {
     try {
-   const response = await batchApi.getAll();
+      const response = await batchApi.getAll();
 
-const list = Array.isArray(response.data)
-  ? response.data
-  : response.data?.data || [];
+      const list = Array.isArray(response.data)
+        ? response.data
+        : response.data?.data || [];
 
-const activeBatches = list.filter((batch) => batch.isActive);
-
-setBatches(activeBatches);
+      setBatches(list.filter((batch) => batch.isActive));
     } catch {
       setBatches([]);
     }
@@ -65,10 +84,401 @@ setBatches(activeBatches);
     return () => clearTimeout(timer);
   }, [filters]);
 
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(students.map((student) => student._id));
+    }
+  };
+
+  const toggleSelectOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((studentId) => studentId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const formatDate = (value) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleDateString("en-IN");
+  };
+
+  const getStudentFullName = (student) => {
+    return (
+      student.name ||
+      `${student.firstName || ""} ${student.lastName || ""}`.trim() ||
+      ""
+    );
+  };
+
+  const buildExportRows = (list) => {
+    return list.map((student, index) => ({
+      "S. No.": index + 1,
+      "Student Code": student.studentCode || student.admissionNumber || "",
+      "Admission Number": student.admissionNumber || "",
+      Name: getStudentFullName(student),
+      Gender: student.gender || "",
+      DOB: formatDate(student.dateOfBirth),
+      Phone: student.phone || "",
+      Email: student.email || "",
+      School: student.schoolName || "",
+      "Parent Name": student.parentName || "",
+      "Parent Phone": student.parentPhone || "",
+      Batch: student.batch?.batchName || "",
+      "Martial Art": student.martialArt || "",
+      "Belt Rank": student.beltRank || "",
+      Status: student.status || "",
+      City: student.city || "",
+      State: student.state || "",
+      Address: student.address || "",
+      "Emergency Contact Name": student.emergencyContact?.name || "",
+      "Emergency Contact Phone": student.emergencyContact?.phone || "",
+      Notes: student.notes || "",
+    }));
+  };
+
+  const buildCompactRows = (list) => {
+    return list.map((student, index) => [
+      index + 1,
+      student.studentCode || student.admissionNumber || "",
+      getStudentFullName(student),
+      student.phone || "",
+      student.schoolName || "",
+      student.batch?.batchName || "",
+      student.martialArt || "",
+      student.beltRank || "",
+      student.status || "",
+    ]);
+  };
+
+  const handleExportExcel = () => {
+    const exportList = printableStudents;
+
+    if (exportList.length === 0) {
+      toast.error("Export ke liye koi student nahi mila");
+      return;
+    }
+
+    const rows = buildExportRows(exportList);
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+
+    worksheet["!cols"] = [
+      { wch: 8 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 26 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 15 },
+      { wch: 26 },
+      { wch: 28 },
+      { wch: 24 },
+      { wch: 16 },
+      { wch: 20 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 35 },
+      { wch: 26 },
+      { wch: 22 },
+      { wch: 35 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+
+    const today = new Date().toISOString().slice(0, 10);
+    const fileName =
+      selectedStudents.length > 0
+        ? `khiladi-selected-students-${today}.xlsx`
+        : `khiladi-students-${today}.xlsx`;
+
+    XLSX.writeFile(workbook, fileName);
+
+    toast.success(`${exportList.length} students export ho gaye`);
+  };
+
+  const handleSavePdf = () => {
+    const exportList = printableStudents;
+
+    if (exportList.length === 0) {
+      toast.error("PDF ke liye koi student nahi mila");
+      return;
+    }
+
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "pt",
+      format: "a4",
+    });
+
+    const today = new Date().toLocaleDateString("en-IN");
+
+    doc.setFontSize(16);
+    doc.text("KHILADI Academy Manager", 40, 36);
+
+    doc.setFontSize(12);
+    doc.text("Students List", 40, 56);
+    doc.text(`Date: ${today}`, 720, 56);
+
+    autoTable(doc, {
+      startY: 80,
+      head: [
+        [
+          "S. No.",
+          "Code",
+          "Name",
+          "Phone",
+          "School",
+          "Batch",
+          "Martial Art",
+          "Belt",
+          "Status",
+        ],
+      ],
+      body: buildCompactRows(exportList),
+      styles: {
+        fontSize: 8,
+        cellPadding: 5,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        fontStyle: "bold",
+      },
+      columnStyles: {
+        0: { cellWidth: 38 },
+        1: { cellWidth: 95 },
+        2: { cellWidth: 130 },
+        3: { cellWidth: 80 },
+        4: { cellWidth: 130 },
+        5: { cellWidth: 85 },
+        6: { cellWidth: 80 },
+        7: { cellWidth: 65 },
+        8: { cellWidth: 60 },
+      },
+      margin: { left: 40, right: 40 },
+    });
+
+    const fileDate = new Date().toISOString().slice(0, 10);
+    const fileName =
+      selectedStudents.length > 0
+        ? `khiladi-selected-students-${fileDate}.pdf`
+        : `khiladi-students-${fileDate}.pdf`;
+
+    doc.save(fileName);
+    toast.success(`${exportList.length} students PDF save ho gaya`);
+  };
+
+  const handlePrint = () => {
+    const printList = printableStudents;
+
+    if (printList.length === 0) {
+      toast.error("Print ke liye koi student nahi mila");
+      return;
+    }
+
+    const rowsHtml = printList
+      .map((student, index) => {
+        return `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${student.studentCode || student.admissionNumber || ""}</td>
+            <td>${getStudentFullName(student)}</td>
+            <td>${student.phone || ""}</td>
+            <td>${student.schoolName || ""}</td>
+            <td>${student.batch?.batchName || ""}</td>
+            <td>${student.martialArt || ""}</td>
+            <td>${student.beltRank || ""}</td>
+            <td>${student.status || ""}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    const printWindow = window.open("", "_blank", "width=1200,height=800");
+
+    if (!printWindow) {
+      toast.error("Popup blocked hai. Browser me popup allow karein.");
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Students List</title>
+          <style>
+            * {
+              box-sizing: border-box;
+            }
+
+            body {
+              font-family: Arial, sans-serif;
+              margin: 24px;
+              color: #111827;
+            }
+
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #111827;
+              padding-bottom: 10px;
+            }
+
+            h1 {
+              margin: 0;
+              font-size: 22px;
+            }
+
+            p {
+              margin: 4px 0 0;
+              font-size: 13px;
+              color: #374151;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 11px;
+            }
+
+            th,
+            td {
+              border: 1px solid #d1d5db;
+              padding: 7px;
+              text-align: left;
+              vertical-align: top;
+            }
+
+            th {
+              background: #f3f4f6;
+              font-weight: 700;
+            }
+
+            tr:nth-child(even) {
+              background: #fafafa;
+            }
+
+            @media print {
+              body {
+                margin: 12mm;
+              }
+
+              .no-print {
+                display: none;
+              }
+            }
+          </style>
+        </head>
+
+        <body>
+          <div class="header">
+            <div>
+              <h1>KHILADI Academy Manager</h1>
+              <p>Students List</p>
+            </div>
+
+            <div>
+              <p>Date: ${new Date().toLocaleDateString("en-IN")}</p>
+              <p>Total Students: ${printList.length}</p>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>S. No.</th>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>School</th>
+                <th>Batch</th>
+                <th>Martial Art</th>
+                <th>Belt</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <script>
+            window.onload = function () {
+              window.focus();
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) {
+      toast.error("Pehle students select karein");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Kya aap selected ${selectedIds.length} students delete karna chahte hain?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setBulkDeleting(true);
+
+      await Promise.all(selectedIds.map((id) => studentApi.remove(id)));
+
+      toast.success(`${selectedIds.length} students delete ho gaye`);
+      setSelectedIds([]);
+      fetchStudents();
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Selected students delete nahi hue"
+      );
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const handleImportStudents = async (rows) => {
+    try {
+      const response = await studentApi.importBulk(rows);
+      const summary = response?.data || {};
+
+      toast.success(
+        `Import complete: ${summary.imported || 0} imported, ${
+          summary.skipped || 0
+        } skipped, ${summary.failed || 0} failed`
+      );
+
+      fetchStudents();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Student import failed");
+      throw error;
+    }
+  };
+
   const handleDelete = async (student) => {
-    const fullName = `${student.firstName || ""} ${
-      student.lastName || ""
-    }`.trim();
+    const fullName = getStudentFullName(student);
 
     const confirmed = window.confirm(
       `Kya aap sach me "${
@@ -89,15 +499,75 @@ setBatches(activeBatches);
 
   return (
     <div className="page">
+      <StudentImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleImportStudents}
+      />
+
       <div className="page-header">
         <div>
           <h1>Students</h1>
           <p>Academy ke students manage karein</p>
         </div>
 
-        <Link className="btn btn-primary" to="/students/new">
-          Add Student
-        </Link>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+            >
+              <Trash2 size={16} />
+              {bulkDeleting
+                ? "Deleting..."
+                : `Delete Selected (${selectedIds.length})`}
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="btn"
+            onClick={handleExportExcel}
+            disabled={loading || students.length === 0}
+          >
+            <Download size={16} />
+            Export Excel
+          </button>
+
+          <button
+            type="button"
+            className="btn"
+            onClick={handleSavePdf}
+            disabled={loading || students.length === 0}
+          >
+            <FileText size={16} />
+            Save PDF
+          </button>
+
+          <button
+            type="button"
+            className="btn"
+            onClick={handlePrint}
+            disabled={loading || students.length === 0}
+          >
+            <Printer size={16} />
+            Print
+          </button>
+
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setImportModalOpen(true)}
+          >
+            <Upload size={16} /> Import Excel
+          </button>
+
+          <Link className="btn btn-primary" to="/students/new">
+            Add Student
+          </Link>
+        </div>
       </div>
 
       <div className="card">
@@ -179,6 +649,13 @@ setBatches(activeBatches);
             <table className="table">
               <thead>
                 <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th>Code</th>
                   <th>Name</th>
                   <th>Phone</th>
@@ -193,21 +670,32 @@ setBatches(activeBatches);
 
               <tbody>
                 {students.map((student) => {
-                  const fullName = `${student.firstName || ""} ${
-                    student.lastName || ""
-                  }`.trim();
+                  const fullName = getStudentFullName(student);
+                  const isSelected = selectedIds.includes(student._id);
 
                   return (
                     <tr
                       key={student._id}
                       onClick={() => navigate(`/students/${student._id}`)}
-                      style={{ cursor: "pointer" }}
+                      style={{
+                        cursor: "pointer",
+                        background: isSelected ? "#f8fafc" : undefined,
+                      }}
                     >
-                      <td>{student.studentCode || student.admissionNumber || "-"}</td>
-                      <td>{student.name || fullName || "-"}</td>
+                      <td onClick={(event) => event.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectOne(student._id)}
+                        />
+                      </td>
+
+                      <td>
+                        {student.studentCode || student.admissionNumber || "-"}
+                      </td>
+                      <td>{fullName || "-"}</td>
                       <td>{student.phone || "-"}</td>
                       <td>{student.schoolName || "-"}</td>
-
                       <td>{student.batch?.batchName || "-"}</td>
                       <td>{student.martialArt || "-"}</td>
                       <td>{student.beltRank || "-"}</td>

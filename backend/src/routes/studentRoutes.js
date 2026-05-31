@@ -6,6 +6,7 @@ import {
   getStudentById,
   updateStudent,
   deleteStudent,
+  importStudents,
 } from "../controllers/studentController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
@@ -31,6 +32,8 @@ router.use(protect);
 router.use(allowAcademyManagement);
 router.use(resolveUserAcademy);
 router.use(requireResolvedAcademy);
+
+router.post("/import", importStudents);
 
 router
   .route("/")

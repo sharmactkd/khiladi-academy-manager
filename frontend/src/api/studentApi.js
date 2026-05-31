@@ -35,6 +35,15 @@ export const studentApi = {
     return res.data;
   },
 
+  importBulk: async (students = []) => {
+    const res = await api.post("/students/import", {
+      students,
+      duplicateMode: "skip",
+    });
+
+    return res.data;
+  },
+
   remove: async (id) => {
     const res = await api.delete(`/students/${id}`);
     return res.data;
@@ -45,6 +54,7 @@ export const getStudents = studentApi.getAll;
 export const getStudentById = studentApi.getById;
 export const createStudent = studentApi.create;
 export const updateStudent = studentApi.update;
+export const importStudents = studentApi.importBulk;
 export const deleteStudent = studentApi.remove;
 
 export default studentApi;

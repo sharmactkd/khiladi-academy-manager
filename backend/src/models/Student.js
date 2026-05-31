@@ -89,11 +89,24 @@ const studentSchema = new mongoose.Schema(
     },
 
     schoolName: {
-  type: String,
-  trim: true,
-  maxlength: 200,
-  default: "",
-},
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: "",
+    },
+
+    parentName: {
+      type: String,
+      trim: true,
+      maxlength: 150,
+      default: "",
+    },
+
+    parentPhone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
 
     address: {
       type: String,
@@ -226,6 +239,10 @@ studentSchema.index({
 studentSchema.pre("save", function () {
   if (this.phone) {
     this.phone = String(this.phone).replace(/\D/g, "").slice(0, 10);
+  }
+
+  if (this.parentPhone) {
+    this.parentPhone = String(this.parentPhone).replace(/\D/g, "").slice(0, 10);
   }
 
   if (this.emergencyContact?.phone) {
