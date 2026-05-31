@@ -37,7 +37,14 @@ const clean = (value) =>
 
 const normalizePhone = (value) => clean(value).replace(/\D/g, "").slice(-10);
 
-const normalizeName = (value) => clean(value).toLowerCase();
+const normalizeName = (value) =>
+  clean(value)
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\b(mammi|mummy|papa|father|mother|guardian)\b/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const getStudentName = (student) =>
   clean(`${student.firstName || ""} ${student.lastName || ""}`);
@@ -51,6 +58,7 @@ const buildStudentLookups = async (academyId) => {
   const byAdmission = new Map();
   const byName = new Map();
   const byNameBatch = new Map();
+  const normalizedStudents = [];
 
   students.forEach((student) => {
     const phone = normalizePhone(student.phone);
@@ -73,6 +81,14 @@ const buildStudentLookups = async (academyId) => {
     if (name && batchKey) {
       byNameBatch.set(`${name}::${batchKey}`, student);
     }
+
+    normalizedStudents.push({
+      student,
+      phone,
+      admission,
+      name,
+      batchKey,
+    });
   });
 
   return {
@@ -80,6 +96,7 @@ const buildStudentLookups = async (academyId) => {
     byAdmission,
     byName,
     byNameBatch,
+    normalizedStudents,
   };
 };
 
@@ -94,11 +111,26 @@ const buildBatchNameLookup = async (academyId) => {
   }, new Map());
 };
 
-const findMatchedStudent = ({
-  row,
-  studentLookups,
-  batchNameLookup,
-}) => {
+const findFuzzyStudentByName = ({ name, studentLookups }) => {
+  if (!name || name.length < 3) return null;
+
+  const exact = studentLookups.byName.get(name);
+  if (exact) return exact;
+
+  const candidates = studentLookups.normalizedStudents.filter((item) => {
+    if (!item.name || item.name.length < 3) return false;
+
+    return item.name.includes(name) || name.includes(item.name);
+  });
+
+  if (candidates.length === 1) {
+    return candidates[0].student;
+  }
+
+  return null;
+};
+
+const findMatchedStudent = ({ row, studentLookups, batchNameLookup }) => {
   const phone = normalizePhone(row.phone);
   const admission = clean(row.admissionNumber || row.studentCode).toLowerCase();
   const name = normalizeName(row.name);
@@ -125,74 +157,85 @@ const findMatchedStudent = ({
     return studentLookups.byName.get(name);
   }
 
-  return null;
+  return findFuzzyStudentByName({ name, studentLookups });
 };
 
 const normalizeImportStatus = (status) => {
-  if (["present", "absent", "leave"].includes(status)) return status;
+  if (["present", "absent", "leave", "late"].includes(status)) return status;
   return null;
+};
+
+const getRawStudentKey = (row) => {
+  const phone = normalizePhone(row.phone);
+  const admission = clean(row.admissionNumber || row.studentCode).toLowerCase();
+  const name = normalizeName(row.name);
+
+  return phone || admission || name || `row-${row.rowNumber || Date.now()}`;
+};
+
+const getRecordIdentityKey = (record) => {
+  if (record.student) {
+    return `student:${String(record.student)}`;
+  }
+
+  return `raw:${normalizePhone(record.importedPhone)}:${clean(
+    record.importedAdmissionNumber
+  ).toLowerCase()}:${normalizeName(record.importedName)}`;
 };
 
 const getGroupKey = ({ batchId, date }) => `${batchId}::${date}`;
 
-const buildImportGroups = async ({
+const buildImportGroups = ({
   rows,
-  academyId,
   studentLookups,
   batchNameLookup,
   summary,
   fallbackBatch,
-  assignMissingBatch,
 }) => {
   const groups = new Map();
 
   rows.forEach((row, rowIndex) => {
     try {
       const rowNumber = row.rowNumber || rowIndex + 2;
-      const student = findMatchedStudent({
+      const matchedStudent = findMatchedStudent({
         row,
         studentLookups,
         batchNameLookup,
       });
 
-      if (!student) {
-        summary.unmatchedStudents.push({
+      const effectiveBatch = matchedStudent?.batch || fallbackBatch;
+
+      if (!effectiveBatch) {
+        summary.failed += 1;
+        summary.errors.push({
           rowNumber,
           name: clean(row.name),
           phone: normalizePhone(row.phone),
           admissionNumber: clean(row.admissionNumber || row.studentCode),
-          reason: "Student not found",
+          message:
+            "No batch found. Please select a batch before importing attendance.",
         });
         return;
       }
 
-    let effectiveBatch = student.batch;
-
-if (!effectiveBatch && fallbackBatch) {
-  effectiveBatch = fallbackBatch;
-
-  if (assignMissingBatch) {
-    student.batch = fallbackBatch;
-  }
-
-  summary.warnings.push({
-    rowNumber,
-    name: getStudentName(student),
-    admissionNumber: clean(student.admissionNumber),
-    message: "Student had no batch. Selected import batch was used.",
-  });
-}
-
-if (!effectiveBatch) {
-  summary.unmatchedStudents.push({
-    rowNumber,
-    name: getStudentName(student),
-    phone: normalizePhone(student.phone),
-    admissionNumber: clean(student.admissionNumber),
-    reason: "Matched student has no batch, attendance skipped",
-  });
-  return;
-}
+      if (!matchedStudent) {
+        summary.rawImportedStudents += 1;
+        summary.warnings.push({
+          rowNumber,
+          name: clean(row.name),
+          phone: normalizePhone(row.phone),
+          admissionNumber: clean(row.admissionNumber || row.studentCode),
+          message:
+            "Student master record not found. Attendance saved as raw Excel record.",
+        });
+      } else if (!matchedStudent.batch && fallbackBatch) {
+        summary.warnings.push({
+          rowNumber,
+          name: getStudentName(matchedStudent),
+          admissionNumber: clean(matchedStudent.admissionNumber),
+          message: "Student had no batch. Selected import batch was used.",
+        });
+      }
 
       const attendanceItems = Array.isArray(row.attendance)
         ? row.attendance
@@ -221,18 +264,27 @@ if (!effectiveBatch) {
         const batchId = String(effectiveBatch);
         const key = getGroupKey({ batchId, date: isoDate });
 
-     if (!groups.has(key)) {
-  groups.set(key, {
-    batch: effectiveBatch,
-    date,
-    records: [],
-  });
-}
+        if (!groups.has(key)) {
+          groups.set(key, {
+            batch: effectiveBatch,
+            date,
+            records: [],
+          });
+        }
 
         groups.get(key).records.push({
-          student: student._id,
+          student: matchedStudent?._id || null,
+          importedName: matchedStudent ? "" : clean(row.name),
+          importedPhone: matchedStudent ? "" : normalizePhone(row.phone),
+          importedAdmissionNumber: matchedStudent
+            ? ""
+            : clean(row.admissionNumber || row.studentCode),
           status,
-          note: "Imported from old attendance Excel",
+          source: "excel-import",
+          note: matchedStudent
+            ? "Imported from old attendance Excel"
+            : "Imported from old attendance Excel as raw record",
+          rowKey: getRawStudentKey(row),
         });
 
         summary.totalAttendanceCells += 1;
@@ -267,15 +319,17 @@ const saveImportGroup = async ({
     const seen = new Set();
 
     group.records.forEach((record) => {
-      const studentId = String(record.student);
+      const recordKey = getRecordIdentityKey(record);
 
-      if (seen.has(studentId)) {
+      if (seen.has(recordKey)) {
         summary.skipped += 1;
         return;
       }
 
-      seen.add(studentId);
-      uniqueRecords.push(record);
+      seen.add(recordKey);
+
+      const { rowKey, ...cleanRecord } = record;
+      uniqueRecords.push(cleanRecord);
     });
 
     await Attendance.create({
@@ -294,17 +348,22 @@ const saveImportGroup = async ({
   const existingMap = new Map();
 
   attendance.records.forEach((record, index) => {
-    existingMap.set(String(record.student), index);
+    existingMap.set(getRecordIdentityKey(record), index);
   });
 
   group.records.forEach((record) => {
-    const studentId = String(record.student);
+    const recordKey = getRecordIdentityKey(record);
+    const { rowKey, ...cleanRecord } = record;
 
-    if (existingMap.has(studentId)) {
+    if (existingMap.has(recordKey)) {
       if (duplicateMode === "overwrite") {
-        const index = existingMap.get(studentId);
-        attendance.records[index].status = record.status;
-        attendance.records[index].note = record.note;
+        const index = existingMap.get(recordKey);
+
+        attendance.records[index] = {
+          ...attendance.records[index].toObject?.(),
+          ...cleanRecord,
+        };
+
         summary.imported += 1;
       } else {
         summary.skipped += 1;
@@ -313,8 +372,8 @@ const saveImportGroup = async ({
       return;
     }
 
-    attendance.records.push(record);
-    existingMap.set(studentId, attendance.records.length - 1);
+    attendance.records.push(cleanRecord);
+    existingMap.set(recordKey, attendance.records.length - 1);
     summary.imported += 1;
   });
 
@@ -334,16 +393,21 @@ export const markAttendance = asyncHandler(async (req, res) => {
     return errorResponse(res, "Batch not found in your academy", 404);
   }
 
-  const studentIds = (records || []).map((record) => record.student);
+  const normalizedRecords = Array.isArray(records) ? records : [];
+  const studentIds = normalizedRecords
+    .map((record) => record.student)
+    .filter(Boolean);
+
+  const uniqueStudentIds = [...new Set(studentIds.map(String))];
 
   const students = await Student.find({
-    _id: { $in: studentIds },
+    _id: { $in: uniqueStudentIds },
     academy: req.academyId,
     batch: batchId,
     status: { $ne: "left" },
   }).select("_id");
 
-  if (students.length !== studentIds.length) {
+  if (students.length !== uniqueStudentIds.length) {
     return errorResponse(
       res,
       "All attendance students must belong to the selected batch and academy",
@@ -361,7 +425,7 @@ export const markAttendance = asyncHandler(async (req, res) => {
     },
     {
       $set: {
-        records,
+        records: normalizedRecords,
         updatedBy: req.user._id,
       },
       $setOnInsert: {
@@ -389,6 +453,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
   const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
   const duplicateMode =
     req.body?.duplicateMode === "overwrite" ? "overwrite" : "skip";
+  const fallbackBatch = req.body?.fallbackBatch || null;
 
   const summary = {
     totalRows: rows.length,
@@ -396,6 +461,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
     imported: 0,
     skipped: 0,
     failed: 0,
+    rawImportedStudents: 0,
     unmatchedStudents: [],
     warnings: [],
     errors: [],
@@ -405,21 +471,33 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
     return successResponse(res, "Attendance import completed", summary);
   }
 
-  const fallbackBatch = req.body?.fallbackBatch || null;
-const assignMissingBatch = Boolean(req.body?.assignMissingBatch);
+  if (!fallbackBatch) {
+    return errorResponse(
+      res,
+      "Please select a batch before importing old attendance",
+      400
+    );
+  }
+
+  const batch = await Batch.findOne({
+    _id: fallbackBatch,
+    academy: req.academyId,
+  }).select("_id");
+
+  if (!batch) {
+    return errorResponse(res, "Selected import batch not found", 404);
+  }
 
   const studentLookups = await buildStudentLookups(req.academyId);
   const batchNameLookup = await buildBatchNameLookup(req.academyId);
 
-const groups = await buildImportGroups({
-  rows,
-  academyId: req.academyId,
-  studentLookups,
-  batchNameLookup,
-  summary,
-  fallbackBatch,
-  assignMissingBatch,
-});
+  const groups = buildImportGroups({
+    rows,
+    studentLookups,
+    batchNameLookup,
+    summary,
+    fallbackBatch: batch._id,
+  });
 
   for (const group of groups.values()) {
     try {
@@ -440,18 +518,18 @@ const groups = await buildImportGroups({
     }
   }
 
-  if (summary.unmatchedStudents.length > 100) {
-    summary.warnings.push(
-      `${summary.unmatchedStudents.length} unmatched students found. Showing first 100 only.`
-    );
-    summary.unmatchedStudents = summary.unmatchedStudents.slice(0, 100);
+  if (summary.warnings.length > 200) {
+    summary.warnings = summary.warnings.slice(0, 200);
+    summary.warnings.push({
+      message: "Warnings trimmed to first 200 items.",
+    });
   }
 
   if (summary.errors.length > 100) {
-    summary.warnings.push(
-      `${summary.errors.length} errors found. Showing first 100 only.`
-    );
     summary.errors = summary.errors.slice(0, 100);
+    summary.errors.push({
+      message: "Errors trimmed to first 100 items.",
+    });
   }
 
   return successResponse(res, "Attendance import completed", summary);
