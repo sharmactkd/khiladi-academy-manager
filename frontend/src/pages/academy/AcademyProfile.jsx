@@ -1,7 +1,52 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { Country, State, City } from "country-state-city";
+import ReactCountryFlag from "react-country-flag";
+
 import { academyApi } from "../../api/academyApi.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+
+const DEFAULT_COUNTRY_CODE = "IN";
+
+const getFlagEmoji = (countryCode = "") => {
+  if (!countryCode) return "";
+
+  return countryCode
+    .toUpperCase()
+    .replace(/./g, (char) =>
+      String.fromCodePoint(127397 + char.charCodeAt())
+    );
+};
+
+const findCountryCodeByName = (countryName = "") => {
+  const countries = Country.getAllCountries();
+  const normalized = String(countryName || "").trim().toLowerCase();
+
+  if (!normalized) return DEFAULT_COUNTRY_CODE;
+
+  const matched = countries.find(
+    (country) =>
+      country.name.toLowerCase() === normalized ||
+      country.isoCode.toLowerCase() === normalized
+  );
+
+  return matched?.isoCode || DEFAULT_COUNTRY_CODE;
+};
+
+const findStateCodeByName = (countryCode, stateName = "") => {
+  const states = State.getStatesOfCountry(countryCode);
+  const normalized = String(stateName || "").trim().toLowerCase();
+
+  if (!normalized) return "";
+
+  const matched = states.find(
+    (state) =>
+      state.name.toLowerCase() === normalized ||
+      state.isoCode.toLowerCase() === normalized
+  );
+
+  return matched?.isoCode || "";
+};
 
 const AcademyProfile = () => {
   const [academy, setAcademy] = useState(null);
@@ -10,12 +55,36 @@ const AcademyProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [selectedCountryCode, setSelectedCountryCode] =
+    useState(DEFAULT_COUNTRY_CODE);
+  const [selectedStateCode, setSelectedStateCode] = useState("");
+
+  const countries = useMemo(() => Country.getAllCountries(), []);
+
+  const states = useMemo(
+    () => State.getStatesOfCountry(selectedCountryCode),
+    [selectedCountryCode]
+  );
+
+  const cities = useMemo(() => {
+    if (!selectedCountryCode || !selectedStateCode) return [];
+    return City.getCitiesOfState(selectedCountryCode, selectedStateCode);
+  }, [selectedCountryCode, selectedStateCode]);
+
   const loadAcademy = async () => {
     try {
       setLoading(true);
 
       const response = await academyApi.getMyAcademy();
       const academyData = response.data?.data?.academy || null;
+
+      if (academyData) {
+        const countryCode = findCountryCodeByName(academyData.country);
+        const stateCode = findStateCodeByName(countryCode, academyData.state);
+
+        setSelectedCountryCode(countryCode);
+        setSelectedStateCode(stateCode);
+      }
 
       setAcademy(academyData);
       setLogoPreview(academyData?.logo ? getAcademyLogoUrl(academyData) : "");
@@ -37,10 +106,34 @@ const AcademyProfile = () => {
     }));
   };
 
+  const handleCountryChange = (event) => {
+    const countryCode = event.target.value;
+    const country = countries.find((item) => item.isoCode === countryCode);
+
+    setSelectedCountryCode(countryCode);
+    setSelectedStateCode("");
+
+    updateField("country", country?.name || "");
+    updateField("state", "");
+    updateField("city", "");
+  };
+
+  const handleStateChange = (event) => {
+    const stateCode = event.target.value;
+    const state = states.find((item) => item.isoCode === stateCode);
+
+    setSelectedStateCode(stateCode);
+
+    updateField("state", state?.name || "");
+    updateField("city", "");
+  };
+
+  const handleCityChange = (event) => {
+    updateField("city", event.target.value);
+  };
+
   const handleLogoChange = (event) => {
     const file = event.target.files?.[0] || null;
-
-console.log("Selected logo file:", file);
 
     if (!file) {
       setLogoFile(null);
@@ -66,7 +159,7 @@ console.log("Selected logo file:", file);
     setLogoPreview(URL.createObjectURL(file));
   };
 
-  const handleSubmit = async (event) => {
+   const handleSubmit = async (event) => {
     event.preventDefault();
 
     try {
@@ -89,8 +182,6 @@ console.log("Selected logo file:", file);
       formData.append("state", academy.state || "");
       formData.append("country", academy.country || "India");
       formData.append("pincode", academy.pincode || "");
-
-      console.log("Logo file before submit:", logoFile);
 
       if (logoFile) {
         formData.append("logo", logoFile);
@@ -158,7 +249,9 @@ console.log("Selected logo file:", file);
             Academy Name
             <input
               value={academy.academyName || ""}
-              onChange={(event) => updateField("academyName", event.target.value)}
+              onChange={(event) =>
+                updateField("academyName", event.target.value)
+              }
             />
           </label>
 
@@ -170,7 +263,9 @@ console.log("Selected logo file:", file);
                   ? academy.martialArts.join(", ")
                   : academy.martialArts || ""
               }
-              onChange={(event) => updateField("martialArts", event.target.value)}
+              onChange={(event) =>
+                updateField("martialArts", event.target.value)
+              }
             />
           </label>
 
@@ -192,27 +287,49 @@ console.log("Selected logo file:", file);
           </label>
 
           <label>
-            City
-            <input
-              value={academy.city || ""}
-              onChange={(event) => updateField("city", event.target.value)}
-            />
+            Country
+            <select
+              value={selectedCountryCode}
+              onChange={handleCountryChange}
+            >
+              {countries.map((country) => (
+              <option key={country.isoCode} value={country.isoCode}>
+  {getFlagEmoji(country.isoCode)} {country.name}
+</option>
+              ))}
+            </select>
           </label>
 
           <label>
             State
-            <input
-              value={academy.state || ""}
-              onChange={(event) => updateField("state", event.target.value)}
-            />
+            <select
+              value={selectedStateCode}
+              onChange={handleStateChange}
+              disabled={!selectedCountryCode}
+            >
+              <option value="">Select State</option>
+              {states.map((state) => (
+                <option key={state.isoCode} value={state.isoCode}>
+                  {state.name}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label>
-            Country
-            <input
-              value={academy.country || ""}
-              onChange={(event) => updateField("country", event.target.value)}
-            />
+            District / City
+            <select
+              value={academy.city || ""}
+              onChange={handleCityChange}
+              disabled={!selectedStateCode}
+            >
+              <option value="">Select District / City</option>
+              {cities.map((city) => (
+                <option key={`${city.name}-${city.latitude}`} value={city.name}>
+                  {city.name}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label>
