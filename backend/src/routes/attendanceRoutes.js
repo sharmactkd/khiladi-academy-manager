@@ -4,6 +4,7 @@ import {
   markAttendance,
   getAttendance,
   getStudentAttendance,
+  getStudentYearlyProfile,
   getBatchAttendance,
   getMonthlyRegister,
   getYearlyRegister,
@@ -42,6 +43,8 @@ router.post("/import", importOldAttendance);
 router.post("/mark", markAttendanceValidator, validateRequest, markAttendance);
 
 router.get("/", attendanceListValidator, validateRequest, getAttendance);
+
+router.get("/student/:studentId/yearly-profile", getStudentYearlyProfile);
 
 router.get(
   "/student/:studentId",

@@ -5,6 +5,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import {
   getMonthlyAttendanceRegister,
+  getStudentYearlyAttendanceProfile,
   getYearlyAttendanceRegister,
   saveMonthlyAttendanceRegister,
 } from "../services/monthlyAttendanceService.js";
@@ -67,21 +68,10 @@ const buildStudentLookups = async (academyId) => {
     const name = normalizeName(getStudentName(student));
     const batchKey = student.batch ? String(student.batch) : "";
 
-    if (phone && !byPhone.has(phone)) {
-      byPhone.set(phone, student);
-    }
-
-    if (admission && !byAdmission.has(admission)) {
-      byAdmission.set(admission, student);
-    }
-
-    if (name && !byName.has(name)) {
-      byName.set(name, student);
-    }
-
-    if (name && batchKey) {
-      byNameBatch.set(`${name}::${batchKey}`, student);
-    }
+    if (phone && !byPhone.has(phone)) byPhone.set(phone, student);
+    if (admission && !byAdmission.has(admission)) byAdmission.set(admission, student);
+    if (name && !byName.has(name)) byName.set(name, student);
+    if (name && batchKey) byNameBatch.set(`${name}::${batchKey}`, student);
 
     normalizedStudents.push({
       student,
@@ -120,15 +110,10 @@ const findFuzzyStudentByName = ({ name, studentLookups }) => {
 
   const candidates = studentLookups.normalizedStudents.filter((item) => {
     if (!item.name || item.name.length < 3) return false;
-
     return item.name.includes(name) || name.includes(item.name);
   });
 
-  if (candidates.length === 1) {
-    return candidates[0].student;
-  }
-
-  return null;
+  return candidates.length === 1 ? candidates[0].student : null;
 };
 
 const findMatchedStudent = ({ row, studentLookups, batchNameLookup }) => {
@@ -238,9 +223,7 @@ const buildImportGroups = ({
         });
       }
 
-      const attendanceItems = Array.isArray(row.attendance)
-        ? row.attendance
-        : [];
+      const attendanceItems = Array.isArray(row.attendance) ? row.attendance : [];
 
       attendanceItems.forEach((item) => {
         const status = normalizeImportStatus(item.status);
@@ -365,16 +348,13 @@ const saveImportGroup = async ({
         attendance.records[index].student = record.student || null;
         attendance.records[index].importedRowNumber =
           record.importedRowNumber || null;
-        attendance.records[index].importedSerialNo =
-          record.importedSerialNo || "";
+        attendance.records[index].importedSerialNo = record.importedSerialNo || "";
         attendance.records[index].importedName = record.importedName || "";
         attendance.records[index].importedPhone = record.importedPhone || "";
         attendance.records[index].importedAdmissionNumber =
           record.importedAdmissionNumber || "";
-        attendance.records[index].importedPaidDate =
-          record.importedPaidDate || "";
-        attendance.records[index].importedFeePaid =
-          record.importedFeePaid || "";
+        attendance.records[index].importedPaidDate = record.importedPaidDate || "";
+        attendance.records[index].importedFeePaid = record.importedFeePaid || "";
         attendance.records[index].importedFeeStatus =
           record.importedFeeStatus || "";
         attendance.records[index].importedExtraNote =
@@ -611,6 +591,18 @@ export const getStudentAttendance = asyncHandler(async (req, res) => {
     student,
     history,
   });
+});
+
+export const getStudentYearlyProfile = asyncHandler(async (req, res) => {
+  const { year } = req.query;
+
+  const data = await getStudentYearlyAttendanceProfile({
+    academyId: req.academyId,
+    studentId: req.params.studentId,
+    year: year || new Date().getFullYear(),
+  });
+
+  return successResponse(res, "Student yearly attendance profile fetched", data);
 });
 
 export const getBatchAttendance = asyncHandler(async (req, res) => {

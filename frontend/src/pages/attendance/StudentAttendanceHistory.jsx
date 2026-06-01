@@ -1,85 +1,87 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
+
 import { attendanceApi } from "../../api/attendanceApi.js";
+import StudentYearlyAttendanceProfile from "../../components/attendance/StudentYearlyAttendanceProfile.jsx";
 
 const StudentAttendanceHistory = () => {
   const { studentId } = useParams();
-  const [student, setStudent] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [filters, setFilters] = useState({ from: "", to: "" });
 
-  const fetchHistory = async () => {
+  const currentYear = new Date().getFullYear();
+
+  const [year, setYear] = useState(currentYear);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const yearOptions = useMemo(() => {
+    const start = currentYear - 30;
+    const end = currentYear + 2;
+
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [currentYear]);
+
+  const fetchProfile = async () => {
     try {
-      const response = await attendanceApi.getStudentHistory(studentId, filters);
-      setStudent(response.data?.data?.student);
-      setHistory(response.data?.data?.history || []);
+      setLoading(true);
+
+      const response = await attendanceApi.getStudentYearlyProfile(studentId, {
+        year,
+      });
+
+      setProfile(response.data?.data || null);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Attendance load nahi hui");
+      toast.error(
+        error.response?.data?.message || "Student yearly attendance load nahi hui"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchHistory();
-  }, [studentId]);
+    fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId, year]);
 
   return (
     <div className="page">
       <div className="page-header">
         <div>
           <h1>Student Attendance</h1>
-          <p>{student?.name || "Student history"}</p>
+          <p>
+            {profile?.student?.importedName ||
+              profile?.student?.name ||
+              "Student yearly attendance"}
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <select value={year} onChange={(event) => setYear(Number(event.target.value))}>
+            {yearOptions.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+
+          <button type="button" className="btn btn-secondary" onClick={fetchProfile}>
+            Refresh
+          </button>
+
+          <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
+            Print
+          </button>
         </div>
       </div>
 
-      <div className="card">
-        <div className="grid grid-3">
-          <input
-            type="date"
-            value={filters.from}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, from: e.target.value }))
-            }
-          />
-          <input
-            type="date"
-            value={filters.to}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, to: e.target.value }))
-            }
-          />
-          <button onClick={fetchHistory}>Apply Filter</button>
+      {loading ? (
+        <div className="card">
+          <p>Loading student attendance...</p>
         </div>
-      </div>
-
-      <div className="card">
-        {history.length === 0 ? (
-          <p>No attendance records found.</p>
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Batch</th>
-                  <th>Status</th>
-                  <th>Note</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((item) => (
-                  <tr key={item._id}>
-                    <td>{new Date(item.date).toLocaleDateString()}</td>
-                    <td>{item.batch?.batchName || "-"}</td>
-                    <td>{item.record?.status || "-"}</td>
-                    <td>{item.record?.note || "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      ) : (
+        <StudentYearlyAttendanceProfile data={profile} />
+      )}
     </div>
   );
 };

@@ -5,6 +5,8 @@ export const attendanceApi = {
   getAll: (params = {}) => api.get("/attendance", { params }),
   getStudentHistory: (studentId, params = {}) =>
     api.get(`/attendance/student/${studentId}`, { params }),
+  getStudentYearlyProfile: (studentId, params = {}) =>
+    api.get(`/attendance/student/${studentId}/yearly-profile`, { params }),
   getBatchHistory: (batchId, params = {}) =>
     api.get(`/attendance/batch/${batchId}`, { params }),
   getMonthlyRegister: (params = {}) =>

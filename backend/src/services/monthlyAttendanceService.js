@@ -47,14 +47,41 @@ const clean = (value) =>
 
 const normalizePhone = (value) => clean(value).replace(/\D/g, "").slice(-10);
 
+const formatDateKey = (date) =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
 const getLocalDateKey = (value) => {
   const date = new Date(value);
-
   if (Number.isNaN(date.getTime())) return "";
+  return formatDateKey(date);
+};
 
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate()
-  )}`;
+const formatDisplayDate = (value) => {
+  if (!value) return "";
+
+  const raw = clean(value);
+  if (!raw || raw === "-") return raw;
+
+  const slash = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (slash) {
+    const [, mm, dd, yy] = slash;
+    return `${pad(dd)}-${pad(mm)}-${String(yy).slice(-2)}`;
+  }
+
+  const dash = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+  if (dash) {
+    const [, dd, mm, yy] = dash;
+    return `${pad(dd)}-${pad(mm)}-${String(yy).slice(-2)}`;
+  }
+
+  const date = new Date(raw);
+  if (!Number.isNaN(date.getTime())) {
+    return `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${String(
+      date.getFullYear()
+    ).slice(-2)}`;
+  }
+
+  return raw;
 };
 
 const getMonthRange = ({ year, month }) => {
@@ -135,9 +162,7 @@ const buildBlankAttendance = (days = []) => {
 };
 
 const getLatestFeeMap = async ({ academyId, studentIds }) => {
-  if (!studentIds.length) {
-    return new Map();
-  }
+  if (!studentIds.length) return new Map();
 
   const payments = await FeePayment.find({
     academy: academyId,
@@ -150,9 +175,7 @@ const getLatestFeeMap = async ({ academyId, studentIds }) => {
 
   payments.forEach((payment) => {
     const key = String(payment.student);
-    if (!map.has(key)) {
-      map.set(key, payment);
-    }
+    if (!map.has(key)) map.set(key, payment);
   });
 
   return map;
@@ -203,8 +226,8 @@ const buildRowFromRecord = ({ identity, attendance, index, fee }) => {
     importedName,
     importedPhone,
     importedAdmissionNumber: identity.importedAdmissionNumber,
-    importedPaidDate: identity.importedPaidDate,
-    importedFeePaid: identity.importedFeePaid,
+    importedPaidDate: formatDisplayDate(identity.importedPaidDate),
+    importedFeePaid: formatDisplayDate(identity.importedFeePaid),
     importedFeeStatus: identity.importedFeeStatus,
     importedExtraNote: identity.importedExtraNote,
 
@@ -212,10 +235,15 @@ const buildRowFromRecord = ({ identity, attendance, index, fee }) => {
       identity.importedAdmissionNumber || student?.admissionNumber || "",
     name: importedName || (student ? getStudentName(student) : "Unknown Student"),
     contact: importedPhone || student?.phone || "-",
-    status: student?.status || (identity.rowType === "raw-import" ? "imported" : "active"),
+    status:
+      student?.status || (identity.rowType === "raw-import" ? "imported" : "active"),
     feeDueDate: student?.joiningDate || student?.createdAt || null,
-    feePaidDate: identity.importedPaidDate || fee?.paidDate || fee?.paymentDate || null,
-    feePaid: identity.importedFeePaid || fee?.amountPaid || fee?.amount || "",
+    feePaidDate:
+      formatDisplayDate(identity.importedPaidDate) ||
+      fee?.paidDate ||
+      fee?.paymentDate ||
+      null,
+    feePaid: formatDisplayDate(identity.importedFeePaid) || fee?.amountPaid || fee?.amount || "",
     feeStatus: identity.importedFeeStatus || fee?.status || "due",
     attendance,
     ...counts,
@@ -232,31 +260,20 @@ const buildMonthlyRows = async ({
 
   attendanceDocs.forEach((doc) => {
     (doc.records || []).forEach((record) => {
-      if (record.student) {
-        markedStudentIds.push(record.student);
-      }
+      if (record.student) markedStudentIds.push(record.student);
     });
   });
 
   const students = await Student.find({
     academy: academyObjectId,
-    $or: [
-      { batch: batchObjectId },
-      {
-        _id: {
-          $in: markedStudentIds,
-        },
-      },
-    ],
+    $or: [{ batch: batchObjectId }, { _id: { $in: markedStudentIds } }],
   })
     .select(
-      "admissionNumber firstName lastName phone status joiningDate createdAt batch"
+      "admissionNumber firstName lastName phone status joiningDate createdAt batch dob dateOfBirth fatherName schoolName address"
     )
     .lean();
 
-  const studentMap = new Map(
-    students.map((student) => [String(student._id), student])
-  );
+  const studentMap = new Map(students.map((student) => [String(student._id), student]));
 
   const studentIds = students.map((student) => student._id);
   const feeMap = await getLatestFeeMap({
@@ -266,6 +283,33 @@ const buildMonthlyRows = async ({
 
   const rowIdentityMap = new Map();
   const attendanceByRow = new Map();
+
+  students.forEach((student) => {
+  const key = String(student._id);
+
+  if (!rowIdentityMap.has(key)) {
+    rowIdentityMap.set(key, {
+      rowId: key,
+      student,
+      studentId: key,
+      rowType: "student",
+      importedRowNumber: null,
+      importedSerialNo: "",
+      importedName: "",
+      importedPhone: "",
+      importedAdmissionNumber: "",
+      importedPaidDate: "",
+      importedFeePaid: "",
+      importedFeeStatus: "",
+      importedExtraNote: "",
+      source: "manual",
+    });
+  }
+
+  if (!attendanceByRow.has(key)) {
+    attendanceByRow.set(key, buildBlankAttendance(days));
+  }
+});
 
   attendanceDocs.forEach((doc) => {
     const dateKey = getLocalDateKey(doc.date);
@@ -295,29 +339,26 @@ const buildMonthlyRows = async ({
     });
   });
 
-  const rows = Array.from(rowIdentityMap.entries())
-    .map(([rowKey, identity], index) => {
-      const attendance = attendanceByRow.get(rowKey) || buildBlankAttendance(days);
-      const fee = identity.studentId ? feeMap.get(String(identity.studentId)) : null;
+  return {
+    students,
+    rows: Array.from(rowIdentityMap.entries())
+      .map(([rowKey, identity], index) => {
+        const attendance = attendanceByRow.get(rowKey) || buildBlankAttendance(days);
+        const fee = identity.studentId ? feeMap.get(String(identity.studentId)) : null;
 
-      return buildRowFromRecord({
-        identity,
-        attendance,
-        index,
-        fee,
-      });
-    })
-    .sort((a, b) => {
-      const aOrder = Number(a.sortOrder || 999999);
-      const bOrder = Number(b.sortOrder || 999999);
-      return aOrder - bOrder;
-    })
-    .map((row, index) => ({
-      ...row,
-      no: row.importedSerialNo || index + 1,
-    }));
-
-  return { rows, students };
+        return buildRowFromRecord({
+          identity,
+          attendance,
+          index,
+          fee,
+        });
+      })
+      .sort((a, b) => Number(a.sortOrder || 999999) - Number(b.sortOrder || 999999))
+      .map((row, index) => ({
+        ...row,
+        no: row.importedSerialNo || index + 1,
+      })),
+  };
 };
 
 export const getMonthlyAttendanceRegister = async ({
@@ -362,10 +403,7 @@ export const getMonthlyAttendanceRegister = async ({
   }
 
   const days = buildDays({ year: numericYear, month: numericMonth });
-  const { start, end } = getMonthRange({
-    year: numericYear,
-    month: numericMonth,
-  });
+  const { start, end } = getMonthRange({ year: numericYear, month: numericMonth });
 
   const attendanceDocs = await Attendance.find({
     academy: academyObjectId,
@@ -390,11 +428,7 @@ export const getMonthlyAttendanceRegister = async ({
   };
 };
 
-export const getYearlyAttendanceRegister = async ({
-  academyId,
-  batchId,
-  year,
-}) => {
+export const getYearlyAttendanceRegister = async ({ academyId, batchId, year }) => {
   const numericYear = Number(year);
 
   if (!numericYear) {
@@ -433,6 +467,143 @@ export const getYearlyAttendanceRegister = async ({
   return {
     year: numericYear,
     batch,
+    months,
+  };
+};
+
+export const getStudentYearlyAttendanceProfile = async ({
+  academyId,
+  studentId,
+  year,
+}) => {
+  const academyObjectId = toObjectId(academyId);
+  const studentObjectId = toObjectId(studentId);
+  const numericYear = Number(year);
+
+  if (!academyObjectId) {
+    const error = new Error("Academy is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!studentObjectId) {
+    const error = new Error("Valid student is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!numericYear) {
+    const error = new Error("Valid year is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const student = await Student.findOne({
+    _id: studentObjectId,
+    academy: academyObjectId,
+  })
+    .populate("batch", "batchName martialArt")
+    .lean();
+
+  if (!student) {
+    const error = new Error("Student not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const yearStart = new Date(numericYear, 0, 1);
+  yearStart.setHours(0, 0, 0, 0);
+
+  const yearEnd = new Date(numericYear, 11, 31);
+  yearEnd.setHours(23, 59, 59, 999);
+
+  const attendanceDocs = await Attendance.find({
+    academy: academyObjectId,
+    date: { $gte: yearStart, $lte: yearEnd },
+    "records.student": studentObjectId,
+  })
+    .populate("batch", "batchName martialArt")
+    .lean();
+
+  const firstImportedRecord =
+    attendanceDocs
+      .flatMap((doc) => doc.records || [])
+      .find((record) => String(record.student) === String(studentObjectId) && record.source === "excel-import") ||
+    null;
+
+  const months = REGISTER_MONTHS.map((monthInfo) => {
+    const days = buildDays({ year: numericYear, month: monthInfo.value });
+    const attendance = {};
+
+    days.forEach((day) => {
+      attendance[day.dateKey] = "";
+    });
+
+    const monthDocs = attendanceDocs.filter((doc) => {
+      const date = new Date(doc.date);
+      return date.getMonth() + 1 === monthInfo.value;
+    });
+
+    let importedPaidDate = "";
+    let importedFeePaid = "";
+    let importedFeeStatus = "";
+
+    monthDocs.forEach((doc) => {
+      const dateKey = getLocalDateKey(doc.date);
+      const record = (doc.records || []).find(
+        (item) => String(item.student) === String(studentObjectId)
+      );
+
+      if (!record) return;
+
+      attendance[dateKey] = toShortStatus(record.status);
+
+      if (!importedPaidDate && record.importedPaidDate) {
+        importedPaidDate = formatDisplayDate(record.importedPaidDate);
+      }
+
+      if (!importedFeePaid && record.importedFeePaid) {
+        importedFeePaid = formatDisplayDate(record.importedFeePaid);
+      }
+
+      if (!importedFeeStatus && record.importedFeeStatus) {
+        importedFeeStatus = record.importedFeeStatus;
+      }
+    });
+
+    return {
+      ...monthInfo,
+      days,
+      attendance,
+      importedPaidDate,
+      importedFeePaid,
+      importedFeeStatus,
+      ...calculateCounts(attendance),
+    };
+  });
+
+  return {
+    year: numericYear,
+    student: {
+      _id: student._id,
+      name: getStudentName(student),
+      firstName: student.firstName || "",
+      lastName: student.lastName || "",
+      admissionNumber: student.admissionNumber || "",
+      phone: student.phone || "",
+      contact: firstImportedRecord?.importedPhone || student.phone || "",
+      batch: student.batch || null,
+      dob: student.dob || student.dateOfBirth || null,
+      fatherName: student.fatherName || "",
+      schoolName: student.schoolName || "",
+      address: student.address || "",
+      joiningDate: student.joiningDate || student.createdAt || null,
+      importedName: firstImportedRecord?.importedName || "",
+      importedPhone: firstImportedRecord?.importedPhone || "",
+      importedPaidDate: firstImportedRecord?.importedPaidDate || "",
+      importedFeePaid: firstImportedRecord?.importedFeePaid || "",
+      importedFeeStatus: firstImportedRecord?.importedFeeStatus || "",
+    },
     months,
   };
 };
