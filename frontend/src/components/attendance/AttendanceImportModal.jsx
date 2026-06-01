@@ -93,7 +93,7 @@ const AttendanceImportModal = ({ open, onClose, onImport }) => {
   const [workbook, setWorkbook] = useState(null);
   const [sheetNames, setSheetNames] = useState([]);
   const [selectedSheet, setSelectedSheet] = useState("");
-  const [duplicateMode, setDuplicateMode] = useState("skip");
+  const [duplicateMode, setDuplicateMode] = useState("overwrite");
   const [parsed, setParsed] = useState({
     rows: [],
     summary: {
@@ -116,7 +116,7 @@ const AttendanceImportModal = ({ open, onClose, onImport }) => {
     setWorkbook(null);
     setSheetNames([]);
     setSelectedSheet("");
-    setDuplicateMode("skip");
+    setDuplicateMode("overwrite");
     setParsed({
       rows: [],
       summary: {

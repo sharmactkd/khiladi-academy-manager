@@ -14,29 +14,101 @@ const normalizePhone = (value) => {
   return raw.replace(/\D/g, "").slice(-10);
 };
 
+const MONTHS = {
+  jan: 0,
+  january: 0,
+  feb: 1,
+  february: 1,
+  mar: 2,
+  march: 2,
+  apr: 3,
+  april: 3,
+  may: 4,
+  jun: 5,
+  june: 5,
+  jul: 6,
+  july: 6,
+  aug: 7,
+  august: 7,
+  sep: 8,
+  sept: 8,
+  september: 8,
+  oct: 9,
+  october: 9,
+  nov: 10,
+  november: 10,
+  dec: 11,
+  december: 11,
+};
+
+const inferYearFromSheetName = (sheetName = "") => {
+  const raw = clean(sheetName);
+
+  const twoDigitMatch = raw.match(/\b(\d{2})\b/);
+  if (twoDigitMatch) {
+    const value = Number(twoDigitMatch[1]);
+    if (value >= 0 && value <= 99) {
+      return value >= 70 ? 1900 + value : 2000 + value;
+    }
+  }
+
+  const fourDigitMatch = raw.match(/\b(19\d{2}|20\d{2})\b/);
+  if (fourDigitMatch) {
+    return Number(fourDigitMatch[1]);
+  }
+
+  return new Date().getFullYear();
+};
+
 const excelSerialToDate = (serial) => {
   if (!serial || Number.isNaN(Number(serial))) return null;
 
-  const utcDays = Math.floor(Number(serial) - 25569);
-  const utcValue = utcDays * 86400;
-  const dateInfo = new Date(utcValue * 1000);
+  const parsed = XLSX.SSF.parse_date_code(Number(serial));
 
-  if (Number.isNaN(dateInfo.getTime())) return null;
+  if (!parsed?.y || !parsed?.m || !parsed?.d) return null;
 
-  return new Date(
-    Date.UTC(
-      dateInfo.getUTCFullYear(),
-      dateInfo.getUTCMonth(),
-      dateInfo.getUTCDate()
-    )
-  );
+  return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
 };
 
-const parseDateValue = (value) => {
+const makeDate = ({ day, month, year }) => {
+  const numericDay = Number(day);
+  const numericMonth = Number(month);
+  const numericYear = Number(year);
+
+  if (
+    !numericDay ||
+    !numericYear ||
+    numericMonth < 0 ||
+    numericMonth > 11 ||
+    numericDay < 1 ||
+    numericDay > 31
+  ) {
+    return null;
+  }
+
+  const date = new Date(Date.UTC(numericYear, numericMonth, numericDay));
+
+  if (
+    date.getUTCFullYear() !== numericYear ||
+    date.getUTCMonth() !== numericMonth ||
+    date.getUTCDate() !== numericDay
+  ) {
+    return null;
+  }
+
+  return date;
+};
+
+const parseDateValue = (value, fallbackYear) => {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return new Date(
-      Date.UTC(value.getFullYear(), value.getMonth(), value.getDate())
-    );
+    const year =
+      value.getFullYear() >= 1990 ? value.getFullYear() : fallbackYear;
+
+    return makeDate({
+      day: value.getDate(),
+      month: value.getMonth(),
+      year,
+    });
   }
 
   if (typeof value === "number") {
@@ -47,38 +119,74 @@ const parseDateValue = (value) => {
 
   if (!raw || raw === "-") return null;
 
-  const direct = new Date(raw);
+  const ddMmmWithYear = raw.match(
+    /^(\d{1,2})[-/\s]([A-Za-z]{3,})[-/\s](\d{2,4})$/
+  );
 
-  if (!Number.isNaN(direct.getTime())) {
-    return new Date(
-      Date.UTC(direct.getFullYear(), direct.getMonth(), direct.getDate())
-    );
+  if (ddMmmWithYear) {
+    const [, day, monthText, yearText] = ddMmmWithYear;
+    const month = MONTHS[monthText.toLowerCase()];
+    const year =
+      yearText.length === 2 ? 2000 + Number(yearText) : Number(yearText);
+
+    return makeDate({ day, month, year });
   }
 
-  const ddMmmYyyy = raw.match(/^(\d{1,2})[-/\s]([A-Za-z]{3,})[-/\s](\d{2,4})$/);
+  const ddMmmWithoutYear = raw.match(/^(\d{1,2})[-/\s]([A-Za-z]{3,})$/);
 
-  if (ddMmmYyyy) {
-    const [, dd, mmm, yyyy] = ddMmmYyyy;
-    const year = yyyy.length === 2 ? `20${yyyy}` : yyyy;
-    const parsed = new Date(`${dd} ${mmm} ${year}`);
+  if (ddMmmWithoutYear) {
+    const [, day, monthText] = ddMmmWithoutYear;
+    const month = MONTHS[monthText.toLowerCase()];
 
-    if (!Number.isNaN(parsed.getTime())) {
-      return new Date(
-        Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
-      );
-    }
+    return makeDate({ day, month, year: fallbackYear });
   }
 
   const ddMmYyyy = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
 
   if (ddMmYyyy) {
-    const [, dd, mm, yyyy] = ddMmYyyy;
-    const year = yyyy.length === 2 ? `20${yyyy}` : yyyy;
-    const parsed = new Date(Date.UTC(Number(year), Number(mm) - 1, Number(dd)));
+    const [, day, monthText, yearText] = ddMmYyyy;
+    const year =
+      yearText.length === 2 ? 2000 + Number(yearText) : Number(yearText);
 
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed;
-    }
+    return makeDate({
+      day,
+      month: Number(monthText) - 1,
+      year,
+    });
+  }
+
+  const ddMmWithoutYear = raw.match(/^(\d{1,2})[-/](\d{1,2})$/);
+
+  if (ddMmWithoutYear) {
+    const [, day, monthText] = ddMmWithoutYear;
+
+    return makeDate({
+      day,
+      month: Number(monthText) - 1,
+      year: fallbackYear,
+    });
+  }
+
+  const mmmDdWithYear = raw.match(
+    /^([A-Za-z]{3,})[-/\s](\d{1,2})[-/\s](\d{2,4})$/
+  );
+
+  if (mmmDdWithYear) {
+    const [, monthText, day, yearText] = mmmDdWithYear;
+    const month = MONTHS[monthText.toLowerCase()];
+    const year =
+      yearText.length === 2 ? 2000 + Number(yearText) : Number(yearText);
+
+    return makeDate({ day, month, year });
+  }
+
+  const mmmDdWithoutYear = raw.match(/^([A-Za-z]{3,})[-/\s](\d{1,2})$/);
+
+  if (mmmDdWithoutYear) {
+    const [, monthText, day] = mmmDdWithoutYear;
+    const month = MONTHS[monthText.toLowerCase()];
+
+    return makeDate({ day, month, year: fallbackYear });
   }
 
   return null;
@@ -105,6 +213,10 @@ const normalizeAttendanceStatus = (value) => {
 
   if (["l", "leave", "lv"].includes(key)) {
     return "leave";
+  }
+
+  if (["lt", "late"].includes(key)) {
+    return "late";
   }
 
   return "unknown";
@@ -137,10 +249,10 @@ const isValidStudentRow = (row = []) => {
   return true;
 };
 
-const getDateColumnsFromDateRow = (dateRow = []) => {
+const getDateColumnsFromDateRow = (dateRow = [], fallbackYear) => {
   return dateRow
     .map((cell, index) => {
-      const date = parseDateValue(cell);
+      const date = parseDateValue(cell, fallbackYear);
 
       if (!date) return null;
 
@@ -214,6 +326,7 @@ export const getAttendanceSheetNames = (workbook) => workbook?.SheetNames || [];
 
 export const parseAttendanceSheet = (workbook, sheetName) => {
   const worksheet = workbook?.Sheets?.[sheetName];
+  const fallbackYear = inferYearFromSheetName(sheetName);
 
   if (!worksheet) {
     return {
@@ -224,6 +337,7 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
         detectedStudentRows: 0,
         detectedDateColumns: 0,
         estimatedAttendanceRecords: 0,
+        detectedYear: fallbackYear,
       },
       warnings: ["Selected sheet not found."],
     };
@@ -249,7 +363,7 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
 
     const dateRowIndex = rowIndex + 2;
     const dateRow = rawRows[dateRowIndex] || [];
-    const dateColumns = getDateColumnsFromDateRow(dateRow);
+    const dateColumns = getDateColumnsFromDateRow(dateRow, fallbackYear);
 
     if (!dateColumns.length) {
       warnings.push(`Row ${rowIndex + 1}: date columns detect nahi hue.`);
@@ -339,6 +453,7 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
       detectedStudentRows: rows.length,
       detectedDateColumns: totalDateColumns,
       estimatedAttendanceRecords,
+      detectedYear: fallbackYear,
       nameColumn: "NAME",
       phoneColumn: "Contact",
     },
