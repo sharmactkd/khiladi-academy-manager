@@ -6,6 +6,7 @@ import {
   getStudentAttendance,
   getBatchAttendance,
   getMonthlyRegister,
+  getYearlyRegister,
   saveMonthlyRegister,
   importOldAttendance,
 } from "../controllers/attendanceController.js";
@@ -33,6 +34,7 @@ router.use(resolveUserAcademy);
 router.use(requireResolvedAcademy);
 
 router.get("/monthly-register", getMonthlyRegister);
+router.get("/yearly-register", getYearlyRegister);
 router.post("/monthly-register", saveMonthlyRegister);
 
 router.post("/import", importOldAttendance);

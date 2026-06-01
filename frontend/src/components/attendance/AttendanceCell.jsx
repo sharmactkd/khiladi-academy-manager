@@ -1,7 +1,7 @@
 import React from "react";
 
 const statusLabels = {
-  "": "",
+  "": "-",
   P: "P",
   A: "A",
   L: "L",

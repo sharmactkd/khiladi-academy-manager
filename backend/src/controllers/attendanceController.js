@@ -5,6 +5,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import {
   getMonthlyAttendanceRegister,
+  getYearlyAttendanceRegister,
   saveMonthlyAttendanceRegister,
 } from "../services/monthlyAttendanceService.js";
 
@@ -165,22 +166,22 @@ const normalizeImportStatus = (status) => {
   return null;
 };
 
-const getRawStudentKey = (row) => {
-  const phone = normalizePhone(row.phone);
-  const admission = clean(row.admissionNumber || row.studentCode).toLowerCase();
-  const name = normalizeName(row.name);
-
-  return phone || admission || name || `row-${row.rowNumber || Date.now()}`;
-};
-
 const getRecordIdentityKey = (record) => {
+  if (record.importedRowNumber) {
+    return `excel-row:${record.importedRowNumber}`;
+  }
+
+  if (record.importedSerialNo || record.importedName || record.importedPhone) {
+    return `excel:${clean(record.importedSerialNo)}:${normalizePhone(
+      record.importedPhone
+    )}:${normalizeName(record.importedName)}`;
+  }
+
   if (record.student) {
     return `student:${String(record.student)}`;
   }
 
-  return `raw:${normalizePhone(record.importedPhone)}:${clean(
-    record.importedAdmissionNumber
-  ).toLowerCase()}:${normalizeName(record.importedName)}`;
+  return `unknown:${Date.now()}:${Math.random()}`;
 };
 
 const getGroupKey = ({ batchId, date }) => `${batchId}::${date}`;
@@ -274,17 +275,22 @@ const buildImportGroups = ({
 
         groups.get(key).records.push({
           student: matchedStudent?._id || null,
-          importedName: matchedStudent ? "" : clean(row.name),
-          importedPhone: matchedStudent ? "" : normalizePhone(row.phone),
-          importedAdmissionNumber: matchedStudent
-            ? ""
-            : clean(row.admissionNumber || row.studentCode),
+
+          importedRowNumber: Number(row.importedRowNumber || rowNumber),
+          importedSerialNo: clean(row.importedSerialNo || row.serialNo),
+          importedName: clean(row.name),
+          importedPhone: normalizePhone(row.phone),
+          importedAdmissionNumber: clean(row.admissionNumber || row.studentCode),
+          importedPaidDate: clean(row.importedPaidDate),
+          importedFeePaid: clean(row.importedFeePaid),
+          importedFeeStatus: clean(row.importedFeeStatus),
+          importedExtraNote: clean(row.importedExtraNote),
+
           status,
           source: "excel-import",
           note: matchedStudent
-            ? "Imported from old attendance Excel"
+            ? "Imported from old attendance Excel and matched with student"
             : "Imported from old attendance Excel as raw record",
-          rowKey: getRawStudentKey(row),
         });
 
         summary.totalAttendanceCells += 1;
@@ -327,9 +333,7 @@ const saveImportGroup = async ({
       }
 
       seen.add(recordKey);
-
-      const { rowKey, ...cleanRecord } = record;
-      uniqueRecords.push(cleanRecord);
+      uniqueRecords.push(record);
     });
 
     await Attendance.create({
@@ -353,16 +357,31 @@ const saveImportGroup = async ({
 
   group.records.forEach((record) => {
     const recordKey = getRecordIdentityKey(record);
-    const { rowKey, ...cleanRecord } = record;
 
     if (existingMap.has(recordKey)) {
       if (duplicateMode === "overwrite") {
         const index = existingMap.get(recordKey);
 
-        attendance.records[index] = {
-          ...attendance.records[index].toObject?.(),
-          ...cleanRecord,
-        };
+        attendance.records[index].student = record.student || null;
+        attendance.records[index].importedRowNumber =
+          record.importedRowNumber || null;
+        attendance.records[index].importedSerialNo =
+          record.importedSerialNo || "";
+        attendance.records[index].importedName = record.importedName || "";
+        attendance.records[index].importedPhone = record.importedPhone || "";
+        attendance.records[index].importedAdmissionNumber =
+          record.importedAdmissionNumber || "";
+        attendance.records[index].importedPaidDate =
+          record.importedPaidDate || "";
+        attendance.records[index].importedFeePaid =
+          record.importedFeePaid || "";
+        attendance.records[index].importedFeeStatus =
+          record.importedFeeStatus || "";
+        attendance.records[index].importedExtraNote =
+          record.importedExtraNote || "";
+        attendance.records[index].status = record.status;
+        attendance.records[index].source = record.source || "excel-import";
+        attendance.records[index].note = record.note || "";
 
         summary.imported += 1;
       } else {
@@ -372,7 +391,7 @@ const saveImportGroup = async ({
       return;
     }
 
-    attendance.records.push(cleanRecord);
+    attendance.records.push(record);
     existingMap.set(recordKey, attendance.records.length - 1);
     summary.imported += 1;
   });
@@ -633,6 +652,18 @@ export const getMonthlyRegister = asyncHandler(async (req, res) => {
   });
 
   return successResponse(res, "Monthly attendance register fetched", data);
+});
+
+export const getYearlyRegister = asyncHandler(async (req, res) => {
+  const { batch, year } = req.query;
+
+  const data = await getYearlyAttendanceRegister({
+    academyId: req.academyId,
+    batchId: batch,
+    year,
+  });
+
+  return successResponse(res, "Yearly attendance register fetched", data);
 });
 
 export const saveMonthlyRegister = asyncHandler(async (req, res) => {

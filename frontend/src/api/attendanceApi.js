@@ -9,6 +9,8 @@ export const attendanceApi = {
     api.get(`/attendance/batch/${batchId}`, { params }),
   getMonthlyRegister: (params = {}) =>
     api.get("/attendance/monthly-register", { params }),
+  getYearlyRegister: (params = {}) =>
+    api.get("/attendance/yearly-register", { params }),
   saveMonthlyRegister: (payload) =>
     api.post("/attendance/monthly-register", payload),
   importOldAttendance: (payload) => api.post("/attendance/import", payload),

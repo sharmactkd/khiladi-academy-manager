@@ -1829,3 +1829,26 @@ button:disabled,
   object-fit: cover;
   border: 4px solid #e5e7eb;
 }
+
+.day-heading--holiday,
+.day-number--holiday,
+.attendance-day-cell--holiday {
+  background: #fff200 !important;
+}
+
+.day-heading--sunday,
+.day-number--sunday,
+.attendance-day-cell--sunday {
+  background: #123a7a !important;
+  color: #ffffff !important;
+}
+
+.attendance-day-cell--sunday .attendance-cell--blank {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.attendance-cell--blank {
+  color: #64748b;
+  font-weight: 700;
+}

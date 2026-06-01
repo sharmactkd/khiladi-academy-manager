@@ -10,7 +10,9 @@ const normalizeKey = (value) =>
 
 const normalizePhone = (value) => {
   const raw = clean(value);
-  if (!raw || raw === "-") return "";
+
+  if (!raw || raw === "-" || raw.startsWith("=")) return "";
+
   return raw.replace(/\D/g, "").slice(-10);
 };
 
@@ -44,6 +46,9 @@ const MONTHS = {
 const inferYearFromSheetName = (sheetName = "") => {
   const raw = clean(sheetName);
 
+  const fourDigitMatch = raw.match(/\b(19\d{2}|20\d{2})\b/);
+  if (fourDigitMatch) return Number(fourDigitMatch[1]);
+
   const twoDigitMatch = raw.match(/\b(\d{2})\b/);
   if (twoDigitMatch) {
     const value = Number(twoDigitMatch[1]);
@@ -52,22 +57,16 @@ const inferYearFromSheetName = (sheetName = "") => {
     }
   }
 
-  const fourDigitMatch = raw.match(/\b(19\d{2}|20\d{2})\b/);
-  if (fourDigitMatch) {
-    return Number(fourDigitMatch[1]);
-  }
-
   return new Date().getFullYear();
 };
 
-const excelSerialToDate = (serial) => {
-  if (!serial || Number.isNaN(Number(serial))) return null;
+const toFullYear = (value, fallbackYear) => {
+  const numeric = Number(value);
 
-  const parsed = XLSX.SSF.parse_date_code(Number(serial));
+  if (!numeric) return fallbackYear;
+  if (numeric < 100) return numeric >= 70 ? 1900 + numeric : 2000 + numeric;
 
-  if (!parsed?.y || !parsed?.m || !parsed?.d) return null;
-
-  return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+  return numeric;
 };
 
 const makeDate = ({ day, month, year }) => {
@@ -97,99 +96,6 @@ const makeDate = ({ day, month, year }) => {
   }
 
   return date;
-};
-
-const parseDateValue = (value, fallbackYear) => {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    const year =
-      value.getFullYear() >= 1990 ? value.getFullYear() : fallbackYear;
-
-    return makeDate({
-      day: value.getDate(),
-      month: value.getMonth(),
-      year,
-    });
-  }
-
-  if (typeof value === "number") {
-    return excelSerialToDate(value);
-  }
-
-  const raw = clean(value);
-
-  if (!raw || raw === "-") return null;
-
-  const ddMmmWithYear = raw.match(
-    /^(\d{1,2})[-/\s]([A-Za-z]{3,})[-/\s](\d{2,4})$/
-  );
-
-  if (ddMmmWithYear) {
-    const [, day, monthText, yearText] = ddMmmWithYear;
-    const month = MONTHS[monthText.toLowerCase()];
-    const year =
-      yearText.length === 2 ? 2000 + Number(yearText) : Number(yearText);
-
-    return makeDate({ day, month, year });
-  }
-
-  const ddMmmWithoutYear = raw.match(/^(\d{1,2})[-/\s]([A-Za-z]{3,})$/);
-
-  if (ddMmmWithoutYear) {
-    const [, day, monthText] = ddMmmWithoutYear;
-    const month = MONTHS[monthText.toLowerCase()];
-
-    return makeDate({ day, month, year: fallbackYear });
-  }
-
-  const ddMmYyyy = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
-
-  if (ddMmYyyy) {
-    const [, day, monthText, yearText] = ddMmYyyy;
-    const year =
-      yearText.length === 2 ? 2000 + Number(yearText) : Number(yearText);
-
-    return makeDate({
-      day,
-      month: Number(monthText) - 1,
-      year,
-    });
-  }
-
-  const ddMmWithoutYear = raw.match(/^(\d{1,2})[-/](\d{1,2})$/);
-
-  if (ddMmWithoutYear) {
-    const [, day, monthText] = ddMmWithoutYear;
-
-    return makeDate({
-      day,
-      month: Number(monthText) - 1,
-      year: fallbackYear,
-    });
-  }
-
-  const mmmDdWithYear = raw.match(
-    /^([A-Za-z]{3,})[-/\s](\d{1,2})[-/\s](\d{2,4})$/
-  );
-
-  if (mmmDdWithYear) {
-    const [, monthText, day, yearText] = mmmDdWithYear;
-    const month = MONTHS[monthText.toLowerCase()];
-    const year =
-      yearText.length === 2 ? 2000 + Number(yearText) : Number(yearText);
-
-    return makeDate({ day, month, year });
-  }
-
-  const mmmDdWithoutYear = raw.match(/^([A-Za-z]{3,})[-/\s](\d{1,2})$/);
-
-  if (mmmDdWithoutYear) {
-    const [, monthText, day] = mmmDdWithoutYear;
-    const month = MONTHS[monthText.toLowerCase()];
-
-    return makeDate({ day, month, year: fallbackYear });
-  }
-
-  return null;
 };
 
 const toIsoDate = (date) => {
@@ -234,35 +140,112 @@ const isAttendanceHeaderRow = (row = []) => {
   );
 };
 
-const isBlankRow = (row = []) => {
-  return !row.some((cell) => clean(cell));
-};
+const isBlankRow = (row = []) => !row.some((cell) => clean(cell));
 
 const isValidStudentRow = (row = []) => {
-  const no = clean(row[0]);
   const name = clean(row[1]);
 
   if (!name) return false;
   if (normalizeKey(name) === "name") return false;
-  if (normalizeKey(no) === "no.") return false;
 
   return true;
 };
 
-const getDateColumnsFromDateRow = (dateRow = [], fallbackYear) => {
-  return dateRow
-    .map((cell, index) => {
-      const date = parseDateValue(cell, fallbackYear);
+const getLastDayOfMonth = (year, monthIndex) => {
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+};
 
-      if (!date) return null;
+const parseMonthYearFromHeaderRow = (headerRow = [], fallbackYear) => {
+  for (let index = 3; index < headerRow.length; index += 1) {
+    const raw = clean(headerRow[index]);
 
-      return {
-        index,
-        date: toIsoDate(date),
-        header: clean(cell),
-      };
-    })
-    .filter(Boolean);
+    if (!raw) continue;
+
+    const monthYearMatch = raw.match(
+      /\b([A-Za-z]{3,}|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[-/\s](\d{2,4})\b/i
+    );
+
+    if (monthYearMatch) {
+      const monthText = monthYearMatch[1].toLowerCase();
+      const yearText = monthYearMatch[2];
+      const month = MONTHS[monthText];
+
+      if (month !== undefined) {
+        return {
+          month,
+          year: toFullYear(yearText, fallbackYear),
+          monthHeaderColumn: index,
+          source: raw,
+        };
+      }
+    }
+
+    const fullDateMatch = raw.match(
+      /^(\d{1,2})[-/\s]([A-Za-z]{3,})[-/\s](\d{2,4})$/i
+    );
+
+    if (fullDateMatch) {
+      const monthText = fullDateMatch[2].toLowerCase();
+      const yearText = fullDateMatch[3];
+      const month = MONTHS[monthText];
+
+      if (month !== undefined) {
+        return {
+          month,
+          year: toFullYear(yearText, fallbackYear),
+          monthHeaderColumn: index,
+          source: raw,
+        };
+      }
+    }
+  }
+
+  return null;
+};
+
+const findFirstDateColumnFromDayRow = ({
+  dateRow = [],
+  preferredStart = 3,
+}) => {
+  for (let index = preferredStart; index < dateRow.length; index += 1) {
+    const raw = clean(dateRow[index]);
+    const numericDay = Number(raw);
+
+    if (numericDay === 1) {
+      return index;
+    }
+  }
+
+  return -1;
+};
+
+const buildDateColumnsFromDayRow = ({
+  dateRow = [],
+  firstDateColumn,
+  month,
+  year,
+}) => {
+  const lastDay = getLastDayOfMonth(year, month);
+  const columns = [];
+
+  for (let day = 1; day <= lastDay; day += 1) {
+    const columnIndex = firstDateColumn + day - 1;
+    const raw = clean(dateRow[columnIndex]);
+    const numericDay = Number(raw);
+
+    if (numericDay !== day) continue;
+
+    const date = makeDate({ day, month, year });
+    if (!date) continue;
+
+    columns.push({
+      index: columnIndex,
+      date: toIsoDate(date),
+      header: raw,
+    });
+  }
+
+  return columns;
 };
 
 const mergeStudentRows = (rows = []) => {
@@ -273,12 +256,13 @@ const mergeStudentRows = (rows = []) => {
       row.phone ||
       row.admissionNumber ||
       normalizeKey(row.name) ||
-      `row-${row.rowNumber}`;
+      `row-${row.importedRowNumber || row.rowNumber}`;
 
     if (!map.has(key)) {
       map.set(key, {
         ...row,
         attendance: [],
+        importedRowNumber: row.importedRowNumber,
       });
     }
 
@@ -291,25 +275,47 @@ const mergeStudentRows = (rows = []) => {
       existing.admissionNumber = row.admissionNumber;
       existing.studentCode = row.admissionNumber;
     }
+
+    if (!existing.importedSerialNo && row.importedSerialNo) {
+      existing.importedSerialNo = row.importedSerialNo;
+    }
+
+    if (!existing.importedPaidDate && row.importedPaidDate) {
+      existing.importedPaidDate = row.importedPaidDate;
+    }
+
+    if (!existing.importedFeePaid && row.importedFeePaid) {
+      existing.importedFeePaid = row.importedFeePaid;
+    }
+
+    if (!existing.importedFeeStatus && row.importedFeeStatus) {
+      existing.importedFeeStatus = row.importedFeeStatus;
+    }
+
+    if (!existing.importedExtraNote && row.importedExtraNote) {
+      existing.importedExtraNote = row.importedExtraNote;
+    }
   });
 
-  return Array.from(map.values()).map((row) => {
-    const seenDates = new Set();
+  return Array.from(map.values())
+    .map((row) => {
+      const seenDates = new Set();
 
-    const attendance = row.attendance.filter((item) => {
-      const key = `${item.date}-${item.status}`;
+      const attendance = row.attendance.filter((item) => {
+        const key = `${item.date}-${item.status}`;
 
-      if (seenDates.has(key)) return false;
+        if (seenDates.has(key)) return false;
 
-      seenDates.add(key);
-      return true;
-    });
+        seenDates.add(key);
+        return true;
+      });
 
-    return {
-      ...row,
-      attendance,
-    };
-  });
+      return {
+        ...row,
+        attendance,
+      };
+    })
+    .sort((a, b) => Number(a.importedRowNumber || 0) - Number(b.importedRowNumber || 0));
 };
 
 export const readAttendanceWorkbook = async (file) => {
@@ -317,7 +323,7 @@ export const readAttendanceWorkbook = async (file) => {
 
   return XLSX.read(buffer, {
     type: "array",
-    cellDates: true,
+    cellDates: false,
     raw: false,
   });
 };
@@ -347,6 +353,7 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
     header: 1,
     defval: "",
     raw: false,
+    blankrows: false,
   });
 
   const warnings = [];
@@ -357,13 +364,34 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
   for (let rowIndex = 0; rowIndex < rawRows.length; rowIndex += 1) {
     const headerRow = rawRows[rowIndex];
 
-    if (!isAttendanceHeaderRow(headerRow)) {
+    if (!isAttendanceHeaderRow(headerRow)) continue;
+
+    const monthInfo = parseMonthYearFromHeaderRow(headerRow, fallbackYear);
+
+    if (!monthInfo) {
+      warnings.push(`Row ${rowIndex + 1}: month/year detect nahi hua.`);
       continue;
     }
 
     const dateRowIndex = rowIndex + 2;
     const dateRow = rawRows[dateRowIndex] || [];
-    const dateColumns = getDateColumnsFromDateRow(dateRow, fallbackYear);
+
+    const firstDateColumn = findFirstDateColumnFromDayRow({
+      dateRow,
+      preferredStart: monthInfo.monthHeaderColumn,
+    });
+
+    if (firstDateColumn < 0) {
+      warnings.push(`Row ${rowIndex + 1}: date start column detect nahi hua.`);
+      continue;
+    }
+
+    const dateColumns = buildDateColumnsFromDayRow({
+      dateRow,
+      firstDateColumn,
+      month: monthInfo.month,
+      year: monthInfo.year,
+    });
 
     if (!dateColumns.length) {
       warnings.push(`Row ${rowIndex + 1}: date columns detect nahi hue.`);
@@ -386,9 +414,6 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
         continue;
       }
 
-      const name = clean(row[1]);
-      const phone = normalizePhone(row[2]);
-      const admissionNumber = "";
       const attendance = [];
 
       dateColumns.forEach((column) => {
@@ -413,14 +438,24 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
         });
       });
 
+      const name = clean(row[1]);
+      const phone = normalizePhone(row[2]);
+      const admissionNumber = "";
+
       if (name || phone || attendance.length) {
         parsedRows.push({
           rowNumber: dataRowIndex + 1,
+          importedRowNumber: dataRowIndex + 1,
+          importedSerialNo: clean(row[0]),
           name,
           phone,
           admissionNumber,
           studentCode: admissionNumber,
           batchName: "",
+          importedPaidDate: clean(row[3]),
+          importedFeePaid: clean(row[4]),
+          importedFeeStatus: clean(row[5]),
+          importedExtraNote: clean(row[6]),
           attendance,
         });
       }

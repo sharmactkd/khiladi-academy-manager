@@ -22,14 +22,62 @@ const recalculateRow = (row, days) => {
   };
 };
 
-const toDateInputValue = (value) => {
-  if (!value) return "";
+const isExcelImportRow = (row) => {
+  return (
+    row.rowType === "raw-import" ||
+    row.source === "excel-import" ||
+    Boolean(row.importedName) ||
+    Boolean(row.importedRowNumber)
+  );
+};
 
-  const date = new Date(value);
+const displayValue = (value, fallback = "-") => {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+};
 
-  if (Number.isNaN(date.getTime())) return "";
+const formatExcelDate = (value) => {
+  const raw = String(value ?? "").trim();
 
-  return date.toISOString().slice(0, 10);
+  if (!raw || raw === "-") return raw || "-";
+
+  const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+
+  if (slashMatch) {
+    const [, month, day, year] = slashMatch;
+
+    return `${String(day).padStart(2, "0")}-${String(month).padStart(
+      2,
+      "0"
+    )}-${String(year).slice(-2)}`;
+  }
+
+  const dashMatch = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+
+  if (dashMatch) {
+    const [, day, month, year] = dashMatch;
+
+    return `${String(day).padStart(2, "0")}-${String(month).padStart(
+      2,
+      "0"
+    )}-${String(year).slice(-2)}`;
+  }
+
+  return raw;
+};
+
+const getHolidayMap = (days = [], rows = []) => {
+  const map = {};
+
+  days.forEach((day) => {
+    const allCellsEmpty = rows.every(
+      (row) => !String(row.attendance?.[day.dateKey] || "").trim()
+    );
+
+    map[day.dateKey] = allCellsEmpty && !day.isSunday;
+  });
+
+  return map;
 };
 
 const MonthlyAttendanceTable = ({
@@ -42,7 +90,14 @@ const MonthlyAttendanceTable = ({
     return Array.isArray(rows) ? rows : [];
   }, [rows]);
 
+  const holidayMap = useMemo(
+    () => getHolidayMap(days, safeRows),
+    [days, safeRows]
+  );
+
   const updateRowField = (rowIndex, field, value) => {
+    if (typeof onRowsChange !== "function") return;
+
     const nextRows = safeRows.map((row, index) => {
       if (index !== rowIndex) return row;
 
@@ -56,6 +111,8 @@ const MonthlyAttendanceTable = ({
   };
 
   const updateCell = (rowIndex, dateKey, value) => {
+    if (typeof onRowsChange !== "function") return;
+
     const nextRows = safeRows.map((row, index) => {
       if (index !== rowIndex) return row;
 
@@ -84,7 +141,7 @@ const MonthlyAttendanceTable = ({
   if (!safeRows.length) {
     return (
       <div className="monthly-register__empty">
-        No active students found for selected batch.
+        No attendance records found for selected batch/month.
       </div>
     );
   }
@@ -103,23 +160,28 @@ const MonthlyAttendanceTable = ({
             <th className="sticky-col sticky-contact" rowSpan="2">
               Contact
             </th>
-            <th rowSpan="2">Fee Due Date</th>
-            <th rowSpan="2">Fee Paid Date</th>
+            <th rowSpan="2">Paid Date</th>
+            <th rowSpan="2">Fee Paid</th>
             <th rowSpan="2">Fee Status</th>
 
-            {days.map((day) => (
-              <th
-                key={day.dateKey}
-                className={[
-                  "day-heading",
-                  day.isSunday ? "day-heading--sunday" : "",
-                  day.isSaturday ? "day-heading--saturday" : "",
-                  day.isToday ? "day-heading--today" : "",
-                ].join(" ")}
-              >
-                {day.weekday}
-              </th>
-            ))}
+            {days.map((day) => {
+              const isHoliday = holidayMap[day.dateKey];
+
+              return (
+                <th
+                  key={day.dateKey}
+                  className={[
+                    "day-heading",
+                    day.isSunday ? "day-heading--sunday" : "",
+                    day.isSaturday ? "day-heading--saturday" : "",
+                    day.isToday ? "day-heading--today" : "",
+                    isHoliday ? "day-heading--holiday" : "",
+                  ].join(" ")}
+                >
+                  {day.weekday}
+                </th>
+              );
+            })}
 
             <th className="sticky-summary" rowSpan="2">
               ABSENT
@@ -139,91 +201,100 @@ const MonthlyAttendanceTable = ({
           </tr>
 
           <tr>
-            {days.map((day) => (
-              <th
-                key={`${day.dateKey}-day`}
-                className={[
-                  "day-number",
-                  day.isSunday ? "day-number--sunday" : "",
-                  day.isSaturday ? "day-number--saturday" : "",
-                  day.isToday ? "day-number--today" : "",
-                ].join(" ")}
-              >
-                {String(day.day).padStart(2, "0")}
-              </th>
-            ))}
+            {days.map((day) => {
+              const isHoliday = holidayMap[day.dateKey];
+
+              return (
+                <th
+                  key={`${day.dateKey}-day`}
+                  className={[
+                    "day-number",
+                    day.isSunday ? "day-number--sunday" : "",
+                    day.isSaturday ? "day-number--saturday" : "",
+                    day.isToday ? "day-number--today" : "",
+                    isHoliday ? "day-number--holiday" : "",
+                  ].join(" ")}
+                >
+                  {String(day.day).padStart(2, "0")}
+                </th>
+              );
+            })}
           </tr>
         </thead>
 
         <tbody>
-          {safeRows.map((row, rowIndex) => (
-            <tr key={row.studentId || rowIndex}>
-              <td className="sticky-col sticky-no">
-                {row.no || rowIndex + 1}
-              </td>
+          {safeRows.map((row, rowIndex) => {
+            const excelRow = isExcelImportRow(row);
 
-              <td className="sticky-col sticky-name monthly-register__name">
-                {row.name || "-"}
-              </td>
-
-              <td className="sticky-col sticky-contact">
-                {row.contact || "-"}
-              </td>
-
-              <td>
-                <input
-                  type="date"
-                  className="monthly-register-date-input"
-                  value={toDateInputValue(row.feeDueDate)}
-                  onChange={(event) =>
-                    updateRowField(rowIndex, "feeDueDate", event.target.value)
-                  }
-                />
-              </td>
-
-              <td>
-  <input
-    type="date"
-    className="monthly-register-date-input"
-    value={toDateInputValue(row.feePaidDate)}
-    onChange={(event) =>
-      updateRowField(rowIndex, "feePaidDate", event.target.value)
-    }
-  />
-</td>
-
-              <td
-                className={
-                  String(row.feeStatus || "").toLowerCase() === "paid"
-                    ? "fee-status fee-status--paid"
-                    : "fee-status fee-status--due"
-                }
-              >
-                {row.feeStatus || "due"}
-              </td>
-
-              {days.map((day) => (
-                <td
-                  key={`${row.studentId}-${day.dateKey}`}
-                  className={[
-                    "attendance-day-cell",
-                    day.isSunday ? "attendance-day-cell--sunday" : "",
-                    day.isSaturday ? "attendance-day-cell--saturday" : "",
-                    day.isToday ? "attendance-day-cell--today" : "",
-                  ].join(" ")}
-                >
-                  <AttendanceCell
-                    value={row.attendance?.[day.dateKey] || ""}
-                    onChange={(value) =>
-                      updateCell(rowIndex, day.dateKey, value)
-                    }
-                  />
+            return (
+              <tr key={row.studentId || row.importedRowNumber || rowIndex}>
+                <td className="sticky-col sticky-no">
+                  {row.importedSerialNo || row.no || rowIndex + 1}
                 </td>
-              ))}
 
-              <AttendanceSummary row={row} />
-            </tr>
-          ))}
+                <td className="sticky-col sticky-name monthly-register__name">
+                  {row.name || row.importedName || "-"}
+                </td>
+
+                <td className="sticky-col sticky-contact">
+                  {row.contact || row.importedPhone || "-"}
+                </td>
+
+                <td>
+                  <span>
+                    {formatExcelDate(
+                      row.importedPaidDate || row.feePaidDate || "-"
+                    )}
+                  </span>
+                </td>
+
+                <td>
+                  <span>{formatExcelDate(row.importedFeePaid || row.feePaid)}</span>
+                </td>
+
+                <td
+                  className={
+                    String(row.feeStatus || row.importedFeeStatus || "")
+                      .toLowerCase()
+                      .includes("paid")
+                      ? "fee-status fee-status--paid"
+                      : "fee-status fee-status--due"
+                  }
+                >
+                  {row.feeStatus || row.importedFeeStatus || "due"}
+                </td>
+
+                {days.map((day) => {
+                  const isHoliday = holidayMap[day.dateKey];
+
+                  return (
+                    <td
+                      key={`${
+                        row.studentId || row.importedRowNumber || rowIndex
+                      }-${day.dateKey}`}
+                      className={[
+                        "attendance-day-cell",
+                        day.isSunday ? "attendance-day-cell--sunday" : "",
+                        day.isSaturday ? "attendance-day-cell--saturday" : "",
+                        day.isToday ? "attendance-day-cell--today" : "",
+                        isHoliday ? "attendance-day-cell--holiday" : "",
+                      ].join(" ")}
+                    >
+                      <AttendanceCell
+                        value={row.attendance?.[day.dateKey] || ""}
+                        onChange={(value) =>
+                          updateCell(rowIndex, day.dateKey, value)
+                        }
+                        disabled={!onRowsChange}
+                      />
+                    </td>
+                  );
+                })}
+
+                <AttendanceSummary row={row} />
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

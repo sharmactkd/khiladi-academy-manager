@@ -18,6 +18,21 @@ const STATUS_MAP = {
 
 const SHORT_STATUSES = ["P", "A", "L", "LT", ""];
 
+export const REGISTER_MONTHS = [
+  { value: 1, label: "Jan", fullLabel: "January" },
+  { value: 2, label: "Feb", fullLabel: "February" },
+  { value: 3, label: "Mar", fullLabel: "March" },
+  { value: 4, label: "Apr", fullLabel: "April" },
+  { value: 5, label: "May", fullLabel: "May" },
+  { value: 6, label: "Jun", fullLabel: "June" },
+  { value: 7, label: "Jul", fullLabel: "July" },
+  { value: 8, label: "Aug", fullLabel: "August" },
+  { value: 9, label: "Sep", fullLabel: "September" },
+  { value: 10, label: "Oct", fullLabel: "October" },
+  { value: 11, label: "Nov", fullLabel: "November" },
+  { value: 12, label: "Dec", fullLabel: "December" },
+];
+
 const toObjectId = (value) => {
   if (!mongoose.Types.ObjectId.isValid(String(value || ""))) return null;
   return new mongoose.Types.ObjectId(value);
@@ -31,38 +46,6 @@ const clean = (value) =>
     .replace(/\s+/g, " ");
 
 const normalizePhone = (value) => clean(value).replace(/\D/g, "").slice(-10);
-
-const normalizeImportedIdentity = (record = {}) => {
-  const importedName = clean(record.importedName);
-  const importedPhone = normalizePhone(record.importedPhone);
-  const importedAdmissionNumber = clean(record.importedAdmissionNumber);
-
-  return {
-    importedName,
-    importedPhone,
-    importedAdmissionNumber,
-  };
-};
-
-const getRawRowId = (record = {}) => {
-  const { importedName, importedPhone, importedAdmissionNumber } =
-    normalizeImportedIdentity(record);
-
-  return [
-    "raw",
-    importedPhone || "-",
-    importedAdmissionNumber.toLowerCase() || "-",
-    importedName.toLowerCase() || "-",
-  ].join(":");
-};
-
-const getRecordRowId = (record = {}) => {
-  if (record.student) {
-    return String(record.student);
-  }
-
-  return getRawRowId(record);
-};
 
 const getLocalDateKey = (value) => {
   const date = new Date(value);
@@ -175,47 +158,166 @@ const getLatestFeeMap = async ({ academyId, studentIds }) => {
   return map;
 };
 
-const createStudentRow = ({ student, index, attendance, fee }) => {
-  const counts = calculateCounts(attendance);
+const getRecordDisplayIdentity = (record = {}, studentMap = new Map()) => {
+  const student = record.student ? studentMap.get(String(record.student)) : null;
 
   return {
-    no: index + 1,
-    studentId: String(student._id),
-    rowType: "student",
-    admissionNumber: student.admissionNumber || "",
-    name: getStudentName(student),
-    contact: student.phone || "-",
-    status: student.status || "active",
-    feeDueDate: student.joiningDate || student.createdAt || null,
-    feePaidDate: fee?.paidDate || fee?.paymentDate || null,
-    feePaid: fee?.amountPaid ?? fee?.amount ?? 0,
-    feeStatus: fee?.status || "due",
+    rowId:
+      record.importedRowNumber ||
+      record.importedPhone ||
+      record.importedName ||
+      record.student ||
+      `${Date.now()}-${Math.random()}`,
+    student,
+    studentId: record.student ? String(record.student) : "",
+    rowType: record.student ? "student" : "raw-import",
+    importedRowNumber: record.importedRowNumber || null,
+    importedSerialNo: record.importedSerialNo || "",
+    importedName: record.importedName || "",
+    importedPhone: record.importedPhone || "",
+    importedAdmissionNumber: record.importedAdmissionNumber || "",
+    importedPaidDate: record.importedPaidDate || "",
+    importedFeePaid: record.importedFeePaid || "",
+    importedFeeStatus: record.importedFeeStatus || "",
+    importedExtraNote: record.importedExtraNote || "",
+    source: record.source || "manual",
+  };
+};
+
+const buildRowFromRecord = ({ identity, attendance, index, fee }) => {
+  const student = identity.student;
+  const counts = calculateCounts(attendance);
+
+  const importedName = clean(identity.importedName);
+  const importedPhone = clean(identity.importedPhone);
+
+  return {
+    no: identity.importedSerialNo || index + 1,
+    sortOrder: Number(identity.importedRowNumber || index + 1),
+    studentId: identity.studentId || identity.rowId,
+    rowType: identity.rowType,
+    source: identity.source,
+
+    importedRowNumber: identity.importedRowNumber,
+    importedSerialNo: identity.importedSerialNo,
+    importedName,
+    importedPhone,
+    importedAdmissionNumber: identity.importedAdmissionNumber,
+    importedPaidDate: identity.importedPaidDate,
+    importedFeePaid: identity.importedFeePaid,
+    importedFeeStatus: identity.importedFeeStatus,
+    importedExtraNote: identity.importedExtraNote,
+
+    admissionNumber:
+      identity.importedAdmissionNumber || student?.admissionNumber || "",
+    name: importedName || (student ? getStudentName(student) : "Unknown Student"),
+    contact: importedPhone || student?.phone || "-",
+    status: student?.status || (identity.rowType === "raw-import" ? "imported" : "active"),
+    feeDueDate: student?.joiningDate || student?.createdAt || null,
+    feePaidDate: identity.importedPaidDate || fee?.paidDate || fee?.paymentDate || null,
+    feePaid: identity.importedFeePaid || fee?.amountPaid || fee?.amount || "",
+    feeStatus: identity.importedFeeStatus || fee?.status || "due",
     attendance,
     ...counts,
   };
 };
 
-const createRawRow = ({ rawRecord, index, attendance }) => {
-  const { importedName, importedPhone, importedAdmissionNumber } =
-    normalizeImportedIdentity(rawRecord);
+const buildMonthlyRows = async ({
+  academyObjectId,
+  batchObjectId,
+  days,
+  attendanceDocs,
+}) => {
+  const markedStudentIds = [];
 
-  const counts = calculateCounts(attendance);
+  attendanceDocs.forEach((doc) => {
+    (doc.records || []).forEach((record) => {
+      if (record.student) {
+        markedStudentIds.push(record.student);
+      }
+    });
+  });
 
-  return {
-    no: index + 1,
-    studentId: getRawRowId(rawRecord),
-    rowType: "raw-import",
-    admissionNumber: importedAdmissionNumber || "",
-    name: importedName || "Unknown Imported Student",
-    contact: importedPhone || "-",
-    status: "imported",
-    feeDueDate: null,
-    feePaidDate: null,
-    feePaid: 0,
-    feeStatus: "imported",
-    attendance,
-    ...counts,
-  };
+  const students = await Student.find({
+    academy: academyObjectId,
+    $or: [
+      { batch: batchObjectId },
+      {
+        _id: {
+          $in: markedStudentIds,
+        },
+      },
+    ],
+  })
+    .select(
+      "admissionNumber firstName lastName phone status joiningDate createdAt batch"
+    )
+    .lean();
+
+  const studentMap = new Map(
+    students.map((student) => [String(student._id), student])
+  );
+
+  const studentIds = students.map((student) => student._id);
+  const feeMap = await getLatestFeeMap({
+    academyId: academyObjectId,
+    studentIds,
+  });
+
+  const rowIdentityMap = new Map();
+  const attendanceByRow = new Map();
+
+  attendanceDocs.forEach((doc) => {
+    const dateKey = getLocalDateKey(doc.date);
+
+    (doc.records || []).forEach((record) => {
+      const identity = getRecordDisplayIdentity(record, studentMap);
+      const rowKey =
+        identity.importedRowNumber ||
+        identity.importedPhone ||
+        identity.importedName ||
+        identity.studentId;
+
+      if (!rowKey) return;
+
+      if (!rowIdentityMap.has(String(rowKey))) {
+        rowIdentityMap.set(String(rowKey), identity);
+      }
+
+      if (!attendanceByRow.has(String(rowKey))) {
+        attendanceByRow.set(String(rowKey), buildBlankAttendance(days));
+      }
+
+      const rowAttendance = attendanceByRow.get(String(rowKey));
+      if (rowAttendance && dateKey) {
+        rowAttendance[dateKey] = toShortStatus(record.status);
+      }
+    });
+  });
+
+  const rows = Array.from(rowIdentityMap.entries())
+    .map(([rowKey, identity], index) => {
+      const attendance = attendanceByRow.get(rowKey) || buildBlankAttendance(days);
+      const fee = identity.studentId ? feeMap.get(String(identity.studentId)) : null;
+
+      return buildRowFromRecord({
+        identity,
+        attendance,
+        index,
+        fee,
+      });
+    })
+    .sort((a, b) => {
+      const aOrder = Number(a.sortOrder || 999999);
+      const bOrder = Number(b.sortOrder || 999999);
+      return aOrder - bOrder;
+    })
+    .map((row, index) => ({
+      ...row,
+      no: row.importedSerialNo || index + 1,
+    }));
+
+  return { rows, students };
 };
 
 export const getMonthlyAttendanceRegister = async ({
@@ -271,109 +373,12 @@ export const getMonthlyAttendanceRegister = async ({
     date: { $gte: start, $lte: end },
   }).lean();
 
-  const markedStudentIds = [];
-  const rawRecordSamples = new Map();
-
-  attendanceDocs.forEach((doc) => {
-    (doc.records || []).forEach((record) => {
-      if (record.student) {
-        markedStudentIds.push(record.student);
-        return;
-      }
-
-      const rawRowId = getRawRowId(record);
-      if (!rawRecordSamples.has(rawRowId)) {
-        rawRecordSamples.set(rawRowId, record);
-      }
-    });
+  const { rows, students } = await buildMonthlyRows({
+    academyObjectId,
+    batchObjectId,
+    days,
+    attendanceDocs,
   });
-
-  const students = await Student.find({
-    academy: academyObjectId,
-    $or: [
-      { batch: batchObjectId },
-      {
-        _id: {
-          $in: markedStudentIds,
-        },
-      },
-    ],
-  })
-    .select(
-      "admissionNumber firstName lastName phone status joiningDate createdAt batch"
-    )
-    .sort({ firstName: 1, lastName: 1, admissionNumber: 1 })
-    .lean();
-
-  const studentIds = students.map((student) => student._id);
-  const feeMap = await getLatestFeeMap({
-    academyId: academyObjectId,
-    studentIds,
-  });
-
-  const attendanceByRow = new Map();
-
-  students.forEach((student) => {
-    attendanceByRow.set(String(student._id), buildBlankAttendance(days));
-  });
-
-  rawRecordSamples.forEach((record, rawRowId) => {
-    attendanceByRow.set(rawRowId, buildBlankAttendance(days));
-  });
-
-  attendanceDocs.forEach((doc) => {
-    const dateKey = getLocalDateKey(doc.date);
-
-    (doc.records || []).forEach((record) => {
-      const rowId = getRecordRowId(record);
-
-      if (!attendanceByRow.has(rowId)) {
-        attendanceByRow.set(rowId, buildBlankAttendance(days));
-
-        if (!record.student && !rawRecordSamples.has(rowId)) {
-          rawRecordSamples.set(rowId, record);
-        }
-      }
-
-      const rowAttendance = attendanceByRow.get(rowId);
-
-      if (rowAttendance && dateKey) {
-        rowAttendance[dateKey] = toShortStatus(record.status);
-      }
-    });
-  });
-
-  const studentRows = students.map((student, index) => {
-    const attendance = attendanceByRow.get(String(student._id)) || {};
-    const fee = feeMap.get(String(student._id));
-
-    return createStudentRow({
-      student,
-      index,
-      attendance,
-      fee,
-    });
-  });
-
-  const rawRows = Array.from(rawRecordSamples.values())
-    .sort((a, b) =>
-      String(a.importedName || "").localeCompare(String(b.importedName || ""))
-    )
-    .map((record, index) => {
-      const rawRowId = getRawRowId(record);
-      const attendance = attendanceByRow.get(rawRowId) || {};
-
-      return createRawRow({
-        rawRecord: record,
-        index: studentRows.length + index,
-        attendance,
-      });
-    });
-
-  const rows = [...studentRows, ...rawRows].map((row, index) => ({
-    ...row,
-    no: index + 1,
-  }));
 
   return {
     month: numericMonth,
@@ -382,6 +387,53 @@ export const getMonthlyAttendanceRegister = async ({
     days,
     students,
     rows,
+  };
+};
+
+export const getYearlyAttendanceRegister = async ({
+  academyId,
+  batchId,
+  year,
+}) => {
+  const numericYear = Number(year);
+
+  if (!numericYear) {
+    const error = new Error("Valid year is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const months = await Promise.all(
+    REGISTER_MONTHS.map(async (monthInfo) => {
+      const data = await getMonthlyAttendanceRegister({
+        academyId,
+        batchId,
+        month: monthInfo.value,
+        year: numericYear,
+      });
+
+      return {
+        ...monthInfo,
+        ...data,
+        hasAttendance: Array.isArray(data.rows)
+          ? data.rows.some(
+              (row) =>
+                row.presentCount ||
+                row.absentCount ||
+                row.leaveCount ||
+                row.lateCount
+            )
+          : false,
+      };
+    })
+  );
+
+  const batch = months.find((item) => item.batch)?.batch || null;
+
+  return {
+    year: numericYear,
+    batch,
+    months,
   };
 };
 
@@ -466,25 +518,23 @@ export const saveMonthlyAttendanceRegister = async ({
 
       if (!longStatus) return;
 
-      if (isRawImport) {
-        recordsByDate.get(day.dateKey).push({
-          student: null,
-          importedName: clean(row.name),
-          importedPhone: normalizePhone(row.contact),
-          importedAdmissionNumber: clean(row.admissionNumber),
-          status: longStatus,
-          source: "excel-import",
-          note: "Saved from monthly register raw imported row",
-        });
-
-        return;
-      }
-
       recordsByDate.get(day.dateKey).push({
-        student: studentId,
+        student: isRawImport ? null : studentId,
+        importedRowNumber: row.importedRowNumber || null,
+        importedSerialNo: clean(row.importedSerialNo || row.no),
+        importedName: clean(row.importedName || row.name),
+        importedPhone: normalizePhone(row.importedPhone || row.contact),
+        importedAdmissionNumber: clean(row.importedAdmissionNumber),
+        importedPaidDate: clean(row.importedPaidDate || row.feePaidDate),
+        importedFeePaid: clean(row.importedFeePaid || row.feePaid),
+        importedFeeStatus: clean(row.importedFeeStatus || row.feeStatus),
+        importedExtraNote: clean(row.importedExtraNote),
         status: longStatus,
-        source: "manual",
-        note: "",
+        source: row.source === "excel-import" ? "excel-import" : "manual",
+        note:
+          row.source === "excel-import"
+            ? "Saved from monthly register imported row"
+            : "",
       });
     });
   });

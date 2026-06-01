@@ -9,28 +9,66 @@ const attendanceRecordSchema = new mongoose.Schema(
       index: true,
     },
 
+    importedRowNumber: {
+      type: Number,
+      default: null,
+      index: true,
+    },
+
+    importedSerialNo: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [30, "Imported serial number cannot exceed 30 characters"],
+    },
+
     importedName: {
       type: String,
       trim: true,
       default: "",
-      maxlength: [120, "Imported name cannot exceed 120 characters"],
+      maxlength: [150, "Imported name cannot exceed 150 characters"],
     },
 
     importedPhone: {
       type: String,
       trim: true,
       default: "",
-      maxlength: [20, "Imported phone cannot exceed 20 characters"],
+      maxlength: [30, "Imported phone cannot exceed 30 characters"],
     },
 
     importedAdmissionNumber: {
       type: String,
       trim: true,
       default: "",
-      maxlength: [
-        50,
-        "Imported admission number cannot exceed 50 characters",
-      ],
+      maxlength: [50, "Imported admission number cannot exceed 50 characters"],
+    },
+
+    importedPaidDate: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [50, "Imported paid date cannot exceed 50 characters"],
+    },
+
+    importedFeePaid: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [50, "Imported fee paid cannot exceed 50 characters"],
+    },
+
+    importedFeeStatus: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [50, "Imported fee status cannot exceed 50 characters"],
+    },
+
+    importedExtraNote: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [120, "Imported extra note cannot exceed 120 characters"],
     },
 
     status: {
@@ -57,12 +95,13 @@ const attendanceRecordSchema = new mongoose.Schema(
   { _id: false }
 );
 
-attendanceRecordSchema.pre("validate", function validateAttendanceRecord(next) {
+attendanceRecordSchema.pre("validate", function validateAttendanceRecord() {
   const hasStudent = Boolean(this.student);
   const hasImportedIdentity = Boolean(
     String(this.importedName || "").trim() ||
       String(this.importedPhone || "").trim() ||
-      String(this.importedAdmissionNumber || "").trim()
+      String(this.importedAdmissionNumber || "").trim() ||
+      String(this.importedSerialNo || "").trim()
   );
 
   if (!hasStudent && !hasImportedIdentity) {
@@ -71,8 +110,6 @@ attendanceRecordSchema.pre("validate", function validateAttendanceRecord(next) {
       "Either student or imported student identity is required"
     );
   }
-
-  
 });
 
 const attendanceSchema = new mongoose.Schema(
@@ -121,6 +158,7 @@ attendanceSchema.index({ academy: 1, batch: 1, date: 1 }, { unique: true });
 attendanceSchema.index({ academy: 1, date: 1 });
 attendanceSchema.index({ academy: 1, batch: 1 });
 attendanceSchema.index({ "records.student": 1 });
+attendanceSchema.index({ "records.importedRowNumber": 1 });
 attendanceSchema.index({ "records.importedName": 1 });
 attendanceSchema.index({ "records.importedPhone": 1 });
 attendanceSchema.index({ "records.source": 1 });
