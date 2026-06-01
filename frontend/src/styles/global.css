@@ -1830,25 +1830,25 @@ button:disabled,
   border: 4px solid #e5e7eb;
 }
 
-.day-heading--holiday,
-.day-number--holiday,
-.attendance-day-cell--holiday {
-  background: #fff200 !important;
-}
-
-.day-heading--sunday,
-.day-number--sunday,
-.attendance-day-cell--sunday {
+/* FINAL OVERRIDE: Sunday always blue */
+.monthly-register-table .day-heading--sunday,
+.monthly-register-table .day-number--sunday,
+.monthly-register-table .attendance-day-cell--sunday {
   background: #123a7a !important;
   color: #ffffff !important;
 }
 
-.attendance-day-cell--sunday .attendance-cell--blank {
-  background: #f8fafc;
-  color: #0f172a;
+/* Sunday ke andar blank cell bhi blue column feel de */
+.monthly-register-table .attendance-day-cell--sunday .attendance-cell,
+.monthly-register-table .attendance-day-cell--sunday .attendance-cell--blank {
+  background: #f8fafc !important;
+  color: #0f172a !important;
 }
 
-.attendance-cell--blank {
-  color: #64748b;
-  font-weight: 700;
+/* Future Sunday bhi blue hi rahe */
+.monthly-register-table .day-heading--sunday.day-heading--future,
+.monthly-register-table .day-number--sunday.day-number--future,
+.monthly-register-table .attendance-day-cell--sunday.attendance-day-cell--future {
+  background: #123a7a !important;
+  color: #ffffff !important;
 }

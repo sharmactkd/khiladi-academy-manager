@@ -264,10 +264,10 @@ const buildMonthlyRows = async ({
     });
   });
 
-  const students = await Student.find({
-    academy: academyObjectId,
-    $or: [{ batch: batchObjectId }, { _id: { $in: markedStudentIds } }],
-  })
+ const students = await Student.find({
+  academy: academyObjectId,
+  status: "active",
+})
     .select(
       "admissionNumber firstName lastName phone status joiningDate createdAt batch dob dateOfBirth fatherName schoolName address"
     )

@@ -73,6 +73,19 @@ const buildExportRows = ({ rows, days }) => {
   });
 };
 
+const getAllowedMonthLimit = () => {
+  const currentMonthIndex = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const nextMonthDate = new Date(currentYear, currentMonthIndex + 1, 1);
+
+  return {
+    currentYear,
+    maxFutureYear: nextMonthDate.getFullYear(),
+    maxFutureMonth: nextMonthDate.getMonth() + 1,
+  };
+};
+
 const MonthlyAttendanceRegister = () => {
   const printRef = useRef(null);
 
@@ -80,39 +93,47 @@ const MonthlyAttendanceRegister = () => {
   const [batch, setBatch] = useState("");
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
-  const [viewMode, setViewMode] = useState("year");
 
   const [days, setDays] = useState([]);
   const [rows, setRows] = useState([]);
-  const [yearMonths, setYearMonths] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
 
+  const allowedLimit = useMemo(() => getAllowedMonthLimit(), []);
+
   const yearOptions = useMemo(() => {
-    const currentYear = now.getFullYear();
-    const startYear = currentYear - 30;
-    const endYear = currentYear + 5;
+    const startYear = allowedLimit.currentYear - 30;
+    const endYear = allowedLimit.maxFutureYear;
 
     return Array.from(
       { length: endYear - startYear + 1 },
       (_, index) => startYear + index
     );
-  }, []);
+  }, [allowedLimit]);
+
+  const visibleMonths = useMemo(() => {
+    return months.filter((item) => {
+      if (year < allowedLimit.maxFutureYear) return true;
+
+      if (year === allowedLimit.maxFutureYear) {
+        return item.value <= allowedLimit.maxFutureMonth;
+      }
+
+      return false;
+    });
+  }, [year, allowedLimit]);
 
   const formattedRows = useMemo(() => formatRows(rows), [rows]);
 
-  const formattedYearMonths = useMemo(() => {
-    return yearMonths.map((monthItem) => ({
-      ...monthItem,
-      rows: formatRows(monthItem.rows || []),
-    }));
-  }, [yearMonths]);
-
   const selectedMonthLabel =
     months.find((item) => Number(item.value) === Number(month))?.label || "";
+
+  const selectedMonthFullLabel =
+    months.find((item) => Number(item.value) === Number(month))?.fullLabel ||
+    selectedMonthLabel;
 
   const loadBatches = useCallback(async () => {
     try {
@@ -138,93 +159,48 @@ const MonthlyAttendanceRegister = () => {
     }
   }, []);
 
-  const loadMonthlyRegister = async (
-    selectedBatchId = batch,
-    selectedMonth = month,
-    selectedYear = year
-  ) => {
-    if (!selectedBatchId) return;
+  const loadMonthlyRegister = useCallback(
+    async (
+      selectedBatchId = batch,
+      selectedMonth = month,
+      selectedYear = year
+    ) => {
+      if (!selectedBatchId) return;
 
-    try {
-      setLoading(true);
+      try {
+        setLoading(true);
 
-      const response = await attendanceApi.getMonthlyRegister({
-        batch: selectedBatchId,
-        month: selectedMonth,
-        year: selectedYear,
-      });
+        const response = await attendanceApi.getMonthlyRegister({
+          batch: selectedBatchId,
+          month: selectedMonth,
+          year: selectedYear,
+        });
 
-      const data = normalizeResponseData(response);
+        const data = normalizeResponseData(response);
 
-      setDays(Array.isArray(data.days) ? data.days : []);
-      setRows(Array.isArray(data.rows) ? data.rows : []);
-      setSelectedBatch(data.batch || null);
-    } catch (error) {
-      if (error?.response?.status === 401) {
-        toast.error("Session expired. Please login again.");
-      } else {
-        toast.error(
-          error?.response?.data?.message || "Monthly attendance load nahi hui"
-        );
+        setDays(Array.isArray(data.days) ? data.days : []);
+        setRows(Array.isArray(data.rows) ? data.rows : []);
+        setSelectedBatch(data.batch || null);
+      } catch (error) {
+        if (error?.response?.status === 401) {
+          toast.error("Session expired. Please login again.");
+        } else {
+          toast.error(
+            error?.response?.data?.message || "Monthly attendance load nahi hui"
+          );
+        }
+
+        setDays([]);
+        setRows([]);
+        setSelectedBatch(null);
+      } finally {
+        setLoading(false);
       }
-
-      setDays([]);
-      setRows([]);
-      setSelectedBatch(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadYearlyRegister = async (
-    selectedBatchId = batch,
-    selectedYear = year
-  ) => {
-    if (!selectedBatchId) return;
-
-    try {
-      setLoading(true);
-
-      const response = await attendanceApi.getYearlyRegister({
-        batch: selectedBatchId,
-        year: selectedYear,
-      });
-
-      const data = normalizeResponseData(response);
-
-      setYearMonths(Array.isArray(data.months) ? data.months : []);
-      setSelectedBatch(data.batch || null);
-    } catch (error) {
-      if (error?.response?.status === 401) {
-        toast.error("Session expired. Please login again.");
-      } else {
-        toast.error(
-          error?.response?.data?.message || "Yearly attendance load nahi hui"
-        );
-      }
-
-      setYearMonths([]);
-      setSelectedBatch(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const reloadCurrentView = async () => {
-    if (viewMode === "year") {
-      await loadYearlyRegister(batch, year);
-      return;
-    }
-
-    await loadMonthlyRegister(batch, month, year);
-  };
+    },
+    [batch, month, year]
+  );
 
   const saveRegister = async () => {
-    if (viewMode === "year") {
-      toast.error("Full Year view read-only hai. Edit ke liye Single Month mode use karein.");
-      return;
-    }
-
     if (!batch) {
       toast.error("Batch select karein");
       return;
@@ -275,8 +251,6 @@ const MonthlyAttendanceRegister = () => {
 
       const summary = response?.data?.data || {};
 
-      console.log("ATTENDANCE IMPORT RESPONSE:", response?.data);
-
       toast.success(
         `Cells: ${summary.totalAttendanceCells || 0}, Imported: ${
           summary.imported || 0
@@ -289,7 +263,7 @@ const MonthlyAttendanceRegister = () => {
         console.warn("IMPORT ERRORS:", summary.errors);
       }
 
-      await reloadCurrentView();
+      await loadMonthlyRegister(batch, month, year);
     } catch (error) {
       console.error("ATTENDANCE IMPORT ERROR:", error);
 
@@ -310,51 +284,12 @@ const MonthlyAttendanceRegister = () => {
   };
 
   const exportExcel = () => {
-    const workbook = XLSX.utils.book_new();
-
-    if (viewMode === "year") {
-      const exportableMonths = formattedYearMonths.filter(
-        (item) => Array.isArray(item.rows) && item.rows.length
-      );
-
-      if (!exportableMonths.length) {
-        toast.error("Export ke liye data nahi hai");
-        return;
-      }
-
-      exportableMonths.forEach((monthItem) => {
-        const exportRows = buildExportRows({
-          rows: monthItem.rows,
-          days: monthItem.days || [],
-        });
-
-        const worksheet = XLSX.utils.json_to_sheet(exportRows);
-        XLSX.utils.book_append_sheet(
-          workbook,
-          worksheet,
-          `${monthItem.label}-${year}`
-        );
-      });
-
-      const buffer = XLSX.write(workbook, {
-        bookType: "xlsx",
-        type: "array",
-      });
-
-      saveAs(
-        new Blob([buffer], {
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        }),
-        `yearly-attendance-${year}.xlsx`
-      );
-
-      return;
-    }
-
     if (!formattedRows.length) {
       toast.error("Export ke liye data nahi hai");
       return;
     }
+
+    const workbook = XLSX.utils.book_new();
 
     const exportRows = buildExportRows({
       rows: formattedRows,
@@ -377,9 +312,10 @@ const MonthlyAttendanceRegister = () => {
     );
   };
 
-  const scrollToMonth = (targetMonth) => {
-    const element = document.getElementById(`attendance-month-${targetMonth}`);
-    element?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const handleMonthClick = (targetMonth) => {
+    if (targetMonth === month) return;
+
+    setMonth(targetMonth);
   };
 
   useEffect(() => {
@@ -387,16 +323,20 @@ const MonthlyAttendanceRegister = () => {
   }, [loadBatches]);
 
   useEffect(() => {
-    if (!batch || !year) return;
+    if (!visibleMonths.some((item) => item.value === month)) {
+      const lastAllowedMonth = visibleMonths[visibleMonths.length - 1]?.value;
 
-    if (viewMode === "year") {
-      loadYearlyRegister(batch, year);
-      return;
+      if (lastAllowedMonth) {
+        setMonth(lastAllowedMonth);
+      }
     }
+  }, [visibleMonths, month]);
+
+  useEffect(() => {
+    if (!batch || !month || !year) return;
 
     loadMonthlyRegister(batch, month, year);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [batch, month, year, viewMode]);
+  }, [batch, month, year, loadMonthlyRegister]);
 
   return (
     <div className="page monthly-register-page">
@@ -410,7 +350,8 @@ const MonthlyAttendanceRegister = () => {
         <div>
           <h1>Monthly Attendance Register</h1>
           <p className="muted">
-            Single month edit mode aur full year vertical attendance view.
+            Current month default rahega. Month button par click karne se wahi
+            month load hoga.
           </p>
         </div>
 
@@ -440,16 +381,14 @@ const MonthlyAttendanceRegister = () => {
             Excel Export
           </button>
 
-          {viewMode === "month" && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={saveRegister}
-              disabled={saving || loading || !rows.length}
-            >
-              {saving ? "Saving..." : "Save"}
-            </button>
-          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={saveRegister}
+            disabled={saving || loading || !rows.length}
+          >
+            {saving ? "Saving..." : "Save"}
+          </button>
         </div>
       </div>
 
@@ -474,33 +413,6 @@ const MonthlyAttendanceRegister = () => {
         </div>
 
         <label>
-          View
-          <select
-            value={viewMode}
-            onChange={(event) => setViewMode(event.target.value)}
-          >
-            <option value="year">Full Year</option>
-            <option value="month">Single Month</option>
-          </select>
-        </label>
-
-        {viewMode === "month" && (
-          <label>
-            Month
-            <select
-              value={month}
-              onChange={(event) => setMonth(Number(event.target.value))}
-            >
-              {months.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        <label>
           Year
           <select
             value={year}
@@ -515,90 +427,52 @@ const MonthlyAttendanceRegister = () => {
         </label>
       </div>
 
-      {viewMode === "year" && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <strong>Jump to Month</strong>
-          <div className="batch-toggle-group" style={{ marginTop: 10 }}>
-            {months.map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                className="batch-toggle-btn"
-                onClick={() => scrollToMonth(item.value)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <strong>Month</strong>
 
-      {selectedBatch && viewMode === "month" && (
+        <div className="batch-toggle-group" style={{ marginTop: 10 }}>
+          {visibleMonths.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              className={`batch-toggle-btn ${
+                month === item.value ? "active" : ""
+              }`}
+              onClick={() => handleMonthClick(item.value)}
+              disabled={loading}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {selectedBatch && (
         <div className="monthly-register-title">
           <strong>{selectedBatch.batchName}</strong>
           <span>
-            {selectedMonthLabel}-{String(year).slice(-2)}
+            {selectedMonthFullLabel} {year}
+          </span>
+          <span>
+            Records:{" "}
+            {formattedRows.filter(
+              (row) =>
+                row.presentCount ||
+                row.absentCount ||
+                row.leaveCount ||
+                row.lateCount
+            ).length || 0}
           </span>
         </div>
       )}
 
-      {selectedBatch && viewMode === "year" && (
-        <div className="monthly-register-title">
-          <strong>{selectedBatch.batchName}</strong>
-          <span>Full Year - {year}</span>
-        </div>
-      )}
-
       <div ref={printRef} className="monthly-register-print-area">
-        {viewMode === "month" ? (
-          <MonthlyAttendanceTable
-            days={days}
-            rows={formattedRows}
-            onRowsChange={setRows}
-            loading={loading}
-          />
-        ) : (
-          <div className="yearly-attendance-stack">
-            {loading ? (
-              <div className="card">
-                <p className="muted">Loading yearly attendance...</p>
-              </div>
-            ) : null}
-
-            {!loading &&
-              formattedYearMonths.map((monthItem) => (
-                <section
-                  key={monthItem.value}
-                  id={`attendance-month-${monthItem.value}`}
-                  className="yearly-attendance-month"
-                  style={{ marginBottom: 28, scrollMarginTop: 90 }}
-                >
-                  <div className="monthly-register-title">
-                    <strong>
-                      {monthItem.fullLabel || monthItem.label} {year}
-                    </strong>
-                    <span>
-                      Records:{" "}
-                      {(monthItem.rows || []).filter(
-                        (row) =>
-                          row.presentCount ||
-                          row.absentCount ||
-                          row.leaveCount ||
-                          row.lateCount
-                      ).length || 0}
-                    </span>
-                  </div>
-
-                  <MonthlyAttendanceTable
-                    days={monthItem.days || []}
-                    rows={monthItem.rows || []}
-                    onRowsChange={() => {}}
-                    loading={false}
-                  />
-                </section>
-              ))}
-          </div>
-        )}
+        <MonthlyAttendanceTable
+          days={days}
+          rows={formattedRows}
+          onRowsChange={setRows}
+          loading={loading}
+        />
       </div>
     </div>
   );

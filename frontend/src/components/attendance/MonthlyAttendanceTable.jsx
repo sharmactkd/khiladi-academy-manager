@@ -9,6 +9,7 @@ const recalculateRow = (row, days) => {
   const absentCount = values.filter((value) => value === "A").length;
   const leaveCount = values.filter((value) => value === "L").length;
   const lateCount = values.filter((value) => value === "LT").length;
+
   const markedDays = presentCount + absentCount + leaveCount + lateCount;
 
   return {
@@ -22,62 +23,103 @@ const recalculateRow = (row, days) => {
   };
 };
 
-const isExcelImportRow = (row) => {
-  return (
-    row.rowType === "raw-import" ||
-    row.source === "excel-import" ||
-    Boolean(row.importedName) ||
-    Boolean(row.importedRowNumber)
-  );
-};
-
 const displayValue = (value, fallback = "-") => {
   const text = String(value ?? "").trim();
   return text || fallback;
 };
 
-const formatExcelDate = (value) => {
-  const raw = String(value ?? "").trim();
+const pad = (value) => String(value).padStart(2, "0");
 
-  if (!raw || raw === "-") return raw || "-";
+const formatDateDDMMYY = (value) => {
+  if (!value) return "-";
+
+  const raw = String(value).trim();
+  if (!raw || raw === "-") return "-";
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, yyyy, mm, dd] = isoMatch;
+    return `${dd}-${mm}-${String(yyyy).slice(-2)}`;
+  }
 
   const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-
   if (slashMatch) {
-    const [, month, day, year] = slashMatch;
-
-    return `${String(day).padStart(2, "0")}-${String(month).padStart(
-      2,
-      "0"
-    )}-${String(year).slice(-2)}`;
+    const [, mm, dd, yy] = slashMatch;
+    return `${pad(dd)}-${pad(mm)}-${String(yy).slice(-2)}`;
   }
 
   const dashMatch = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
-
   if (dashMatch) {
-    const [, day, month, year] = dashMatch;
+    const [, dd, mm, yy] = dashMatch;
+    return `${pad(dd)}-${pad(mm)}-${String(yy).slice(-2)}`;
+  }
 
-    return `${String(day).padStart(2, "0")}-${String(month).padStart(
-      2,
-      "0"
-    )}-${String(year).slice(-2)}`;
+  const date = new Date(raw);
+  if (!Number.isNaN(date.getTime())) {
+    return `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${String(
+      date.getFullYear()
+    ).slice(-2)}`;
   }
 
   return raw;
+};
+
+const getPaidDateValue = (row) => {
+  return (
+    row.importedPaidDate ||
+    row.paidDate ||
+    row.feePaidDate ||
+    row.feeDueDate ||
+    "-"
+  );
+};
+
+const getFeePaidValue = (row) => {
+  return (
+    row.importedFeePaidDate ||
+    row.feePaidDate ||
+    row.importedFeePaid ||
+    row.feePaid ||
+    "-"
+  );
+};
+
+const isToday = (day) => {
+  const todayKey = new Date().toISOString().slice(0, 10);
+  return day.dateKey === todayKey;
 };
 
 const getHolidayMap = (days = [], rows = []) => {
   const map = {};
 
   days.forEach((day) => {
+    if (isFutureDay(day) || isToday(day) || day.isSunday) {
+      map[day.dateKey] = false;
+      return;
+    }
+
     const allCellsEmpty = rows.every(
       (row) => !String(row.attendance?.[day.dateKey] || "").trim()
     );
 
-    map[day.dateKey] = allCellsEmpty && !day.isSunday;
+    map[day.dateKey] = allCellsEmpty;
   });
 
   return map;
+};
+
+const getFeeStatusValue = (row) => {
+  return row.importedFeeStatus || row.feeStatus || "due";
+};
+
+const isFutureDay = (day) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const current = new Date(`${day.dateKey}T00:00:00`);
+  current.setHours(0, 0, 0, 0);
+
+  return current > today;
 };
 
 const MonthlyAttendanceTable = ({
@@ -86,29 +128,12 @@ const MonthlyAttendanceTable = ({
   onRowsChange,
   loading = false,
 }) => {
-  const safeRows = useMemo(() => {
-    return Array.isArray(rows) ? rows : [];
-  }, [rows]);
+  const safeRows = useMemo(() => (Array.isArray(rows) ? rows : []), [rows]);
 
   const holidayMap = useMemo(
     () => getHolidayMap(days, safeRows),
     [days, safeRows]
   );
-
-  const updateRowField = (rowIndex, field, value) => {
-    if (typeof onRowsChange !== "function") return;
-
-    const nextRows = safeRows.map((row, index) => {
-      if (index !== rowIndex) return row;
-
-      return {
-        ...row,
-        [field]: value,
-      };
-    });
-
-    onRowsChange(nextRows);
-  };
 
   const updateCell = (rowIndex, dateKey, value) => {
     if (typeof onRowsChange !== "function") return;
@@ -165,6 +190,7 @@ const MonthlyAttendanceTable = ({
             <th rowSpan="2">Fee Status</th>
 
             {days.map((day) => {
+              const future = isFutureDay(day);
               const isHoliday = holidayMap[day.dateKey];
 
               return (
@@ -176,6 +202,7 @@ const MonthlyAttendanceTable = ({
                     day.isSaturday ? "day-heading--saturday" : "",
                     day.isToday ? "day-heading--today" : "",
                     isHoliday ? "day-heading--holiday" : "",
+                    future ? "day-heading--future" : "",
                   ].join(" ")}
                 >
                   {day.weekday}
@@ -202,6 +229,7 @@ const MonthlyAttendanceTable = ({
 
           <tr>
             {days.map((day) => {
+              const future = isFutureDay(day);
               const isHoliday = holidayMap[day.dateKey];
 
               return (
@@ -213,6 +241,7 @@ const MonthlyAttendanceTable = ({
                     day.isSaturday ? "day-number--saturday" : "",
                     day.isToday ? "day-number--today" : "",
                     isHoliday ? "day-number--holiday" : "",
+                    future ? "day-number--future" : "",
                   ].join(" ")}
                 >
                   {String(day.day).padStart(2, "0")}
@@ -223,63 +252,61 @@ const MonthlyAttendanceTable = ({
         </thead>
 
         <tbody>
-          {safeRows.map((row, rowIndex) => {
-            const excelRow = isExcelImportRow(row);
+          {safeRows.map((row, rowIndex) => (
+            <tr key={row.studentId || row.importedRowNumber || rowIndex}>
+              <td className="sticky-col sticky-no">
+                {row.importedSerialNo || row.no || rowIndex + 1}
+              </td>
 
-            return (
-              <tr key={row.studentId || row.importedRowNumber || rowIndex}>
-                <td className="sticky-col sticky-no">
-                  {row.importedSerialNo || row.no || rowIndex + 1}
-                </td>
+              <td className="sticky-col sticky-name monthly-register__name">
+                {row.name || row.importedName || "-"}
+              </td>
 
-                <td className="sticky-col sticky-name monthly-register__name">
-                  {row.name || row.importedName || "-"}
-                </td>
+              <td className="sticky-col sticky-contact">
+                {row.contact || row.importedPhone || "-"}
+              </td>
 
-                <td className="sticky-col sticky-contact">
-                  {row.contact || row.importedPhone || "-"}
-                </td>
+              <td>
+                <span>{formatDateDDMMYY(getPaidDateValue(row))}</span>
+              </td>
 
-                <td>
-                  <span>
-                    {formatExcelDate(
-                      row.importedPaidDate || row.feePaidDate || "-"
-                    )}
-                  </span>
-                </td>
+              <td>
+                <span>{formatDateDDMMYY(getFeePaidValue(row))}</span>
+              </td>
 
-                <td>
-                  <span>{formatExcelDate(row.importedFeePaid || row.feePaid)}</span>
-                </td>
+              <td
+                className={
+                  String(getFeeStatusValue(row)).toLowerCase().includes("paid")
+                    ? "fee-status fee-status--paid"
+                    : "fee-status fee-status--due"
+                }
+              >
+                {getFeeStatusValue(row)}
+              </td>
 
-                <td
-                  className={
-                    String(row.feeStatus || row.importedFeeStatus || "")
-                      .toLowerCase()
-                      .includes("paid")
-                      ? "fee-status fee-status--paid"
-                      : "fee-status fee-status--due"
-                  }
-                >
-                  {row.feeStatus || row.importedFeeStatus || "due"}
-                </td>
+              {days.map((day) => {
+                const future = isFutureDay(day);
+                const isHoliday = holidayMap[day.dateKey];
 
-                {days.map((day) => {
-                  const isHoliday = holidayMap[day.dateKey];
-
-                  return (
-                    <td
-                      key={`${
-                        row.studentId || row.importedRowNumber || rowIndex
-                      }-${day.dateKey}`}
-                      className={[
-                        "attendance-day-cell",
-                        day.isSunday ? "attendance-day-cell--sunday" : "",
-                        day.isSaturday ? "attendance-day-cell--saturday" : "",
-                        day.isToday ? "attendance-day-cell--today" : "",
-                        isHoliday ? "attendance-day-cell--holiday" : "",
-                      ].join(" ")}
-                    >
+                return (
+                  <td
+                    key={`${
+                      row.studentId || row.importedRowNumber || rowIndex
+                    }-${day.dateKey}`}
+                    className={[
+                      "attendance-day-cell",
+                      day.isSunday ? "attendance-day-cell--sunday" : "",
+                      day.isSaturday ? "attendance-day-cell--saturday" : "",
+                      day.isToday ? "attendance-day-cell--today" : "",
+                      isHoliday ? "attendance-day-cell--holiday" : "",
+                      future ? "attendance-day-cell--future" : "",
+                    ].join(" ")}
+                  >
+                    {future ? (
+                      <span className="attendance-cell attendance-cell--future">
+                        &nbsp;
+                      </span>
+                    ) : (
                       <AttendanceCell
                         value={row.attendance?.[day.dateKey] || ""}
                         onChange={(value) =>
@@ -287,14 +314,14 @@ const MonthlyAttendanceTable = ({
                         }
                         disabled={!onRowsChange}
                       />
-                    </td>
-                  );
-                })}
+                    )}
+                  </td>
+                );
+              })}
 
-                <AttendanceSummary row={row} />
-              </tr>
-            );
-          })}
+              <AttendanceSummary row={row} />
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
