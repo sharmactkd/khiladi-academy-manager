@@ -1,107 +1,58 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Country, State, City } from "country-state-city";
-import ReactCountryFlag from "react-country-flag";
 
 import { getBranchById, updateBranch } from "../../api/branchApi";
+import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 
-const DEFAULT_COUNTRY_ISO = "IN";
-const DEFAULT_DIAL_CODE = "+91";
+const FACILITY_OPTIONS = [
+  "Mat Area",
+  "Changing Room",
+  "Washroom",
+  "Drinking Water",
+  "Parking",
+  "CCTV",
+  "First Aid",
+  "PSS / Sensor System",
+  "Gym Equipment",
+  "Waiting Area",
+];
 
-const onlyDigits = (value) => String(value || "").replace(/\D/g, "");
+const LANGUAGE_OPTIONS = [
+  "Hindi",
+  "English",
+  "Urdu",
+  "Punjabi",
+  "Bengali",
+  "Marathi",
+  "Tamil",
+  "Telugu",
+  "Kannada",
+  "Malayalam",
+];
 
-const formatPhone = (digits) => {
-  const clean = onlyDigits(digits);
+const currentYear = new Date().getFullYear();
 
-  if (clean.length <= 4) return clean;
-  if (clean.length <= 6) return `${clean.slice(0, 4)}-${clean.slice(4)}`;
+const normalizeArray = (value) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
 
-  return `${clean.slice(0, 4)}-${clean.slice(4, 6)}-${clean.slice(6, 10)}`;
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 };
 
 const EditBranch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const countries = useMemo(() => Country.getAllCountries(), []);
-
-  const [selectedCountryIso, setSelectedCountryIso] =
-    useState(DEFAULT_COUNTRY_ISO);
-  const [selectedStateIso, setSelectedStateIso] = useState("");
-
-  const [showCountryCodeDropdown, setShowCountryCodeDropdown] = useState(false);
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-
-  const [countryCodeSearch, setCountryCodeSearch] = useState("");
-  const [countrySearch, setCountrySearch] = useState("");
-
-  const [displayPhone, setDisplayPhone] = useState("");
-
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  const selectedCountry = useMemo(() => {
-    return (
-      countries.find((country) => country.isoCode === selectedCountryIso) ||
-      countries.find((country) => country.isoCode === DEFAULT_COUNTRY_ISO)
-    );
-  }, [countries, selectedCountryIso]);
-
-  const states = useMemo(() => {
-    if (!selectedCountryIso) return [];
-    return State.getStatesOfCountry(selectedCountryIso);
-  }, [selectedCountryIso]);
-
-  const districts = useMemo(() => {
-    if (!selectedCountryIso || !selectedStateIso) return [];
-    return City.getCitiesOfState(selectedCountryIso, selectedStateIso);
-  }, [selectedCountryIso, selectedStateIso]);
-
-  const countryCodeOptions = useMemo(() => {
-    return countries
-      .map((country) => ({
-        name: country.name,
-        isoCode: country.isoCode,
-        dialCode: country.phonecode ? `+${country.phonecode}` : "",
-      }))
-      .filter((country) => country.dialCode);
-  }, [countries]);
-
-  const filteredCountryCodeOptions = useMemo(() => {
-    const search = countryCodeSearch.trim().toLowerCase();
-
-    if (!search) return countryCodeOptions;
-
-    return countryCodeOptions.filter((country) => {
-      return (
-        country.name.toLowerCase().includes(search) ||
-        country.isoCode.toLowerCase().includes(search) ||
-        country.dialCode.includes(search)
-      );
-    });
-  }, [countryCodeOptions, countryCodeSearch]);
-
-  const filteredCountries = useMemo(() => {
-    const search = countrySearch.trim().toLowerCase();
-
-    if (!search) return countries;
-
-    return countries.filter((country) => {
-      return (
-        country.name.toLowerCase().includes(search) ||
-        country.isoCode.toLowerCase().includes(search)
-      );
-    });
-  }, [countries, countrySearch]);
-
-  const selectedDialCode = form?.countryCode || DEFAULT_DIAL_CODE;
-  const isIndiaPhone = selectedDialCode === "+91";
-
-  const selectedDialCountry =
-    countryCodeOptions.find((country) => country.dialCode === selectedDialCode) ||
-    countryCodeOptions.find((country) => country.isoCode === DEFAULT_COUNTRY_ISO);
 
   const loadBranch = async () => {
     try {
@@ -109,35 +60,37 @@ const EditBranch = () => {
       setError("");
 
       const res = await getBranchById(id);
-      const branch = res.data?.branch || res.data?.data || res.data;
-
-      const country =
-        countries.find((item) => item.name === branch.country) ||
-        countries.find((item) => item.isoCode === DEFAULT_COUNTRY_ISO);
-
-      const countryIso = country?.isoCode || DEFAULT_COUNTRY_ISO;
-      const countryStates = State.getStatesOfCountry(countryIso);
-      const state =
-        countryStates.find((item) => item.name === branch.state) || null;
-
-      setSelectedCountryIso(countryIso);
-      setSelectedStateIso(state?.isoCode || "");
-
-      const rawPhone = onlyDigits(branch.phone || "");
-
-      setDisplayPhone(formatPhone(rawPhone));
+      const branch = res.data?.branch || res.data?.data?.branch || res.data;
 
       setForm({
         branchName: branch.branchName || "",
         branchCode: branch.branchCode || "",
-        countryCode: branch.countryCode || DEFAULT_DIAL_CODE,
-        phone: rawPhone,
+        countryCode: branch.countryCode || "+91",
+        phone: branch.phone || "",
         email: branch.email || "",
         address: branch.address || "",
         city: branch.city || "",
         state: branch.state || "",
         country: branch.country || "India",
-      
+
+        headCoachName: branch.headCoachName || "",
+        headCoachCountryCode: branch.headCoachCountryCode || "+91",
+        headCoachPhone: branch.headCoachPhone || "",
+
+        assistantCoachName: branch.assistantCoachName || "",
+        assistantCoachCountryCode: branch.assistantCoachCountryCode || "+91",
+        assistantCoachPhone: branch.assistantCoachPhone || "",
+
+        additionalCoaches: Array.isArray(branch.additionalCoaches)
+  ? branch.additionalCoaches
+  : [],
+customFacility: "",
+customLanguage: "",
+
+        branchSince: branch.branchSince || "",
+        facilities: normalizeArray(branch.facilities),
+        languagesSpoken: normalizeArray(branch.languagesSpoken),
+
         isMainBranch: Boolean(branch.isMainBranch),
         isActive: Boolean(branch.isActive),
       });
@@ -149,10 +102,8 @@ const EditBranch = () => {
   };
 
   useEffect(() => {
-    if (countries.length) {
-      loadBranch();
-    }
-  }, [id, countries.length]);
+    loadBranch();
+  }, [id]);
 
   const updateField = (name, value) => {
     setForm((prev) => ({
@@ -161,82 +112,88 @@ const EditBranch = () => {
     }));
   };
 
-  const handleCountryCodeSelect = (country) => {
-    const nextDialCode = country.dialCode;
-
+  const toggleArrayValue = (field, value) => {
     setForm((prev) => {
-      const digits = onlyDigits(prev.phone);
-      const nextPhone =
-        nextDialCode === "+91" ? digits.slice(0, 10) : digits;
+      const current = Array.isArray(prev[field]) ? prev[field] : [];
+
+      const next = current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value];
 
       return {
         ...prev,
-        countryCode: nextDialCode,
-        phone: nextPhone,
+        [field]: next,
       };
     });
-
-    setDisplayPhone((prev) => {
-      const digits = onlyDigits(prev);
-      const finalDigits =
-        nextDialCode === "+91" ? digits.slice(0, 10) : digits;
-
-      return formatPhone(finalDigits);
-    });
-
-    setCountryCodeSearch("");
-    setShowCountryCodeDropdown(false);
   };
 
-  const handlePhoneChange = (event) => {
-    let digits = onlyDigits(event.target.value);
-
-    if (isIndiaPhone) {
-      digits = digits.slice(0, 10);
-    }
-
-    setDisplayPhone(formatPhone(digits));
-
-    setForm((prev) => ({
-      ...prev,
-      phone: digits,
-    }));
+  const handleHeadCoachPhoneChange = (field, value) => {
+    updateField(
+      field === "countryCode" ? "headCoachCountryCode" : "headCoachPhone",
+      value
+    );
   };
 
-  const handleCountrySelect = (country) => {
-    setSelectedCountryIso(country.isoCode);
-    setSelectedStateIso("");
-
-    setForm((prev) => ({
-      ...prev,
-      country: country.name || "",
-      state: "",
-      city: "",
-    }));
-
-    setCountrySearch("");
-    setShowCountryDropdown(false);
+  const handleAssistantCoachPhoneChange = (field, value) => {
+    updateField(
+      field === "countryCode"
+        ? "assistantCoachCountryCode"
+        : "assistantCoachPhone",
+      value
+    );
   };
 
-  const handleStateChange = (event) => {
-    const isoCode = event.target.value;
-    const state = states.find((item) => item.isoCode === isoCode);
+  const addAdditionalCoach = () => {
+  setForm((prev) => ({
+    ...prev,
+    additionalCoaches: [
+      ...(prev.additionalCoaches || []),
+      { name: "", countryCode: "+91", phone: "" },
+    ],
+  }));
+};
 
-    setSelectedStateIso(isoCode);
+const updateAdditionalCoach = (index, field, value) => {
+  setForm((prev) => ({
+    ...prev,
+    additionalCoaches: prev.additionalCoaches.map((coach, coachIndex) =>
+      coachIndex === index ? { ...coach, [field]: value } : coach
+    ),
+  }));
+};
 
-    setForm((prev) => ({
-      ...prev,
-      state: state?.name || "",
-      city: "",
-    }));
-  };
+const removeAdditionalCoach = (index) => {
+  setForm((prev) => ({
+    ...prev,
+    additionalCoaches: prev.additionalCoaches.filter(
+      (_, coachIndex) => coachIndex !== index
+    ),
+  }));
+};
 
-  const handleDistrictChange = (event) => {
-    setForm((prev) => ({
-      ...prev,
-      city: event.target.value,
-    }));
-  };
+const addCustomFacility = () => {
+  const value = String(form.customFacility || "").trim();
+
+  if (!value || form.facilities.includes(value)) return;
+
+  setForm((prev) => ({
+    ...prev,
+    facilities: [...prev.facilities, value],
+    customFacility: "",
+  }));
+};
+
+const addCustomLanguage = () => {
+  const value = String(form.customLanguage || "").trim();
+
+  if (!value || form.languagesSpoken.includes(value)) return;
+
+  setForm((prev) => ({
+    ...prev,
+    languagesSpoken: [...prev.languagesSpoken, value],
+    customLanguage: "",
+  }));
+};
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -245,16 +202,12 @@ const EditBranch = () => {
       setSaving(true);
       setError("");
 
-      if (isIndiaPhone && form.phone && form.phone.length !== 10) {
-        setError("India phone number must be exactly 10 digits");
-        setSaving(false);
-        return;
-      }
-
-      await updateBranch(id, {
-        ...form,
-        phone: displayPhone,
-      });
+    await updateBranch(id, {
+  ...form,
+  additionalCoaches: form.additionalCoaches,
+  facilities: form.facilities,
+  languagesSpoken: form.languagesSpoken,
+});
 
       navigate(`/branches/${id}`);
     } catch (err) {
@@ -302,175 +255,6 @@ const EditBranch = () => {
             />
           </div>
 
-          <div className="form-group form-group-full">
-            <label>Phone</label>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "220px 1fr",
-                gap: "12px",
-                position: "relative",
-              }}
-            >
-              <div style={{ position: "relative" }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCountryCodeDropdown((prev) => !prev);
-                    setShowCountryDropdown(false);
-                  }}
-                  style={{
-                    width: "100%",
-                    minHeight: "42px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "8px",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "10px",
-                    background: "#ffffff",
-                    color: "#111827",
-                    padding: "10px 12px",
-                    cursor: "pointer",
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      overflow: "hidden",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {selectedDialCountry?.isoCode && (
-                      <ReactCountryFlag
-                        countryCode={selectedDialCountry.isoCode}
-                        svg
-                        style={{
-                          width: "22px",
-                          height: "22px",
-                          borderRadius: "50%",
-                        }}
-                      />
-                    )}
-
-                    <span>{selectedDialCode}</span>
-                  </span>
-
-                  <span>▾</span>
-                </button>
-
-                {showCountryCodeDropdown && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "48px",
-                      left: 0,
-                      right: 0,
-                      zIndex: 50,
-                      background: "#ffffff",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "12px",
-                      boxShadow: "0 18px 40px rgba(15, 23, 42, 0.16)",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div style={{ padding: "10px" }}>
-                      <input
-                        type="text"
-                        value={countryCodeSearch}
-                        onChange={(event) =>
-                          setCountryCodeSearch(event.target.value)
-                        }
-                        placeholder="Search country..."
-                        style={{
-                          width: "100%",
-                          border: "1px solid #d1d5db",
-                          borderRadius: "8px",
-                          padding: "9px 10px",
-                          outline: "none",
-                        }}
-                      />
-                    </div>
-
-                    <div
-                      style={{
-                        maxHeight: "260px",
-                        overflowY: "auto",
-                      }}
-                    >
-                      {filteredCountryCodeOptions.length ? (
-                        filteredCountryCodeOptions.map((country) => (
-                          <button
-                            type="button"
-                            key={`${country.isoCode}-${country.dialCode}`}
-                            onClick={() => handleCountryCodeSelect(country)}
-                            style={{
-                              width: "100%",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "10px",
-                              border: 0,
-                              background:
-                                country.dialCode === selectedDialCode
-                                  ? "#eff6ff"
-                                  : "#ffffff",
-                              color: "#111827",
-                              padding: "10px 12px",
-                              textAlign: "left",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <ReactCountryFlag
-                              countryCode={country.isoCode}
-                              svg
-                              style={{
-                                width: "22px",
-                                height: "22px",
-                                borderRadius: "50%",
-                              }}
-                            />
-                            <span style={{ flex: 1 }}>{country.name}</span>
-                            <strong>{country.dialCode}</strong>
-                          </button>
-                        ))
-                      ) : (
-                        <p
-                          style={{
-                            margin: 0,
-                            padding: "12px",
-                            color: "#6b7280",
-                          }}
-                        >
-                          No country found.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <input
-                name="phone"
-                type="text"
-                inputMode="numeric"
-                value={displayPhone}
-                onChange={handlePhoneChange}
-                placeholder="0000-00-0000"
-                autoComplete="tel"
-                style={{
-                  width: "100%",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "10px",
-                  padding: "10px 12px",
-                  outline: "none",
-                }}
-              />
-            </div>
-          </div>
-
           <div className="form-group">
             <label>Email</label>
             <input
@@ -480,7 +264,35 @@ const EditBranch = () => {
             />
           </div>
 
-        
+          <div className="form-group">
+            <label>Branch Since</label>
+            <select
+              value={form.branchSince || ""}
+              onChange={(event) => updateField("branchSince", event.target.value)}
+            >
+              <option value="">Select Year</option>
+
+              {Array.from({ length: currentYear - 1949 }, (_, index) => {
+                const year = currentYear - index;
+
+                return (
+                  <option key={year} value={year}>
+                    {year} ({currentYear - year} Years)
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          <PhoneLocationFields
+            countryCode={form.countryCode || "+91"}
+            phone={form.phone || ""}
+            country={form.country || "India"}
+            state={form.state || ""}
+            city={form.city || ""}
+            phoneLabel="Branch Phone"
+            onChange={updateField}
+          />
 
           <div className="form-group form-group-full">
             <label>Address</label>
@@ -489,178 +301,172 @@ const EditBranch = () => {
               onChange={(event) => updateField("address", event.target.value)}
             />
           </div>
+        </div>
 
-          <div className="form-group">
-            <label>Country</label>
+        <div className="card subtle-card">
+          <h3>Coaches</h3>
 
-            <div style={{ position: "relative" }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCountryDropdown((prev) => !prev);
-                  setShowCountryCodeDropdown(false);
-                }}
-                style={{
-                  width: "100%",
-                  minHeight: "42px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "8px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "10px",
-                  background: "#ffffff",
-                  color: "#111827",
-                  padding: "10px 12px",
-                  cursor: "pointer",
-                }}
-              >
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <ReactCountryFlag
-                    countryCode={selectedCountry?.isoCode || "IN"}
-                    svg
-                    style={{
-                      width: "22px",
-                      height: "22px",
-                      borderRadius: "50%",
-                    }}
-                  />
-
-                  <span>{selectedCountry?.name || "India"}</span>
-                </span>
-
-                <span>▾</span>
-              </button>
-
-              {showCountryDropdown && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "48px",
-                    left: 0,
-                    right: 0,
-                    zIndex: 50,
-                    background: "#ffffff",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    boxShadow: "0 18px 40px rgba(15, 23, 42, 0.16)",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={{ padding: "10px" }}>
-                    <input
-                      type="text"
-                      value={countrySearch}
-                      onChange={(event) => setCountrySearch(event.target.value)}
-                      placeholder="Search country..."
-                      style={{
-                        width: "100%",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "8px",
-                        padding: "9px 10px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      maxHeight: "260px",
-                      overflowY: "auto",
-                    }}
-                  >
-                    {filteredCountries.length ? (
-                      filteredCountries.map((country) => (
-                        <button
-                          type="button"
-                          key={country.isoCode}
-                          onClick={() => handleCountrySelect(country)}
-                          style={{
-                            width: "100%",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            border: 0,
-                            background:
-                              country.isoCode === selectedCountryIso
-                                ? "#eff6ff"
-                                : "#ffffff",
-                            color: "#111827",
-                            padding: "10px 12px",
-                            textAlign: "left",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <ReactCountryFlag
-                            countryCode={country.isoCode}
-                            svg
-                            style={{
-                              width: "22px",
-                              height: "22px",
-                              borderRadius: "50%",
-                            }}
-                          />
-
-                          <span>{country.name}</span>
-                        </button>
-                      ))
-                    ) : (
-                      <p
-                        style={{
-                          margin: 0,
-                          padding: "12px",
-                          color: "#6b7280",
-                        }}
-                      >
-                        No country found.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Branch In-charge / Head Coach</label>
+              <input
+                value={form.headCoachName}
+                onChange={(event) =>
+                  updateField("headCoachName", event.target.value)
+                }
+              />
             </div>
-          </div>
 
-          <div className="form-group">
-            <label>State</label>
-            <select
-              value={selectedStateIso}
-              onChange={handleStateChange}
-              disabled={!states.length}
-            >
-              <option value="">Select State</option>
-              {states.map((state) => (
-                <option key={state.isoCode} value={state.isoCode}>
-                  {state.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <PhoneLocationFields
+              countryCode={form.headCoachCountryCode || "+91"}
+              phone={form.headCoachPhone || ""}
+              phoneLabel="Head Coach Mobile"
+              showLocation={false}
+              onChange={handleHeadCoachPhoneChange}
+            />
 
-          <div className="form-group">
-            <label>District</label>
-            <select
-              value={form.city}
-              onChange={handleDistrictChange}
-              disabled={!districts.length}
-            >
-              <option value="">Select District</option>
-              {districts.map((district) => (
-                <option key={district.name} value={district.name}>
-                  {district.name}
-                </option>
-              ))}
-            </select>
+            <div className="form-group">
+              <label>Assistant Coach</label>
+              <input
+                value={form.assistantCoachName}
+                onChange={(event) =>
+                  updateField("assistantCoachName", event.target.value)
+                }
+              />
+            </div>
+
+            <PhoneLocationFields
+              countryCode={form.assistantCoachCountryCode || "+91"}
+              phone={form.assistantCoachPhone || ""}
+              phoneLabel="Assistant Coach Mobile"
+              showLocation={false}
+              onChange={handleAssistantCoachPhoneChange}
+            />
+
+<div className="form-group form-group-full">
+  <button
+    type="button"
+    className="btn btn-secondary"
+    onClick={addAdditionalCoach}
+  >
+    + Add More Coach
+  </button>
+</div>
+
+{(form.additionalCoaches || []).map((coach, index) => (
+  <React.Fragment key={index}>
+    <div className="form-group">
+      <label>Coach Name</label>
+      <input
+        value={coach.name || ""}
+        onChange={(event) =>
+          updateAdditionalCoach(index, "name", event.target.value)
+        }
+        placeholder="Coach name"
+      />
+    </div>
+
+    <PhoneLocationFields
+      countryCode={coach.countryCode || "+91"}
+      phone={coach.phone || ""}
+      phoneLabel="Coach Mobile"
+      showLocation={false}
+      onChange={(field, value) =>
+        updateAdditionalCoach(
+          index,
+          field === "countryCode" ? "countryCode" : "phone",
+          value
+        )
+      }
+    />
+
+    <div className="form-group">
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => removeAdditionalCoach(index)}
+      >
+        Remove Coach
+      </button>
+    </div>
+  </React.Fragment>
+))}
+
           </div>
         </div>
+
+        <div className="card subtle-card">
+          <h3>Facilities</h3>
+
+          <div className="checkbox-grid">
+            {FACILITY_OPTIONS.map((facility) => (
+              <label key={facility}>
+                <input
+                  type="checkbox"
+                  checked={form.facilities.includes(facility)}
+                  onChange={() => toggleArrayValue("facilities", facility)}
+                />
+                {facility}
+              </label>
+            ))}
+          </div>
+
+          <div className="form-group" style={{ marginTop: 12 }}>
+  <label>Add Custom Facility</label>
+  <div style={{ display: "flex", gap: 8 }}>
+    <input
+      value={form.customFacility || ""}
+      onChange={(event) => updateField("customFacility", event.target.value)}
+      placeholder="Enter facility"
+    />
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={addCustomFacility}
+    >
+      Add
+    </button>
+  </div>
+</div>
+
+        </div>
+
+     <div className="card subtle-card">
+  <h3>Languages Spoken</h3>
+
+  <div className="checkbox-grid">
+    {LANGUAGE_OPTIONS.map((language) => (
+      <label key={language}>
+        <input
+          type="checkbox"
+          checked={form.languagesSpoken.includes(language)}
+          onChange={() =>
+            toggleArrayValue("languagesSpoken", language)
+          }
+        />
+        {language}
+      </label>
+    ))}
+  </div>
+
+  <div className="form-group" style={{ marginTop: 12 }}>
+    <label>Add Custom Language</label>
+    <div style={{ display: "flex", gap: 8 }}>
+      <input
+        value={form.customLanguage || ""}
+        onChange={(event) => updateField("customLanguage", event.target.value)}
+        placeholder="Enter language"
+      />
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={addCustomLanguage}
+      >
+        Add
+      </button>
+    </div>
+  </div>
+</div>
 
         <div className="checkbox-row">
           <label>
@@ -691,6 +497,7 @@ const EditBranch = () => {
             type="button"
             className="btn btn-secondary"
             onClick={() => navigate(`/branches/${id}`)}
+            disabled={saving}
           >
             Cancel
           </button>

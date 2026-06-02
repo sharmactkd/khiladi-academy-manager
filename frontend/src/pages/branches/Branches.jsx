@@ -1,6 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import { getBranches, deleteBranch } from "../../api/branchApi";
+
+const displayValue = (value) => {
+  const text = String(value || "").trim();
+  return text || "-";
+};
+
+const displayPhone = (countryCode, phone) => {
+  const finalPhone = String(phone || "").trim();
+  if (!finalPhone) return "-";
+
+  return `${countryCode || "+91"} ${finalPhone}`;
+};
 
 const Branches = () => {
   const navigate = useNavigate();
@@ -16,7 +29,9 @@ const Branches = () => {
       setError("");
 
       const res = await getBranches(filters);
-      setBranches(res.data || []);
+      const payload = res?.data || res;
+
+      setBranches(Array.isArray(payload) ? payload : payload?.data || []);
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to load branches");
     } finally {
@@ -28,8 +43,8 @@ const Branches = () => {
     loadBranches();
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
+  const handleSearch = (event) => {
+    event.preventDefault();
     loadBranches();
   };
 
@@ -61,17 +76,23 @@ const Branches = () => {
       <form className="filter-card" onSubmit={handleSearch}>
         <input
           type="text"
-          placeholder="Search branch, code, city..."
+          placeholder="Search branch, code, district, coach..."
           value={filters.search}
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, search: e.target.value }))
+          onChange={(event) =>
+            setFilters((prev) => ({
+              ...prev,
+              search: event.target.value,
+            }))
           }
         />
 
         <select
           value={filters.status}
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, status: e.target.value }))
+          onChange={(event) =>
+            setFilters((prev) => ({
+              ...prev,
+              status: event.target.value,
+            }))
           }
         >
           <option value="active">Active</option>
@@ -95,8 +116,10 @@ const Branches = () => {
               <tr>
                 <th>Branch</th>
                 <th>Code</th>
-                <th>City</th>
-                <th>Phone</th>
+                <th>District</th>
+                <th>Branch Phone</th>
+                <th>Head Coach</th>
+                <th>Coach Phone</th>
                 <th>Main</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -111,12 +134,20 @@ const Branches = () => {
                     onClick={() => navigate(`/branches/${branch._id}`)}
                     style={{ cursor: "pointer" }}
                   >
-                    <td>{branch.branchName}</td>
-                    <td>{branch.branchCode}</td>
-                    <td>{branch.city || "-"}</td>
-                    <td>{branch.phone || "-"}</td>
+                    <td>{displayValue(branch.branchName)}</td>
+                    <td>{displayValue(branch.branchCode)}</td>
+                    <td>{displayValue(branch.city)}</td>
+                    <td>{displayPhone(branch.countryCode, branch.phone)}</td>
+                    <td>{displayValue(branch.headCoachName)}</td>
+                    <td>
+                      {displayPhone(
+                        branch.headCoachCountryCode,
+                        branch.headCoachPhone
+                      )}
+                    </td>
                     <td>{branch.isMainBranch ? "Yes" : "No"}</td>
                     <td>{branch.isActive ? "Active" : "Inactive"}</td>
+
                     <td onClick={(event) => event.stopPropagation()}>
                       <div className="table-actions">
                         <Link to={`/branches/${branch._id}/edit`}>Edit</Link>
@@ -135,7 +166,7 @@ const Branches = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7">No branches found.</td>
+                  <td colSpan="9">No branches found.</td>
                 </tr>
               )}
             </tbody>

@@ -4,8 +4,13 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 
 const SAFE_ACADEMY_UPDATE_FIELDS = [
+  "ownerName",
   "academyName",
   "martialArts",
+  "since",
+  "about",
+  "affiliations",
+  "socialLinks",
   "logo",
   "countryCode",
   "phone",
@@ -14,7 +19,6 @@ const SAFE_ACADEMY_UPDATE_FIELDS = [
   "city",
   "state",
   "country",
- 
   "branchesEnabled",
   "settings",
 ];
@@ -24,7 +28,63 @@ const getUploadedFilePath = (file) => {
   return `/${file.path.replace(/\\/g, "/")}`;
 };
 
-const buildSafeUpdatePayload = (body) => {
+const parseJsonIfNeeded = (value, fallback) => {
+  if (value === undefined || value === null || value === "") return fallback;
+
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeStringArray = (value) => {
+  const parsed = parseJsonIfNeeded(value, value);
+
+  if (Array.isArray(parsed)) {
+    return parsed.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+
+  if (typeof parsed === "string") {
+    return parsed
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const normalizeAffiliations = (value) => {
+  const parsed = parseJsonIfNeeded(value, []);
+
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .map((item) => ({
+      type: ["affiliation", "recognition", "registration"].includes(item?.type)
+        ? item.type
+        : "affiliation",
+      organizationName: String(item?.organizationName || "").trim(),
+      registrationNumber: String(item?.registrationNumber || "").trim(),
+    }))
+    .filter((item) => item.organizationName || item.registrationNumber);
+};
+
+const normalizeSocialLinks = (value) => {
+  const parsed = parseJsonIfNeeded(value, {});
+
+  return {
+    website: String(parsed?.website || "").trim(),
+    instagram: String(parsed?.instagram || "").trim(),
+    facebook: String(parsed?.facebook || "").trim(),
+    youtube: String(parsed?.youtube || "").trim(),
+  };
+};
+
+const normalizeAcademyPayload = (body = {}) => {
   const payload = {};
 
   SAFE_ACADEMY_UPDATE_FIELDS.forEach((field) => {
@@ -32,6 +92,22 @@ const buildSafeUpdatePayload = (body) => {
       payload[field] = body[field];
     }
   });
+
+  if (Object.prototype.hasOwnProperty.call(body, "martialArts")) {
+    payload.martialArts = normalizeStringArray(body.martialArts);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "affiliations")) {
+    payload.affiliations = normalizeAffiliations(body.affiliations);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "socialLinks")) {
+    payload.socialLinks = normalizeSocialLinks(body.socialLinks);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "since")) {
+    payload.since = body.since ? Number(body.since) : null;
+  }
 
   return payload;
 };
@@ -75,22 +151,16 @@ export const createAcademy = asyncHandler(async (req, res) => {
   }
 
   const logo = getUploadedFilePath(req.file) || req.body.logo || "";
+  const payload = normalizeAcademyPayload(req.body);
 
   const academy = await Academy.create({
     owner: ownerId,
-    academyName: req.body.academyName,
-    martialArts: req.body.martialArts,
+    ...payload,
     logo,
-    countryCode: req.body.countryCode || "+91",
-    phone: req.body.phone,
-    email: req.body.email,
-    address: req.body.address,
-    city: req.body.city,
-    state: req.body.state,
-    country: req.body.country || "India",
-  
-    branchesEnabled: req.body.branchesEnabled,
-    settings: req.body.settings,
+    countryCode: payload.countryCode || "+91",
+    country: payload.country || "India",
+    branchesEnabled: payload.branchesEnabled,
+    settings: payload.settings,
   });
 
   await createAuditLog({
@@ -128,7 +198,7 @@ export const updateMyAcademy = asyncHandler(async (req, res) => {
     return errorResponse(res, "Academy not found", 404);
   }
 
-  const safePayload = buildSafeUpdatePayload(req.body);
+  const safePayload = normalizeAcademyPayload(req.body);
 
   if (req.file) {
     safePayload.logo = getUploadedFilePath(req.file);

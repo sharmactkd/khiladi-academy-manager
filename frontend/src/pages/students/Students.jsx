@@ -5,9 +5,44 @@ import { Download, FileText, Printer, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+
 import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import StudentImportModal from "../../components/students/StudentImportModal.jsx";
+
+const BLOOD_GROUPS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
+const AGE_CATEGORIES = ["", "Sub-Junior", "Cadet", "Junior", "Senior"];
+
+const formatDate = (value) => {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleDateString("en-IN");
+};
+
+const getStudentFullName = (student) => {
+  return (
+    student.name ||
+    `${student.firstName || ""} ${student.lastName || ""}`.trim() ||
+    ""
+  );
+};
+
+const displayBelt = (student) => {
+  const belt = student.beltRank || "-";
+
+  if (belt === "Black" && student.danRank) {
+    return `${belt} (${student.danRank})`;
+  }
+
+  return belt;
+};
 
 const Students = () => {
   const navigate = useNavigate();
@@ -25,11 +60,13 @@ const Students = () => {
     batch: "",
     martialArt: "",
     beltRank: "",
+    ageCategory: "",
+    bloodGroup: "",
   });
 
   const allVisibleSelected = useMemo(() => {
     return (
-      students.length > 0 && students.every((s) => selectedIds.includes(s._id))
+      students.length > 0 && students.every((student) => selectedIds.includes(student._id))
     );
   }, [students, selectedIds]);
 
@@ -52,7 +89,11 @@ const Students = () => {
       );
 
       const response = await studentApi.getAll(cleanFilters);
-      setStudents(response?.data || []);
+      const list = Array.isArray(response?.data)
+        ? response.data
+        : response?.data?.data || [];
+
+      setStudents(Array.isArray(list) ? list : []);
       setSelectedIds([]);
     } catch (error) {
       toast.error(error.response?.data?.message || "Students load nahi hue");
@@ -100,42 +141,35 @@ const Students = () => {
     );
   };
 
-  const formatDate = (value) => {
-    if (!value) return "";
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return "";
-    }
-
-    return date.toLocaleDateString("en-IN");
-  };
-
-  const getStudentFullName = (student) => {
-    return (
-      student.name ||
-      `${student.firstName || ""} ${student.lastName || ""}`.trim() ||
-      ""
-    );
-  };
-
   const buildExportRows = (list) => {
     return list.map((student, index) => ({
       "S. No.": index + 1,
       "Student Code": student.studentCode || student.admissionNumber || "",
       "Admission Number": student.admissionNumber || "",
+      "Aadhaar Number": student.aadhaarNumber || "",
       Name: getStudentFullName(student),
       Gender: student.gender || "",
       DOB: formatDate(student.dateOfBirth),
+      Age: student.age ?? "",
+      "Age Category": student.ageCategory || "",
       Phone: student.phone || "",
       Email: student.email || "",
-      School: student.schoolName || "",
+      "Blood Group": student.bloodGroup || "",
+      School: student.schoolName || student.education?.schoolName || "",
+      Class: student.className || student.education?.className || "",
+      Section: student.section || student.education?.section || "",
+      College: student.collegeName || student.education?.collegeName || "",
+      Occupation: student.occupation || student.education?.occupation || "",
       "Parent Name": student.parentName || "",
       "Parent Phone": student.parentPhone || "",
       Batch: student.batch?.batchName || "",
       "Martial Art": student.martialArt || "",
-      "Belt Rank": student.beltRank || "",
+      "Belt Rank": displayBelt(student),
+      Height: student.heightCm ?? student.physicalInfo?.heightCm ?? "",
+      Weight: student.weightKg ?? student.physicalInfo?.weightKg ?? "",
+      "Medical Conditions": Array.isArray(student.medicalConditions)
+        ? student.medicalConditions.join(", ")
+        : "",
       Status: student.status || "",
       City: student.city || "",
       State: student.state || "",
@@ -151,11 +185,12 @@ const Students = () => {
       index + 1,
       student.studentCode || student.admissionNumber || "",
       getStudentFullName(student),
+      student.age ?? "",
+      student.ageCategory || "",
       student.phone || "",
-      student.schoolName || "",
       student.batch?.batchName || "",
       student.martialArt || "",
-      student.beltRank || "",
+      displayBelt(student),
       student.status || "",
     ]);
   };
@@ -175,17 +210,28 @@ const Students = () => {
       { wch: 8 },
       { wch: 22 },
       { wch: 22 },
+      { wch: 18 },
       { wch: 26 },
       { wch: 12 },
       { wch: 14 },
+      { wch: 8 },
+      { wch: 14 },
       { wch: 15 },
       { wch: 26 },
+      { wch: 14 },
       { wch: 28 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 28 },
+      { wch: 20 },
       { wch: 24 },
       { wch: 16 },
       { wch: 20 },
       { wch: 18 },
-      { wch: 16 },
+      { wch: 18 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 30 },
       { wch: 12 },
       { wch: 18 },
       { wch: 18 },
@@ -239,8 +285,9 @@ const Students = () => {
           "S. No.",
           "Code",
           "Name",
+          "Age",
+          "Category",
           "Phone",
-          "School",
           "Batch",
           "Martial Art",
           "Belt",
@@ -258,14 +305,15 @@ const Students = () => {
       },
       columnStyles: {
         0: { cellWidth: 38 },
-        1: { cellWidth: 95 },
+        1: { cellWidth: 90 },
         2: { cellWidth: 130 },
-        3: { cellWidth: 80 },
-        4: { cellWidth: 130 },
-        5: { cellWidth: 85 },
-        6: { cellWidth: 80 },
-        7: { cellWidth: 65 },
-        8: { cellWidth: 60 },
+        3: { cellWidth: 40 },
+        4: { cellWidth: 75 },
+        5: { cellWidth: 75 },
+        6: { cellWidth: 85 },
+        7: { cellWidth: 80 },
+        8: { cellWidth: 70 },
+        9: { cellWidth: 60 },
       },
       margin: { left: 40, right: 40 },
     });
@@ -295,11 +343,12 @@ const Students = () => {
             <td>${index + 1}</td>
             <td>${student.studentCode || student.admissionNumber || ""}</td>
             <td>${getStudentFullName(student)}</td>
+            <td>${student.age ?? ""}</td>
+            <td>${student.ageCategory || ""}</td>
             <td>${student.phone || ""}</td>
-            <td>${student.schoolName || ""}</td>
             <td>${student.batch?.batchName || ""}</td>
             <td>${student.martialArt || ""}</td>
-            <td>${student.beltRank || ""}</td>
+            <td>${displayBelt(student)}</td>
             <td>${student.status || ""}</td>
           </tr>
         `;
@@ -319,16 +368,12 @@ const Students = () => {
         <head>
           <title>Students List</title>
           <style>
-            * {
-              box-sizing: border-box;
-            }
-
+            * { box-sizing: border-box; }
             body {
               font-family: Arial, sans-serif;
               margin: 24px;
               color: #111827;
             }
-
             .header {
               display: flex;
               justify-content: space-between;
@@ -337,49 +382,24 @@ const Students = () => {
               border-bottom: 2px solid #111827;
               padding-bottom: 10px;
             }
-
-            h1 {
-              margin: 0;
-              font-size: 22px;
-            }
-
-            p {
-              margin: 4px 0 0;
-              font-size: 13px;
-              color: #374151;
-            }
-
+            h1 { margin: 0; font-size: 22px; }
+            p { margin: 4px 0 0; font-size: 13px; color: #374151; }
             table {
               width: 100%;
               border-collapse: collapse;
               font-size: 11px;
             }
-
-            th,
-            td {
+            th, td {
               border: 1px solid #d1d5db;
               padding: 7px;
               text-align: left;
               vertical-align: top;
             }
-
-            th {
-              background: #f3f4f6;
-              font-weight: 700;
-            }
-
-            tr:nth-child(even) {
-              background: #fafafa;
-            }
-
+            th { background: #f3f4f6; font-weight: 700; }
+            tr:nth-child(even) { background: #fafafa; }
             @media print {
-              body {
-                margin: 12mm;
-              }
-
-              .no-print {
-                display: none;
-              }
+              body { margin: 12mm; }
+              .no-print { display: none; }
             }
           </style>
         </head>
@@ -403,8 +423,9 @@ const Students = () => {
                 <th>S. No.</th>
                 <th>Code</th>
                 <th>Name</th>
+                <th>Age</th>
+                <th>Category</th>
                 <th>Phone</th>
-                <th>School</th>
                 <th>Batch</th>
                 <th>Martial Art</th>
                 <th>Belt</th>
@@ -573,7 +594,7 @@ const Students = () => {
       <div className="card">
         <div className="grid grid-5">
           <input
-            placeholder="Search name, phone, code"
+            placeholder="Search name, phone, code, Aadhaar"
             value={filters.search}
             onChange={(event) =>
               setFilters((prev) => ({
@@ -636,6 +657,38 @@ const Students = () => {
               }))
             }
           />
+
+          <select
+            value={filters.ageCategory}
+            onChange={(event) =>
+              setFilters((prev) => ({
+                ...prev,
+                ageCategory: event.target.value,
+              }))
+            }
+          >
+            {AGE_CATEGORIES.map((category) => (
+              <option key={category || "all"} value={category}>
+                {category || "All Age Categories"}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.bloodGroup}
+            onChange={(event) =>
+              setFilters((prev) => ({
+                ...prev,
+                bloodGroup: event.target.value,
+              }))
+            }
+          >
+            {BLOOD_GROUPS.map((group) => (
+              <option key={group || "all"} value={group}>
+                {group || "All Blood Groups"}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -658,11 +711,14 @@ const Students = () => {
                   </th>
                   <th>Code</th>
                   <th>Name</th>
+                  <th>Age</th>
+                  <th>Category</th>
                   <th>Phone</th>
-                  <th>School</th>
+                  <th>School/Class</th>
                   <th>Batch</th>
                   <th>Martial Art</th>
                   <th>Belt</th>
+                  <th>Blood</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -694,11 +750,22 @@ const Students = () => {
                         {student.studentCode || student.admissionNumber || "-"}
                       </td>
                       <td>{fullName || "-"}</td>
+                      <td>{student.age ?? "-"}</td>
+                      <td>{student.ageCategory || "-"}</td>
                       <td>{student.phone || "-"}</td>
-                      <td>{student.schoolName || "-"}</td>
+                      <td>
+                        {student.schoolName || student.education?.schoolName || "-"}
+                        {student.className || student.section ? (
+                          <div className="muted">
+                            {student.className || ""}
+                            {student.section ? ` - ${student.section}` : ""}
+                          </div>
+                        ) : null}
+                      </td>
                       <td>{student.batch?.batchName || "-"}</td>
                       <td>{student.martialArt || "-"}</td>
-                      <td>{student.beltRank || "-"}</td>
+                      <td>{displayBelt(student)}</td>
+                      <td>{student.bloodGroup || "-"}</td>
                       <td>
                         <span className={`badge badge-${student.status}`}>
                           {student.status}

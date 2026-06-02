@@ -2,26 +2,74 @@ import mongoose from "mongoose";
 
 const emergencyContactSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
-    relation: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
-    phone: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+    name: { type: String, trim: true, default: "" },
+    relation: { type: String, trim: true, default: "" },
+    countryCode: { type: String, trim: true, default: "+91" },
+    phone: { type: String, trim: true, default: "" },
   },
   { _id: false }
 );
+
+const educationSchema = new mongoose.Schema(
+  {
+    schoolName: { type: String, trim: true, maxlength: 200, default: "" },
+    className: { type: String, trim: true, maxlength: 80, default: "" },
+    section: { type: String, trim: true, maxlength: 40, default: "" },
+    collegeName: { type: String, trim: true, maxlength: 200, default: "" },
+    occupation: { type: String, trim: true, maxlength: 150, default: "" },
+  },
+  { _id: false }
+);
+
+const physicalInfoSchema = new mongoose.Schema(
+  {
+    heightCm: { type: Number, default: null, min: 0 },
+    weightKg: { type: Number, default: null, min: 0 },
+  },
+  { _id: false }
+);
+
+const medicalInfoSchema = new mongoose.Schema(
+  {
+    bloodGroup: {
+      type: String,
+      trim: true,
+      default: "",
+      enum: ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+    },
+    medicalConditions: { type: [String], default: [] },
+    notes: { type: String, trim: true, default: "" },
+  },
+  { _id: false }
+);
+
+const calculateAge = (dateOfBirth) => {
+  if (!dateOfBirth) return null;
+
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+
+  const monthDiff = today.getMonth() - dob.getMonth();
+  const dayDiff = today.getDate() - dob.getDate();
+
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+};
+
+const getAgeCategory = (age) => {
+  if (age === null || age === undefined) return "";
+
+  if (age <= 11) return "Sub-Junior";
+  if (age <= 14) return "Cadet";
+  if (age <= 17) return "Junior";
+  return "Senior";
+};
 
 const studentSchema = new mongoose.Schema(
   {
@@ -52,6 +100,13 @@ const studentSchema = new mongoose.Schema(
       required: true,
     },
 
+    aadhaarNumber: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 12,
+    },
+
     firstName: {
       type: String,
       trim: true,
@@ -75,6 +130,26 @@ const studentSchema = new mongoose.Schema(
       required: true,
     },
 
+    age: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+
+    ageCategory: {
+      type: String,
+      trim: true,
+      default: "",
+      enum: ["", "Sub-Junior", "Cadet", "Junior", "Senior"],
+      index: true,
+    },
+
+    countryCode: {
+      type: String,
+      trim: true,
+      default: "+91",
+    },
+
     phone: {
       type: String,
       trim: true,
@@ -88,18 +163,17 @@ const studentSchema = new mongoose.Schema(
       default: "",
     },
 
-    schoolName: {
-      type: String,
-      trim: true,
-      maxlength: 200,
-      default: "",
-    },
-
     parentName: {
       type: String,
       trim: true,
       maxlength: 150,
       default: "",
+    },
+
+    parentCountryCode: {
+      type: String,
+      trim: true,
+      default: "+91",
     },
 
     parentPhone: {
@@ -126,6 +200,52 @@ const studentSchema = new mongoose.Schema(
       default: "",
     },
 
+    country: {
+      type: String,
+      trim: true,
+      default: "India",
+    },
+
+    education: {
+      type: educationSchema,
+      default: () => ({}),
+    },
+
+    schoolName: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: "",
+    },
+
+    className: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+      default: "",
+    },
+
+    section: {
+      type: String,
+      trim: true,
+      maxlength: 40,
+      default: "",
+    },
+
+    collegeName: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: "",
+    },
+
+    occupation: {
+      type: String,
+      trim: true,
+      maxlength: 150,
+      default: "",
+    },
+
     martialArt: {
       type: String,
       trim: true,
@@ -138,6 +258,47 @@ const studentSchema = new mongoose.Schema(
       trim: true,
       default: "",
       index: true,
+    },
+
+    danRank: {
+      type: String,
+      trim: true,
+      default: "",
+      enum: ["", "1st Dan", "2nd Dan", "3rd Dan", "4th Dan", "5th Dan", "6th Dan", "7th Dan", "8th Dan", "9th Dan", "10th Dan"],
+    },
+
+    physicalInfo: {
+      type: physicalInfoSchema,
+      default: () => ({}),
+    },
+
+    heightCm: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+
+    weightKg: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+
+    medicalInfo: {
+      type: medicalInfoSchema,
+      default: () => ({}),
+    },
+
+    bloodGroup: {
+      type: String,
+      trim: true,
+      default: "",
+      enum: ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+    },
+
+    medicalConditions: {
+      type: [String],
+      default: [],
     },
 
     joiningDate: {
@@ -211,44 +372,81 @@ const studentSchema = new mongoose.Schema(
   }
 );
 
-studentSchema.index(
-  {
-    academy: 1,
-    admissionNumber: 1,
-  },
-  {
-    unique: true,
+studentSchema.index({ academy: 1, admissionNumber: 1 }, { unique: true });
+studentSchema.index({ academy: 1, aadhaarNumber: 1 });
+studentSchema.index({ academy: 1, branch: 1 });
+studentSchema.index({ academy: 1, batch: 1 });
+studentSchema.index({ academy: 1, status: 1 });
+studentSchema.index({ academy: 1, ageCategory: 1 });
+
+const cleanPhone = (value) => String(value || "").replace(/\D/g, "").slice(0, 10);
+
+const cleanNumberOrNull = (value) => {
+  if (value === "" || value === undefined || value === null) return null;
+  const number = Number(value);
+  return Number.isNaN(number) ? null : number;
+};
+
+const normalizeArray = (value) => {
+  if (Array.isArray(value)) {
+    return [...new Set(value.map((item) => String(item || "").trim()).filter(Boolean))];
   }
-);
 
-studentSchema.index({
-  academy: 1,
-  branch: 1,
-});
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return [...new Set(parsed.map((item) => String(item || "").trim()).filter(Boolean))];
+      }
+    } catch {
+      return [...new Set(value.split(",").map((item) => item.trim()).filter(Boolean))];
+    }
+  }
 
-studentSchema.index({
-  academy: 1,
-  batch: 1,
-});
+  return [];
+};
 
-studentSchema.index({
-  academy: 1,
-  status: 1,
+studentSchema.pre("validate", function () {
+  this.aadhaarNumber = String(this.aadhaarNumber || "").replace(/\D/g, "").slice(0, 12);
+
+  this.age = calculateAge(this.dateOfBirth);
+  this.ageCategory = getAgeCategory(this.age);
+
+  this.heightCm = cleanNumberOrNull(this.heightCm);
+  this.weightKg = cleanNumberOrNull(this.weightKg);
+
+  this.physicalInfo = {
+    heightCm: this.heightCm,
+    weightKg: this.weightKg,
+  };
+
+  this.medicalConditions = normalizeArray(this.medicalConditions);
+
+  this.medicalInfo = {
+    bloodGroup: this.bloodGroup || "",
+    medicalConditions: this.medicalConditions,
+    notes: this.notes || "",
+  };
+
+  this.education = {
+    schoolName: this.schoolName || "",
+    className: this.className || "",
+    section: this.section || "",
+    collegeName: this.collegeName || "",
+    occupation: this.occupation || "",
+  };
+
+  if (String(this.beltRank || "").toLowerCase() !== "black") {
+    this.danRank = "";
+  }
 });
 
 studentSchema.pre("save", function () {
-  if (this.phone) {
-    this.phone = String(this.phone).replace(/\D/g, "").slice(0, 10);
-  }
-
-  if (this.parentPhone) {
-    this.parentPhone = String(this.parentPhone).replace(/\D/g, "").slice(0, 10);
-  }
+  if (this.phone) this.phone = cleanPhone(this.phone);
+  if (this.parentPhone) this.parentPhone = cleanPhone(this.parentPhone);
 
   if (this.emergencyContact?.phone) {
-    this.emergencyContact.phone = String(this.emergencyContact.phone)
-      .replace(/\D/g, "")
-      .slice(0, 10);
+    this.emergencyContact.phone = cleanPhone(this.emergencyContact.phone);
   }
 });
 

@@ -5,14 +5,36 @@ import Branch from "../models/Branch.js";
 import Batch from "../models/Batch.js";
 
 import asyncHandler from "../utils/asyncHandler.js";
-import {
-  successResponse,
-  errorResponse,
-} from "../utils/apiResponse.js";
+import { successResponse, errorResponse } from "../utils/apiResponse.js";
 
 import { buildBranchAccessFilter } from "../services/branchAccessService.js";
 
 const IMPORT_FALLBACK_DOB = new Date("2000-01-01T00:00:00.000Z");
+
+const TAEKWONDO_BELTS = [
+  "White",
+  "Yellow",
+  "Green",
+  "Green One",
+  "Blue",
+  "Blue One",
+  "Red",
+  "Red One",
+  "Black",
+];
+
+const DAN_RANKS = [
+  "1st Dan",
+  "2nd Dan",
+  "3rd Dan",
+  "4th Dan",
+  "5th Dan",
+  "6th Dan",
+  "7th Dan",
+  "8th Dan",
+  "9th Dan",
+  "10th Dan",
+];
 
 const validateBranch = async (academyId, branchId) => {
   if (!branchId) return null;
@@ -36,64 +58,7 @@ const validateBranch = async (academyId, branchId) => {
 
 const getUploadedFilePath = (file) => {
   if (!file) return "";
-
   return `/${file.path.replace(/\\/g, "/")}`;
-};
-
-const normalizeStudentPayload = (body = {}) => {
-  const payload = { ...body };
-
-  if (payload.studentCode && !payload.admissionNumber) {
-    payload.admissionNumber = payload.studentCode;
-  }
-
-  if (payload.name && !payload.firstName) {
-    const nameParts = String(payload.name || "").trim().split(/\s+/);
-    payload.firstName = nameParts[0] || "";
-    payload.lastName = nameParts.slice(1).join(" ");
-  }
-
-  if (payload.dob && !payload.dateOfBirth) {
-    payload.dateOfBirth = payload.dob;
-  }
-
-  if (payload.branch === "") {
-    payload.branch = null;
-  }
-
-  if (payload.batch === "") {
-    payload.batch = null;
-  }
-
-  if (
-    payload.emergencyContactName !== undefined ||
-    payload.emergencyContactPhone !== undefined ||
-    payload.emergencyContactRelation !== undefined
-  ) {
-    payload.emergencyContact = {
-      name:
-        payload.emergencyContactName ||
-        payload.emergencyContact?.name ||
-        "",
-      relation:
-        payload.emergencyContactRelation ||
-        payload.emergencyContact?.relation ||
-        "",
-      phone:
-        payload.emergencyContactPhone ||
-        payload.emergencyContact?.phone ||
-        "",
-    };
-  }
-
-  delete payload.studentCode;
-  delete payload.name;
-  delete payload.dob;
-  delete payload.emergencyContactName;
-  delete payload.emergencyContactPhone;
-  delete payload.emergencyContactRelation;
-
-  return payload;
 };
 
 const cleanString = (value, maxLength = 500) => {
@@ -107,6 +72,41 @@ const cleanString = (value, maxLength = 500) => {
 
 const cleanPhone = (value) =>
   cleanString(value).replace(/\D/g, "").slice(0, 10);
+
+const cleanAadhaar = (value) =>
+  cleanString(value).replace(/\D/g, "").slice(0, 12);
+
+const toNullableNumber = (value) => {
+  if (value === "" || value === undefined || value === null) return null;
+
+  const number = Number(value);
+  return Number.isNaN(number) ? null : number;
+};
+
+const parseJsonIfNeeded = (value, fallback) => {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeStringArray = (value) => {
+  const parsed = parseJsonIfNeeded(value, value);
+
+  if (Array.isArray(parsed)) {
+    return [...new Set(parsed.map((item) => cleanString(item, 120)).filter(Boolean))];
+  }
+
+  if (typeof parsed === "string") {
+    return [...new Set(parsed.split(",").map((item) => cleanString(item, 120)).filter(Boolean))];
+  }
+
+  return [];
+};
 
 const normalizeGender = (value) => {
   const gender = cleanString(value).toLowerCase();
@@ -126,6 +126,39 @@ const normalizeStatus = (value) => {
   return "active";
 };
 
+const normalizeBloodGroup = (value) => {
+  const bloodGroup = cleanString(value).toUpperCase();
+  const allowed = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
+  return allowed.includes(bloodGroup) ? bloodGroup : "";
+};
+
+const normalizeBeltRank = ({ martialArt, beltRank }) => {
+  const sport = cleanString(martialArt).toLowerCase();
+  const belt = cleanString(beltRank, 80);
+
+  if (sport === "taekwondo") {
+    const matched = TAEKWONDO_BELTS.find(
+      (item) => item.toLowerCase() === belt.toLowerCase()
+    );
+
+    return matched || "";
+  }
+
+  return belt;
+};
+
+const normalizeDanRank = ({ beltRank, danRank }) => {
+  if (cleanString(beltRank).toLowerCase() !== "black") return "";
+
+  const dan = cleanString(danRank, 40);
+  const matched = DAN_RANKS.find(
+    (item) => item.toLowerCase() === dan.toLowerCase()
+  );
+
+  return matched || "";
+};
+
 const parseDateSafely = (value, fallback = null) => {
   const raw = cleanString(value);
 
@@ -142,11 +175,7 @@ const parseDateSafely = (value, fallback = null) => {
   if (match) {
     const [, dd, mm, yyyy] = match;
     const year = yyyy.length === 2 ? `20${yyyy}` : yyyy;
-    const parsed = new Date(
-      Number(year),
-      Number(mm) - 1,
-      Number(dd)
-    );
+    const parsed = new Date(Number(year), Number(mm) - 1, Number(dd));
 
     if (!Number.isNaN(parsed.getTime())) {
       return parsed;
@@ -156,31 +185,141 @@ const parseDateSafely = (value, fallback = null) => {
   return fallback;
 };
 
+const normalizeStudentPayload = (body = {}) => {
+  const payload = { ...body };
+
+  if (payload.studentCode && !payload.admissionNumber) {
+    payload.admissionNumber = payload.studentCode;
+  }
+
+  if (payload.name && !payload.firstName) {
+    const nameParts = String(payload.name || "").trim().split(/\s+/);
+    payload.firstName = nameParts[0] || "";
+    payload.lastName = nameParts.slice(1).join(" ");
+  }
+
+  if (payload.dob && !payload.dateOfBirth) {
+    payload.dateOfBirth = payload.dob;
+  }
+
+  if (payload.branch === "") payload.branch = null;
+  if (payload.batch === "") payload.batch = null;
+
+  payload.admissionNumber = cleanString(payload.admissionNumber, 80);
+  payload.aadhaarNumber = cleanAadhaar(payload.aadhaarNumber);
+  payload.firstName = cleanString(payload.firstName, 100);
+  payload.lastName = cleanString(payload.lastName, 100);
+  payload.gender = normalizeGender(payload.gender);
+  payload.phone = cleanPhone(payload.phone);
+  payload.email = cleanString(payload.email, 120).toLowerCase();
+
+  payload.countryCode = cleanString(payload.countryCode || "+91", 10);
+  payload.country = cleanString(payload.country || "India", 100);
+  payload.state = cleanString(payload.state, 100);
+  payload.city = cleanString(payload.city, 100);
+  payload.address = cleanString(payload.address, 500);
+
+  payload.parentName = cleanString(payload.parentName, 150);
+  payload.parentCountryCode = cleanString(payload.parentCountryCode || "+91", 10);
+  payload.parentPhone = cleanPhone(payload.parentPhone);
+
+  payload.schoolName = cleanString(payload.schoolName, 200);
+  payload.className = cleanString(payload.className, 80);
+  payload.section = cleanString(payload.section, 40);
+  payload.collegeName = cleanString(payload.collegeName, 200);
+  payload.occupation = cleanString(payload.occupation, 150);
+
+  payload.education = {
+    schoolName: payload.schoolName,
+    className: payload.className,
+    section: payload.section,
+    collegeName: payload.collegeName,
+    occupation: payload.occupation,
+  };
+
+  payload.martialArt = cleanString(payload.martialArt || "Taekwondo", 80);
+  payload.beltRank = normalizeBeltRank({
+    martialArt: payload.martialArt,
+    beltRank: payload.beltRank,
+  });
+  payload.danRank = normalizeDanRank({
+    beltRank: payload.beltRank,
+    danRank: payload.danRank,
+  });
+
+  payload.heightCm = toNullableNumber(payload.heightCm);
+  payload.weightKg = toNullableNumber(payload.weightKg);
+  payload.physicalInfo = {
+    heightCm: payload.heightCm,
+    weightKg: payload.weightKg,
+  };
+
+  payload.bloodGroup = normalizeBloodGroup(payload.bloodGroup);
+  payload.medicalConditions = normalizeStringArray(payload.medicalConditions);
+  payload.notes = cleanString(payload.notes || payload.medicalNotes, 1000);
+
+  payload.medicalInfo = {
+    bloodGroup: payload.bloodGroup,
+    medicalConditions: payload.medicalConditions,
+    notes: payload.notes,
+  };
+
+  if (
+    payload.emergencyContactName !== undefined ||
+    payload.emergencyContactPhone !== undefined ||
+    payload.emergencyContactRelation !== undefined ||
+    payload.emergencyContactCountryCode !== undefined
+  ) {
+    payload.emergencyContact = {
+      name:
+        cleanString(payload.emergencyContactName, 150) ||
+        payload.emergencyContact?.name ||
+        "",
+      relation:
+        cleanString(payload.emergencyContactRelation, 80) ||
+        payload.emergencyContact?.relation ||
+        "",
+      countryCode:
+        cleanString(payload.emergencyContactCountryCode || "+91", 10) ||
+        payload.emergencyContact?.countryCode ||
+        "+91",
+      phone:
+        cleanPhone(payload.emergencyContactPhone) ||
+        payload.emergencyContact?.phone ||
+        "",
+    };
+  }
+
+  payload.status = normalizeStatus(payload.status);
+
+  delete payload.studentCode;
+  delete payload.name;
+  delete payload.dob;
+  delete payload.medicalNotes;
+  delete payload.emergencyContactName;
+  delete payload.emergencyContactPhone;
+  delete payload.emergencyContactRelation;
+  delete payload.emergencyContactCountryCode;
+
+  return payload;
+};
+
 const splitName = (row = {}) => {
   const firstName = cleanString(row.firstName, 100);
   const lastName = cleanString(row.lastName, 100);
   const fullName = cleanString(row.name, 200);
 
-  if (firstName || lastName) {
-    return {
-      firstName: firstName || "Unknown",
-      lastName,
-    };
-  }
+  if (firstName || lastName) return { firstName: firstName || "Unknown", lastName };
 
   if (fullName) {
     const parts = fullName.split(/\s+/);
-
     return {
       firstName: parts[0] || "Unknown",
       lastName: parts.slice(1).join(" "),
     };
   }
 
-  return {
-    firstName: "Unknown",
-    lastName: "Student",
-  };
+  return { firstName: "Unknown", lastName: "Student" };
 };
 
 const buildBatchLookup = async (academyId) => {
@@ -202,12 +341,9 @@ const buildAdmissionNumber = async ({
   usedAdmissionNumbers,
 }) => {
   const preferred =
-    cleanString(row.admissionNumber, 40) ||
-    cleanString(row.studentCode, 40);
+    cleanString(row.admissionNumber, 40) || cleanString(row.studentCode, 40);
 
-  if (preferred) {
-    return preferred;
-  }
+  if (preferred) return preferred;
 
   let counter = rowIndex + 1;
 
@@ -220,9 +356,7 @@ const buildAdmissionNumber = async ({
         admissionNumber: generated,
       });
 
-      if (!exists) {
-        return generated;
-      }
+      if (!exists) return generated;
     }
 
     counter += 1;
@@ -254,12 +388,16 @@ const normalizeImportRow = async ({
 
   const dateOfBirth = parseDateSafely(row.dateOfBirth, IMPORT_FALLBACK_DOB);
   const joiningDate = parseDateSafely(row.joiningDate, new Date());
+  const martialArt =
+    cleanString(row.martialArt, 80) || matchedBatch?.martialArt || "Taekwondo";
+  const beltRank = normalizeBeltRank({ martialArt, beltRank: row.beltRank });
 
   return {
     academy: academyId,
     branch: matchedBatch?.branch || null,
     batch: matchedBatch?._id || null,
     admissionNumber,
+    aadhaarNumber: cleanAadhaar(row.aadhaarNumber),
     firstName,
     lastName,
     gender: normalizeGender(row.gender),
@@ -267,21 +405,28 @@ const normalizeImportRow = async ({
     phone: cleanPhone(row.phone),
     email: cleanString(row.email, 120).toLowerCase(),
     schoolName: cleanString(row.schoolName, 200),
+    className: cleanString(row.className, 80),
+    section: cleanString(row.section, 40),
+    collegeName: cleanString(row.collegeName, 200),
+    occupation: cleanString(row.occupation, 150),
     parentName: cleanString(row.parentName, 150),
     parentPhone: cleanPhone(row.parentPhone),
     address: cleanString(row.address, 500),
     city: cleanString(row.city, 100),
     state: cleanString(row.state, 100),
-    martialArt:
-      cleanString(row.martialArt, 80) ||
-      matchedBatch?.martialArt ||
-      "Taekwondo",
-    beltRank: cleanString(row.beltRank, 80),
+    martialArt,
+    beltRank,
+    danRank: normalizeDanRank({ beltRank, danRank: row.danRank }),
+    heightCm: toNullableNumber(row.heightCm),
+    weightKg: toNullableNumber(row.weightKg),
+    bloodGroup: normalizeBloodGroup(row.bloodGroup),
+    medicalConditions: normalizeStringArray(row.medicalConditions),
     joiningDate,
     status: normalizeStatus(row.status),
     emergencyContact: {
       name: cleanString(row.emergencyContactName, 150),
       relation: "",
+      countryCode: "+91",
       phone: cleanPhone(row.emergencyContactPhone),
     },
     notes: cleanString(row.notes, 1000),
@@ -294,9 +439,7 @@ export const createStudent = asyncHandler(async (req, res) => {
   const academyId = req.academyId;
   const payload = normalizeStudentPayload(req.body);
 
-  if (payload.branch) {
-    await validateBranch(academyId, payload.branch);
-  }
+  if (payload.branch) await validateBranch(academyId, payload.branch);
 
   const existing = await Student.findOne({
     academy: academyId,
@@ -317,21 +460,13 @@ export const createStudent = asyncHandler(async (req, res) => {
     updatedBy: req.user._id,
   });
 
-  return successResponse(
-    res,
-    "Student created successfully",
-    student,
-    201
-  );
+  return successResponse(res, "Student created successfully", student, 201);
 });
 
 export const importStudents = asyncHandler(async (req, res) => {
   const academyId = req.academyId;
   const userId = req.user._id;
-  const students = Array.isArray(req.body?.students)
-    ? req.body.students
-    : [];
-
+  const students = Array.isArray(req.body?.students) ? req.body.students : [];
   const duplicateMode = req.body?.duplicateMode || "skip";
 
   const summary = {
@@ -414,6 +549,8 @@ export const getStudents = asyncHandler(async (req, res) => {
     status,
     martialArt,
     beltRank,
+    ageCategory,
+    bloodGroup,
     search,
   } = req.query;
 
@@ -422,55 +559,24 @@ export const getStudents = asyncHandler(async (req, res) => {
     ...buildBranchAccessFilter(req.user),
   };
 
-  if (branch) {
-    query.branch = branch;
-  }
-
-  if (batch) {
-    query.batch = batch;
-  }
-
-  if (status) {
-    query.status = status;
-  }
-
-  if (martialArt) {
-    query.martialArt = martialArt;
-  }
+  if (branch) query.branch = branch;
+  if (batch) query.batch = batch;
+  if (status) query.status = status;
+  if (martialArt) query.martialArt = martialArt;
+  if (ageCategory) query.ageCategory = ageCategory;
+  if (bloodGroup) query.bloodGroup = bloodGroup;
 
   if (beltRank) {
-    query.beltRank = {
-      $regex: beltRank,
-      $options: "i",
-    };
+    query.beltRank = { $regex: beltRank, $options: "i" };
   }
 
   if (search) {
     query.$or = [
-      {
-        firstName: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-      {
-        lastName: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-      {
-        admissionNumber: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-      {
-        phone: {
-          $regex: search,
-          $options: "i",
-        },
-      },
+      { firstName: { $regex: search, $options: "i" } },
+      { lastName: { $regex: search, $options: "i" } },
+      { admissionNumber: { $regex: search, $options: "i" } },
+      { aadhaarNumber: { $regex: search, $options: "i" } },
+      { phone: { $regex: search, $options: "i" } },
     ];
   }
 
@@ -482,11 +588,7 @@ export const getStudents = asyncHandler(async (req, res) => {
     )
     .sort({ createdAt: -1 });
 
-  return successResponse(
-    res,
-    "Students fetched successfully",
-    students
-  );
+  return successResponse(res, "Students fetched successfully", students);
 });
 
 export const getStudentById = asyncHandler(async (req, res) => {
@@ -505,11 +607,7 @@ export const getStudentById = asyncHandler(async (req, res) => {
     return errorResponse(res, "Student not found", 404);
   }
 
-  return successResponse(
-    res,
-    "Student fetched successfully",
-    student
-  );
+  return successResponse(res, "Student fetched successfully", student);
 });
 
 export const updateStudent = asyncHandler(async (req, res) => {
@@ -525,9 +623,7 @@ export const updateStudent = asyncHandler(async (req, res) => {
 
   const payload = normalizeStudentPayload(req.body);
 
-  if (payload.branch) {
-    await validateBranch(req.academyId, payload.branch);
-  }
+  if (payload.branch) await validateBranch(req.academyId, payload.branch);
 
   Object.keys(payload).forEach((key) => {
     student[key] = payload[key];
@@ -541,11 +637,7 @@ export const updateStudent = asyncHandler(async (req, res) => {
 
   await student.save();
 
-  return successResponse(
-    res,
-    "Student updated successfully",
-    student
-  );
+  return successResponse(res, "Student updated successfully", student);
 });
 
 export const deleteStudent = asyncHandler(async (req, res) => {
@@ -561,8 +653,5 @@ export const deleteStudent = asyncHandler(async (req, res) => {
 
   await student.deleteOne();
 
-  return successResponse(
-    res,
-    "Student deleted successfully"
-  );
+  return successResponse(res, "Student deleted successfully");
 });

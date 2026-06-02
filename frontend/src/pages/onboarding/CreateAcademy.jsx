@@ -6,6 +6,29 @@ import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx
 import Input from "../../components/common/Input.jsx";
 import Button from "../../components/common/Button.jsx";
 
+const MARTIAL_ART_OPTIONS = [
+  "Taekwondo",
+  "Karate",
+  "Judo",
+  "Boxing",
+  "Kickboxing",
+  "Wrestling",
+  "MMA",
+  "Kung Fu",
+  "Wushu",
+  "Muay Thai",
+  "Brazilian Jiu-Jitsu",
+  "Self Defence",
+  "Fitness",
+  "Yoga",
+];
+
+const EMPTY_AFFILIATION = {
+  type: "affiliation",
+  organizationName: "",
+  registrationNumber: "",
+};
+
 const CreateAcademy = () => {
   const navigate = useNavigate();
 
@@ -15,8 +38,9 @@ const CreateAcademy = () => {
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
+    ownerName: "",
     academyName: "",
-    martialArts: "Taekwondo",
+    martialArts: ["Taekwondo"],
     countryCode: "+91",
     phone: "",
     email: "",
@@ -26,7 +50,16 @@ const CreateAcademy = () => {
     country: "India",
     about: "",
     since: "",
+    socialLinks: {
+      website: "",
+      instagram: "",
+      facebook: "",
+      youtube: "",
+    },
+    affiliations: [{ ...EMPTY_AFFILIATION }],
   });
+
+  const currentYear = new Date().getFullYear();
 
   const updateField = (field, value) => {
     setForm((prev) => ({
@@ -35,9 +68,91 @@ const CreateAcademy = () => {
     }));
   };
 
+  const updateSocialLink = (field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      socialLinks: {
+        ...(prev.socialLinks || {}),
+        [field]: value,
+      },
+    }));
+  };
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     updateField(name, value);
+  };
+
+  const toggleMartialArt = (item) => {
+    setForm((prev) => {
+      const current = Array.isArray(prev.martialArts) ? prev.martialArts : [];
+      const exists = current.includes(item);
+
+      const next = exists
+        ? current.filter((value) => value !== item)
+        : [...current, item];
+
+      return {
+        ...prev,
+        martialArts: next.length ? next : current,
+      };
+    });
+  };
+
+  const addCustomMartialArt = (event) => {
+    if (event.key !== "Enter") return;
+
+    event.preventDefault();
+
+    const value = event.currentTarget.value.trim();
+
+    if (!value) return;
+
+    setForm((prev) => {
+      const current = Array.isArray(prev.martialArts) ? prev.martialArts : [];
+
+      if (current.some((item) => item.toLowerCase() === value.toLowerCase())) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        martialArts: [...current, value],
+      };
+    });
+
+    event.currentTarget.value = "";
+  };
+
+  const updateAffiliation = (index, field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      affiliations: prev.affiliations.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]: value,
+            }
+          : item
+      ),
+    }));
+  };
+
+  const addAffiliation = () => {
+    setForm((prev) => ({
+      ...prev,
+      affiliations: [...prev.affiliations, { ...EMPTY_AFFILIATION }],
+    }));
+  };
+
+  const removeAffiliation = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      affiliations:
+        prev.affiliations.length > 1
+          ? prev.affiliations.filter((_, itemIndex) => itemIndex !== index)
+          : [{ ...EMPTY_AFFILIATION }],
+    }));
   };
 
   const handleLogoChange = (event) => {
@@ -72,13 +187,19 @@ const CreateAcademy = () => {
     event.preventDefault();
     setError("");
 
+    if (!form.martialArts.length) {
+      setError("Please select at least one sport / martial art");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const formData = new FormData();
 
+      formData.append("ownerName", form.ownerName || "");
       formData.append("academyName", form.academyName || "");
-      formData.append("martialArts", form.martialArts || "");
+      formData.append("martialArts", JSON.stringify(form.martialArts || []));
       formData.append("countryCode", form.countryCode || "+91");
       formData.append("phone", form.phone || "");
       formData.append("email", form.email || "");
@@ -88,6 +209,8 @@ const CreateAcademy = () => {
       formData.append("country", form.country || "India");
       formData.append("about", form.about || "");
       formData.append("since", form.since || "");
+      formData.append("socialLinks", JSON.stringify(form.socialLinks || {}));
+      formData.append("affiliations", JSON.stringify(form.affiliations || []));
 
       if (logoFile) {
         formData.append("logo", logoFile);
@@ -103,8 +226,6 @@ const CreateAcademy = () => {
     }
   };
 
-  const currentYear = new Date().getFullYear();
-
   return (
     <div className="page">
       <div className="page-header">
@@ -119,14 +240,83 @@ const CreateAcademy = () => {
       <form className="card form wide-form" onSubmit={handleSubmit}>
         {error && <div className="alert alert-error">{error}</div>}
 
-        <Input
-          label="Academy Name"
-          name="academyName"
-          value={form.academyName}
-          onChange={handleChange}
-          placeholder="Khiladi Martial Arts Academy"
-          required
-        />
+        <div className="grid grid-2">
+          <Input
+            label="Owner / Director Name"
+            name="ownerName"
+            value={form.ownerName}
+            onChange={handleChange}
+            placeholder="Abhishek Sharma"
+          />
+
+          <Input
+            label="Academy Name"
+            name="academyName"
+            value={form.academyName}
+            onChange={handleChange}
+            placeholder="Khiladi Martial Arts Academy"
+            required
+          />
+
+          <Input
+            label="Email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="academy@example.com"
+          />
+
+          <label className="form-field">
+            <span>Since</span>
+            <select
+              name="since"
+              value={form.since || ""}
+              onChange={handleChange}
+            >
+              <option value="">Select Year</option>
+
+              {Array.from({ length: currentYear - 1949 }, (_, index) => {
+                const year = currentYear - index;
+
+                return (
+                  <option key={year} value={year}>
+                    {year} ({currentYear - year} Years)
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+        </div>
+
+        <div className="card subtle-card">
+          <h3>Sports / Martial Arts</h3>
+          <p>Select one or more sports / martial arts your academy teaches.</p>
+
+          <div className="actions" style={{ flexWrap: "wrap", gap: "8px" }}>
+            {MARTIAL_ART_OPTIONS.map((item) => {
+              const active = form.martialArts.includes(item);
+
+              return (
+                <button
+                  type="button"
+                  key={item}
+                  className={active ? "btn btn-primary" : "btn btn-secondary"}
+                  onClick={() => toggleMartialArt(item)}
+                >
+                  {item}
+                </button>
+              );
+            })}
+          </div>
+
+          <label style={{ marginTop: 12 }}>
+            Add Custom Sport / Martial Art
+            <input
+              placeholder="Type and press Enter"
+              onKeyDown={addCustomMartialArt}
+            />
+          </label>
+        </div>
 
         <label className="form-field">
           <span>Academy Logo</span>
@@ -155,23 +345,6 @@ const CreateAcademy = () => {
           )}
         </label>
 
-        <Input
-          label="Martial Arts"
-          name="martialArts"
-          value={form.martialArts}
-          onChange={handleChange}
-          placeholder="Taekwondo, Karate"
-          required
-        />
-
-        <Input
-          label="Email"
-          name="email"
-          value={form.email}
-          onChange={handleChange}
-          placeholder="academy@example.com"
-        />
-
         <PhoneLocationFields
           countryCode={form.countryCode || "+91"}
           phone={form.phone || ""}
@@ -194,27 +367,6 @@ const CreateAcademy = () => {
         </label>
 
         <label className="form-field">
-          <span>Since</span>
-          <select
-            name="since"
-            value={form.since || ""}
-            onChange={handleChange}
-          >
-            <option value="">Select Year</option>
-
-            {Array.from({ length: currentYear - 1949 }, (_, index) => {
-              const year = currentYear - index;
-
-              return (
-                <option key={year} value={year}>
-                  {year} ({currentYear - year} Years)
-                </option>
-              );
-            })}
-          </select>
-        </label>
-
-        <label className="form-field">
           <span>About Academy</span>
           <textarea
             name="about"
@@ -224,6 +376,128 @@ const CreateAcademy = () => {
             rows={5}
           />
         </label>
+
+        <div className="card subtle-card">
+          <h3>Affiliation / Recognition / Registration</h3>
+          <p>
+            Add organization name and certificate / registration number if
+            available.
+          </p>
+
+          {form.affiliations.map((item, index) => (
+            <div
+              key={index}
+              className="grid grid-3"
+              style={{ alignItems: "end", marginBottom: 12 }}
+            >
+              <label>
+                Type
+                <select
+                  value={item.type}
+                  onChange={(event) =>
+                    updateAffiliation(index, "type", event.target.value)
+                  }
+                >
+                  <option value="affiliation">Affiliation</option>
+                  <option value="recognition">Recognition</option>
+                  <option value="registration">Registration</option>
+                </select>
+              </label>
+
+              <label>
+                Organization Name
+                <input
+                  value={item.organizationName}
+                  onChange={(event) =>
+                    updateAffiliation(
+                      index,
+                      "organizationName",
+                      event.target.value
+                    )
+                  }
+                  placeholder="Association / Federation / Trust"
+                />
+              </label>
+
+              <label>
+                Number
+                <input
+                  value={item.registrationNumber}
+                  onChange={(event) =>
+                    updateAffiliation(
+                      index,
+                      "registrationNumber",
+                      event.target.value
+                    )
+                  }
+                  placeholder="Certificate / Registration No."
+                />
+              </label>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => removeAffiliation(index)}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+
+          <button type="button" className="btn btn-secondary" onClick={addAffiliation}>
+            + Add More
+          </button>
+        </div>
+
+        <div className="card subtle-card">
+          <h3>Website & Social Links</h3>
+
+          <div className="grid grid-2">
+            <label>
+              Website URL
+              <input
+                value={form.socialLinks.website}
+                onChange={(event) =>
+                  updateSocialLink("website", event.target.value)
+                }
+                placeholder="https://youracademy.com"
+              />
+            </label>
+
+            <label>
+              Instagram
+              <input
+                value={form.socialLinks.instagram}
+                onChange={(event) =>
+                  updateSocialLink("instagram", event.target.value)
+                }
+                placeholder="https://instagram.com/youracademy"
+              />
+            </label>
+
+            <label>
+              Facebook
+              <input
+                value={form.socialLinks.facebook}
+                onChange={(event) =>
+                  updateSocialLink("facebook", event.target.value)
+                }
+                placeholder="https://facebook.com/youracademy"
+              />
+            </label>
+
+            <label>
+              YouTube
+              <input
+                value={form.socialLinks.youtube}
+                onChange={(event) =>
+                  updateSocialLink("youtube", event.target.value)
+                }
+                placeholder="https://youtube.com/@youracademy"
+              />
+            </label>
+          </div>
+        </div>
 
         <Button type="submit" disabled={loading}>
           {loading ? "Creating..." : "Create Academy"}

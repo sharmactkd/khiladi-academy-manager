@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Trash2 } from "lucide-react";
+
 import { batchApi } from "../../api/batchApi.js";
 
 const formatTime = (time) => {
@@ -20,17 +21,41 @@ const formatTime = (time) => {
   });
 };
 
+const formatLabel = (value) => {
+  const text = String(value || "").trim();
+
+  if (!text) return "-";
+
+  return text
+    .split("-")
+    .map((item) => item.charAt(0).toUpperCase() + item.slice(1))
+    .join(" ");
+};
+
+const formatGenderGroup = (value) => {
+  if (value === "male") return "Male";
+  if (value === "female") return "Female";
+  return "Male & Female";
+};
+
 const Batches = () => {
   const navigate = useNavigate();
+
   const [batches, setBatches] = useState([]);
   const [status, setStatus] = useState("");
+  const [batchType, setBatchType] = useState("");
+  const [skillLevel, setSkillLevel] = useState("");
   const [loading, setLoading] = useState(true);
 
   const fetchBatches = async () => {
     try {
       setLoading(true);
 
-      const response = await batchApi.getAll();
+      const response = await batchApi.getAll({
+        batchType: batchType || undefined,
+        skillLevel: skillLevel || undefined,
+      });
+
       const list = response.data?.data || [];
 
       const filteredList =
@@ -50,7 +75,7 @@ const Batches = () => {
 
   useEffect(() => {
     fetchBatches();
-  }, [status]);
+  }, [status, batchType, skillLevel]);
 
   const handleToggleStatus = async (batch) => {
     try {
@@ -61,6 +86,7 @@ const Batches = () => {
         toast.success("Batch inactive ho gaya");
       } else {
         await batchApi.update(batch._id, {
+          ...batch,
           isActive: true,
         });
         toast.success("Batch active ho gaya");
@@ -98,23 +124,62 @@ const Batches = () => {
           <p>Classes aur training batches manage karein</p>
         </div>
 
-      <div className="actions">
-  <Link className="btn btn-primary" to="/students/new">
-    Add Student
-  </Link>
+        <div className="actions">
+          <Link className="btn btn-primary" to="/students/new">
+            Add Student
+          </Link>
 
-  <Link className="btn btn-primary" to="/batches/new">
-    Add Batch
-  </Link>
-</div>
+          <Link className="btn btn-primary" to="/batches/new">
+            Add Batch
+          </Link>
+        </div>
       </div>
 
       <div className="card">
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
+        <div className="grid grid-3">
+          <label>
+            Status
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
+
+          <label>
+            Batch Type
+            <select
+              value={batchType}
+              onChange={(event) => setBatchType(event.target.value)}
+            >
+              <option value="">All Types</option>
+              <option value="regular">Regular</option>
+              <option value="competition">Competition Team</option>
+              <option value="poomsae">Poomsae Team</option>
+              <option value="sparring">Sparring Team</option>
+              <option value="fitness">Fitness Batch</option>
+              <option value="kids">Kids Batch</option>
+              <option value="adults">Adults Batch</option>
+              <option value="black-belt">Black Belt Batch</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+
+          <label>
+            Skill Level
+            <select
+              value={skillLevel}
+              onChange={(event) => setSkillLevel(event.target.value)}
+            >
+              <option value="">All Levels</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+              <option value="elite">Elite</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="card">
@@ -128,10 +193,15 @@ const Batches = () => {
               <thead>
                 <tr>
                   <th>Batch</th>
+                  <th>Code</th>
+                  <th>Type</th>
+                  <th>Level</th>
                   <th>Martial Art</th>
+                  <th>Gender</th>
                   <th>Days</th>
                   <th>Time</th>
                   <th>Students</th>
+                  <th>Coach</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -144,19 +214,39 @@ const Batches = () => {
                     onClick={() => navigate(`/batches/${batch._id}`)}
                     style={{ cursor: "pointer" }}
                   >
-                    <td>{batch.batchName}</td>
-                    <td>{batch.martialArt}</td>
+                    <td>
+                      <strong>{batch.batchName}</strong>
+                      {batch.isCompetitionBatch ? (
+                        <div className="muted">Competition Batch</div>
+                      ) : null}
+                    </td>
+
+                    <td>{batch.batchCode || "-"}</td>
+
+                    <td>{formatLabel(batch.batchType)}</td>
+
+                    <td>{formatLabel(batch.skillLevel)}</td>
+
+                    <td>{batch.martialArt || "-"}</td>
+
+                    <td>{formatGenderGroup(batch.genderGroup)}</td>
+
                     <td>
                       {batch.schedule?.map((item) => item.day).join(", ") ||
                         "-"}
                     </td>
-                  <td>
-  {formatTime(batch.schedule?.[0]?.startTime)} -{" "}
-  {formatTime(batch.schedule?.[0]?.endTime)}
-</td>
+
+                    <td>
+                      {formatTime(batch.schedule?.[0]?.startTime)} -{" "}
+                      {formatTime(batch.schedule?.[0]?.endTime)}
+                    </td>
+
                     <td>
                       {batch.students?.length || 0} / {batch.capacity || 0}
                     </td>
+
+                    <td>{batch.headCoachName || batch.coach?.name || "-"}</td>
+
                     <td>
                       <span
                         className={`badge badge-${

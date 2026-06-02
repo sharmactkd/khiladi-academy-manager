@@ -16,6 +16,90 @@ const isOwnerRole = (user) => OWNER_ROLES.includes(user?.role);
 
 const normalizeBranchCode = (value) => String(value || "").trim().toUpperCase();
 
+
+
+const parseJsonIfNeeded = (value, fallback) => {
+  if (value === undefined || value === null || value === "") return fallback;
+
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeAdditionalCoaches = (value) => {
+  const parsed = parseJsonIfNeeded(value, []);
+
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .map((coach) => ({
+      name: String(coach?.name || "").trim(),
+      countryCode: String(coach?.countryCode || "+91").trim(),
+      phone: String(coach?.phone || "").trim(),
+    }))
+    .filter((coach) => coach.name || coach.phone);
+};
+
+const normalizeStringArray = (value) => {
+  const parsed = parseJsonIfNeeded(value, value);
+
+  if (Array.isArray(parsed)) {
+    return parsed.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+
+  if (typeof parsed === "string") {
+    return parsed
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const normalizeBoolean = (value, fallback = false) => {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value === "true";
+  return Boolean(value);
+};
+
+const normalizeBranchPayload = (body = {}) => {
+  const payload = {
+    branchName: body.branchName,
+    countryCode: body.countryCode || "+91",
+    phone: body.phone || "",
+    email: body.email || "",
+    address: body.address || "",
+    city: body.city || "",
+    state: body.state || "",
+    country: body.country || "India",
+
+    headCoachName: body.headCoachName || "",
+    headCoachCountryCode: body.headCoachCountryCode || "+91",
+    headCoachPhone: body.headCoachPhone || "",
+
+    assistantCoachName: body.assistantCoachName || "",
+    assistantCoachCountryCode: body.assistantCoachCountryCode || "+91",
+    assistantCoachPhone: body.assistantCoachPhone || "",
+
+    additionalCoaches: normalizeAdditionalCoaches(body.additionalCoaches),
+    branchSince: body.branchSince ? Number(body.branchSince) : null,
+
+    facilities: normalizeStringArray(body.facilities),
+    languagesSpoken: normalizeStringArray(body.languagesSpoken),
+
+    isMainBranch: normalizeBoolean(body.isMainBranch, false),
+    isActive: normalizeBoolean(body.isActive, true),
+  };
+
+  return payload;
+};
+
 const getAssignedBranchIdsForCoach = (user) => {
   const possibleValues = [
     user?.branch,
@@ -59,14 +143,8 @@ const validateAcademyUser = async ({ userId, academyId, allowedRoles }) => {
     throw new Error(`Selected user must have role: ${allowedRoles.join(", ")}`);
   }
 
-  if (user.role === "super_admin") {
-    return user;
-  }
-
-  const ownsAcademy = String(user._id) === String(academyId);
-
-  if (!user.isActive || user.isSuspended) {
-    throw new Error("Selected user is inactive or suspended");
+  if (user.role !== "super_admin" && !user.isActive) {
+    throw new Error("Selected user is inactive");
   }
 
   return user;
@@ -127,22 +205,16 @@ const getBranchCounts = async ({ academyId, branchId }) => {
     students,
     activeStudents,
     batches,
-    todayAttendanceRecords,
-    presentToday,
+    todayAttendanceDocs,
     pendingFeesResult,
   ] = await Promise.all([
     Student.countDocuments(baseFilter),
     Student.countDocuments({ ...baseFilter, status: "active" }),
     Batch.countDocuments({ ...baseFilter, isActive: true }),
-    Attendance.countDocuments({
+    Attendance.find({
       ...baseFilter,
       date: { $gte: today, $lt: tomorrow },
-    }),
-    Attendance.countDocuments({
-      ...baseFilter,
-      date: { $gte: today, $lt: tomorrow },
-      status: "present",
-    }),
+    }).lean(),
     FeePayment.aggregate([
       {
         $match: {
@@ -164,10 +236,18 @@ const getBranchCounts = async ({ academyId, branchId }) => {
     ]),
   ]);
 
+  let totalMarked = 0;
+  let presentToday = 0;
+
+  todayAttendanceDocs.forEach((doc) => {
+    (doc.records || []).forEach((record) => {
+      totalMarked += 1;
+      if (record.status === "present") presentToday += 1;
+    });
+  });
+
   const todayAttendancePercentage =
-    todayAttendanceRecords > 0
-      ? Math.round((presentToday / todayAttendanceRecords) * 100)
-      : 0;
+    totalMarked > 0 ? Math.round((presentToday / totalMarked) * 100) : 0;
 
   return {
     students,
@@ -184,24 +264,7 @@ export const createBranch = asyncHandler(async (req, res) => {
   }
 
   const academyId = req.academyId;
-
-  const {
-    branchName,
-    branchCode,
-    phone,
-    email,
-    address,
-    city,
-    state,
-    country,
- 
-    manager,
-    coaches,
-    isMainBranch,
-    isActive,
-  } = req.body;
-
-  const cleanBranchCode = normalizeBranchCode(branchCode);
+  const cleanBranchCode = normalizeBranchCode(req.body.branchCode);
 
   const existing = await Branch.findOne({
     academy: academyId,
@@ -213,30 +276,23 @@ export const createBranch = asyncHandler(async (req, res) => {
   }
 
   const validatedCoaches = await validateBranchUsers({
-    manager,
-    coaches,
+    manager: req.body.manager,
+    coaches: req.body.coaches,
     academyId,
   });
 
-  if (isMainBranch) {
+  const payload = normalizeBranchPayload(req.body);
+
+  if (payload.isMainBranch) {
     await unsetOtherMainBranches({ academyId });
   }
 
   const branch = await Branch.create({
     academy: academyId,
-    branchName,
     branchCode: cleanBranchCode,
-    phone,
-    email,
-    address,
-    city,
-    state,
-    country: country || "India",
-   
-    manager: manager || null,
+    ...payload,
+    manager: req.body.manager || null,
     coaches: validatedCoaches,
-    isMainBranch: Boolean(isMainBranch),
-    isActive: isActive === undefined ? true : Boolean(isActive),
     createdBy: req.user._id,
     updatedBy: req.user._id,
   });
@@ -261,6 +317,8 @@ export const getBranches = asyncHandler(async (req, res) => {
       { branchCode: { $regex: search, $options: "i" } },
       { city: { $regex: search, $options: "i" } },
       { state: { $regex: search, $options: "i" } },
+      { headCoachName: { $regex: search, $options: "i" } },
+      { assistantCoachName: { $regex: search, $options: "i" } },
     ];
   }
 
@@ -312,21 +370,6 @@ export const updateBranch = asyncHandler(async (req, res) => {
     return errorResponse(res, "Branch not found", 404);
   }
 
-  const allowedFields = [
-    "branchName",
-    "phone",
-    "email",
-    "address",
-    "city",
-    "state",
-    "country",
-   
-    "manager",
-    "coaches",
-    "isMainBranch",
-    "isActive",
-  ];
-
   if (req.body.branchCode !== undefined) {
     const cleanBranchCode = normalizeBranchCode(req.body.branchCode);
 
@@ -363,15 +406,11 @@ export const updateBranch = asyncHandler(async (req, res) => {
     }
   }
 
-  for (const field of allowedFields) {
-    if (["manager", "coaches"].includes(field)) continue;
+  const payload = normalizeBranchPayload(req.body);
 
-    if (req.body[field] !== undefined) {
-      branch[field] = req.body[field];
-    }
-  }
+  Object.assign(branch, payload);
 
-  if (req.body.isMainBranch === true) {
+  if (payload.isMainBranch === true) {
     await unsetOtherMainBranches({
       academyId: req.academyId,
       branchId: branch._id,

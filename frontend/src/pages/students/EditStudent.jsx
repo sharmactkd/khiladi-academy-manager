@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
 
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
@@ -8,10 +8,47 @@ import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
 
-const onlyDigits = (value) => String(value || "").replace(/\D/g, "");
+const TAEKWONDO_BELTS = [
+  "White",
+  "Yellow",
+  "Green",
+  "Green One",
+  "Blue",
+  "Blue One",
+  "Red",
+  "Red One",
+  "Black",
+];
+
+const DAN_RANKS = [
+  "1st Dan",
+  "2nd Dan",
+  "3rd Dan",
+  "4th Dan",
+  "5th Dan",
+  "6th Dan",
+  "7th Dan",
+  "8th Dan",
+  "9th Dan",
+  "10th Dan",
+];
+
+const BLOOD_GROUPS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
+const MEDICAL_CONDITIONS = [
+  "Asthma",
+  "Diabetes",
+  "Heart Issue",
+  "Allergies",
+  "Epilepsy",
+  "High BP",
+  "Low BP",
+  "Joint Pain",
+  "Previous Injury",
+];
 
 const formatPhone = (value) => {
-  const digits = onlyDigits(value).slice(0, 10);
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 10);
 
   if (digits.length <= 4) return digits;
   if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
@@ -30,7 +67,64 @@ const toDateInput = (value) => {
 
 const appendFormDataValue = (formData, key, value) => {
   if (value === undefined || value === null) return;
+
+  if (typeof value === "object" && !(value instanceof File)) {
+    formData.append(key, JSON.stringify(value));
+    return;
+  }
+
   formData.append(key, value);
+};
+
+const calculateAge = (dob) => {
+  if (!dob) return "";
+
+  const birthDate = new Date(dob);
+  if (Number.isNaN(birthDate.getTime())) return "";
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  const dayDiff = today.getDate() - birthDate.getDate();
+
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : "";
+};
+
+const getAgeCategory = (age) => {
+  if (age === "" || age === null || age === undefined) return "";
+
+  const numericAge = Number(age);
+
+  if (numericAge <= 11) return "Sub-Junior";
+  if (numericAge <= 14) return "Cadet";
+  if (numericAge <= 17) return "Junior";
+  return "Senior";
+};
+
+const isTaekwondo = (value) =>
+  String(value || "").trim().toLowerCase() === "taekwondo";
+
+const normalizeConditions = (value) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
 };
 
 const EditStudent = () => {
@@ -51,7 +145,6 @@ const EditStudent = () => {
     country: "India",
     state: "",
     city: "",
- 
   });
 
   const [parentContact, setParentContact] = useState({
@@ -64,9 +157,19 @@ const EditStudent = () => {
     phone: "",
   });
 
-  const { register, handleSubmit, reset } = useForm({
+  const [medicalConditions, setMedicalConditions] = useState([]);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
       admissionNumber: "",
+      aadhaarNumber: "",
       name: "",
       batch: "",
       status: "active",
@@ -74,15 +177,39 @@ const EditStudent = () => {
       dob: "",
       email: "",
       schoolName: "",
+      className: "",
+      section: "",
+      collegeName: "",
+      occupation: "",
       parentName: "",
-      martialArt: "",
+      martialArt: "Taekwondo",
       beltRank: "",
+      danRank: "",
+      heightCm: "",
+      weightKg: "",
+      bloodGroup: "",
       joiningDate: "",
       address: "",
       medicalNotes: "",
       emergencyContactName: "",
     },
   });
+
+  const dob = useWatch({ control, name: "dob" });
+  const martialArt = useWatch({ control, name: "martialArt" });
+  const beltRank = useWatch({ control, name: "beltRank" });
+
+  const age = useMemo(() => calculateAge(dob), [dob]);
+  const ageCategory = useMemo(() => getAgeCategory(age), [age]);
+
+  const showTaekwondoBeltDropdown = isTaekwondo(martialArt);
+  const showDanRank = showTaekwondoBeltDropdown && beltRank === "Black";
+
+  useEffect(() => {
+    if (beltRank !== "Black") {
+      setValue("danRank", "");
+    }
+  }, [beltRank, setValue]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,7 +219,9 @@ const EditStudent = () => {
           batchApi.getAll(),
         ]);
 
-        const studentData = studentRes?.data || null;
+        const studentData =
+          studentRes?.data?.data || studentRes?.data?.student || studentRes?.data || null;
+
         setStudent(studentData);
 
         const batchList = Array.isArray(batchRes.data)
@@ -103,6 +232,7 @@ const EditStudent = () => {
 
         reset({
           admissionNumber: studentData?.admissionNumber || "",
+          aadhaarNumber: studentData?.aadhaarNumber || "",
           name: `${studentData?.firstName || ""} ${
             studentData?.lastName || ""
           }`.trim(),
@@ -111,15 +241,53 @@ const EditStudent = () => {
           gender: studentData?.gender || "other",
           dob: toDateInput(studentData?.dateOfBirth),
           email: studentData?.email || "",
-          schoolName: studentData?.schoolName || "",
+
+          schoolName:
+            studentData?.schoolName || studentData?.education?.schoolName || "",
+          className:
+            studentData?.className || studentData?.education?.className || "",
+          section: studentData?.section || studentData?.education?.section || "",
+          collegeName:
+            studentData?.collegeName ||
+            studentData?.education?.collegeName ||
+            "",
+          occupation:
+            studentData?.occupation ||
+            studentData?.education?.occupation ||
+            "",
+
           parentName: studentData?.parentName || "",
-          martialArt: studentData?.martialArt || "",
+          martialArt: studentData?.martialArt || "Taekwondo",
           beltRank: studentData?.beltRank || "",
+          danRank: studentData?.danRank || "",
+
+          heightCm:
+            studentData?.heightCm ??
+            studentData?.physicalInfo?.heightCm ??
+            "",
+          weightKg:
+            studentData?.weightKg ??
+            studentData?.physicalInfo?.weightKg ??
+            "",
+
+          bloodGroup:
+            studentData?.bloodGroup ||
+            studentData?.medicalInfo?.bloodGroup ||
+            "",
+
           joiningDate: toDateInput(studentData?.joiningDate),
           address: studentData?.address || "",
-          medicalNotes: studentData?.notes || "",
+          medicalNotes:
+            studentData?.notes || studentData?.medicalInfo?.notes || "",
           emergencyContactName: studentData?.emergencyContact?.name || "",
         });
+
+        setMedicalConditions(
+          normalizeConditions(
+            studentData?.medicalConditions ||
+              studentData?.medicalInfo?.medicalConditions
+          )
+        );
 
         setStudentContact({
           countryCode: studentData?.countryCode || "+91",
@@ -127,7 +295,6 @@ const EditStudent = () => {
           country: studentData?.country || "India",
           state: studentData?.state || "",
           city: studentData?.city || "",
-         
         });
 
         setParentContact({
@@ -174,6 +341,14 @@ const EditStudent = () => {
     }));
   };
 
+  const toggleMedicalCondition = (condition) => {
+    setMedicalConditions((prev) =>
+      prev.includes(condition)
+        ? prev.filter((item) => item !== condition)
+        : [...prev, condition]
+    );
+  };
+
   const handleProfilePhotoChange = (event) => {
     const file = event.target.files?.[0] || null;
 
@@ -211,27 +386,45 @@ const EditStudent = () => {
 
       const payload = {
         admissionNumber: values.admissionNumber,
+        aadhaarNumber: values.aadhaarNumber || "",
         firstName,
         lastName,
         batch: values.batch || "",
         status: values.status || "active",
         gender: values.gender || "other",
         dateOfBirth: values.dob,
+
         countryCode: studentContact.countryCode || "+91",
         phone: studentContact.phone || "",
         country: studentContact.country || "India",
         state: studentContact.state || "",
         city: studentContact.city || "",
-       
+
         email: values.email || "",
+        address: values.address || "",
+
         schoolName: values.schoolName || "",
+        className: values.className || "",
+        section: values.section || "",
+        collegeName: values.collegeName || "",
+        occupation: values.occupation || "",
+
         parentName: values.parentName || "",
         parentCountryCode: parentContact.countryCode || "+91",
         parentPhone: parentContact.phone || "",
+
         martialArt: values.martialArt || "Taekwondo",
         beltRank: values.beltRank || "",
+        danRank: values.danRank || "",
+
+        heightCm: values.heightCm || "",
+        weightKg: values.weightKg || "",
+
+        bloodGroup: values.bloodGroup || "",
+        medicalConditions,
+
         joiningDate: values.joiningDate || "",
-        address: values.address || "",
+
         notes: values.medicalNotes || "",
         emergencyContactName: values.emergencyContactName || "",
         emergencyContactCountryCode: emergencyContact.countryCode || "+91",
@@ -271,90 +464,94 @@ const EditStudent = () => {
       </div>
 
       <form className="card form" onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-3">
-          <label>
-            Admission Number
-            <input {...register("admissionNumber")} />
-          </label>
+        <div className="card subtle-card">
+          <h3>Basic Information</h3>
 
-          <label>
-            Name
-            <input {...register("name")} />
-          </label>
+          <div className="grid grid-3">
+            <label>
+              Admission Number
+              <input {...register("admissionNumber")} />
+            </label>
 
-          <label>
-            Batch
-            <select {...register("batch")}>
-              <option value="">No Batch</option>
-              {batches.map((batch) => (
-                <option key={batch._id} value={batch._id}>
-                  {batch.batchName}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label>
+              Aadhaar Number
+              <input
+                maxLength={12}
+                inputMode="numeric"
+                {...register("aadhaarNumber")}
+                placeholder="12 digit Aadhaar number"
+              />
+            </label>
 
-          <label>
-            Status
-            <select {...register("status")}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="left">Left</option>
-            </select>
-          </label>
+            <label>
+              Name
+              <input {...register("name")} />
+            </label>
 
-          <label>
-            Gender
-            <select {...register("gender")}>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
+            <label>
+              Batch
+              <select {...register("batch")}>
+                <option value="">No Batch</option>
+                {batches.map((batch) => (
+                  <option key={batch._id} value={batch._id}>
+                    {batch.batchName}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label>
-            DOB
-            <input type="date" {...register("dob")} />
-          </label>
+            <label>
+              Status
+              <select {...register("status")}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="left">Left</option>
+              </select>
+            </label>
 
-          <label>
-            Passport Size Photo
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              onChange={handleProfilePhotoChange}
-            />
-          </label>
+            <label>
+              Gender
+              <select {...register("gender")}>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
 
-          <label>
-            Email
-            <input type="email" {...register("email")} />
-          </label>
+            <label>
+              DOB
+              <input type="date" {...register("dob")} />
+            </label>
 
-          <label>
-            School Name
-            <input {...register("schoolName")} placeholder="Enter school name" />
-          </label>
+            <label>
+              Age
+              <input value={age === "" ? "" : `${age} Years`} readOnly />
+            </label>
 
-          <label>
-            Parent Name
-            <input {...register("parentName")} />
-          </label>
+            <label>
+              Age Category
+              <input value={ageCategory} readOnly />
+            </label>
 
-          <label>
-            Martial Art
-            <input {...register("martialArt")} />
-          </label>
+            <label>
+              Passport Size Photo
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handleProfilePhotoChange}
+              />
+            </label>
 
-          <label>
-            Belt Rank
-            <input {...register("beltRank")} />
-          </label>
+            <label>
+              Email
+              <input type="email" {...register("email")} />
+            </label>
 
-          <label>
-            Joining Date
-            <input type="date" {...register("joiningDate")} />
-          </label>
+            <label>
+              Joining Date
+              <input type="date" {...register("joiningDate")} />
+            </label>
+          </div>
         </div>
 
         <div className="card subtle-card">
@@ -366,16 +563,60 @@ const EditStudent = () => {
             country={studentContact.country}
             state={studentContact.state}
             city={studentContact.city}
-          
             phoneLabel="Student Phone"
             onChange={updateStudentContact}
           />
         </div>
 
         <div className="card subtle-card">
+          <h3>Education Information</h3>
+
+          <div className="grid grid-3">
+            <label>
+              School Name
+              <input
+                {...register("schoolName")}
+                placeholder="Enter school name"
+              />
+            </label>
+
+            <label>
+              Class
+              <input {...register("className")} placeholder="Class" />
+            </label>
+
+            <label>
+              Section
+              <input {...register("section")} placeholder="Section" />
+            </label>
+
+            <label>
+              College Name
+              <input
+                {...register("collegeName")}
+                placeholder="College name optional"
+              />
+            </label>
+
+            <label>
+              Occupation
+              <input
+                {...register("occupation")}
+                placeholder="For adult students"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="card subtle-card">
           <h3>Parent Contact</h3>
 
           <div className="grid grid-2">
+            <label>
+              Parent Name
+              <input {...register("parentName")} />
+            </label>
+
             <PhoneLocationFields
               countryCode={parentContact.countryCode}
               phone={parentContact.phone}
@@ -384,6 +625,116 @@ const EditStudent = () => {
               onChange={updateParentContact}
             />
           </div>
+        </div>
+
+        <div className="card subtle-card">
+          <h3>Training Information</h3>
+
+          <div className="grid grid-3">
+            <label>
+              Martial Art / Sport
+              <input {...register("martialArt")} />
+            </label>
+
+            <label>
+              Belt Rank
+              {showTaekwondoBeltDropdown ? (
+                <select {...register("beltRank")}>
+                  <option value="">Select Belt</option>
+                  {TAEKWONDO_BELTS.map((belt) => (
+                    <option key={belt} value={belt}>
+                      {belt}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input {...register("beltRank")} />
+              )}
+            </label>
+
+            {showDanRank && (
+              <label>
+                Dan Rank
+                <select {...register("danRank")}>
+                  <option value="">Select Dan</option>
+                  {DAN_RANKS.map((dan) => (
+                    <option key={dan} value={dan}>
+                      {dan}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        </div>
+
+        <div className="card subtle-card">
+          <h3>Physical Information</h3>
+
+          <div className="grid grid-2">
+            <label>
+              Height
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                {...register("heightCm")}
+                placeholder="Height in cm"
+              />
+              <small>cm</small>
+            </label>
+
+            <label>
+              Weight
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                {...register("weightKg")}
+                placeholder="Weight in kg"
+              />
+              <small>kg</small>
+            </label>
+          </div>
+        </div>
+
+        <div className="card subtle-card">
+          <h3>Medical Information</h3>
+
+          <div className="grid grid-2">
+            <label>
+              Blood Group
+              <select {...register("bloodGroup")}>
+                {BLOOD_GROUPS.map((group) => (
+                  <option key={group || "none"} value={group}>
+                    {group || "Select Blood Group"}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <strong>Medical Conditions</strong>
+
+            <div className="checkbox-grid" style={{ marginTop: 8 }}>
+              {MEDICAL_CONDITIONS.map((condition) => (
+                <label key={condition}>
+                  <input
+                    type="checkbox"
+                    checked={medicalConditions.includes(condition)}
+                    onChange={() => toggleMedicalCondition(condition)}
+                  />
+                  {condition}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <label style={{ display: "block", marginTop: 12 }}>
+            Medical Notes
+            <textarea {...register("medicalNotes")} />
+          </label>
         </div>
 
         {profilePhotoPreview && (
@@ -409,11 +760,6 @@ const EditStudent = () => {
         <label>
           Address
           <textarea {...register("address")} />
-        </label>
-
-        <label>
-          Medical Notes
-          <textarea {...register("medicalNotes")} />
         </label>
 
         <div className="card subtle-card">
@@ -445,7 +791,7 @@ const EditStudent = () => {
           </button>
 
           <button className="btn btn-primary" disabled={saving}>
-            {saving ? "Updating..." : "Update Student"}
+            {saving ? "Saving..." : "Update Student"}
           </button>
         </div>
       </form>

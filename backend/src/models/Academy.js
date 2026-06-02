@@ -25,6 +25,59 @@ const academySettingsSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const socialLinksSchema = new mongoose.Schema(
+  {
+    website: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: [250, "Website URL cannot exceed 250 characters"],
+    },
+    instagram: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: [250, "Instagram URL cannot exceed 250 characters"],
+    },
+    facebook: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: [250, "Facebook URL cannot exceed 250 characters"],
+    },
+    youtube: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: [250, "YouTube URL cannot exceed 250 characters"],
+    },
+  },
+  { _id: false }
+);
+
+const affiliationSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["affiliation", "recognition", "registration"],
+      default: "affiliation",
+    },
+    organizationName: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: [180, "Organization name cannot exceed 180 characters"],
+    },
+    registrationNumber: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: [120, "Registration number cannot exceed 120 characters"],
+    },
+  },
+  { _id: true }
+);
+
 const academySchema = new mongoose.Schema(
   {
     owner: {
@@ -33,6 +86,13 @@ const academySchema = new mongoose.Schema(
       required: [true, "Academy owner is required"],
       unique: true,
       index: true,
+    },
+
+    ownerName: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: [120, "Owner name cannot exceed 120 characters"],
     },
 
     academyName: {
@@ -52,6 +112,30 @@ const academySchema = new mongoose.Schema(
         },
         message: "At least one martial art is required",
       },
+    },
+
+    since: {
+      type: Number,
+      default: null,
+      min: [1900, "Since year must be valid"],
+      max: [new Date().getFullYear(), "Since year cannot be in the future"],
+    },
+
+    about: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: [1500, "About academy cannot exceed 1500 characters"],
+    },
+
+    affiliations: {
+      type: [affiliationSchema],
+      default: [],
+    },
+
+    socialLinks: {
+      type: socialLinksSchema,
+      default: () => ({}),
     },
 
     logo: {
@@ -108,8 +192,6 @@ const academySchema = new mongoose.Schema(
       maxlength: [80, "Country cannot exceed 80 characters"],
     },
 
- 
-
     branchesEnabled: {
       type: Boolean,
       default: false,
@@ -153,13 +235,40 @@ const academySchema = new mongoose.Schema(
 academySchema.index({ academyName: "text" });
 academySchema.index({ city: 1, state: 1 });
 
-academySchema.pre("save", function () {
-  if (Array.isArray(this.martialArts)) {
-    this.martialArts = this.martialArts
-      .map((item) => String(item || "").trim())
+const normalizeStringArray = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
       .filter(Boolean);
   }
 
+  return [];
+};
+
+academySchema.pre("validate", function () {
+  this.martialArts = normalizeStringArray(this.martialArts);
+
+  if (this.since === "" || this.since === undefined) {
+    this.since = null;
+  }
+
+  if (Array.isArray(this.affiliations)) {
+    this.affiliations = this.affiliations
+      .map((item) => ({
+        type: item?.type || "affiliation",
+        organizationName: String(item?.organizationName || "").trim(),
+        registrationNumber: String(item?.registrationNumber || "").trim(),
+      }))
+      .filter((item) => item.organizationName || item.registrationNumber);
+  }
+});
+
+academySchema.pre("save", function () {
   if (this.countryCode === "+91" && this.phone) {
     const digits = String(this.phone).replace(/\D/g, "").slice(0, 10);
 

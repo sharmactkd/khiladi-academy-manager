@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
+
 import { batchApi } from "../../api/batchApi.js";
 import { studentApi } from "../../api/studentApi.js";
 
@@ -20,12 +21,40 @@ const formatTime = (time) => {
   });
 };
 
-const currency = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const currency = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+
+const displayValue = (value) => {
+  const text = String(value || "").trim();
+  return text || "-";
+};
+
+const formatLabel = (value) => {
+  const text = String(value || "").trim();
+
+  if (!text) return "-";
+
+  return text
+    .split("-")
+    .map((item) => item.charAt(0).toUpperCase() + item.slice(1))
+    .join(" ");
+};
 
 const getStudentName = (student) => {
   const fullName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
   return student.name || fullName || "-";
+};
+
+const getAvailableSeats = (capacity, studentCount) => {
+  const max = Number(capacity || 0);
+  if (!max) return "-";
+
+  return Math.max(max - Number(studentCount || 0), 0);
+};
+
+const formatGenderGroup = (value) => {
+  if (value === "male") return "Male";
+  if (value === "female") return "Female";
+  return "Male & Female";
 };
 
 const BatchDetail = () => {
@@ -66,12 +95,18 @@ const BatchDetail = () => {
   if (loading) return <p>Loading batch...</p>;
   if (!batch) return <p>Batch not found.</p>;
 
+  const firstSchedule = batch.schedule?.[0] || null;
+  const availableSeats = getAvailableSeats(batch.capacity, studentCount);
+
   return (
     <div className="page">
       <div className="page-header">
         <div>
           <h1>{batch.batchName}</h1>
-          <p>{batch.martialArt}</p>
+          <p>
+            {batch.martialArt || "-"}{" "}
+            {batch.batchCode ? `• ${batch.batchCode}` : ""}
+          </p>
         </div>
 
         <div className="actions">
@@ -93,20 +128,197 @@ const BatchDetail = () => {
 
         <div className="card stat-card">
           <span>Students</span>
-          <strong>{studentCount}</strong>
+          <strong>
+            {studentCount} / {batch.capacity || 0}
+          </strong>
+        </div>
+
+        <div className="card stat-card">
+          <span>Available Seats</span>
+          <strong>{availableSeats}</strong>
         </div>
 
         <div className="card stat-card">
           <span>Time</span>
           <strong>
-            {formatTime(batch.schedule?.[0]?.startTime)} -{" "}
-            {formatTime(batch.schedule?.[0]?.endTime)}
+            {formatTime(firstSchedule?.startTime)} -{" "}
+            {formatTime(firstSchedule?.endTime)}
           </strong>
         </div>
 
         <div className="card stat-card">
           <span>Monthly Fee</span>
           <strong>{currency(batch.monthlyFee)}</strong>
+        </div>
+
+        <div className="card stat-card">
+          <span>Batch Type</span>
+          <strong>{formatLabel(batch.batchType)}</strong>
+        </div>
+
+        <div className="card stat-card">
+          <span>Skill Level</span>
+          <strong>{formatLabel(batch.skillLevel)}</strong>
+        </div>
+
+        <div className="card stat-card">
+          <span>Mode</span>
+          <strong>{formatLabel(batch.mode)}</strong>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Batch Details</h2>
+
+        <div className="details-grid">
+          <p>
+            <strong>Batch Code:</strong> {displayValue(batch.batchCode)}
+          </p>
+
+          <p>
+            <strong>Martial Art / Sport:</strong>{" "}
+            {displayValue(batch.martialArt)}
+          </p>
+
+<p>
+  <strong>Gender Group:</strong> {formatGenderGroup(batch.genderGroup)}
+</p>
+
+          <p>
+            <strong>Branch:</strong>{" "}
+            {batch.branch?.branchName || batch.branch?.branchCode || "-"}
+          </p>
+
+          <p>
+            <strong>Batch Type:</strong> {formatLabel(batch.batchType)}
+          </p>
+
+          <p>
+            <strong>Skill Level:</strong> {formatLabel(batch.skillLevel)}
+          </p>
+
+          <p>
+            <strong>Mode:</strong> {formatLabel(batch.mode)}
+          </p>
+
+          <p>
+            <strong>Session Slot:</strong> {formatLabel(batch.sessionSlot)}
+          </p>
+
+          <p>
+            <strong>Venue / Hall:</strong> {displayValue(batch.venue)}
+          </p>
+
+          <p>
+            <strong>Batch Color Tag:</strong> {displayValue(batch.batchColor)}
+          </p>
+
+          <p>
+            <strong>Competition Batch:</strong>{" "}
+            {batch.isCompetitionBatch ? "Yes" : "No"}
+          </p>
+
+          <p>
+            <strong>Notes:</strong> {displayValue(batch.notes)}
+          </p>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Training Schedule</h2>
+
+        <div className="details-grid">
+          <p>
+            <strong>Days:</strong>{" "}
+            {batch.schedule?.map((item) => item.day).join(", ") || "-"}
+          </p>
+
+          <p>
+            <strong>Start Time:</strong> {formatTime(firstSchedule?.startTime)}
+          </p>
+
+          <p>
+            <strong>End Time:</strong> {formatTime(firstSchedule?.endTime)}
+          </p>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Coach Assignment</h2>
+
+        <div className="details-grid">
+          <p>
+            <strong>System Coach:</strong> {batch.coach?.name || "-"}
+          </p>
+
+          <p>
+            <strong>Head Coach:</strong> {displayValue(batch.headCoachName)}
+          </p>
+
+          <p>
+            <strong>Assistant Coach:</strong>{" "}
+            {displayValue(batch.assistantCoachName)}
+          </p>
+
+          <p>
+            <strong>Additional Coaches:</strong>{" "}
+            {Array.isArray(batch.additionalCoaches) &&
+            batch.additionalCoaches.length
+              ? batch.additionalCoaches
+                  .filter((coach) => coach?.name || coach?.phone)
+                  .map((coach) => {
+                    const name = coach.name || "Coach";
+                    const phone = coach.phone ? ` (${coach.phone})` : "";
+                    return `${name}${phone}`;
+                  })
+                  .join(", ")
+              : "-"}
+          </p>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Student Capacity & Eligibility</h2>
+
+        <div className="details-grid">
+          <p>
+            <strong>Capacity:</strong> {batch.capacity || 0}
+          </p>
+
+          <p>
+            <strong>Current Students:</strong> {studentCount}
+          </p>
+
+          <p>
+            <strong>Available Seats:</strong> {availableSeats}
+          </p>
+
+          <p>
+            <strong>Min Age:</strong>{" "}
+            {batch.minAge === null || batch.minAge === undefined
+              ? "-"
+              : batch.minAge}
+          </p>
+
+          <p>
+            <strong>Max Age:</strong>{" "}
+            {batch.maxAge === null || batch.maxAge === undefined
+              ? "-"
+              : batch.maxAge}
+          </p>
+
+          <p>
+            <strong>Minimum Belt:</strong> {displayValue(batch.minBelt)}
+          </p>
+
+          <p>
+            <strong>Maximum Belt:</strong> {displayValue(batch.maxBelt)}
+          </p>
+
+          <p>
+            <strong>Minimum Attendance %:</strong>{" "}
+            {batch.minimumAttendancePercentage ?? 75}%
+          </p>
         </div>
       </div>
 
@@ -127,30 +339,59 @@ const BatchDetail = () => {
           </p>
 
           <p>
+            <strong>Registration Fee:</strong> {currency(batch.registrationFee)}
+          </p>
+
+          <p>
+            <strong>Uniform Fee:</strong> {currency(batch.uniformFee)}
+          </p>
+
+          <p>
+            <strong>Examination Fee:</strong> {currency(batch.examinationFee)}
+          </p>
+
+          <p>
+            <strong>Late Fee:</strong> {currency(batch.lateFee)}
+          </p>
+
+          <p>
             <strong>Fee Due Day:</strong> {batch.feeDueDay || 10}
           </p>
         </div>
       </div>
 
       <div className="card">
-        <h2>Batch Details</h2>
+        <h2>Links & Communication</h2>
 
         <div className="details-grid">
           <p>
-            <strong>Days:</strong>{" "}
-            {batch.schedule?.map((item) => item.day).join(", ") || "-"}
+            <strong>Batch Language:</strong> {displayValue(batch.batchLanguage)}
           </p>
 
           <p>
-            <strong>Capacity:</strong> {batch.capacity || 0}
+            <strong>WhatsApp Group:</strong>{" "}
+            {batch.whatsappGroupLink ? (
+              <a
+                href={batch.whatsappGroupLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open Link
+              </a>
+            ) : (
+              "-"
+            )}
           </p>
 
           <p>
-            <strong>Coach:</strong> {batch.coach?.name || "-"}
-          </p>
-
-          <p>
-            <strong>Notes:</strong> {batch.notes || "-"}
+            <strong>Google Meet:</strong>{" "}
+            {batch.googleMeetLink ? (
+              <a href={batch.googleMeetLink} target="_blank" rel="noreferrer">
+                Open Link
+              </a>
+            ) : (
+              "-"
+            )}
           </p>
         </div>
       </div>

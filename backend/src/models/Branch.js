@@ -26,6 +26,13 @@ const branchSchema = new mongoose.Schema(
       maxlength: [30, "Branch code cannot exceed 30 characters"],
     },
 
+    countryCode: {
+      type: String,
+      trim: true,
+      default: "+91",
+      maxlength: [10, "Country code cannot exceed 10 characters"],
+    },
+
     phone: {
       type: String,
       trim: true,
@@ -43,6 +50,7 @@ const branchSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
+      maxlength: [500, "Address cannot exceed 500 characters"],
     },
 
     city: {
@@ -65,7 +73,87 @@ const branchSchema = new mongoose.Schema(
       default: "India",
     },
 
-   
+    headCoachName: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [120, "Head coach name cannot exceed 120 characters"],
+    },
+
+    headCoachCountryCode: {
+      type: String,
+      trim: true,
+      default: "+91",
+      maxlength: [10, "Head coach country code cannot exceed 10 characters"],
+    },
+
+    headCoachPhone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    assistantCoachName: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [120, "Assistant coach name cannot exceed 120 characters"],
+    },
+
+    assistantCoachCountryCode: {
+      type: String,
+      trim: true,
+      default: "+91",
+      maxlength: [
+        10,
+        "Assistant coach country code cannot exceed 10 characters",
+      ],
+    },
+
+    assistantCoachPhone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    additionalCoaches: [
+  {
+    name: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [120, "Coach name cannot exceed 120 characters"],
+    },
+    countryCode: {
+      type: String,
+      trim: true,
+      default: "+91",
+      maxlength: [10, "Coach country code cannot exceed 10 characters"],
+    },
+    phone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+  },
+],
+
+    branchSince: {
+      type: Number,
+      default: null,
+      min: [1900, "Branch since year must be valid"],
+      max: [new Date().getFullYear(), "Branch since cannot be in the future"],
+    },
+
+    facilities: {
+      type: [String],
+      default: [],
+    },
+
+    languagesSpoken: {
+      type: [String],
+      default: [],
+    },
 
     manager: {
       type: mongoose.Schema.Types.ObjectId,
@@ -113,6 +201,73 @@ branchSchema.index({ academy: 1, branchCode: 1 }, { unique: true });
 branchSchema.index({ academy: 1, branchName: 1 });
 branchSchema.index({ academy: 1, city: 1, state: 1 });
 branchSchema.index({ academy: 1, isActive: 1 });
+
+const normalizeStringArray = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => String(item || "").trim()).filter(Boolean);
+      }
+    } catch {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
+const formatIndianPhone = (value) => {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 10);
+
+  if (digits.length !== 10) return String(value || "").trim();
+
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+};
+
+branchSchema.pre("validate", function () {
+  if (this.branchSince === "" || this.branchSince === undefined) {
+    this.branchSince = null;
+  }
+
+ this.facilities = [...new Set(normalizeStringArray(this.facilities))];
+
+this.languagesSpoken = [
+  ...new Set(normalizeStringArray(this.languagesSpoken)),
+];
+});
+
+branchSchema.pre("save", function () {
+  if (this.countryCode === "+91" && this.phone) {
+    this.phone = formatIndianPhone(this.phone);
+  }
+
+  if (this.headCoachCountryCode === "+91" && this.headCoachPhone) {
+    this.headCoachPhone = formatIndianPhone(this.headCoachPhone);
+  }
+
+  if (this.assistantCoachCountryCode === "+91" && this.assistantCoachPhone) {
+    this.assistantCoachPhone = formatIndianPhone(this.assistantCoachPhone);
+  }
+
+ if (Array.isArray(this.additionalCoaches)) {
+  this.additionalCoaches = this.additionalCoaches.map((coach) => ({
+    name: coach.name || "",
+    countryCode: coach.countryCode || "+91",
+    phone:
+      coach.countryCode === "+91" && coach.phone
+        ? formatIndianPhone(coach.phone)
+        : coach.phone || "",
+  }));
+}
+});
 
 const Branch = mongoose.model("Branch", branchSchema);
 
