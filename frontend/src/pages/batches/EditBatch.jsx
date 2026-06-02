@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+
 import { batchApi } from "../../api/batchApi.js";
 
 const DAYS = [
@@ -17,7 +18,9 @@ const DAYS = [
 const EditBatch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const {
     register,
@@ -44,11 +47,14 @@ const EditBatch = () => {
   useEffect(() => {
     const fetchBatch = async () => {
       try {
+        setLoading(true);
+
         const response = await batchApi.getById(id);
-        const batch = response.data?.data;
+        const batch = response.data?.data || response.data?.batch || response.data;
 
         if (!batch) {
           toast.error("Batch not found");
+          navigate("/batches");
           return;
         }
 
@@ -59,7 +65,9 @@ const EditBatch = () => {
           endTime: batch.schedule?.[0]?.endTime || "",
           maxStudents: batch.capacity || 0,
           status: batch.isActive ? "active" : "inactive",
-          days: batch.schedule?.map((item) => item.day) || [],
+          days: Array.isArray(batch.schedule)
+            ? batch.schedule.map((item) => item.day)
+            : [],
           monthlyFee: batch.monthlyFee || 0,
           quarterlyFee: batch.quarterlyFee || 0,
           annualFee: batch.annualFee || 0,
@@ -73,21 +81,21 @@ const EditBatch = () => {
     };
 
     fetchBatch();
-  }, [id, reset]);
+  }, [id, navigate, reset]);
 
   const onSubmit = async (values) => {
     try {
+      setSaving(true);
+
       await batchApi.update(id, {
         batchName: values.batchName,
         martialArt: values.martialArt,
         capacity: Number(values.maxStudents || 0),
         isActive: values.status === "active",
         notes: values.notes || "",
-
         monthlyFee: Number(values.monthlyFee || 0),
         quarterlyFee: Number(values.quarterlyFee || 0),
         annualFee: Number(values.annualFee || 0),
-
         schedule: (values.days || []).map((day) => ({
           day,
           startTime: values.startTime,
@@ -99,6 +107,8 @@ const EditBatch = () => {
       navigate(`/batches/${id}`);
     } catch (error) {
       toast.error(error.response?.data?.message || "Batch update nahi hua");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -202,7 +212,10 @@ const EditBatch = () => {
         <div className="card subtle-card">
           <h3>Training Days</h3>
 
-          <div className="actions" style={{ marginBottom: "16px", flexWrap: "wrap" }}>
+          <div
+            className="actions"
+            style={{ marginBottom: "16px", flexWrap: "wrap" }}
+          >
             <button type="button" onClick={() => setValue("days", DAYS)}>
               All Days
             </button>
@@ -275,10 +288,17 @@ const EditBatch = () => {
         </label>
 
         <div className="form-actions">
-          <button type="button" onClick={() => navigate(`/batches/${id}`)}>
+          <button
+            type="button"
+            onClick={() => navigate(`/batches/${id}`)}
+            disabled={saving}
+          >
             Cancel
           </button>
-          <button className="btn btn-primary">Update Batch</button>
+
+          <button className="btn btn-primary" disabled={saving}>
+            {saving ? "Updating..." : "Update Batch"}
+          </button>
         </div>
       </form>
     </div>

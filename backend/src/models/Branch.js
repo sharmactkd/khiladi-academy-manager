@@ -65,11 +65,7 @@ const branchSchema = new mongoose.Schema(
       default: "India",
     },
 
-    pincode: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+   
 
     manager: {
       type: mongoose.Schema.Types.ObjectId,

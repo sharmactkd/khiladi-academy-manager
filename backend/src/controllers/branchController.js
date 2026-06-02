@@ -194,7 +194,7 @@ export const createBranch = asyncHandler(async (req, res) => {
     city,
     state,
     country,
-    pincode,
+ 
     manager,
     coaches,
     isMainBranch,
@@ -232,7 +232,7 @@ export const createBranch = asyncHandler(async (req, res) => {
     city,
     state,
     country: country || "India",
-    pincode,
+   
     manager: manager || null,
     coaches: validatedCoaches,
     isMainBranch: Boolean(isMainBranch),
@@ -320,7 +320,7 @@ export const updateBranch = asyncHandler(async (req, res) => {
     "city",
     "state",
     "country",
-    "pincode",
+   
     "manager",
     "coaches",
     "isMainBranch",

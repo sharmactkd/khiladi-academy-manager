@@ -137,7 +137,7 @@ const EditBranch = () => {
         city: branch.city || "",
         state: branch.state || "",
         country: branch.country || "India",
-        pincode: branch.pincode || "",
+      
         isMainBranch: Boolean(branch.isMainBranch),
         isActive: Boolean(branch.isActive),
       });
@@ -480,13 +480,7 @@ const EditBranch = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label>Pincode</label>
-            <input
-              value={form.pincode}
-              onChange={(event) => updateField("pincode", event.target.value)}
-            />
-          </div>
+        
 
           <div className="form-group form-group-full">
             <label>Address</label>

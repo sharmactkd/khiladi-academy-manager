@@ -1,52 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Country, State, City } from "country-state-city";
-import ReactCountryFlag from "react-country-flag";
 
+import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import { academyApi } from "../../api/academyApi.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
-
-const DEFAULT_COUNTRY_CODE = "IN";
-
-const getFlagEmoji = (countryCode = "") => {
-  if (!countryCode) return "";
-
-  return countryCode
-    .toUpperCase()
-    .replace(/./g, (char) =>
-      String.fromCodePoint(127397 + char.charCodeAt())
-    );
-};
-
-const findCountryCodeByName = (countryName = "") => {
-  const countries = Country.getAllCountries();
-  const normalized = String(countryName || "").trim().toLowerCase();
-
-  if (!normalized) return DEFAULT_COUNTRY_CODE;
-
-  const matched = countries.find(
-    (country) =>
-      country.name.toLowerCase() === normalized ||
-      country.isoCode.toLowerCase() === normalized
-  );
-
-  return matched?.isoCode || DEFAULT_COUNTRY_CODE;
-};
-
-const findStateCodeByName = (countryCode, stateName = "") => {
-  const states = State.getStatesOfCountry(countryCode);
-  const normalized = String(stateName || "").trim().toLowerCase();
-
-  if (!normalized) return "";
-
-  const matched = states.find(
-    (state) =>
-      state.name.toLowerCase() === normalized ||
-      state.isoCode.toLowerCase() === normalized
-  );
-
-  return matched?.isoCode || "";
-};
 
 const AcademyProfile = () => {
   const [academy, setAcademy] = useState(null);
@@ -55,36 +12,12 @@ const AcademyProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [selectedCountryCode, setSelectedCountryCode] =
-    useState(DEFAULT_COUNTRY_CODE);
-  const [selectedStateCode, setSelectedStateCode] = useState("");
-
-  const countries = useMemo(() => Country.getAllCountries(), []);
-
-  const states = useMemo(
-    () => State.getStatesOfCountry(selectedCountryCode),
-    [selectedCountryCode]
-  );
-
-  const cities = useMemo(() => {
-    if (!selectedCountryCode || !selectedStateCode) return [];
-    return City.getCitiesOfState(selectedCountryCode, selectedStateCode);
-  }, [selectedCountryCode, selectedStateCode]);
-
   const loadAcademy = async () => {
     try {
       setLoading(true);
 
       const response = await academyApi.getMyAcademy();
       const academyData = response.data?.data?.academy || null;
-
-      if (academyData) {
-        const countryCode = findCountryCodeByName(academyData.country);
-        const stateCode = findStateCodeByName(countryCode, academyData.state);
-
-        setSelectedCountryCode(countryCode);
-        setSelectedStateCode(stateCode);
-      }
 
       setAcademy(academyData);
       setLogoPreview(academyData?.logo ? getAcademyLogoUrl(academyData) : "");
@@ -104,32 +37,6 @@ const AcademyProfile = () => {
       ...prev,
       [field]: value,
     }));
-  };
-
-  const handleCountryChange = (event) => {
-    const countryCode = event.target.value;
-    const country = countries.find((item) => item.isoCode === countryCode);
-
-    setSelectedCountryCode(countryCode);
-    setSelectedStateCode("");
-
-    updateField("country", country?.name || "");
-    updateField("state", "");
-    updateField("city", "");
-  };
-
-  const handleStateChange = (event) => {
-    const stateCode = event.target.value;
-    const state = states.find((item) => item.isoCode === stateCode);
-
-    setSelectedStateCode(stateCode);
-
-    updateField("state", state?.name || "");
-    updateField("city", "");
-  };
-
-  const handleCityChange = (event) => {
-    updateField("city", event.target.value);
   };
 
   const handleLogoChange = (event) => {
@@ -159,7 +66,7 @@ const AcademyProfile = () => {
     setLogoPreview(URL.createObjectURL(file));
   };
 
-   const handleSubmit = async (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     try {
@@ -181,7 +88,8 @@ const AcademyProfile = () => {
       formData.append("city", academy.city || "");
       formData.append("state", academy.state || "");
       formData.append("country", academy.country || "India");
-      formData.append("pincode", academy.pincode || "");
+      formData.append("about", academy.about || "");
+formData.append("since", academy.since || "");
 
       if (logoFile) {
         formData.append("logo", logoFile);
@@ -270,14 +178,6 @@ const AcademyProfile = () => {
           </label>
 
           <label>
-            Phone
-            <input
-              value={academy.phone || ""}
-              onChange={(event) => updateField("phone", event.target.value)}
-            />
-          </label>
-
-          <label>
             Email
             <input
               type="email"
@@ -286,68 +186,62 @@ const AcademyProfile = () => {
             />
           </label>
 
-          <label>
-            Country
-            <select
-              value={selectedCountryCode}
-              onChange={handleCountryChange}
-            >
-              {countries.map((country) => (
-              <option key={country.isoCode} value={country.isoCode}>
-  {getFlagEmoji(country.isoCode)} {country.name}
-</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            State
-            <select
-              value={selectedStateCode}
-              onChange={handleStateChange}
-              disabled={!selectedCountryCode}
-            >
-              <option value="">Select State</option>
-              {states.map((state) => (
-                <option key={state.isoCode} value={state.isoCode}>
-                  {state.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            District / City
-            <select
-              value={academy.city || ""}
-              onChange={handleCityChange}
-              disabled={!selectedStateCode}
-            >
-              <option value="">Select District / City</option>
-              {cities.map((city) => (
-                <option key={`${city.name}-${city.latitude}`} value={city.name}>
-                  {city.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Pincode
-            <input
-              value={academy.pincode || ""}
-              onChange={(event) => updateField("pincode", event.target.value)}
-            />
-          </label>
+          <PhoneLocationFields
+            countryCode={academy.countryCode || "+91"}
+            phone={academy.phone || ""}
+            country={academy.country || "India"}
+            state={academy.state || ""}
+            city={academy.city || ""}
+           
+            phoneLabel="Phone"
+            onChange={updateField}
+          />
         </div>
 
-        <label>
+          <label>
           Address
           <textarea
             value={academy.address || ""}
             onChange={(event) => updateField("address", event.target.value)}
           />
         </label>
+        
+<label>
+  Since
+  <select
+    value={academy.since || ""}
+    onChange={(event) => updateField("since", event.target.value)}
+  >
+    <option value="">Select Year</option>
+
+    {Array.from(
+      { length: new Date().getFullYear() - 1949 },
+      (_, index) => {
+        const year = new Date().getFullYear() - index;
+
+        return (
+          <option key={year} value={year}>
+            {year} ({new Date().getFullYear() - year} Years)
+          </option>
+        );
+      }
+    )}
+  </select>
+</label>
+
+
+
+<label className="form-group-full">
+  About Academy
+  <textarea
+    value={academy.about || ""}
+    onChange={(event) => updateField("about", event.target.value)}
+    placeholder="Write something about your academy..."
+    rows={5}
+  />
+</label>
+
+      
 
         <div className="form-actions">
           <button className="btn btn-primary" disabled={saving}>

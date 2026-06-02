@@ -107,10 +107,7 @@ const BranchDetail = () => {
             <p>{branch.country || "-"}</p>
           </div>
 
-          <div>
-            <strong>Pincode</strong>
-            <p>{branch.pincode || "-"}</p>
-          </div>
+         
 
           <div>
             <strong>Main Branch</strong>

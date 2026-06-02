@@ -14,7 +14,7 @@ const SAFE_ACADEMY_UPDATE_FIELDS = [
   "city",
   "state",
   "country",
-  "pincode",
+ 
   "branchesEnabled",
   "settings",
 ];
@@ -88,7 +88,7 @@ export const createAcademy = asyncHandler(async (req, res) => {
     city: req.body.city,
     state: req.body.state,
     country: req.body.country || "India",
-    pincode: req.body.pincode,
+  
     branchesEnabled: req.body.branchesEnabled,
     settings: req.body.settings,
   });

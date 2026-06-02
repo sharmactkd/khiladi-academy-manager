@@ -47,7 +47,7 @@ export const createBranchValidator = [
   body("city").optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
   body("state").optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
   body("country").optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
-  body("pincode").optional({ checkFalsy: true }).trim().isLength({ max: 20 }),
+ 
 
   body("manager")
     .optional({ nullable: true, checkFalsy: true })
@@ -99,8 +99,7 @@ export const updateBranchValidator = [
   body("city").optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
   body("state").optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
   body("country").optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
-  body("pincode").optional({ checkFalsy: true }).trim().isLength({ max: 20 }),
-
+ 
   body("manager")
     .optional({ nullable: true, checkFalsy: true })
     .custom((value) => {

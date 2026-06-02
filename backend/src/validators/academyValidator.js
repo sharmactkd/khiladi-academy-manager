@@ -73,7 +73,7 @@ export const createAcademyValidator = [
   stringField("city", 80, "District"),
   stringField("state", 80, "State"),
   stringField("country", 80, "Country"),
-  stringField("pincode", 12, "Pincode"),
+  
 
   body("branchesEnabled")
     .optional()
@@ -143,7 +143,7 @@ export const updateAcademyValidator = [
   stringField("city", 80, "District"),
   stringField("state", 80, "State"),
   stringField("country", 80, "Country"),
-  stringField("pincode", 12, "Pincode"),
+  
 
   body("branchesEnabled")
     .optional()

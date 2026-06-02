@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+
+import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
@@ -19,7 +21,11 @@ const formatPhone = (value) => {
 
 const toDateInput = (value) => {
   if (!value) return "";
-  return new Date(value).toISOString().slice(0, 10);
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toISOString().slice(0, 10);
 };
 
 const appendFormDataValue = (formData, key, value) => {
@@ -39,7 +45,26 @@ const EditStudent = () => {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState("");
 
-  const { register, handleSubmit, reset, setValue } = useForm({
+  const [studentContact, setStudentContact] = useState({
+    countryCode: "+91",
+    phone: "",
+    country: "India",
+    state: "",
+    city: "",
+ 
+  });
+
+  const [parentContact, setParentContact] = useState({
+    countryCode: "+91",
+    phone: "",
+  });
+
+  const [emergencyContact, setEmergencyContact] = useState({
+    countryCode: "+91",
+    phone: "",
+  });
+
+  const { register, handleSubmit, reset } = useForm({
     defaultValues: {
       admissionNumber: "",
       name: "",
@@ -47,20 +72,15 @@ const EditStudent = () => {
       status: "active",
       gender: "other",
       dob: "",
-      phone: "",
       email: "",
       schoolName: "",
       parentName: "",
-      parentPhone: "",
       martialArt: "",
       beltRank: "",
       joiningDate: "",
-      city: "",
-      state: "",
       address: "",
       medicalNotes: "",
       emergencyContactName: "",
-      emergencyContactPhone: "",
     },
   });
 
@@ -90,22 +110,34 @@ const EditStudent = () => {
           status: studentData?.status || "active",
           gender: studentData?.gender || "other",
           dob: toDateInput(studentData?.dateOfBirth),
-          phone: formatPhone(studentData?.phone || ""),
           email: studentData?.email || "",
-        schoolName: studentData?.schoolName || "",
+          schoolName: studentData?.schoolName || "",
           parentName: studentData?.parentName || "",
-          parentPhone: formatPhone(studentData?.parentPhone || ""),
           martialArt: studentData?.martialArt || "",
           beltRank: studentData?.beltRank || "",
           joiningDate: toDateInput(studentData?.joiningDate),
-          city: studentData?.city || "",
-          state: studentData?.state || "",
           address: studentData?.address || "",
           medicalNotes: studentData?.notes || "",
           emergencyContactName: studentData?.emergencyContact?.name || "",
-          emergencyContactPhone: formatPhone(
-            studentData?.emergencyContact?.phone || ""
-          ),
+        });
+
+        setStudentContact({
+          countryCode: studentData?.countryCode || "+91",
+          phone: formatPhone(studentData?.phone || ""),
+          country: studentData?.country || "India",
+          state: studentData?.state || "",
+          city: studentData?.city || "",
+         
+        });
+
+        setParentContact({
+          countryCode: studentData?.parentCountryCode || "+91",
+          phone: formatPhone(studentData?.parentPhone || ""),
+        });
+
+        setEmergencyContact({
+          countryCode: studentData?.emergencyContact?.countryCode || "+91",
+          phone: formatPhone(studentData?.emergencyContact?.phone || ""),
         });
 
         setProfilePhotoPreview(
@@ -121,13 +153,25 @@ const EditStudent = () => {
     fetchData();
   }, [id, reset]);
 
-  const handlePhoneChange = (fieldName, event) => {
-    const formattedPhone = formatPhone(event.target.value);
+  const updateStudentContact = (field, value) => {
+    setStudentContact((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
-    setValue(fieldName, formattedPhone, {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
+  const updateParentContact = (field, value) => {
+    setParentContact((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const updateEmergencyContact = (field, value) => {
+    setEmergencyContact((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const handleProfilePhotoChange = (event) => {
@@ -173,18 +217,25 @@ const EditStudent = () => {
         status: values.status || "active",
         gender: values.gender || "other",
         dateOfBirth: values.dob,
-        phone: values.phone || "",
+        countryCode: studentContact.countryCode || "+91",
+        phone: studentContact.phone || "",
+        country: studentContact.country || "India",
+        state: studentContact.state || "",
+        city: studentContact.city || "",
+       
         email: values.email || "",
         schoolName: values.schoolName || "",
+        parentName: values.parentName || "",
+        parentCountryCode: parentContact.countryCode || "+91",
+        parentPhone: parentContact.phone || "",
         martialArt: values.martialArt || "Taekwondo",
         beltRank: values.beltRank || "",
         joiningDate: values.joiningDate || "",
-        city: values.city || "",
-        state: values.state || "",
         address: values.address || "",
         notes: values.medicalNotes || "",
         emergencyContactName: values.emergencyContactName || "",
-        emergencyContactPhone: values.emergencyContactPhone || "",
+        emergencyContactCountryCode: emergencyContact.countryCode || "+91",
+        emergencyContactPhone: emergencyContact.phone || "",
       };
 
       const formData = new FormData();
@@ -276,40 +327,18 @@ const EditStudent = () => {
           </label>
 
           <label>
-            Phone
-            <input
-              {...register("phone")}
-              inputMode="numeric"
-              placeholder="0000-00-0000"
-              maxLength={12}
-              onChange={(event) => handlePhoneChange("phone", event)}
-            />
-          </label>
-
-          <label>
             Email
             <input type="email" {...register("email")} />
           </label>
 
-<label>
-  School Name
-  <input {...register("schoolName")} placeholder="Enter school name" />
-</label>
+          <label>
+            School Name
+            <input {...register("schoolName")} placeholder="Enter school name" />
+          </label>
 
           <label>
             Parent Name
             <input {...register("parentName")} />
-          </label>
-
-          <label>
-            Parent Phone
-            <input
-              {...register("parentPhone")}
-              inputMode="numeric"
-              placeholder="0000-00-0000"
-              maxLength={12}
-              onChange={(event) => handlePhoneChange("parentPhone", event)}
-            />
           </label>
 
           <label>
@@ -326,16 +355,35 @@ const EditStudent = () => {
             Joining Date
             <input type="date" {...register("joiningDate")} />
           </label>
+        </div>
 
-          <label>
-            City
-            <input {...register("city")} />
-          </label>
+        <div className="card subtle-card">
+          <h3>Student Contact & Location</h3>
 
-          <label>
-            State
-            <input {...register("state")} />
-          </label>
+          <PhoneLocationFields
+            countryCode={studentContact.countryCode}
+            phone={studentContact.phone}
+            country={studentContact.country}
+            state={studentContact.state}
+            city={studentContact.city}
+          
+            phoneLabel="Student Phone"
+            onChange={updateStudentContact}
+          />
+        </div>
+
+        <div className="card subtle-card">
+          <h3>Parent Contact</h3>
+
+          <div className="grid grid-2">
+            <PhoneLocationFields
+              countryCode={parentContact.countryCode}
+              phone={parentContact.phone}
+              phoneLabel="Parent Phone"
+              showLocation={false}
+              onChange={updateParentContact}
+            />
+          </div>
         </div>
 
         {profilePhotoPreview && (
@@ -368,33 +416,36 @@ const EditStudent = () => {
           <textarea {...register("medicalNotes")} />
         </label>
 
-        <div className="grid grid-2">
-          <label>
-            Emergency Contact Name
-            <input {...register("emergencyContactName")} />
-          </label>
+        <div className="card subtle-card">
+          <h3>Emergency Contact</h3>
 
-          <label>
-            Emergency Contact Phone
-            <input
-              {...register("emergencyContactPhone")}
-              inputMode="numeric"
-              placeholder="0000-00-0000"
-              maxLength={12}
-              onChange={(event) =>
-                handlePhoneChange("emergencyContactPhone", event)
-              }
+          <div className="grid grid-2">
+            <label>
+              Emergency Contact Name
+              <input {...register("emergencyContactName")} />
+            </label>
+
+            <PhoneLocationFields
+              countryCode={emergencyContact.countryCode}
+              phone={emergencyContact.phone}
+              phoneLabel="Emergency Contact Phone"
+              showLocation={false}
+              onChange={updateEmergencyContact}
             />
-          </label>
+          </div>
         </div>
 
         <div className="form-actions">
-          <button type="button" onClick={() => navigate(`/students/${id}`)}>
+          <button
+            type="button"
+            onClick={() => navigate(`/students/${id}`)}
+            disabled={saving}
+          >
             Cancel
           </button>
 
           <button className="btn btn-primary" disabled={saving}>
-            {saving ? "Saving..." : "Update Student"}
+            {saving ? "Updating..." : "Update Student"}
           </button>
         </div>
       </form>

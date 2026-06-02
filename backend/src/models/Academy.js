@@ -108,12 +108,7 @@ const academySchema = new mongoose.Schema(
       maxlength: [80, "Country cannot exceed 80 characters"],
     },
 
-    pincode: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: [12, "Pincode cannot exceed 12 characters"],
-    },
+ 
 
     branchesEnabled: {
       type: Boolean,

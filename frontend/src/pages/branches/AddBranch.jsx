@@ -46,7 +46,7 @@ const AddBranch = () => {
     city: "",
     state: "",
     country: "India",
-    pincode: "",
+  
     isMainBranch: false,
     isActive: true,
   });
@@ -438,13 +438,7 @@ const AddBranch = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label>Pincode</label>
-            <input
-              value={form.pincode}
-              onChange={(event) => updateField("pincode", event.target.value)}
-            />
-          </div>
+         
 
           <div className="form-group form-group-full">
             <label>Address</label>
