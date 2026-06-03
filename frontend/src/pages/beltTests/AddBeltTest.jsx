@@ -4,11 +4,20 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { beltTestApi } from "../../api/beltTestApi.js";
 import { studentApi } from "../../api/studentApi.js";
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import {
+  TAEKWONDO_BELTS,
+  TAEKWONDO_DAN_RANKS,
+  isTaekwondoSport,
+} from "../../components/taekwondoBelts/taekwondoBelts.js";
 
 const initialForm = {
   student: "",
-  currentBelt: "",
+   currentBelt: "",
+  currentDanRank: "",
   promotedToBelt: "",
+  promotedToDanRank: "",
+  marks: "",
+outOf: "",
   testDate: "",
   result: "pending",
   examinerName: "",
@@ -40,6 +49,11 @@ const getStudentName = (student) => {
 const getStudentCode = (student) =>
   student?.studentCode || student?.admissionNumber || "-";
 
+const isTaekwondoStudent = (student) => {
+  const martialArt = student?.martialArt || student?.batch?.martialArt || "";
+  return isTaekwondoSport(martialArt);
+};
+
 const AddBeltTest = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -64,6 +78,13 @@ const AddBeltTest = () => {
     );
   }, [students, form.student]);
 
+  const showTaekwondoBeltList = useMemo(() => {
+  return isTaekwondoStudent(selectedStudent);
+}, [selectedStudent]);
+
+const showCurrentDanRank = form.currentBelt === "Black";
+const showPromotedDanRank = form.promotedToBelt === "Black";
+
   useEffect(() => {
     const loadStudents = async () => {
       try {
@@ -77,11 +98,15 @@ const AddBeltTest = () => {
             (student) => String(student._id) === String(studentIdFromUrl)
           );
 
-          setForm((prev) => ({
-            ...prev,
-            student: studentIdFromUrl,
-            currentBelt: matchedStudent?.beltRank || prev.currentBelt || "",
-          }));
+      setForm((prev) => ({
+  ...prev,
+  student: studentIdFromUrl,
+  currentBelt: matchedStudent?.beltRank || prev.currentBelt || "",
+  currentDanRank:
+    matchedStudent?.beltRank === "Black" ? matchedStudent?.danRank || "" : "",
+  promotedToBelt: "",
+  promotedToDanRank: "",
+}));
         }
       } catch {
         setStudents([]);
@@ -91,51 +116,85 @@ const AddBeltTest = () => {
     loadStudents();
   }, [studentIdFromUrl]);
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
+const handleChange = (event) => {
+  const { name, value } = event.target;
 
-    if (name === "student") {
-      const nextStudent = students.find(
-        (student) => String(student._id) === String(value)
-      );
-
-      setForm((prev) => ({
-        ...prev,
-        student: value,
-        currentBelt: nextStudent?.beltRank || "",
-      }));
-
-      return;
-    }
+  if (name === "student") {
+    const nextStudent = students.find(
+      (student) => String(student._id) === String(value)
+    );
 
     setForm((prev) => ({
       ...prev,
-      [name]: value,
+      student: value,
+      currentBelt: nextStudent?.beltRank || "",
+      currentDanRank:
+        nextStudent?.beltRank === "Black" ? nextStudent?.danRank || "" : "",
+      promotedToBelt: "",
+      promotedToDanRank: "",
     }));
-  };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+    return;
+  }
 
-    try {
-      setSaving(true);
-      setError("");
+  if (name === "currentBelt") {
+    setForm((prev) => ({
+      ...prev,
+      currentBelt: value,
+      currentDanRank: value === "Black" ? prev.currentDanRank : "",
+    }));
 
-      await beltTestApi.create({
-        ...form,
-        testDate: form.testDate
-          ? new Date(form.testDate).toISOString()
-          : new Date().toISOString(),
-      });
+    return;
+  }
 
-      alert("Belt test created successfully");
-      navigate("/belt-tests");
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to create belt test");
-    } finally {
+  if (name === "promotedToBelt") {
+    setForm((prev) => ({
+      ...prev,
+      promotedToBelt: value,
+      promotedToDanRank: value === "Black" ? prev.promotedToDanRank : "",
+    }));
+
+    return;
+  }
+
+  setForm((prev) => ({
+    ...prev,
+    [name]: value,
+  }));
+};
+
+const handleSubmit = async (event) => {
+  event.preventDefault();
+
+  try {
+    setSaving(true);
+    setError("");
+
+    if (
+      form.marks !== "" &&
+      form.outOf !== "" &&
+      Number(form.marks) > Number(form.outOf)
+    ) {
+      setError("Marks out of se zyada nahi ho sakte");
       setSaving(false);
+      return;
     }
-  };
+
+    await beltTestApi.create({
+      ...form,
+      testDate: form.testDate
+        ? new Date(form.testDate).toISOString()
+        : new Date().toISOString(),
+    });
+
+    alert("Belt test created successfully");
+    navigate("/belt-tests");
+  } catch (err) {
+    setError(err.response?.data?.message || "Failed to create belt test");
+  } finally {
+    setSaving(false);
+  }
+}; 
 
   return (
     <div className="page">
@@ -167,16 +226,51 @@ const AddBeltTest = () => {
           </select>
         </label>
 
-        <label>
-          Current Belt
-          <input
-            name="currentBelt"
-            value={form.currentBelt}
-            onChange={handleChange}
-            placeholder={selectedStudent?.beltRank || ""}
-            required
-          />
-        </label>
+      <label>
+  Current Belt
+  {showTaekwondoBeltList ? (
+    <select
+      name="currentBelt"
+      value={form.currentBelt}
+      onChange={handleChange}
+      required
+    >
+      <option value="">Select Current Belt</option>
+      {TAEKWONDO_BELTS.map((belt) => (
+        <option key={belt} value={belt}>
+          {belt}
+        </option>
+      ))}
+    </select>
+  ) : (
+    <input
+      name="currentBelt"
+      value={form.currentBelt}
+      onChange={handleChange}
+      placeholder={selectedStudent?.beltRank || ""}
+      required
+    />
+  )}
+</label>
+
+{showCurrentDanRank && (
+  <label>
+    Current Dan
+    <select
+      name="currentDanRank"
+      value={form.currentDanRank}
+      onChange={handleChange}
+      required
+    >
+      <option value="">Select Dan</option>
+      {TAEKWONDO_DAN_RANKS.map((dan) => (
+        <option key={dan} value={dan}>
+          {dan}
+        </option>
+      ))}
+    </select>
+  </label>
+)}
 
         {selectedStudent && (
           <div className="full-width card subtle-card">
@@ -215,15 +309,76 @@ const AddBeltTest = () => {
           </div>
         )}
 
-        <label>
-          Promoted To Belt
-          <input
-            name="promotedToBelt"
-            value={form.promotedToBelt}
-            onChange={handleChange}
-            required
-          />
-        </label>
+       <label>
+  Promoted To Belt
+  {showTaekwondoBeltList ? (
+    <select
+      name="promotedToBelt"
+      value={form.promotedToBelt}
+      onChange={handleChange}
+      required
+    >
+      <option value="">Select Belt</option>
+      {TAEKWONDO_BELTS.map((belt) => (
+        <option key={belt} value={belt}>
+          {belt}
+        </option>
+      ))}
+    </select>
+  ) : (
+    <input
+      name="promotedToBelt"
+      value={form.promotedToBelt}
+      onChange={handleChange}
+      required
+    />
+  )}
+</label>
+
+{showPromotedDanRank && (
+  <label>
+    Promoted To Dan
+    <select
+      name="promotedToDanRank"
+      value={form.promotedToDanRank}
+      onChange={handleChange}
+      required
+    >
+      <option value="">Select Dan</option>
+      {TAEKWONDO_DAN_RANKS.map((dan) => (
+        <option key={dan} value={dan}>
+          {dan}
+        </option>
+      ))}
+    </select>
+  </label>
+)}
+
+<label>
+  Marks
+  <input
+    type="number"
+    min="0"
+    step="0.01"
+    name="marks"
+    value={form.marks}
+    onChange={handleChange}
+    placeholder="Obtained marks"
+  />
+</label>
+
+<label>
+  Out Of
+  <input
+    type="number"
+    min="0"
+    step="0.01"
+    name="outOf"
+    value={form.outOf}
+    onChange={handleChange}
+    placeholder="Total marks"
+  />
+</label>
 
         <label>
           Test Date

@@ -7,7 +7,11 @@ import { createBeltTestTimeline } from "../services/timelineService.js";
 const allowedFields = [
   "student",
   "currentBelt",
+  "currentDanRank",
   "promotedToBelt",
+  "promotedToDanRank",
+   "marks",
+  "outOf",
   "testDate",
   "result",
   "examinerName",
@@ -24,6 +28,18 @@ const buildPayload = (body) => {
       payload[field] = body[field];
     }
   });
+
+  if (payload.marks === "" || payload.marks === undefined) {
+    payload.marks = null;
+  } else if (payload.marks !== null) {
+    payload.marks = Number(payload.marks);
+  }
+
+  if (payload.outOf === "" || payload.outOf === undefined) {
+    payload.outOf = null;
+  } else if (payload.outOf !== null) {
+    payload.outOf = Number(payload.outOf);
+  }
 
   return payload;
 };
@@ -44,10 +60,14 @@ const applyPassResultToStudent = async ({ beltTest, userId }) => {
       academy: beltTest.academy,
     },
     {
-      $set: {
-        beltRank: beltTest.promotedToBelt,
-        updatedBy: userId,
-      },
+     $set: {
+  beltRank: beltTest.promotedToBelt,
+  danRank:
+    beltTest.promotedToBelt === "Black"
+      ? beltTest.promotedToDanRank || ""
+      : "",
+  updatedBy: userId,
+},
     },
     { new: true }
   );

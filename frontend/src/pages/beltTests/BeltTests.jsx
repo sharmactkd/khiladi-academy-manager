@@ -34,6 +34,26 @@ const getLatestTest = (studentId, beltTests) => {
     .sort((a, b) => new Date(b.testDate || 0) - new Date(a.testDate || 0))[0];
 };
 
+const displayMarks = (beltTest) => {
+  if (
+    beltTest?.marks === null ||
+    beltTest?.marks === undefined ||
+    beltTest?.marks === ""
+  ) {
+    return "-";
+  }
+
+  if (
+    beltTest?.outOf === null ||
+    beltTest?.outOf === undefined ||
+    beltTest?.outOf === ""
+  ) {
+    return beltTest.marks;
+  }
+
+  return `${beltTest.marks}/${beltTest.outOf}`;
+};
+
 const BeltTests = () => {
   const navigate = useNavigate();
 
@@ -67,9 +87,7 @@ const BeltTests = () => {
       setBatches(activeBatches);
       setBeltTests(beltTestsList);
 
-      if (activeBatches.length) {
-        setSelectedBatchId((prev) => prev || activeBatches[0]._id);
-      }
+     setSelectedBatchId((prev) => prev);
     } catch (error) {
       toast.error(error.response?.data?.message || "Belt test data load nahi hua");
     } finally {
@@ -81,9 +99,10 @@ const BeltTests = () => {
     loadData();
   }, []);
 
-  const selectedBatch = useMemo(() => {
-    return batches.find((batch) => batch._id === selectedBatchId) || null;
-  }, [batches, selectedBatchId]);
+ const selectedBatch = useMemo(() => {
+  if (!selectedBatchId) return null;
+  return batches.find((batch) => batch._id === selectedBatchId) || null;
+}, [batches, selectedBatchId]);
 
   const selectedBatchStudents = useMemo(() => {
     const search = filters.search.trim().toLowerCase();
@@ -137,6 +156,7 @@ const BeltTests = () => {
         <td>{student.phone || "-"}</td>
         <td>{student.beltRank || "-"}</td>
         <td>{latestTest?.promotedToBelt || "-"}</td>
+        <td>{displayMarks(latestTest)}</td>
 
         <td>
           {latestTest?.testDate
@@ -185,6 +205,7 @@ const BeltTests = () => {
               <th>Phone</th>
               <th>Current Belt</th>
               <th>Promoted To</th>
+              <th>Marks</th>
               <th>Last Test Date</th>
               <th>Result</th>
               <th>Status</th>
@@ -218,6 +239,13 @@ const BeltTests = () => {
           <p>No active batches found.</p>
         ) : (
           <div className="actions" style={{ flexWrap: "wrap" }}>
+            <button
+  type="button"
+  className={!selectedBatchId ? "btn btn-primary" : "btn"}
+  onClick={() => setSelectedBatchId("")}
+>
+  All Batches
+</button>
             {batches.map((batch) => (
               <button
                 key={batch._id}
@@ -272,15 +300,16 @@ const BeltTests = () => {
 
       {loading ? (
         <div className="card">Loading belt test records...</div>
-      ) : !selectedBatch ? (
-        <div className="card">No batch selected.</div>
+     
       ) : (
         <div className="card table-card">
           <div className="page-header">
             <div>
-              <h2>
-                {selectedBatch.batchName} - {selectedBatch.martialArt}
-              </h2>
+             <h2>
+  {selectedBatchId
+    ? `${selectedBatch?.batchName || "-"} - ${selectedBatch?.martialArt || "-"}`
+    : "All Batches"}
+</h2>
               <p>
                 Active: {activeStudents.length} | Non-active:{" "}
                 {nonActiveStudents.length}

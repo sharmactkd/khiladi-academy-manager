@@ -18,12 +18,21 @@ const normalizeList = (response, nestedKey) => {
 };
 
 const getStudentName = (student) => {
-  const fullName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
-  return student.name || fullName || "Unknown";
+  const fullName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
+  return student?.name || fullName || "Unknown";
 };
 
 const getStudentCode = (student) =>
-  student.studentCode || student.admissionNumber || "-";
+  student?.studentCode || student?.admissionNumber || "-";
+
+const formatDate = (value) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleDateString("en-IN");
+};
 
 const getLatestRecord = (studentId, records) => {
   return records
@@ -31,7 +40,11 @@ const getLatestRecord = (studentId, records) => {
       const recordStudentId = record.student?._id || record.student;
       return String(recordStudentId) === String(studentId);
     })
-    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
+    .sort(
+      (a, b) =>
+        new Date(b.startDate || b.date || 0) -
+        new Date(a.startDate || a.date || 0)
+    )[0];
 };
 
 const ChampionshipRecords = () => {
@@ -66,10 +79,7 @@ const ChampionshipRecords = () => {
       setStudents(studentsList);
       setBatches(activeBatches);
       setRecords(recordsList);
-
-      if (activeBatches.length) {
-        setSelectedBatchId((prev) => prev || activeBatches[0]._id);
-      }
+      setSelectedBatchId((prev) => prev);
     } catch (error) {
       toast.error(
         error.response?.data?.message || "Championship data load nahi hua"
@@ -84,6 +94,7 @@ const ChampionshipRecords = () => {
   }, []);
 
   const selectedBatch = useMemo(() => {
+    if (!selectedBatchId) return null;
     return batches.find((batch) => batch._id === selectedBatchId) || null;
   }, [batches, selectedBatchId]);
 
@@ -139,16 +150,15 @@ const ChampionshipRecords = () => {
         </td>
 
         <td>{student.phone || "-"}</td>
-
         <td>{latestRecord?.championshipName || "-"}</td>
-
+        <td>{latestRecord?.championshipType || "-"}</td>
         <td>{latestRecord?.level || "-"}</td>
-
         <td>{latestRecord?.eventType || "-"}</td>
+        <td>{latestRecord?.totalBouts ?? "-"}</td>
 
         <td>
           {latestRecord?.result ? (
-            <span className={`badge badge-${latestRecord.result}`}>
+            <span className={`badge badge-${String(latestRecord.result).toLowerCase()}`}>
               {latestRecord.result}
             </span>
           ) : (
@@ -156,11 +166,7 @@ const ChampionshipRecords = () => {
           )}
         </td>
 
-        <td>
-          {latestRecord?.date
-            ? new Date(latestRecord.date).toLocaleDateString()
-            : "-"}
-        </td>
+        <td>{formatDate(latestRecord?.startDate || latestRecord?.date)}</td>
 
         <td>
           <span className={`badge badge-${student.status}`}>
@@ -196,8 +202,10 @@ const ChampionshipRecords = () => {
               <th>Student</th>
               <th>Phone</th>
               <th>Latest Championship</th>
+              <th>Type</th>
               <th>Level</th>
               <th>Event</th>
+              <th>Bouts</th>
               <th>Result</th>
               <th>Date</th>
               <th>Status</th>
@@ -231,6 +239,14 @@ const ChampionshipRecords = () => {
           <p>No active batches found.</p>
         ) : (
           <div className="actions" style={{ flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className={!selectedBatchId ? "btn btn-primary" : "btn"}
+              onClick={() => setSelectedBatchId("")}
+            >
+              All Batches
+            </button>
+
             {batches.map((batch) => (
               <button
                 key={batch._id}
@@ -285,14 +301,16 @@ const ChampionshipRecords = () => {
 
       {loading ? (
         <div className="card">Loading championship records...</div>
-      ) : !selectedBatch ? (
-        <div className="card">No batch selected.</div>
       ) : (
         <div className="card table-card">
           <div className="page-header">
             <div>
               <h2>
-                {selectedBatch.batchName} - {selectedBatch.martialArt}
+                {selectedBatchId
+                  ? `${selectedBatch?.batchName || "-"} - ${
+                      selectedBatch?.martialArt || "-"
+                    }`
+                  : "All Batches"}
               </h2>
               <p>
                 Active: {activeStudents.length} | Non-active:{" "}

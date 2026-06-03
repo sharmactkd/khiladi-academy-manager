@@ -6,31 +6,12 @@ import toast from "react-hot-toast";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
+import {
+  TAEKWONDO_BELTS,
+  TAEKWONDO_DAN_RANKS,
+  isTaekwondoSport,
+} from "../../components/taekwondoBelts/taekwondoBelts.js";
 
-const TAEKWONDO_BELTS = [
-  "White",
-  "Yellow",
-  "Green",
-  "Green One",
-  "Blue",
-  "Blue One",
-  "Red",
-  "Red One",
-  "Black",
-];
-
-const DAN_RANKS = [
-  "1st Dan",
-  "2nd Dan",
-  "3rd Dan",
-  "4th Dan",
-  "5th Dan",
-  "6th Dan",
-  "7th Dan",
-  "8th Dan",
-  "9th Dan",
-  "10th Dan",
-];
 
 const BLOOD_GROUPS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -87,8 +68,7 @@ const getAgeCategory = (age) => {
   return "Senior";
 };
 
-const isTaekwondo = (value) =>
-  String(value || "").trim().toLowerCase() === "taekwondo";
+const isTaekwondo = isTaekwondoSport;
 
 const AddStudent = () => {
   const navigate = useNavigate();
@@ -539,7 +519,7 @@ const AddStudent = () => {
                 Dan Rank
                 <select {...register("danRank")}>
                   <option value="">Select Dan</option>
-                  {DAN_RANKS.map((dan) => (
+                {TAEKWONDO_DAN_RANKS.map((dan) => (
                     <option key={dan} value={dan}>
                       {dan}
                     </option>

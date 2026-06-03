@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-
+import { TAEKWONDO_BELTS } from "../../components/taekwondoBelts/taekwondoBelts.js";
 import { batchApi } from "../../api/batchApi.js";
 
 const DAYS = [
@@ -49,19 +49,7 @@ const SESSION_SLOTS = [
   { value: "night", label: "Night" },
 ];
 
-const BELTS = [
-  "",
-  "White",
-  "Yellow",
-  "Green",
-  "Blue",
-  "Red",
-  "Black",
-  "1st Dan",
-  "2nd Dan",
-  "3rd Dan",
-  "4th Dan",
-];
+const BELTS = ["", ...TAEKWONDO_BELTS];
 
 const AddBatch = () => {
   const navigate = useNavigate();

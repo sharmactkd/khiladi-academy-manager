@@ -19,11 +19,36 @@ const beltTestSchema = new mongoose.Schema(
       required: [true, "Current belt is required"],
       trim: true,
     },
+
+    currentDanRank: {
+  type: String,
+  trim: true,
+  default: "",
+},
+
     promotedToBelt: {
       type: String,
       required: [true, "Promoted belt is required"],
       trim: true,
     },
+    promotedToDanRank: {
+  type: String,
+  trim: true,
+  default: "",
+},
+
+marks: {
+  type: Number,
+  default: null,
+  min: [0, "Marks cannot be negative"],
+},
+
+outOf: {
+  type: Number,
+  default: null,
+  min: [0, "Out of marks cannot be negative"],
+},
+
     testDate: {
       type: Date,
       required: [true, "Test date is required"],

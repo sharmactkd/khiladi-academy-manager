@@ -1,146 +1,206 @@
-import { body, param, query } from "express-validator";
+import { body, param, query, validationResult } from "express-validator";
 
-export const championshipRecordIdValidator = [
-  param("id").isMongoId().withMessage("Invalid championship record ID"),
+import {
+  AGE_CATEGORIES,
+  CHAMPIONSHIP_LEVELS,
+  CHAMPIONSHIP_TYPES,
+  EVENT_TYPES,
+  INTERNATIONAL_GRADINGS,
+  OFFICIAL_CATEGORIES,
+  POOMSAE_TYPES,
+  RESULT_TYPES,
+} from "../models/ChampionshipRecord.js";
+
+export const validateRequest = (req, res, next) => {
+  const errors = validationResult(req);
+
+  if (errors.isEmpty()) return next();
+
+  return res.status(400).json({
+    success: false,
+    message: errors.array()[0]?.msg || "Validation failed",
+    errors: errors.array(),
+  });
+};
+
+export const validateChampionshipRecordId = [
+  param("id")
+    .isMongoId()
+    .withMessage("Valid championship record id is required"),
+  validateRequest,
 ];
 
-export const championshipStudentIdValidator = [
-  param("studentId").isMongoId().withMessage("Invalid student ID"),
+export const validateStudentChampionshipRecordParam = [
+  param("studentId").isMongoId().withMessage("Valid student id is required"),
+  validateRequest,
 ];
 
-export const createChampionshipRecordValidator = [
+const commonChampionshipRecordRules = [
   body("student").isMongoId().withMessage("Valid student is required"),
 
   body("championshipName")
     .trim()
     .notEmpty()
     .withMessage("Championship name is required")
-    .isLength({ min: 2, max: 150 })
-    .withMessage("Championship name must be between 2 and 150 characters"),
+    .isLength({ min: 2, max: 200 })
+    .withMessage("Championship name must be between 2 and 200 characters"),
+
+  body("championshipType")
+    .optional()
+    .isIn(CHAMPIONSHIP_TYPES)
+    .withMessage("Invalid championship type"),
+
+  body("officialCategory")
+    .optional({ checkFalsy: true })
+    .isIn(OFFICIAL_CATEGORIES)
+    .withMessage("Invalid official category"),
 
   body("level")
-    .optional()
-    .isIn(["district", "state", "national", "international", "open"])
+    .notEmpty()
+    .withMessage("Championship level is required")
+    .isIn(CHAMPIONSHIP_LEVELS)
     .withMessage("Invalid championship level"),
 
+  body("grading")
+    .optional({ checkFalsy: true })
+    .isIn(INTERNATIONAL_GRADINGS)
+    .withMessage("Invalid international grading"),
+
   body("eventType")
-    .optional()
-    .isIn(["kyorugi", "poomsae", "demo", "other"])
+    .notEmpty()
+    .withMessage("Event type is required")
+    .isIn(EVENT_TYPES)
     .withMessage("Invalid event type"),
 
-  body("ageCategory")
+  body("poomsaeType")
     .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 80 })
-    .withMessage("Age category cannot exceed 80 characters"),
+    .isIn(POOMSAE_TYPES)
+    .withMessage("Invalid poomsae type"),
 
-  body("weightCategory")
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 80 })
-    .withMessage("Weight category cannot exceed 80 characters"),
+  body("ageCategory")
+    .notEmpty()
+    .withMessage("Age category is required")
+    .isIn(AGE_CATEGORIES)
+    .withMessage("Invalid age category"),
 
   body("result")
     .optional()
-    .isIn(["gold", "silver", "bronze", "participated", "disqualified"])
+    .isIn(RESULT_TYPES)
     .withMessage("Invalid result"),
 
-  body("date")
-    .notEmpty()
-    .withMessage("Championship date is required")
-    .isISO8601()
-    .withMessage("Championship date must be valid"),
+  body("startDate").notEmpty().withMessage("Start date is required"),
+  body("endDate").notEmpty().withMessage("End date is required"),
 
-  body("venue")
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 150 })
-    .withMessage("Venue cannot exceed 150 characters"),
+  body("totalBouts")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Total bouts cannot be negative"),
 
-  body("organizer")
+  body("boutsWon")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Bouts won cannot be negative"),
+
+  body("boutsLost")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Bouts lost cannot be negative"),
+
+  body("ranking")
     .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 150 })
-    .withMessage("Organizer cannot exceed 150 characters"),
+    .isFloat({ min: 1 })
+    .withMessage("Ranking must be positive"),
 
   body("remarks")
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage("Remarks cannot exceed 1000 characters"),
-
-  body("certificateUrl")
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("Certificate URL cannot exceed 500 characters"),
-];
-
-export const updateChampionshipRecordValidator = [
-  param("id").isMongoId().withMessage("Invalid championship record ID"),
-
-  body("student").optional().isMongoId().withMessage("Invalid student ID"),
-
-  body("championshipName")
     .optional()
     .trim()
-    .notEmpty()
-    .withMessage("Championship name cannot be empty")
-    .isLength({ min: 2, max: 150 }),
+    .isLength({ max: 2000 })
+    .withMessage("Remarks cannot exceed 2000 characters"),
 
-  body("level")
-    .optional()
-    .isIn(["district", "state", "national", "international", "open"]),
+  body().custom((value) => {
+    if (value.championshipType === "Official" && !value.officialCategory) {
+      throw new Error("Official category is required for official championship");
+    }
 
-  body("eventType")
-    .optional()
-    .isIn(["kyorugi", "poomsae", "demo", "other"]),
+    if (
+      value.championshipType === "Official" &&
+      value.level === "International" &&
+      !value.grading
+    ) {
+      throw new Error(
+        "Grading is required for official international championship"
+      );
+    }
 
-  body("ageCategory").optional({ checkFalsy: true }).trim().isLength({
-    max: 80,
-  }),
+    if (value.eventType === "Poomsae" && !value.poomsaeType) {
+      throw new Error("Poomsae type is required");
+    }
 
-  body("weightCategory").optional({ checkFalsy: true }).trim().isLength({
-    max: 80,
-  }),
+    if (value.startDate && value.endDate) {
+      const start = new Date(value.startDate);
+      const end = new Date(value.endDate);
 
-  body("result")
-    .optional()
-    .isIn(["gold", "silver", "bronze", "participated", "disqualified"]),
+      if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+        if (end < start) {
+          throw new Error("End date cannot be before start date");
+        }
+      }
+    }
 
-  body("date").optional().isISO8601(),
+    const totalBouts = Number(value.totalBouts || 0);
+    const boutsWon = Number(value.boutsWon || 0);
+    const boutsLost = Number(value.boutsLost || 0);
 
-  body("venue").optional({ checkFalsy: true }).trim().isLength({
-    max: 150,
-  }),
+    if (boutsWon + boutsLost > totalBouts) {
+      throw new Error("Won + lost bouts cannot be greater than total bouts");
+    }
 
-  body("organizer").optional({ checkFalsy: true }).trim().isLength({
-    max: 150,
-  }),
-
-  body("remarks").optional({ checkFalsy: true }).trim().isLength({
-    max: 1000,
-  }),
-
-  body("certificateUrl").optional({ checkFalsy: true }).trim().isLength({
-    max: 500,
+    return true;
   }),
 ];
 
-export const listChampionshipRecordsValidator = [
-  query("page").optional().isInt({ min: 1 }),
-  query("limit").optional().isInt({ min: 1, max: 100 }),
-  query("student").optional({ checkFalsy: true }).isMongoId(),
+export const createChampionshipRecordValidation = [
+  ...commonChampionshipRecordRules,
+  validateRequest,
+];
+
+export const updateChampionshipRecordValidation = [
+  ...commonChampionshipRecordRules,
+  validateRequest,
+];
+
+export const getChampionshipRecordsValidation = [
+  query("student").optional().isMongoId().withMessage("Invalid student id"),
+
+  query("championshipType")
+    .optional()
+    .isIn(CHAMPIONSHIP_TYPES)
+    .withMessage("Invalid championship type"),
+
   query("level")
-    .optional({ checkFalsy: true })
-    .isIn(["district", "state", "national", "international", "open"]),
+    .optional()
+    .isIn(CHAMPIONSHIP_LEVELS)
+    .withMessage("Invalid championship level"),
+
   query("eventType")
-    .optional({ checkFalsy: true })
-    .isIn(["kyorugi", "poomsae", "demo", "other"]),
+    .optional()
+    .isIn(EVENT_TYPES)
+    .withMessage("Invalid event type"),
+
+  query("ageCategory")
+    .optional()
+    .isIn(AGE_CATEGORIES)
+    .withMessage("Invalid age category"),
+
   query("result")
-    .optional({ checkFalsy: true })
-    .isIn(["gold", "silver", "bronze", "participated", "disqualified"]),
-  query("search").optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
-  query("fromDate").optional({ checkFalsy: true }).isISO8601(),
-  query("toDate").optional({ checkFalsy: true }).isISO8601(),
+    .optional()
+    .isIn(RESULT_TYPES)
+    .withMessage("Invalid result"),
+
+  query("year")
+    .optional()
+    .isInt({ min: 1900 })
+    .withMessage("Invalid year"),
+
+  validateRequest,
 ];
