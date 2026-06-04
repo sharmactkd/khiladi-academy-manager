@@ -204,3 +204,17 @@ export const getChampionshipRecordsValidation = [
 
   validateRequest,
 ];
+
+export const championshipRecordIdValidator = validateChampionshipRecordId;
+
+export const championshipStudentIdValidator =
+  validateStudentChampionshipRecordParam;
+
+export const createChampionshipRecordValidator =
+  createChampionshipRecordValidation;
+
+export const updateChampionshipRecordValidator =
+  updateChampionshipRecordValidation;
+
+export const listChampionshipRecordsValidator =
+  getChampionshipRecordsValidation;
