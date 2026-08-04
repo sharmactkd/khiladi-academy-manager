@@ -1,0 +1,390 @@
+/* =========================================================
+   SMALL DESKTOP / TABLET LANDSCAPE
+   ========================================================= */
+
+@media (max-width: 1024px) {
+  .dashboard-shell {
+    grid-template-columns:
+      232px
+      minmax(0, 1fr);
+  }
+
+  .sidebar {
+    width: 232px;
+    padding-inline: 12px;
+  }
+
+  .sidebar-nav a {
+    padding-inline: 9px;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .navbar {
+    padding-inline: 20px;
+  }
+
+  .dashboard-content {
+    padding: 22px 20px;
+  }
+
+  .filters-grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .grid-3 {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* =========================================================
+   TABLET / MOBILE DRAWER
+   ========================================================= */
+
+@media (max-width: 768px) {
+  .dashboard-shell {
+    display: block;
+  }
+
+  .dashboard-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 1200;
+
+    width: min(304px, 86vw);
+    height: 100dvh;
+
+    visibility: hidden;
+    transform: translateX(-105%);
+
+    box-shadow: var(--shadow-overlay);
+
+    transition:
+      transform var(--transition-base),
+      visibility var(--transition-base);
+  }
+
+  .sidebar.is-open {
+    visibility: visible;
+    transform: translateX(0);
+  }
+
+  /*
+   Desktop par close button hidden rahega.
+   Mobile drawer mein visible hoga.
+  */
+  .sidebar .sidebar-close {
+    display: inline-grid;
+  }
+
+  .mobile-menu-btn {
+    display: inline-grid;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+
+    width: 100%;
+    height: 100%;
+    padding: 0;
+
+    display: block;
+
+    border: 0;
+    border-radius: 0;
+
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+
+    background: rgba(17, 24, 39, 0.54);
+
+    transition:
+      opacity var(--transition-base),
+      visibility var(--transition-base);
+  }
+
+  .sidebar-overlay.is-visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  body.drawer-open {
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  .navbar {
+    padding-inline: 16px;
+  }
+
+  .navbar-user-copy {
+    display: none;
+  }
+
+  .navbar-user {
+    padding-left: 8px;
+  }
+
+  .navbar-title h2 {
+    max-width: 48vw;
+  }
+
+  .dashboard-content {
+    padding: 18px 16px 28px;
+  }
+
+  .page-header {
+    align-items: flex-start;
+  }
+
+  .grid.two,
+  .grid-3,
+  .form-grid,
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-bar,
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-card,
+  .table-wrapper,
+  .table-container {
+    width: 100%;
+    max-width: calc(100vw - 32px);
+    overflow-x: auto;
+  }
+
+  .modal,
+  .modal-content,
+  .dialog-content {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+
+  /* Authentication */
+
+  .auth-page {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .auth-card {
+    min-height: 100dvh;
+    grid-template-columns: 1fr;
+    border-radius: 0;
+  }
+
+  .brand-block {
+    min-height: 210px;
+    padding: 28px 24px;
+  }
+
+  .auth-brand-header {
+    position: static;
+  }
+
+  .auth-brand-copy {
+    margin-top: 54px;
+  }
+
+  .auth-brand-copy h1 {
+    font-size: clamp(25px, 7vw, 34px);
+  }
+
+  .auth-brand-copy p,
+  .auth-feature-list,
+  .auth-brand-footer {
+    display: none;
+  }
+
+  .auth-content {
+    padding: 32px 24px;
+    justify-content: flex-start;
+  }
+
+  .auth-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 390px) {
+  .navbar {
+    height: 66px;
+    padding-inline: 12px;
+  }
+
+  .navbar-actions {
+    gap: 4px;
+  }
+
+  .navbar-eyebrow {
+    display: none;
+  }
+
+  .navbar-title h2,
+  .navbar h2 {
+    max-width: 44vw;
+    font-size: 18px;
+  }
+
+  .navbar-user {
+    padding-left: 5px;
+  }
+
+  .navbar-avatar {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+  }
+
+  .notification-bell,
+  .mobile-menu-btn {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+  }
+
+  .dashboard-content {
+    padding: 16px 12px 26px;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+
+  .page-header > .btn,
+  .page-header > .actions {
+    width: 100%;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .form-actions,
+  .actions,
+  .dashboard-actions {
+    align-items: stretch;
+  }
+
+  .form-actions .btn,
+  .actions .btn,
+  .dashboard-actions .btn {
+    flex: 1 1 100%;
+  }
+
+  .table-card,
+  .table-wrapper,
+  .table-container {
+    max-width: calc(100vw - 24px);
+  }
+
+  .auth-brand-header {
+    left: 24px;
+    right: 24px;
+  }
+
+  .auth-brand-header .auth-brand-logo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .auth-brand-copy {
+    margin-top: 34px;
+  }
+
+  .auth-content {
+    padding: 28px 20px;
+  }
+
+  .auth-heading {
+    margin-bottom: 20px;
+  }
+}
+
+/* =========================================================
+   NARROW MOBILE
+   ========================================================= */
+
+@media (max-width: 360px) {
+  .navbar-title h2,
+  .navbar h2 {
+    max-width: 38vw;
+    font-size: 17px;
+  }
+
+  .dashboard-content {
+    padding-inline: 10px;
+  }
+
+  .sidebar {
+    width: 88vw;
+  }
+
+  .table-card,
+  .table-wrapper,
+  .table-container {
+    max-width: calc(100vw - 20px);
+  }
+}
+
+/* =========================================================
+   PRINT SAFETY
+   ========================================================= */
+
+@media print {
+  .navbar,
+  .sidebar,
+  .sidebar-overlay {
+    display: none !important;
+  }
+
+  .dashboard-shell {
+    display: block !important;
+  }
+
+  .dashboard-main {
+    min-height: auto !important;
+  }
+
+  .dashboard-content {
+    width: 100% !important;
+    padding: 0 !important;
+  }
+}
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

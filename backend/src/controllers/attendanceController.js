@@ -60,6 +60,8 @@ const buildStudentLookups = async (academyId) => {
   const byAdmission = new Map();
   const byName = new Map();
   const byNameBatch = new Map();
+  const ambiguousPhones = new Set();
+  const ambiguousNames = new Set();
   const normalizedStudents = [];
 
   students.forEach((student) => {
@@ -68,8 +70,10 @@ const buildStudentLookups = async (academyId) => {
     const name = normalizeName(getStudentName(student));
     const batchKey = student.batch ? String(student.batch) : "";
 
+    if (phone && byPhone.has(phone)) ambiguousPhones.add(phone);
     if (phone && !byPhone.has(phone)) byPhone.set(phone, student);
     if (admission && !byAdmission.has(admission)) byAdmission.set(admission, student);
+    if (name && byName.has(name)) ambiguousNames.add(name);
     if (name && !byName.has(name)) byName.set(name, student);
     if (name && batchKey) byNameBatch.set(`${name}::${batchKey}`, student);
 
@@ -88,6 +92,8 @@ const buildStudentLookups = async (academyId) => {
     byName,
     byNameBatch,
     normalizedStudents,
+    ambiguousPhones,
+    ambiguousNames,
   };
 };
 
@@ -116,13 +122,22 @@ const findFuzzyStudentByName = ({ name, studentLookups }) => {
   return candidates.length === 1 ? candidates[0].student : null;
 };
 
-const findMatchedStudent = ({ row, studentLookups, batchNameLookup }) => {
+const findMatchedStudent = ({
+  row,
+  studentLookups,
+  batchNameLookup,
+  strictMatching = false,
+}) => {
   const phone = normalizePhone(row.phone);
   const admission = clean(row.admissionNumber || row.studentCode).toLowerCase();
   const name = normalizeName(row.name);
   const batchName = clean(row.batchName).toLowerCase();
 
-  if (phone && studentLookups.byPhone.has(phone)) {
+  if (
+    phone &&
+    !studentLookups.ambiguousPhones.has(phone) &&
+    studentLookups.byPhone.has(phone)
+  ) {
     return studentLookups.byPhone.get(phone);
   }
 
@@ -139,11 +154,17 @@ const findMatchedStudent = ({ row, studentLookups, batchNameLookup }) => {
     }
   }
 
-  if (name && studentLookups.byName.has(name)) {
+  if (
+    name &&
+    !studentLookups.ambiguousNames.has(name) &&
+    studentLookups.byName.has(name)
+  ) {
     return studentLookups.byName.get(name);
   }
 
-  return findFuzzyStudentByName({ name, studentLookups });
+  return strictMatching
+    ? null
+    : findFuzzyStudentByName({ name, studentLookups });
 };
 
 const normalizeImportStatus = (status) => {
@@ -152,18 +173,20 @@ const normalizeImportStatus = (status) => {
 };
 
 const getRecordIdentityKey = (record) => {
-  if (record.importedRowNumber) {
-    return `excel-row:${record.importedRowNumber}`;
+  if (record.student) {
+    return `student:${String(record.student)}`;
   }
 
   if (record.importedSerialNo || record.importedName || record.importedPhone) {
-    return `excel:${clean(record.importedSerialNo)}:${normalizePhone(
+    return `excel:${clean(record.importedSourceSheet)}:${clean(
+      record.importedSerialNo
+    )}:${normalizePhone(
       record.importedPhone
     )}:${normalizeName(record.importedName)}`;
   }
 
-  if (record.student) {
-    return `student:${String(record.student)}`;
+  if (record.importedRowNumber) {
+    return `excel-row:${clean(record.importedSourceSheet)}:${record.importedRowNumber}`;
   }
 
   return `unknown:${Date.now()}:${Math.random()}`;
@@ -177,6 +200,7 @@ const buildImportGroups = ({
   batchNameLookup,
   summary,
   fallbackBatch,
+  strictMatching = false,
 }) => {
   const groups = new Map();
 
@@ -187,6 +211,7 @@ const buildImportGroups = ({
         row,
         studentLookups,
         batchNameLookup,
+        strictMatching,
       });
 
       const effectiveBatch = matchedStudent?.batch || fallbackBatch;
@@ -206,6 +231,13 @@ const buildImportGroups = ({
 
       if (!matchedStudent) {
         summary.rawImportedStudents += 1;
+        summary.unmatchedStudents.push({
+          rowNumber,
+          sourceSheet: clean(row.sourceSheet),
+          name: clean(row.name),
+          phone: normalizePhone(row.phone),
+          admissionNumber: clean(row.admissionNumber || row.studentCode),
+        });
         summary.warnings.push({
           rowNumber,
           name: clean(row.name),
@@ -260,6 +292,7 @@ const buildImportGroups = ({
           student: matchedStudent?._id || null,
 
           importedRowNumber: Number(row.importedRowNumber || rowNumber),
+          importedSourceSheet: clean(row.sourceSheet),
           importedSerialNo: clean(row.importedSerialNo || row.serialNo),
           importedName: clean(row.name),
           importedPhone: normalizePhone(row.phone),
@@ -348,6 +381,8 @@ const saveImportGroup = async ({
         attendance.records[index].student = record.student || null;
         attendance.records[index].importedRowNumber =
           record.importedRowNumber || null;
+        attendance.records[index].importedSourceSheet =
+          record.importedSourceSheet || "";
         attendance.records[index].importedSerialNo = record.importedSerialNo || "";
         attendance.records[index].importedName = record.importedName || "";
         attendance.records[index].importedPhone = record.importedPhone || "";
@@ -453,6 +488,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
   const duplicateMode =
     req.body?.duplicateMode === "overwrite" ? "overwrite" : "skip";
   const fallbackBatch = req.body?.fallbackBatch || null;
+  const strictMatching = req.body?.strictMatching === true;
 
   const summary = {
     totalRows: rows.length,
@@ -496,6 +532,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
     batchNameLookup,
     summary,
     fallbackBatch: batch._id,
+    strictMatching,
   });
 
   for (const group of groups.values()) {
@@ -522,6 +559,11 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
     summary.warnings.push({
       message: "Warnings trimmed to first 200 items.",
     });
+  }
+
+  if (summary.unmatchedStudents.length > 500) {
+    summary.unmatchedStudents = summary.unmatchedStudents.slice(0, 500);
+    summary.unmatchedStudentsTrimmed = true;
   }
 
   if (summary.errors.length > 100) {

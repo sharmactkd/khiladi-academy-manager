@@ -109,6 +109,10 @@ const normalizeAttendanceStatus = (value) => {
 
   if (!raw || raw === "-") return null;
 
+  // H marks a holiday/non-class day in the supplied historical workbook. It
+  // is intentionally not converted into an absence or attendance record.
+  if (["h", "holiday", "off"].includes(key)) return null;
+
   if (["p", "present", "1", "yes", "y", "✓", "✔"].includes(key)) {
     return "present";
   }
@@ -321,14 +325,143 @@ const mergeStudentRows = (rows = []) => {
 export const readAttendanceWorkbook = async (file) => {
   const buffer = await file.arrayBuffer();
 
-  return XLSX.read(buffer, {
+  // The historical workbook contains a few accidentally formatted sheets whose
+  // used range reaches XFD. Reading every worksheet eagerly can consume hundreds
+  // of MB in the browser. The first pass therefore reads workbook metadata only.
+  const metadata = XLSX.read(buffer, {
+    type: "array",
+    bookSheets: true,
+    bookProps: true,
+  });
+
+  return {
+    SheetNames: metadata.SheetNames || [],
+    __buffer: buffer,
+    __lazy: true,
+  };
+};
+
+export const loadAttendanceWorksheet = (workbook, sheetName) => {
+  if (!workbook?.__lazy) return workbook;
+
+  return XLSX.read(workbook.__buffer, {
     type: "array",
     cellDates: false,
     raw: false,
+    sheets: [sheetName],
   });
 };
 
 export const getAttendanceSheetNames = (workbook) => workbook?.SheetNames || [];
+
+export const isHistoricalAttendanceSheet = (sheetName = "") =>
+  /^\s*\d{2,4}\s*-\s*att(?:e|a)ndance\s*$/i.test(clean(sheetName));
+
+export const isStudentRecordSheet = (sheetName = "") =>
+  normalizeKey(sheetName) === "record";
+
+export const classifyHistoricalSheets = (sheetNames = []) => ({
+  recordSheet: sheetNames.find(isStudentRecordSheet) || "",
+  attendanceSheets: sheetNames.filter(isHistoricalAttendanceSheet),
+  ignoredSheets: sheetNames.filter(
+    (name) => !isStudentRecordSheet(name) && !isHistoricalAttendanceSheet(name)
+  ),
+});
+
+const excelSerialToIsoDate = (value) => {
+  const raw = clean(value);
+  if (!raw || raw === "-") return "";
+
+  if (/^\d+(?:\.\d+)?$/.test(raw)) {
+    const serial = Number(raw);
+    if (!Number.isFinite(serial) || serial <= 0) return "";
+    const parsed = new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 86400000);
+    return toIsoDate(parsed);
+  }
+
+  const match = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+  if (!match) return "";
+  const year = Number(match[3].length === 2 ? `20${match[3]}` : match[3]);
+  const month = Number(match[2]);
+  const day = Number(match[1]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return "";
+  }
+  return toIsoDate(date);
+};
+
+export const parseStudentRecordSheet = (workbook, sheetName = "Record") => {
+  const loadedWorkbook = loadAttendanceWorksheet(workbook, sheetName);
+  const worksheet = loadedWorkbook?.Sheets?.[sheetName];
+  if (!worksheet) {
+    return { rows: [], incompleteRows: [], warnings: ["Record sheet not found."] };
+  }
+
+  // Record's real data is A:AH. Columns beyond that are accidental formatting.
+  const rawRows = XLSX.utils.sheet_to_json(worksheet, {
+    header: 1,
+    range: "A1:AH10000",
+    defval: "",
+    raw: true,
+    blankrows: false,
+  });
+
+  const rows = [];
+  const incompleteRows = [];
+
+  rawRows.slice(2).forEach((row, index) => {
+    const rowNumber = index + 3;
+    const serialNo = clean(row[0]);
+    const name = clean(row[1]);
+    if (!name || normalizeKey(name) === "name") return;
+
+    const dateOfBirth = excelSerialToIsoDate(row[4]);
+    const joiningDate = excelSerialToIsoDate(row[7]);
+    const payload = {
+      rowNumber,
+      studentCode: serialNo ? `LEGACY-GROUND-${serialNo}` : "",
+      admissionNumber: serialNo ? `LEGACY-GROUND-${serialNo}` : "",
+      name,
+      parentName: clean(row[2]) === "-" ? "" : clean(row[2]),
+      phone: normalizePhone(row[3]),
+      dateOfBirth,
+      address: clean(row[5]) === "-" ? "" : clean(row[5]),
+      schoolName: clean(row[6]) === "-" ? "" : clean(row[6]),
+      joiningDate,
+      beltRank: clean(row[9]) === "-" ? "" : clean(row[9]),
+      martialArt: "Taekwondo",
+      gender: "other",
+      status: "inactive",
+      notes: "Imported from Ground.xlsx Record sheet; gender requires review.",
+    };
+
+    if (!dateOfBirth) {
+      incompleteRows.push({
+        ...payload,
+        reason: "DOB missing/invalid; kept for historical attendance matching only.",
+      });
+      return;
+    }
+
+    rows.push(payload);
+  });
+
+  return {
+    rows,
+    incompleteRows,
+    warnings: incompleteRows.length
+      ? [`${incompleteRows.length} Record rows have no valid DOB and will not create fake profiles.`]
+      : [],
+  };
+};
+
+export const parseHistoricalAttendanceSheet = (workbook, sheetName) =>
+  parseAttendanceSheet(loadAttendanceWorksheet(workbook, sheetName), sheetName);
 
 export const parseAttendanceSheet = (workbook, sheetName) => {
   const worksheet = workbook?.Sheets?.[sheetName];
@@ -351,6 +484,10 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
 
   const rawRows = XLSX.utils.sheet_to_json(worksheet, {
     header: 1,
+    // Historical attendance data is confined to A:AN. Several source sheets
+    // accidentally report XFD as their used column, which would otherwise make
+    // sheet_to_json iterate millions of empty cells.
+    range: "A1:AN10000",
     defval: "",
     raw: false,
     blankrows: false,
@@ -358,6 +495,7 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
 
   const warnings = [];
   const parsedRows = [];
+  const blocks = [];
   let totalDateColumns = 0;
   let detectedBlocks = 0;
 
@@ -400,6 +538,7 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
 
     detectedBlocks += 1;
     totalDateColumns += dateColumns.length;
+    const blockRows = [];
 
     let dataRowIndex = rowIndex + 3;
 
@@ -443,7 +582,8 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
       const admissionNumber = "";
 
       if (name || phone || attendance.length) {
-        parsedRows.push({
+        const parsedStudentRow = {
+          sourceSheet: sheetName,
           rowNumber: dataRowIndex + 1,
           importedRowNumber: dataRowIndex + 1,
           importedSerialNo: clean(row[0]),
@@ -457,11 +597,27 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
           importedFeeStatus: clean(row[5]),
           importedExtraNote: clean(row[6]),
           attendance,
-        });
+        };
+        parsedRows.push(parsedStudentRow);
+        blockRows.push(parsedStudentRow);
       }
 
       dataRowIndex += 1;
     }
+
+    const mergedBlockRows = mergeStudentRows(blockRows);
+    blocks.push({
+      blockId: `${sheetName}:${monthInfo.year}-${String(monthInfo.month + 1).padStart(2, "0")}`,
+      sheetName,
+      year: monthInfo.year,
+      month: monthInfo.month + 1,
+      source: monthInfo.source,
+      rows: mergedBlockRows,
+      estimatedAttendanceRecords: mergedBlockRows.reduce(
+        (sum, item) => sum + item.attendance.length,
+        0
+      ),
+    });
   }
 
   const rows = mergeStudentRows(parsedRows);
@@ -482,6 +638,7 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
   return {
     sheetName,
     rows,
+    blocks,
     summary: {
       sheetName,
       detectedBlocks,

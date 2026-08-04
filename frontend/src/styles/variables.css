@@ -1,0 +1,87 @@
+:root {
+  /* KHILADI Brand */
+  --color-primary: #cf0006;
+  --color-primary-hover: #a50005;
+  --color-primary-active: #820004;
+  --color-primary-soft: #fff1f2;
+  --color-maroon: #640606;
+
+  /* Application surfaces */
+  --color-bg: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f9fafb;
+  --color-surface-hover: #fffafa;
+
+  /* Typography */
+  --color-text: #111827;
+  --color-text-secondary: #374151;
+  --color-muted: #6b7280;
+  --color-placeholder: #9ca3af;
+  --color-on-primary: #ffffff;
+
+  /* Borders */
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+
+  /* Semantic states */
+  --color-success: #15803d;
+  --color-success-soft: #ecfdf5;
+  --color-success-border: #bbf7d0;
+
+  --color-warning: #b45309;
+  --color-warning-soft: #fffbeb;
+  --color-warning-border: #fde68a;
+
+  --color-danger: #b91c1c;
+  --color-danger-hover: #991b1b;
+  --color-danger-soft: #fef2f2;
+  --color-danger-border: #fecaca;
+
+  --color-info: #0369a1;
+  --color-info-soft: #f0f9ff;
+  --color-info-border: #bae6fd;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-sm: 0 1px 3px rgba(17, 24, 39, 0.08);
+  --shadow-card: 0 8px 24px rgba(17, 24, 39, 0.06);
+  --shadow-card-hover: 0 12px 30px rgba(17, 24, 39, 0.1);
+  --shadow-overlay: 0 24px 60px rgba(17, 24, 39, 0.16);
+
+  /* Border radius */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* Layout */
+  --sidebar-width: 264px;
+  --header-height: 72px;
+  --content-space: clamp(16px, 2vw, 30px);
+  --container-max-width: 1600px;
+
+  /* Form controls */
+  --control-height: 44px;
+  --control-padding-x: 14px;
+
+  /* Typography */
+  --font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+
+  /* Transitions */
+  --transition-fast: 160ms ease;
+  --transition-base: 220ms ease;
+
+  /* Accessibility */
+  --focus-ring: 0 0 0 3px rgba(207, 0, 6, 0.14);
+
+  /* Breakpoint references */
+  --breakpoint-desktop: 1440px;
+  --breakpoint-small-desktop: 1024px;
+  --breakpoint-tablet: 768px;
+  --breakpoint-mobile: 390px;
+  --breakpoint-mobile-small: 360px;
+}

@@ -35,9 +35,13 @@ export const studentApi = {
     return res.data;
   },
 
-  importBulk: async (students = []) => {
+  importBulk: async (payload = {}) => {
+    const students = Array.isArray(payload) ? payload : payload.students || [];
+    const destination = Array.isArray(payload) ? {} : payload.destination || {};
+
     const res = await api.post("/students/import", {
       students,
+      destination,
       duplicateMode: "skip",
     });
 

@@ -3,7 +3,10 @@ import { createRoot } from "react-dom/client";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import App from "./App.jsx";
+
+import "./styles/variables.css";
 import "./styles/global.css";
+import "./styles/responsive.css";
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 

@@ -287,7 +287,7 @@ genderGroup: values.genderGroup || "both",
               Batch Color Tag
               <input
                 {...register("batchColor")}
-                placeholder="Blue / Red / #2563eb"
+                placeholder="Red / Black / #cf0006"
               />
             </label>
 

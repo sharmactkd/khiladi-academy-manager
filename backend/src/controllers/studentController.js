@@ -8,6 +8,8 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 
 import { buildBranchAccessFilter } from "../services/branchAccessService.js";
+import { getPlanLimit, isLimitUnlimited } from "../services/planService.js";
+import { getResourceUsage } from "../services/usageService.js";
 
 const IMPORT_FALLBACK_DOB = new Date("2000-01-01T00:00:00.000Z");
 
@@ -482,6 +484,21 @@ export const importStudents = asyncHandler(async (req, res) => {
     return successResponse(res, "Student import completed", summary);
   }
 
+  let remainingCapacity = Number.POSITIVE_INFINITY;
+  if (req.user?.role !== "super_admin") {
+    const planLimit = await getPlanLimit({
+      academyId,
+      resourceName: "students",
+    });
+    if (!isLimitUnlimited(planLimit)) {
+      const currentUsage = await getResourceUsage({
+        academyId,
+        resourceName: "students",
+      });
+      remainingCapacity = Math.max(0, Number(planLimit || 0) - currentUsage);
+    }
+  }
+
   const batchLookup = await buildBatchLookup(academyId);
   const usedAdmissionNumbers = new Set();
 
@@ -528,7 +545,20 @@ export const importStudents = asyncHandler(async (req, res) => {
         continue;
       }
 
+      if (!existing && remainingCapacity <= 0) {
+        summary.failed += 1;
+        summary.errors.push({
+          rowNumber,
+          admissionNumber: studentPayload.admissionNumber,
+          message: "Student plan limit reached; row was not imported",
+        });
+        continue;
+      }
+
       await Student.create(studentPayload);
+      if (!existing && Number.isFinite(remainingCapacity)) {
+        remainingCapacity -= 1;
+      }
       summary.imported += 1;
     } catch (error) {
       summary.failed += 1;

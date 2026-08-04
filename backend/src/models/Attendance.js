@@ -15,6 +15,13 @@ const attendanceRecordSchema = new mongoose.Schema(
       index: true,
     },
 
+    importedSourceSheet: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [120, "Imported source sheet cannot exceed 120 characters"],
+    },
+
     importedSerialNo: {
       type: String,
       trim: true,

@@ -264,6 +264,7 @@ const MonthlyAttendanceRegister = () => {
       }
 
       await loadMonthlyRegister(batch, month, year);
+      return summary;
     } catch (error) {
       console.error("ATTENDANCE IMPORT ERROR:", error);
 
@@ -344,6 +345,7 @@ const MonthlyAttendanceRegister = () => {
         open={importModalOpen}
         onClose={() => setImportModalOpen(false)}
         onImport={handleImportAttendance}
+        fallbackBatch={batch}
       />
 
       <div className="page-header monthly-register-header">

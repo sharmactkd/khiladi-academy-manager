@@ -137,6 +137,8 @@ const AttendanceSheet = () => {
           summary.skipped || 0
         } skipped, ${summary.failed || 0} failed`
       );
+
+      return summary;
     } catch (error) {
       toast.error(
         error.response?.data?.message || "Attendance import nahi ho paya"
@@ -151,6 +153,7 @@ const AttendanceSheet = () => {
         open={importModalOpen}
         onClose={() => setImportModalOpen(false)}
         onImport={handleImportAttendance}
+        fallbackBatch={batch}
       />
 
       <div className="page-header">

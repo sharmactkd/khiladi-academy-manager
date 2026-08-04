@@ -8,6 +8,7 @@ import autoTable from "jspdf-autotable";
 
 import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
+import { getBranches } from "../../api/branchApi.js";
 import StudentImportModal from "../../components/students/StudentImportModal.jsx";
 
 const BLOOD_GROUPS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -48,6 +49,7 @@ const Students = () => {
   const navigate = useNavigate();
 
   const [students, setStudents] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -66,7 +68,8 @@ const Students = () => {
 
   const allVisibleSelected = useMemo(() => {
     return (
-      students.length > 0 && students.every((student) => selectedIds.includes(student._id))
+      students.length > 0 &&
+      students.every((student) => selectedIds.includes(student._id))
     );
   }, [students, selectedIds]);
 
@@ -102,6 +105,19 @@ const Students = () => {
     }
   };
 
+  const fetchBranches = async () => {
+    try {
+      const response = await getBranches({ status: "active" });
+      const list = Array.isArray(response?.data)
+        ? response.data
+        : response?.data?.data || response?.data || [];
+
+      setBranches(Array.isArray(list) ? list : []);
+    } catch {
+      setBranches([]);
+    }
+  };
+
   const fetchBatches = async () => {
     try {
       const response = await batchApi.getAll();
@@ -117,6 +133,7 @@ const Students = () => {
   };
 
   useEffect(() => {
+    fetchBranches();
     fetchBatches();
   }, []);
 
@@ -162,6 +179,7 @@ const Students = () => {
       Occupation: student.occupation || student.education?.occupation || "",
       "Parent Name": student.parentName || "",
       "Parent Phone": student.parentPhone || "",
+      Branch: student.branch?.branchName || "",
       Batch: student.batch?.batchName || "",
       "Martial Art": student.martialArt || "",
       "Belt Rank": displayBelt(student),
@@ -226,6 +244,7 @@ const Students = () => {
       { wch: 20 },
       { wch: 24 },
       { wch: 16 },
+      { wch: 20 },
       { wch: 20 },
       { wch: 18 },
       { wch: 18 },
@@ -480,10 +499,10 @@ const Students = () => {
     }
   };
 
-  const handleImportStudents = async (rows) => {
+  const handleImportStudents = async (payload) => {
     try {
-      const response = await studentApi.importBulk(rows);
-      const summary = response?.data || {};
+      const response = await studentApi.importBulk(payload);
+      const summary = response?.data || response || {};
 
       toast.success(
         `Import complete: ${summary.imported || 0} imported, ${
@@ -491,7 +510,7 @@ const Students = () => {
         } skipped, ${summary.failed || 0} failed`
       );
 
-      fetchStudents();
+      await Promise.all([fetchBranches(), fetchBatches(), fetchStudents()]);
     } catch (error) {
       toast.error(error.response?.data?.message || "Student import failed");
       throw error;
@@ -524,6 +543,8 @@ const Students = () => {
         open={importModalOpen}
         onClose={() => setImportModalOpen(false)}
         onImport={handleImportStudents}
+        branches={branches}
+        batches={batches}
       />
 
       <div className="page-header">
@@ -754,7 +775,9 @@ const Students = () => {
                       <td>{student.ageCategory || "-"}</td>
                       <td>{student.phone || "-"}</td>
                       <td>
-                        {student.schoolName || student.education?.schoolName || "-"}
+                        {student.schoolName ||
+                          student.education?.schoolName ||
+                          "-"}
                         {student.className || student.section ? (
                           <div className="muted">
                             {student.className || ""}

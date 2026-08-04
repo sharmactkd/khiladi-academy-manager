@@ -1,22 +1,50 @@
-import React from "react";
-
-const AnalyticsCard = ({ title, value, subtitle, icon, loading = false }) => {
+const AnalyticsCard = ({
+  title,
+  value,
+  subtitle,
+  icon,
+  loading = false,
+  tone = "primary",
+}) => {
   return (
-    <div className="analytics-card">
+    <article
+      className={[
+        "analytics-card",
+        `analytics-card--${tone}`,
+      ].join(" ")}
+    >
       <div className="analytics-card__content">
-        <p className="analytics-card__title">{title}</p>
+        <p className="analytics-card__title">
+          {title}
+        </p>
 
         {loading ? (
-          <div className="analytics-card__skeleton" />
+          <div
+            className="analytics-card__skeleton"
+            aria-label="Loading analytics"
+          />
         ) : (
-          <h3 className="analytics-card__value">{value ?? 0}</h3>
+          <h3 className="analytics-card__value">
+            {value ?? 0}
+          </h3>
         )}
 
-        {subtitle ? <p className="analytics-card__subtitle">{subtitle}</p> : null}
+        {subtitle ? (
+          <p className="analytics-card__subtitle">
+            {subtitle}
+          </p>
+        ) : null}
       </div>
 
-      {icon ? <div className="analytics-card__icon">{icon}</div> : null}
-    </div>
+      {icon ? (
+        <div
+          className="analytics-card__icon"
+          aria-hidden="true"
+        >
+          {icon}
+        </div>
+      ) : null}
+    </article>
   );
 };
 

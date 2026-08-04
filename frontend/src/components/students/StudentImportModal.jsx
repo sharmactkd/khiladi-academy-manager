@@ -79,12 +79,29 @@ const modalStyles = {
   },
 };
 
-const StudentImportModal = ({ open, onClose, onImport }) => {
+const StudentImportModal = ({
+  open,
+  onClose,
+  onImport,
+  branches = [],
+  batches = [],
+}) => {
   const [fileName, setFileName] = useState("");
   const [workbook, setWorkbook] = useState(null);
   const [sheetNames, setSheetNames] = useState([]);
   const [selectedSheet, setSelectedSheet] = useState("");
   const [loadingFile, setLoadingFile] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  const [destination, setDestination] = useState({
+    branchMode: "existing",
+    branchId: "",
+    newBranchName: "",
+    batchMode: "existing",
+    batchId: "",
+    newBatchName: "",
+  });
+
   const [parsed, setParsed] = useState({
     headers: [],
     rows: [],
@@ -92,7 +109,6 @@ const StudentImportModal = ({ open, onClose, onImport }) => {
     mapping: {},
     warnings: [],
   });
-  const [importing, setImporting] = useState(false);
 
   const mappedFields = useMemo(
     () =>
@@ -102,6 +118,17 @@ const StudentImportModal = ({ open, onClose, onImport }) => {
     [parsed.mapping]
   );
 
+  const filteredBatches = useMemo(() => {
+    if (destination.branchMode !== "existing" || !destination.branchId) {
+      return batches;
+    }
+
+    return batches.filter((batch) => {
+      const batchBranchId = batch.branch?._id || batch.branch || "";
+      return String(batchBranchId) === String(destination.branchId);
+    });
+  }, [batches, destination.branchId, destination.branchMode]);
+
   if (!open) return null;
 
   const resetState = () => {
@@ -110,6 +137,15 @@ const StudentImportModal = ({ open, onClose, onImport }) => {
     setSheetNames([]);
     setSelectedSheet("");
     setLoadingFile(false);
+    setImporting(false);
+    setDestination({
+      branchMode: "existing",
+      branchId: "",
+      newBranchName: "",
+      batchMode: "existing",
+      batchId: "",
+      newBatchName: "",
+    });
     setParsed({
       headers: [],
       rows: [],
@@ -117,14 +153,23 @@ const StudentImportModal = ({ open, onClose, onImport }) => {
       mapping: {},
       warnings: [],
     });
-    setImporting(false);
   };
 
   const handleClose = () => {
     if (loadingFile || importing) return;
-
     resetState();
     onClose?.();
+  };
+
+  const updateDestination = (field, value) => {
+    setDestination((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === "branchMode"
+        ? { branchId: "", newBranchName: "", batchId: "" }
+        : {}),
+      ...(field === "batchMode" ? { batchId: "", newBatchName: "" } : {}),
+    }));
   };
 
   const handleFileChange = async (event) => {
@@ -185,27 +230,27 @@ const StudentImportModal = ({ open, onClose, onImport }) => {
     }
   };
 
- const handleSheetChange = (event) => {
-  const sheet = event.target.value;
+  const handleSheetChange = (event) => {
+    const sheet = event.target.value;
 
-  flushSync(() => {
-    setSelectedSheet(sheet);
-    setLoadingFile(true);
-  });
+    flushSync(() => {
+      setSelectedSheet(sheet);
+      setLoadingFile(true);
+    });
 
-  if (!workbook || !sheet) {
-    setLoadingFile(false);
-    return;
-  }
-
-  setTimeout(() => {
-    try {
-      setParsed(parseStudentSheet(workbook, sheet));
-    } finally {
+    if (!workbook || !sheet) {
       setLoadingFile(false);
+      return;
     }
-  }, 100);
-};
+
+    setTimeout(() => {
+      try {
+        setParsed(parseStudentSheet(workbook, sheet));
+      } finally {
+        setLoadingFile(false);
+      }
+    }, 100);
+  };
 
   const handleMappingChange = (field, columnIndex) => {
     const nextMapping = {
@@ -220,15 +265,49 @@ const StudentImportModal = ({ open, onClose, onImport }) => {
     }));
   };
 
+  const validateDestination = () => {
+    if (destination.branchMode === "existing" && !destination.branchId) {
+      toast.error("Please select branch or create new branch");
+      return false;
+    }
+
+    if (
+      destination.branchMode === "new" &&
+      !destination.newBranchName.trim()
+    ) {
+      toast.error("New branch name required");
+      return false;
+    }
+
+    if (destination.batchMode === "existing" && !destination.batchId) {
+      toast.error("Please select batch or create new batch");
+      return false;
+    }
+
+    if (destination.batchMode === "new" && !destination.newBatchName.trim()) {
+      toast.error("New batch name required");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleImport = async () => {
     if (!parsed.mappedRows.length) {
       toast.error("Import ke liye koi valid row nahi mili");
       return;
     }
 
+    if (!validateDestination()) return;
+
     try {
       setImporting(true);
-      await onImport?.(parsed.mappedRows);
+
+      await onImport?.({
+        students: parsed.mappedRows,
+        destination,
+      });
+
       handleClose();
     } finally {
       setImporting(false);
@@ -250,8 +329,8 @@ const StudentImportModal = ({ open, onClose, onImport }) => {
           <div>
             <h2 style={{ margin: 0 }}>Import Students from Excel</h2>
             <p style={{ ...modalStyles.smallText, margin: "6px 0 0" }}>
-              Upload .xlsx, .xls ya .csv file. Auto mapping ke baad aap manually
-              bhi column select kar sakte hain.
+              Upload .xlsx, .xls ya .csv file. Import se pehle branch aur batch
+              select/create karein.
             </p>
           </div>
 
@@ -263,6 +342,111 @@ const StudentImportModal = ({ open, onClose, onImport }) => {
           >
             Close
           </button>
+        </div>
+
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Import Destination</h3>
+
+          <div className="grid grid-2">
+            <div>
+              <label>Branch Option</label>
+              <select
+                value={destination.branchMode}
+                onChange={(event) =>
+                  updateDestination("branchMode", event.target.value)
+                }
+                disabled={loadingFile || importing}
+              >
+                <option value="existing">Select Existing Branch</option>
+                <option value="new">Create New Branch</option>
+              </select>
+            </div>
+
+            {destination.branchMode === "existing" ? (
+              <div>
+                <label>Select Branch</label>
+                <select
+                  value={destination.branchId}
+                  onChange={(event) =>
+                    updateDestination("branchId", event.target.value)
+                  }
+                  disabled={loadingFile || importing}
+                >
+                  <option value="">Select Branch</option>
+                  {branches.map((branch) => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.branchName}
+                      {branch.branchCode ? ` (${branch.branchCode})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label>New Branch Name</label>
+                <input
+                  value={destination.newBranchName}
+                  onChange={(event) =>
+                    updateDestination("newBranchName", event.target.value)
+                  }
+                  placeholder="Example: Sikandra Branch"
+                  disabled={loadingFile || importing}
+                />
+              </div>
+            )}
+
+            <div>
+              <label>Batch Option</label>
+              <select
+                value={destination.batchMode}
+                onChange={(event) =>
+                  updateDestination("batchMode", event.target.value)
+                }
+                disabled={loadingFile || importing}
+              >
+                <option value="existing">Select Existing Batch</option>
+                <option value="new">Create New Batch</option>
+              </select>
+            </div>
+
+            {destination.batchMode === "existing" ? (
+              <div>
+                <label>Select Batch</label>
+                <select
+                  value={destination.batchId}
+                  onChange={(event) =>
+                    updateDestination("batchId", event.target.value)
+                  }
+                  disabled={loadingFile || importing}
+                >
+                  <option value="">Select Batch</option>
+                  {filteredBatches.map((batch) => (
+                    <option key={batch._id} value={batch._id}>
+                      {batch.batchName}
+                      {batch.martialArt ? ` - ${batch.martialArt}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label>New Batch Name</label>
+                <input
+                  value={destination.newBatchName}
+                  onChange={(event) =>
+                    updateDestination("newBatchName", event.target.value)
+                  }
+                  placeholder="Example: Evening Batch"
+                  disabled={loadingFile || importing}
+                />
+              </div>
+            )}
+          </div>
+
+          <p style={modalStyles.smallText}>
+            Import ke time sirf branch/batch name create hoga. Baaki details
+            baad me edit page se update kar sakte hain.
+          </p>
         </div>
 
         <div className="card" style={{ marginBottom: 16 }}>

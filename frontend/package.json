@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "verify:historical-workbook": "node --max-old-space-size=4096 scripts/verifyHistoricalWorkbook.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
