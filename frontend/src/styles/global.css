@@ -1604,35 +1604,33 @@ button:disabled,
   color: #94a3b8;
 }
 
-.sticky-summary {
-  position: sticky;
-  right: 256px;
-  z-index: 16;
-  background: #ffffff !important;
+.summary-heading {
   min-width: 64px;
   width: 64px;
   font-weight: 900;
 }
 
-.sticky-summary-2 {
-  right: 192px;
+.monthly-register__meta-input {
+  width: 112px;
+  min-width: 112px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  padding: 6px 7px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  text-align: center;
 }
 
-.sticky-summary-3 {
-  right: 128px;
+.monthly-register__meta-input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  border-color: var(--color-primary);
 }
 
-.sticky-summary-4 {
-  right: 64px;
-}
-
-.sticky-summary-5 {
-  right: 0;
-}
-
-.monthly-register-table thead .sticky-summary {
-  z-index: 31;
-  background: #f3f6fb !important;
+.monthly-register__meta-input:disabled {
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .monthly-register__summary {

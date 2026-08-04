@@ -288,6 +288,10 @@ const mergeStudentRows = (rows = []) => {
       existing.importedPaidDate = row.importedPaidDate;
     }
 
+    if (!existing.importedDueDate && row.importedDueDate) {
+      existing.importedDueDate = row.importedDueDate;
+    }
+
     if (!existing.importedFeePaid && row.importedFeePaid) {
       existing.importedFeePaid = row.importedFeePaid;
     }
@@ -592,8 +596,12 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
           admissionNumber,
           studentCode: admissionNumber,
           batchName: "",
-          importedPaidDate: clean(row[3]),
-          importedFeePaid: clean(row[4]),
+          // In the supplied legacy workbook column D is labelled "Paid Date"
+          // but contains the due day/date. Column E contains the actual paid
+          // date. Store both explicitly so they cannot be swapped in the UI.
+          importedDueDate: clean(row[3]),
+          importedPaidDate: clean(row[4]),
+          importedFeePaid: "",
           importedFeeStatus: clean(row[5]),
           importedExtraNote: clean(row[6]),
           attendance,

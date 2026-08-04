@@ -271,7 +271,12 @@ const AttendanceImportModal = ({
       }
 
       setProgress({ stage: "completed", label: "Historical migration completed" });
-      toast.success("Selected historical attendance sheets import हो गईं");
+      toast.success(
+        "Historical migration completed successfully. Attendance data import ho gaya.",
+        { duration: 7000 }
+      );
+      reset();
+      onClose?.();
     } catch (error) {
       setProgress({
         stage: "failed",

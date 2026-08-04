@@ -57,6 +57,13 @@ const attendanceRecordSchema = new mongoose.Schema(
       maxlength: [50, "Imported paid date cannot exceed 50 characters"],
     },
 
+    importedDueDate: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [50, "Imported due date cannot exceed 50 characters"],
+    },
+
     importedFeePaid: {
       type: String,
       trim: true,

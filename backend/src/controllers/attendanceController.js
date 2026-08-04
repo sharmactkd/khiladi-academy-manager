@@ -297,6 +297,7 @@ const buildImportGroups = ({
           importedName: clean(row.name),
           importedPhone: normalizePhone(row.phone),
           importedAdmissionNumber: clean(row.admissionNumber || row.studentCode),
+          importedDueDate: clean(row.importedDueDate),
           importedPaidDate: clean(row.importedPaidDate),
           importedFeePaid: clean(row.importedFeePaid),
           importedFeeStatus: clean(row.importedFeeStatus),
@@ -388,6 +389,7 @@ const saveImportGroup = async ({
         attendance.records[index].importedPhone = record.importedPhone || "";
         attendance.records[index].importedAdmissionNumber =
           record.importedAdmissionNumber || "";
+        attendance.records[index].importedDueDate = record.importedDueDate || "";
         attendance.records[index].importedPaidDate = record.importedPaidDate || "";
         attendance.records[index].importedFeePaid = record.importedFeePaid || "";
         attendance.records[index].importedFeeStatus =

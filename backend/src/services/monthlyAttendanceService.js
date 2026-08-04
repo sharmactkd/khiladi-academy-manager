@@ -199,6 +199,7 @@ const getRecordDisplayIdentity = (record = {}, studentMap = new Map()) => {
     importedName: record.importedName || "",
     importedPhone: record.importedPhone || "",
     importedAdmissionNumber: record.importedAdmissionNumber || "",
+    importedDueDate: record.importedDueDate || "",
     importedPaidDate: record.importedPaidDate || "",
     importedFeePaid: record.importedFeePaid || "",
     importedFeeStatus: record.importedFeeStatus || "",
@@ -213,6 +214,13 @@ const buildRowFromRecord = ({ identity, attendance, index, fee }) => {
 
   const importedName = clean(identity.importedName);
   const importedPhone = clean(identity.importedPhone);
+  const hasExplicitDueDate = Boolean(clean(identity.importedDueDate));
+  const normalizedDueDate = hasExplicitDueDate
+    ? clean(identity.importedDueDate)
+    : clean(identity.importedPaidDate);
+  const normalizedPaidDate = hasExplicitDueDate
+    ? clean(identity.importedPaidDate)
+    : clean(identity.importedFeePaid);
 
   return {
     no: identity.importedSerialNo || index + 1,
@@ -226,8 +234,9 @@ const buildRowFromRecord = ({ identity, attendance, index, fee }) => {
     importedName,
     importedPhone,
     importedAdmissionNumber: identity.importedAdmissionNumber,
-    importedPaidDate: formatDisplayDate(identity.importedPaidDate),
-    importedFeePaid: formatDisplayDate(identity.importedFeePaid),
+    importedDueDate: normalizedDueDate,
+    importedPaidDate: formatDisplayDate(normalizedPaidDate),
+    importedFeePaid: "",
     importedFeeStatus: identity.importedFeeStatus,
     importedExtraNote: identity.importedExtraNote,
 
@@ -237,9 +246,14 @@ const buildRowFromRecord = ({ identity, attendance, index, fee }) => {
     contact: importedPhone || student?.phone || "-",
     status:
       student?.status || (identity.rowType === "raw-import" ? "imported" : "active"),
-    feeDueDate: student?.joiningDate || student?.createdAt || null,
+    feeDueDate:
+      normalizedDueDate ||
+      fee?.dueDate ||
+      student?.joiningDate ||
+      student?.createdAt ||
+      null,
     feePaidDate:
-      formatDisplayDate(identity.importedPaidDate) ||
+      formatDisplayDate(normalizedPaidDate) ||
       fee?.paidDate ||
       fee?.paymentDate ||
       null,
@@ -298,6 +312,7 @@ const buildMonthlyRows = async ({
       importedName: "",
       importedPhone: "",
       importedAdmissionNumber: "",
+      importedDueDate: "",
       importedPaidDate: "",
       importedFeePaid: "",
       importedFeeStatus: "",
@@ -696,6 +711,7 @@ export const saveMonthlyAttendanceRegister = async ({
         importedName: clean(row.importedName || row.name),
         importedPhone: normalizePhone(row.importedPhone || row.contact),
         importedAdmissionNumber: clean(row.importedAdmissionNumber),
+        importedDueDate: clean(row.importedDueDate || row.feeDueDate),
         importedPaidDate: clean(row.importedPaidDate || row.feePaidDate),
         importedFeePaid: clean(row.importedFeePaid || row.feePaid),
         importedFeeStatus: clean(row.importedFeeStatus || row.feeStatus),

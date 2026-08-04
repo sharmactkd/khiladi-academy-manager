@@ -64,22 +64,26 @@ const formatDateDDMMYY = (value) => {
   return raw;
 };
 
-const getPaidDateValue = (row) => {
+const formatEditableDueValue = (value) => {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw === "-") return raw;
+  if (/^\d{1,2}$/.test(raw) || /[A-Za-z]/.test(raw)) return raw;
+  return formatDateDDMMYY(raw);
+};
+
+const getDueDateValue = (row) => {
   return (
-    row.importedPaidDate ||
-    row.paidDate ||
-    row.feePaidDate ||
+    row.importedDueDate ||
     row.feeDueDate ||
     "-"
   );
 };
 
-const getFeePaidValue = (row) => {
+const getPaidDateValue = (row) => {
   return (
-    row.importedFeePaidDate ||
+    row.importedPaidDate ||
+    row.paidDate ||
     row.feePaidDate ||
-    row.importedFeePaid ||
-    row.feePaid ||
     "-"
   );
 };
@@ -155,6 +159,16 @@ const MonthlyAttendanceTable = ({
     onRowsChange(nextRows);
   };
 
+  const updateRowField = (rowIndex, field, value) => {
+    if (typeof onRowsChange !== "function") return;
+
+    onRowsChange(
+      safeRows.map((row, index) =>
+        index === rowIndex ? { ...row, [field]: value } : row
+      )
+    );
+  };
+
   if (loading) {
     return (
       <div className="monthly-register__empty">
@@ -185,8 +199,8 @@ const MonthlyAttendanceTable = ({
             <th className="sticky-col sticky-contact" rowSpan="2">
               Contact
             </th>
+            <th rowSpan="2">Due Date</th>
             <th rowSpan="2">Paid Date</th>
-            <th rowSpan="2">Fee Paid</th>
             <th rowSpan="2">Fee Status</th>
 
             {days.map((day) => {
@@ -210,19 +224,19 @@ const MonthlyAttendanceTable = ({
               );
             })}
 
-            <th className="sticky-summary" rowSpan="2">
+            <th className="summary-heading" rowSpan="2">
               ABSENT
             </th>
-            <th className="sticky-summary sticky-summary-2" rowSpan="2">
+            <th className="summary-heading" rowSpan="2">
               PRESENT
             </th>
-            <th className="sticky-summary sticky-summary-3" rowSpan="2">
+            <th className="summary-heading" rowSpan="2">
               LEAVE
             </th>
-            <th className="sticky-summary sticky-summary-4" rowSpan="2">
+            <th className="summary-heading" rowSpan="2">
               LATE
             </th>
-            <th className="sticky-summary sticky-summary-5" rowSpan="2">
+            <th className="summary-heading" rowSpan="2">
               %
             </th>
           </tr>
@@ -267,11 +281,46 @@ const MonthlyAttendanceTable = ({
               </td>
 
               <td>
-                <span>{formatDateDDMMYY(getPaidDateValue(row))}</span>
+                <input
+                  type="text"
+                  className="monthly-register__meta-input"
+                  value={displayValue(
+                    formatEditableDueValue(getDueDateValue(row)),
+                    ""
+                  )}
+                  onChange={(event) =>
+                    updateRowField(
+                      rowIndex,
+                      "importedDueDate",
+                      event.target.value
+                    )
+                  }
+                  placeholder="Due date"
+                  disabled={!onRowsChange}
+                  aria-label={`Due date for ${
+                    row.name || row.importedName || "student"
+                  }`}
+                />
               </td>
 
               <td>
-                <span>{formatDateDDMMYY(getFeePaidValue(row))}</span>
+                <input
+                  type="text"
+                  className="monthly-register__meta-input"
+                  value={displayValue(getPaidDateValue(row), "")}
+                  onChange={(event) =>
+                    updateRowField(
+                      rowIndex,
+                      "importedPaidDate",
+                      event.target.value
+                    )
+                  }
+                  placeholder="DD-MM-YY"
+                  disabled={!onRowsChange}
+                  aria-label={`Paid date for ${
+                    row.name || row.importedName || "student"
+                  }`}
+                />
               </td>
 
               <td
