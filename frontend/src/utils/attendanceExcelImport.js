@@ -441,15 +441,19 @@ export const parseStudentRecordSheet = (workbook, sheetName = "Record") => {
       martialArt: "Taekwondo",
       gender: "other",
       status: "inactive",
+      sourceSheet: sheetName,
+      legacySourceSheets: [sheetName],
+      importSource: "excel-record",
+      profileStatus: "incomplete",
+      profileIncompleteFields: ["gender", ...(!dateOfBirth ? ["dateOfBirth"] : [])],
       notes: "Imported from Ground.xlsx Record sheet; gender requires review.",
     };
 
     if (!dateOfBirth) {
       incompleteRows.push({
         ...payload,
-        reason: "DOB missing/invalid; kept for historical attendance matching only.",
+        reason: "DOB missing/invalid; provisional profile will be created.",
       });
-      return;
     }
 
     rows.push(payload);
@@ -459,9 +463,65 @@ export const parseStudentRecordSheet = (workbook, sheetName = "Record") => {
     rows,
     incompleteRows,
     warnings: incompleteRows.length
-      ? [`${incompleteRows.length} Record rows have no valid DOB and will not create fake profiles.`]
+      ? [`${incompleteRows.length} Record rows have no valid DOB; provisional profiles will keep DOB blank.`]
       : [],
   };
+};
+
+const stableLegacyCode = (value) => {
+  let hash = 2166136261;
+  const input = normalizeKey(value) || "unknown";
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash >>> 0).toString(36).toUpperCase();
+};
+
+export const buildProvisionalStudentsFromAttendance = (
+  parsedSheets = [],
+  { fallbackBatchName = "" } = {}
+) => {
+  const identities = new Map();
+  parsedSheets.forEach((parsedSheet) => {
+    (parsedSheet?.rows || []).forEach((row) => {
+      const name = clean(row.name);
+      const phone = normalizePhone(row.phone);
+      if (!name && !phone) return;
+      const normalizedName = normalizeKey(name);
+      const identityKey = phone
+        ? `name-phone:${normalizedName}:${phone}`
+        : `name:${normalizedName}`;
+      const existing = identities.get(identityKey);
+      const sheetName = clean(row.sourceSheet || parsedSheet.sheetName);
+      if (existing) {
+        existing.legacySourceSheets = [...new Set([
+          ...existing.legacySourceSheets,
+          ...(sheetName ? [sheetName] : []),
+        ])];
+        return;
+      }
+      const legacyCode = `LEGACY-ATT-${stableLegacyCode(identityKey)}`;
+      identities.set(identityKey, {
+        rowNumber: row.rowNumber,
+        admissionNumber: legacyCode,
+        studentCode: legacyCode,
+        name: name || `Student ${phone.slice(-4)}`,
+        phone,
+        dateOfBirth: "",
+        gender: "",
+        batchName: fallbackBatchName,
+        martialArt: "Taekwondo",
+        status: "inactive",
+        importSource: "excel-attendance",
+        profileStatus: "incomplete",
+        profileIncompleteFields: ["dateOfBirth", "gender"],
+        legacySourceSheets: sheetName ? [sheetName] : [],
+        notes: "Provisional profile created from historical attendance. DOB and gender require review.",
+      });
+    });
+  });
+  return Array.from(identities.values());
 };
 
 export const parseHistoricalAttendanceSheet = (workbook, sheetName) =>

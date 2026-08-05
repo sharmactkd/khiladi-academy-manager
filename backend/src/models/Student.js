@@ -122,13 +122,30 @@ const studentSchema = new mongoose.Schema(
     gender: {
       type: String,
       enum: ["male", "female", "other"],
-      required: true,
+      default: "other",
     },
 
     dateOfBirth: {
       type: Date,
-      required: true,
+      default: null,
     },
+
+    profileStatus: {
+      type: String,
+      enum: ["complete", "incomplete"],
+      default: "complete",
+      index: true,
+    },
+
+    profileIncompleteFields: { type: [String], default: [] },
+
+    importSource: {
+      type: String,
+      enum: ["manual", "excel-record", "excel-attendance"],
+      default: "manual",
+    },
+
+    legacySourceSheets: { type: [String], default: [] },
 
     age: {
       type: Number,
@@ -378,6 +395,8 @@ studentSchema.index({ academy: 1, branch: 1 });
 studentSchema.index({ academy: 1, batch: 1 });
 studentSchema.index({ academy: 1, status: 1 });
 studentSchema.index({ academy: 1, ageCategory: 1 });
+studentSchema.index({ academy: 1, profileStatus: 1 });
+studentSchema.index({ academy: 1, phone: 1 });
 
 const cleanPhone = (value) => String(value || "").replace(/\D/g, "").slice(0, 10);
 
@@ -411,6 +430,17 @@ studentSchema.pre("validate", function () {
 
   this.age = calculateAge(this.dateOfBirth);
   this.ageCategory = getAgeCategory(this.age);
+
+  this.profileIncompleteFields = normalizeArray(this.profileIncompleteFields);
+  this.legacySourceSheets = normalizeArray(this.legacySourceSheets);
+
+  if (this.profileStatus === "complete" && !this.dateOfBirth) {
+    this.invalidate("dateOfBirth", "Date of birth is required for a complete profile");
+  }
+
+  if (this.profileStatus === "incomplete" && !this.profileIncompleteFields.length) {
+    this.profileIncompleteFields = ["dateOfBirth"];
+  }
 
   this.heightCm = cleanNumberOrNull(this.heightCm);
   this.weightKg = cleanNumberOrNull(this.weightKg);

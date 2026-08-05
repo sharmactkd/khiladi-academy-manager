@@ -770,7 +770,17 @@ const Students = () => {
                       <td>
                         {student.studentCode || student.admissionNumber || "-"}
                       </td>
-                      <td>{fullName || "-"}</td>
+                      <td>
+                        <div>{fullName || "-"}</div>
+                        {student.profileStatus === "incomplete" && (
+                          <span
+                            className="profile-incomplete-badge"
+                            title={`Missing: ${(student.profileIncompleteFields || []).join(", ") || "profile details"}`}
+                          >
+                            Profile Incomplete
+                          </span>
+                        )}
+                      </td>
                       <td>{student.age ?? "-"}</td>
                       <td>{student.ageCategory || "-"}</td>
                       <td>{student.phone || "-"}</td>

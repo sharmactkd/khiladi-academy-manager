@@ -38,11 +38,13 @@ export const studentApi = {
   importBulk: async (payload = {}) => {
     const students = Array.isArray(payload) ? payload : payload.students || [];
     const destination = Array.isArray(payload) ? {} : payload.destination || {};
+    const duplicateMode = Array.isArray(payload) ? "skip" : payload.duplicateMode || "skip";
 
     const res = await api.post("/students/import", {
       students,
       destination,
-      duplicateMode: "skip",
+      duplicateMode,
+      allowProvisional: !Array.isArray(payload) && payload.allowProvisional === true,
     });
 
     return res.data;

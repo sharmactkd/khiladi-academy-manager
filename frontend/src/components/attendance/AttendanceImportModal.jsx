@@ -2,15 +2,24 @@ import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { studentApi } from "../../api/studentApi.js";
 import {
+  buildProvisionalStudentsFromAttendance,
   classifyHistoricalSheets,
   getAttendanceSheetNames,
+  isHistoricalAttendanceSheet,
+  isStudentRecordSheet,
   parseHistoricalAttendanceSheet,
   parseStudentRecordSheet,
   readAttendanceWorkbook,
 } from "../../utils/attendanceExcelImport.js";
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 const emptyPreview = {
   rows: [],
+  blocks: [],
   summary: {
     sheetName: "",
     detectedStudentRows: 0,
@@ -28,45 +37,96 @@ const chunk = (items, size) => {
   return batches;
 };
 
-const StudentImportSummary = ({ summary }) => {
-  if (!summary) return null;
+const uniqueByIdentity = (rows = []) => {
+  const map = new Map();
+  rows.forEach((row) => {
+    const phone = String(row.phone || "").replace(/\D/g, "");
+    const name = String(row.name || `${row.firstName || ""} ${row.lastName || ""}`)
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+    const admission = String(row.admissionNumber || row.studentCode || "").trim().toLowerCase();
+    const key = admission ? `admission:${admission}` : phone ? `name-phone:${name}:${phone}` : `name:${name}`;
+    if (!map.has(key)) map.set(key, row);
+  });
+  return Array.from(map.values());
+};
+
+const SheetTypeBadge = ({ sheetName }) => {
+  const type = isStudentRecordSheet(sheetName)
+    ? "Student Record"
+    : isHistoricalAttendanceSheet(sheetName)
+      ? "Attendance"
+      : "Ignored / Unsupported";
+  const color = type === "Student Record" ? "#166534" : type === "Attendance" ? "#1d4ed8" : "#64748b";
+  const background = type === "Student Record" ? "#dcfce7" : type === "Attendance" ? "#dbeafe" : "#f1f5f9";
   return (
-    <div className="card" style={{ marginTop: 12 }}>
-      <strong>Student Master Result</strong>
-      <p className="muted" style={{ marginBottom: 0 }}>
-        Imported: {summary.imported || 0} | Skipped: {summary.skipped || 0} |
-        Failed: {summary.failed || 0} | Historical-only identities: {summary.incomplete || 0}
-      </p>
+    <span style={{ padding: "3px 8px", borderRadius: 999, color, background, fontSize: 12, fontWeight: 700 }}>
+      {type}
+    </span>
+  );
+};
+
+const ResultSummary = ({ studentSummary, attendanceResults }) => {
+  if (!studentSummary && !attendanceResults.length) return null;
+  return (
+    <div className="card" style={{ marginTop: 14 }}>
+      <h3>Import Result</h3>
+      {studentSummary && (
+        <p className="muted">
+          Students — Imported: {studentSummary.imported || 0} | Skipped: {studentSummary.skipped || 0} |
+          Failed: {studentSummary.failed || 0} | Provisional detected: {studentSummary.incomplete || 0}
+        </p>
+      )}
+      {attendanceResults.length > 0 && (
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Sheet / Month</th><th>Imported</th><th>Skipped</th><th>Failed</th></tr></thead>
+            <tbody>
+              {attendanceResults.map((result) => (
+                <tr key={result.key}>
+                  <td>{result.label}</td>
+                  <td>{result.imported || 0}</td>
+                  <td>{result.skipped || 0}</td>
+                  <td>{result.failed || 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
 
-const AttendanceImportModal = ({
-  open,
-  onClose,
-  onImport,
-  fallbackBatch,
-}) => {
+const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch }) => {
   const [fileName, setFileName] = useState("");
   const [workbook, setWorkbook] = useState(null);
-  const [classification, setClassification] = useState({
-    recordSheet: "",
-    attendanceSheets: [],
-    ignoredSheets: [],
-  });
-  const [selectedSheets, setSelectedSheets] = useState([]);
-  const [previewSheet, setPreviewSheet] = useState("");
-  const [preview, setPreview] = useState(emptyPreview);
-  const [importRecord, setImportRecord] = useState(true);
+  const [classification, setClassification] = useState({ recordSheet: "", attendanceSheets: [], ignoredSheets: [] });
+  const [studentSheets, setStudentSheets] = useState([]);
+  const [attendanceSheets, setAttendanceSheets] = useState([]);
+  const [attendanceMode, setAttendanceMode] = useState("complete");
+  const [monthSheet, setMonthSheet] = useState("");
+  const [selectedBlockIds, setSelectedBlockIds] = useState([]);
+  const [parsedSheets, setParsedSheets] = useState({});
   const [duplicateMode, setDuplicateMode] = useState("skip");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(null);
   const [studentSummary, setStudentSummary] = useState(null);
-  const [sheetResults, setSheetResults] = useState([]);
+  const [attendanceResults, setAttendanceResults] = useState([]);
 
-  const totalDetectedSheets = useMemo(
-    () => getAttendanceSheetNames(workbook).length,
-    [workbook]
+  const allSheets = useMemo(() => getAttendanceSheetNames(workbook), [workbook]);
+  const selectedMonthSheetData = parsedSheets[monthSheet] || emptyPreview;
+  const selectableStudentSheets = useMemo(
+    () => allSheets.filter((name) => isStudentRecordSheet(name) || isHistoricalAttendanceSheet(name)),
+    [allSheets]
+  );
+  const selectedMonthsCount = selectedBlockIds.length;
+  const canStart = Boolean(
+    workbook &&
+    (studentSheets.length || attendanceSheets.length) &&
+    (!attendanceSheets.length || fallbackBatch) &&
+    (attendanceMode !== "months" || !attendanceSheets.length || selectedBlockIds.length)
   );
 
   if (!open) return null;
@@ -75,14 +135,16 @@ const AttendanceImportModal = ({
     setFileName("");
     setWorkbook(null);
     setClassification({ recordSheet: "", attendanceSheets: [], ignoredSheets: [] });
-    setSelectedSheets([]);
-    setPreviewSheet("");
-    setPreview(emptyPreview);
-    setImportRecord(true);
+    setStudentSheets([]);
+    setAttendanceSheets([]);
+    setAttendanceMode("complete");
+    setMonthSheet("");
+    setSelectedBlockIds([]);
+    setParsedSheets({});
     setDuplicateMode("skip");
     setProgress(null);
     setStudentSummary(null);
-    setSheetResults([]);
+    setAttendanceResults([]);
   };
 
   const close = () => {
@@ -91,356 +153,315 @@ const AttendanceImportModal = ({
     onClose?.();
   };
 
-  const loadPreview = async (nextWorkbook, sheetName) => {
-    if (!nextWorkbook || !sheetName) {
-      setPreview(emptyPreview);
-      return;
-    }
-
-    setBusy(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 30));
-    try {
-      setPreview(parseHistoricalAttendanceSheet(nextWorkbook, sheetName));
-    } catch (error) {
-      setPreview({ ...emptyPreview, warnings: [error.message || "Sheet parse failed"] });
-      toast.error(`${sheetName} read nahi ho payi`);
-    } finally {
-      setBusy(false);
-    }
+  const parseAndCache = async (sheetName) => {
+    if (!sheetName) return emptyPreview;
+    if (parsedSheets[sheetName]) return parsedSheets[sheetName];
+    await new Promise((resolve) => window.setTimeout(resolve, 20));
+    const parsed = parseHistoricalAttendanceSheet(workbook, sheetName);
+    setParsedSheets((current) => ({ ...current, [sheetName]: parsed }));
+    return parsed;
   };
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-
     if (!/\.(xlsx|xls)$/i.test(file.name)) {
-      toast.error("Historical migration ke liye .xlsx ya .xls file upload karein");
+      toast.error("Please select an .xlsx or .xls workbook");
       return;
     }
 
     setBusy(true);
     reset();
     setFileName(file.name);
-
     try {
       const nextWorkbook = await readAttendanceWorkbook(file);
       const names = getAttendanceSheetNames(nextWorkbook);
-      const nextClassification = classifyHistoricalSheets(names);
-
+      const detected = classifyHistoricalSheets(names);
       setWorkbook(nextWorkbook);
-      setClassification(nextClassification);
-      setSelectedSheets(nextClassification.attendanceSheets);
-      setPreviewSheet(nextClassification.attendanceSheets[0] || "");
-      setImportRecord(Boolean(nextClassification.recordSheet));
-
-      if (!nextClassification.attendanceSheets.length) {
-        toast.error("Attendance sheets detect nahi hui");
-      } else {
-        toast.success(
-          `${names.length} sheets मिलीं; ${nextClassification.attendanceSheets.length} attendance sheets selected`
-        );
-      }
+      setClassification(detected);
+      setStudentSheets(detected.recordSheet ? [detected.recordSheet] : []);
+      setAttendanceSheets([]);
+      toast.success(`${names.length} worksheets found. Select what you want to import.`);
     } catch (error) {
-      toast.error(error.message || "Workbook read nahi ho payi");
+      toast.error(error.message || "Workbook could not be read");
     } finally {
       setBusy(false);
     }
   };
 
-  const toggleSheet = (sheetName) => {
-    setSelectedSheets((current) =>
-      current.includes(sheetName)
-        ? current.filter((name) => name !== sheetName)
-        : [...current, sheetName]
-    );
+  const toggleStudentSheet = (sheetName) => {
+    setStudentSheets((current) => current.includes(sheetName)
+      ? current.filter((name) => name !== sheetName)
+      : [...current, sheetName]);
   };
 
-  const importStudentRecord = async () => {
-    if (!importRecord || !classification.recordSheet) return null;
-
-    setProgress({ stage: "students", label: "Record sheet parsing..." });
-    const parsedRecord = parseStudentRecordSheet(
-      workbook,
-      classification.recordSheet
-    );
-    const aggregate = {
-      imported: 0,
-      skipped: 0,
-      failed: 0,
-      incomplete: parsedRecord.incompleteRows.length,
-      errors: [],
-      warnings: [...parsedRecord.warnings],
-    };
-
-    const batches = chunk(parsedRecord.rows, 100);
-    for (let index = 0; index < batches.length; index += 1) {
-      setProgress({
-        stage: "students",
-        label: `Student batch ${index + 1} of ${batches.length}`,
-      });
-      const response = await studentApi.importBulk(batches[index]);
-      const result = response?.data || {};
-      aggregate.imported += result.imported || 0;
-      aggregate.skipped += result.skipped || 0;
-      aggregate.failed += result.failed || 0;
-      aggregate.errors.push(...(result.errors || []));
-      aggregate.warnings.push(...(result.warnings || []));
-    }
-
-    setStudentSummary(aggregate);
-    return aggregate;
-  };
-
-  const handleImport = async () => {
-    if (!workbook || !selectedSheets.length) {
-      toast.error("Kam se kam ek attendance sheet select karein");
-      return;
-    }
-    if (!fallbackBatch) {
-      toast.error("Pehle historical attendance ke liye batch select karein");
+  const toggleAttendanceSheet = async (sheetName) => {
+    const removing = attendanceSheets.includes(sheetName);
+    if (removing) {
+      const blockIds = (parsedSheets[sheetName]?.blocks || []).map((block) => block.blockId);
+      setAttendanceSheets((current) => current.filter((name) => name !== sheetName));
+      setSelectedBlockIds((current) => current.filter((id) => !blockIds.includes(id)));
+      if (monthSheet === sheetName) setMonthSheet("");
       return;
     }
 
     setBusy(true);
-    setSheetResults([]);
-    setStudentSummary(null);
-
     try {
-      await importStudentRecord();
-      const results = [];
-
-      for (let index = 0; index < selectedSheets.length; index += 1) {
-        const sheetName = selectedSheets[index];
-        setProgress({
-          stage: "attendance",
-          label: `${sheetName} (${index + 1} of ${selectedSheets.length}) parsing...`,
-        });
-        await new Promise((resolve) => window.setTimeout(resolve, 20));
-
-        const parsedSheet = parseHistoricalAttendanceSheet(workbook, sheetName);
-        if (!parsedSheet.rows.length) {
-          results.push({ sheetName, failed: 1, message: "No attendance rows detected" });
-          setSheetResults([...results]);
-          continue;
-        }
-
-        const sheetResult = {
-          sheetName,
-          imported: 0,
-          skipped: 0,
-          failed: 0,
-          rawImportedStudents: 0,
-          warnings: parsedSheet.warnings.length,
-        };
-        const blocks = parsedSheet.blocks?.length
-          ? parsedSheet.blocks
-          : [
-              {
-                blockId: sheetName,
-                rows: parsedSheet.rows,
-                estimatedAttendanceRecords:
-                  parsedSheet.summary?.estimatedAttendanceRecords || 0,
-              },
-            ];
-
-        for (let blockIndex = 0; blockIndex < blocks.length; blockIndex += 1) {
-          const block = blocks[blockIndex];
-          if (!block.rows.length || !block.estimatedAttendanceRecords) continue;
-          setProgress({
-            stage: "attendance",
-            label: `${sheetName}: month ${blockIndex + 1} of ${blocks.length} save हो रहा है...`,
-          });
-          const result = await onImport?.({
-            sheetName,
-            blockId: block.blockId,
-            sourceWorkbook: fileName,
-            duplicateMode,
-            fallbackBatch,
-            strictMatching: true,
-            rows: block.rows,
-          });
-          sheetResult.imported += result?.imported || 0;
-          sheetResult.skipped += result?.skipped || 0;
-          sheetResult.failed += result?.failed || 0;
-          sheetResult.rawImportedStudents += result?.rawImportedStudents || 0;
-        }
-
-        results.push(sheetResult);
-        setSheetResults([...results]);
+      const parsed = await parseAndCache(sheetName);
+      setAttendanceSheets((current) => [...current, sheetName]);
+      if (!monthSheet) setMonthSheet(sheetName);
+      if (attendanceMode === "months") {
+        setSelectedBlockIds((current) => [...new Set([
+          ...current,
+          ...(parsed.blocks || []).map((block) => block.blockId),
+        ])]);
       }
-
-      setProgress({ stage: "completed", label: "Historical migration completed" });
-      toast.success(
-        "Historical migration completed successfully. Attendance data import ho gaya.",
-        { duration: 7000 }
-      );
-      reset();
-      onClose?.();
     } catch (error) {
-      setProgress({
-        stage: "failed",
-        label: error.response?.data?.message || error.message || "Migration failed",
-      });
-      toast.error(error.response?.data?.message || "Historical migration failed");
+      toast.error(`${sheetName} could not be parsed`);
     } finally {
       setBusy(false);
     }
   };
 
+  const selectMonthSheet = async (sheetName) => {
+    setMonthSheet(sheetName);
+    if (!sheetName) return;
+    setBusy(true);
+    try {
+      await parseAndCache(sheetName);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleBlock = (blockId) => {
+    setSelectedBlockIds((current) => current.includes(blockId)
+      ? current.filter((id) => id !== blockId)
+      : [...current, blockId]);
+  };
+
+  const importStudents = async () => {
+    if (!studentSheets.length) return null;
+    setProgress({ stage: "students", label: "Preparing selected student sources..." });
+
+    const recordRows = [];
+    const attendanceSources = [];
+    const warnings = [];
+
+    for (const sheetName of studentSheets) {
+      if (isStudentRecordSheet(sheetName)) {
+        const parsed = parseStudentRecordSheet(workbook, sheetName);
+        recordRows.push(...parsed.rows);
+        warnings.push(...(parsed.warnings || []));
+      } else if (isHistoricalAttendanceSheet(sheetName)) {
+        attendanceSources.push(await parseAndCache(sheetName));
+      }
+    }
+
+    const provisionalRows = buildProvisionalStudentsFromAttendance(attendanceSources);
+    const rows = uniqueByIdentity([...recordRows, ...provisionalRows]);
+    const aggregate = {
+      imported: 0,
+      skipped: 0,
+      failed: 0,
+      incomplete: rows.filter((row) => row.profileStatus === "incomplete").length,
+      warnings,
+      errors: [],
+    };
+
+    const batches = chunk(rows, 100);
+    for (let index = 0; index < batches.length; index += 1) {
+      setProgress({ stage: "students", label: `Student batch ${index + 1} of ${batches.length}` });
+      const response = await studentApi.importBulk({
+        students: batches[index],
+        duplicateMode: "skip",
+        allowProvisional: true,
+      });
+      const result = response?.data || {};
+      aggregate.imported += result.imported || 0;
+      aggregate.skipped += result.skipped || 0;
+      aggregate.failed += result.failed || 0;
+      aggregate.warnings.push(...(result.warnings || []));
+      aggregate.errors.push(...(result.errors || []));
+    }
+    setStudentSummary(aggregate);
+    return aggregate;
+  };
+
+  const importAttendance = async () => {
+    const results = [];
+    for (let sheetIndex = 0; sheetIndex < attendanceSheets.length; sheetIndex += 1) {
+      const sheetName = attendanceSheets[sheetIndex];
+      const parsed = await parseAndCache(sheetName);
+      const allBlocks = parsed.blocks?.length ? parsed.blocks : [];
+      const blocks = attendanceMode === "months"
+        ? allBlocks.filter((block) => selectedBlockIds.includes(block.blockId))
+        : allBlocks;
+
+      for (let blockIndex = 0; blockIndex < blocks.length; blockIndex += 1) {
+        const block = blocks[blockIndex];
+        if (!block.rows?.length || !block.estimatedAttendanceRecords) continue;
+        const label = `${sheetName} — ${MONTHS[(block.month || 1) - 1]} ${block.year}`;
+        setProgress({ stage: "attendance", label: `Importing ${label}...` });
+        const result = await onImport?.({
+          sheetName,
+          blockId: block.blockId,
+          sourceWorkbook: fileName,
+          duplicateMode,
+          fallbackBatch,
+          strictMatching: true,
+          rows: block.rows,
+        });
+        results.push({
+          key: block.blockId,
+          label,
+          imported: result?.imported || 0,
+          skipped: result?.skipped || 0,
+          failed: result?.failed || 0,
+        });
+        setAttendanceResults([...results]);
+      }
+    }
+    return results;
+  };
+
+  const handleImport = async () => {
+    if (!canStart) {
+      toast.error("Select at least one valid student sheet or attendance sheet/month");
+      return;
+    }
+    setBusy(true);
+    setStudentSummary(null);
+    setAttendanceResults([]);
+    try {
+      await importStudents();
+      await importAttendance();
+      setProgress({ stage: "completed", label: "Selected data imported successfully" });
+      toast.success("Import completed successfully", { duration: 7000 });
+      window.setTimeout(() => {
+        reset();
+        onClose?.();
+      }, 900);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || "Import failed";
+      setProgress({ stage: "failed", label: message });
+      toast.error(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sectionStyle = { marginTop: 14, border: "1px solid #e2e8f0", borderRadius: 14 };
+  const sheetGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10, marginTop: 10 };
+  const sheetRowStyle = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: 10, border: "1px solid #e2e8f0", borderRadius: 10 };
+
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-        background: "rgba(15, 23, 42, 0.68)",
-      }}
-    >
-      <div
-        style={{
-          width: "min(1050px, 96vw)",
-          maxHeight: "92vh",
-          overflow: "auto",
-          borderRadius: 16,
-          padding: 20,
-          background: "#ffffff",
-          boxShadow: "0 24px 80px rgba(15, 23, 42, 0.35)",
-        }}
-      >
+    <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: "rgba(15, 23, 42, 0.68)" }}>
+      <div style={{ width: "min(1100px, 96vw)", maxHeight: "92vh", overflow: "auto", borderRadius: 16, padding: 20, background: "#fff", boxShadow: "0 24px 80px rgba(15,23,42,.35)" }}>
         <div className="page-header" style={{ marginBottom: 16 }}>
           <div>
-            <h2>Historical Student & Attendance Migration</h2>
-            <p className="muted">
-              Record और सभी yearly attendance sheets import होंगी। Balance/report sheets ignore रहेंगी।
-            </p>
+            <h2>Excel Student & Attendance Import</h2>
+            <p className="muted">First choose the workbook, then independently select student and attendance sources.</p>
           </div>
           <button type="button" className="btn" onClick={close} disabled={busy}>Close</button>
         </div>
 
         <div className="card">
-          <label>
-            Historical Excel Workbook
-            <input type="file" accept=".xlsx,.xls" onChange={handleFileChange} disabled={busy} />
-          </label>
+          <label>Excel Workbook<input type="file" accept=".xlsx,.xls" onChange={handleFileChange} disabled={busy} /></label>
           {fileName && <p className="muted">Selected: {fileName}</p>}
         </div>
 
         {workbook && (
           <>
-            <div className="card" style={{ marginTop: 14 }}>
-              <h3>Workbook Classification</h3>
-              <p>Total sheets: {totalDetectedSheets}</p>
-              <label style={{ display: "block", marginBottom: 10 }}>
-                <input
-                  type="checkbox"
-                  checked={importRecord && Boolean(classification.recordSheet)}
-                  disabled={!classification.recordSheet || busy}
-                  onChange={(event) => setImportRecord(event.target.checked)}
-                />{" "}
-                Import Student Master: {classification.recordSheet || "Not detected"}
-              </label>
+            <div className="card" style={sectionStyle}>
+              <h3>All Worksheets ({allSheets.length})</h3>
+              <p className="muted">The workbook contains the following sheets. Unsupported Balance/Report sheets are shown but will not be imported.</p>
+              <div style={sheetGridStyle}>
+                {allSheets.map((sheetName) => (
+                  <div key={sheetName} style={sheetRowStyle}>
+                    <strong>{sheetName}</strong><SheetTypeBadge sheetName={sheetName} />
+                  </div>
+                ))}
+              </div>
+            </div>
 
-              <strong>Attendance sheets</strong>
-              <div className="grid grid-3" style={{ marginTop: 8 }}>
+            <div className="card" style={sectionStyle}>
+              <h3>1. Import Student Record</h3>
+              <p className="muted">Choose one or more sheets. Attendance sheets can create provisional profiles without fake DOB.</p>
+              <div style={sheetGridStyle}>
+                {allSheets.map((sheetName) => {
+                  const supported = selectableStudentSheets.includes(sheetName);
+                  return (
+                    <label key={sheetName} style={{ ...sheetRowStyle, opacity: supported ? 1 : 0.55 }}>
+                      <span><input type="checkbox" checked={studentSheets.includes(sheetName)} disabled={!supported || busy} onChange={() => toggleStudentSheet(sheetName)} /> {sheetName}</span>
+                      <SheetTypeBadge sheetName={sheetName} />
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="muted">Selected student sources: {studentSheets.join(", ") || "None"}</p>
+            </div>
+
+            <div className="card" style={sectionStyle}>
+              <h3>2. Import Attendance</h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 18, marginBottom: 12 }}>
+                <label><input type="radio" name="attendanceMode" value="complete" checked={attendanceMode === "complete"} onChange={() => setAttendanceMode("complete")} disabled={busy} /> Complete selected sheets</label>
+                <label><input type="radio" name="attendanceMode" value="months" checked={attendanceMode === "months"} onChange={() => setAttendanceMode("months")} disabled={busy} /> Select months manually</label>
+              </div>
+
+              <div style={sheetGridStyle}>
                 {classification.attendanceSheets.map((sheetName) => (
-                  <label key={sheetName}>
-                    <input
-                      type="checkbox"
-                      checked={selectedSheets.includes(sheetName)}
-                      onChange={() => toggleSheet(sheetName)}
-                      disabled={busy}
-                    />{" "}
-                    {sheetName}
+                  <label key={sheetName} style={sheetRowStyle}>
+                    <span><input type="checkbox" checked={attendanceSheets.includes(sheetName)} disabled={busy} onChange={() => toggleAttendanceSheet(sheetName)} /> {sheetName}</span>
+                    <SheetTypeBadge sheetName={sheetName} />
                   </label>
                 ))}
               </div>
-              <p className="muted">
-                Ignored automatically: {classification.ignoredSheets.join(", ") || "None"}
-              </p>
-            </div>
 
-            <div className="card" style={{ marginTop: 14 }}>
-              <div className="grid grid-2">
-                <label>
-                  Preview attendance sheet
-                  <select
-                    value={previewSheet}
-                    disabled={busy}
-                    onChange={(event) => {
-                      const sheet = event.target.value;
-                      setPreviewSheet(sheet);
-                      loadPreview(workbook, sheet);
-                    }}
-                  >
-                    <option value="">Select sheet</option>
-                    {classification.attendanceSheets.map((sheet) => (
-                      <option key={sheet} value={sheet}>{sheet}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Existing attendance
+              {attendanceMode === "months" && attendanceSheets.length > 0 && (
+                <div style={{ marginTop: 16, padding: 14, border: "1px solid #cbd5e1", borderRadius: 12, background: "#f8fafc" }}>
+                  <label>Choose attendance sheet
+                    <select value={monthSheet} disabled={busy} onChange={(event) => selectMonthSheet(event.target.value)}>
+                      <option value="">Select sheet</option>
+                      {attendanceSheets.map((sheetName) => <option key={sheetName} value={sheetName}>{sheetName}</option>)}
+                    </select>
+                  </label>
+                  {monthSheet && (
+                    <div style={sheetGridStyle}>
+                      {(selectedMonthSheetData.blocks || []).map((block) => (
+                        <label key={block.blockId} style={sheetRowStyle}>
+                          <span><input type="checkbox" checked={selectedBlockIds.includes(block.blockId)} onChange={() => toggleBlock(block.blockId)} disabled={busy} /> {MONTHS[(block.month || 1) - 1]} {block.year}</span>
+                          <small>{block.rows?.length || 0} students · {block.estimatedAttendanceRecords || 0} cells</small>
+                        </label>
+                      ))}
+                      {!selectedMonthSheetData.blocks?.length && <p className="muted">No month blocks detected in this sheet.</p>}
+                    </div>
+                  )}
+                  <p className="muted">Selected months: {selectedMonthsCount}</p>
+                </div>
+              )}
+
+              <div className="grid grid-2" style={{ marginTop: 14 }}>
+                <label>Existing attendance
                   <select value={duplicateMode} onChange={(event) => setDuplicateMode(event.target.value)} disabled={busy}>
                     <option value="skip">Skip existing (Recommended)</option>
                     <option value="overwrite">Overwrite existing</option>
                   </select>
                 </label>
+                <div><strong>Selected attendance sheets</strong><p className="muted">{attendanceSheets.join(", ") || "None"}</p></div>
               </div>
-              {preview.summary.sheetName && (
-                <p className="muted">
-                  {preview.summary.sheetName}: {preview.summary.detectedStudentRows || 0} students, {preview.summary.detectedDateColumns || 0} date columns, {preview.summary.estimatedAttendanceRecords || 0} records
-                </p>
-              )}
             </div>
           </>
         )}
 
-        {progress && (
-          <div className="card" style={{ marginTop: 14 }}>
-            <strong>{progress.label}</strong>
-          </div>
-        )}
-
-        <StudentImportSummary summary={studentSummary} />
-
-        {sheetResults.length > 0 && (
-          <div className="card" style={{ marginTop: 14 }}>
-            <h3>Attendance Results</h3>
-            <div className="table-wrap">
-              <table className="table">
-                <thead><tr><th>Sheet</th><th>Imported</th><th>Skipped</th><th>Failed</th><th>Historical identities</th></tr></thead>
-                <tbody>
-                  {sheetResults.map((result) => (
-                    <tr key={result.sheetName}>
-                      <td>{result.sheetName}</td>
-                      <td>{result.imported || 0}</td>
-                      <td>{result.skipped || 0}</td>
-                      <td>{result.failed || 0}</td>
-                      <td>{result.rawImportedStudents || 0}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        {progress && <div className="card" style={{ marginTop: 14 }}><strong>{progress.label}</strong></div>}
+        <ResultSummary studentSummary={studentSummary} attendanceResults={attendanceResults} />
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
           <button type="button" className="btn" onClick={close} disabled={busy}>Cancel</button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleImport}
-            disabled={busy || !workbook || !selectedSheets.length || !fallbackBatch}
-          >
-            {busy ? "Processing..." : "Start Safe Migration"}
+          <button type="button" className="btn btn-primary" onClick={handleImport} disabled={busy || !canStart}>
+            {busy ? "Processing..." : "Start Safe Import"}
           </button>
         </div>
       </div>

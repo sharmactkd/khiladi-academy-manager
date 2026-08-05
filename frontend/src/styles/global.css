@@ -1633,6 +1633,58 @@ button:disabled,
   color: #6b7280;
 }
 
+.monthly-register__date-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 112px;
+  min-width: 112px;
+}
+
+.monthly-register__date-display {
+  padding-right: 29px;
+  cursor: pointer;
+}
+
+.monthly-register__calendar-button {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 23px;
+  height: 23px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.monthly-register__calendar-button:hover:not(:disabled),
+.monthly-register__calendar-button:focus-visible {
+  background: var(--color-primary-soft);
+  outline: none;
+}
+
+.monthly-register__calendar-button:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.monthly-register__native-date {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .monthly-register__summary {
   font-weight: 900;
   font-size: 15px;
@@ -2003,6 +2055,21 @@ tbody tr:hover { background: #fffafa; }
 .plan-card.popular { border: 2px solid var(--color-primary); box-shadow: 0 12px 32px rgba(207,0,6,.1); }
 .plan-price strong { color: var(--color-primary); }
 .premium-badge { background: var(--color-primary-soft); color: var(--color-primary); border: 1px solid #fecdd3; }
+
+.profile-incomplete-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border: 1px solid #f59e0b;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
 .upgrade-card { border-color: #fecdd3; background: linear-gradient(145deg,#fff 0%,var(--color-primary-soft) 100%); }
 .report-toolbar { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 18px; background: var(--color-surface); box-shadow: var(--shadow-sm); }
 .skill-score-card__bar span { background: linear-gradient(90deg,var(--color-primary),var(--color-primary-hover)); }

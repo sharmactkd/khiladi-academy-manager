@@ -11,8 +11,6 @@ import { buildBranchAccessFilter } from "../services/branchAccessService.js";
 import { getPlanLimit, isLimitUnlimited } from "../services/planService.js";
 import { getResourceUsage } from "../services/usageService.js";
 
-const IMPORT_FALLBACK_DOB = new Date("2000-01-01T00:00:00.000Z");
-
 const TAEKWONDO_BELTS = [
   "White",
   "Yellow",
@@ -212,6 +210,20 @@ const normalizeStudentPayload = (body = {}) => {
   payload.firstName = cleanString(payload.firstName, 100);
   payload.lastName = cleanString(payload.lastName, 100);
   payload.gender = normalizeGender(payload.gender);
+  if (Object.prototype.hasOwnProperty.call(body, "profileIncompleteFields")) {
+    payload.profileIncompleteFields = normalizeStringArray(payload.profileIncompleteFields);
+  } else delete payload.profileIncompleteFields;
+  if (Object.prototype.hasOwnProperty.call(body, "legacySourceSheets")) {
+    payload.legacySourceSheets = normalizeStringArray(payload.legacySourceSheets);
+  } else delete payload.legacySourceSheets;
+  if (Object.prototype.hasOwnProperty.call(body, "importSource")) {
+    payload.importSource = ["manual", "excel-record", "excel-attendance"].includes(cleanString(payload.importSource))
+      ? cleanString(payload.importSource)
+      : "manual";
+  } else delete payload.importSource;
+  if (Object.prototype.hasOwnProperty.call(body, "profileStatus")) {
+    payload.profileStatus = payload.profileStatus === "incomplete" ? "incomplete" : "complete";
+  } else delete payload.profileStatus;
   payload.phone = cleanPhone(payload.phone);
   payload.email = cleanString(payload.email, 120).toLowerCase();
 
@@ -374,6 +386,7 @@ const normalizeImportRow = async ({
   userId,
   batchLookup,
   usedAdmissionNumbers,
+  allowProvisional,
 }) => {
   const { firstName, lastName } = splitName(row);
   const batchName = cleanString(row.batchName);
@@ -388,11 +401,20 @@ const normalizeImportRow = async ({
     usedAdmissionNumbers,
   });
 
-  const dateOfBirth = parseDateSafely(row.dateOfBirth, IMPORT_FALLBACK_DOB);
+  const dateOfBirth = parseDateSafely(row.dateOfBirth, null);
   const joiningDate = parseDateSafely(row.joiningDate, new Date());
   const martialArt =
     cleanString(row.martialArt, 80) || matchedBatch?.martialArt || "Taekwondo";
   const beltRank = normalizeBeltRank({ martialArt, beltRank: row.beltRank });
+  const incompleteFields = [...new Set([
+    ...normalizeStringArray(row.profileIncompleteFields),
+    ...(!dateOfBirth ? ["dateOfBirth"] : []),
+    ...(!cleanString(row.gender) ? ["gender"] : []),
+  ])];
+  const profileStatus = incompleteFields.length ? "incomplete" : "complete";
+  if (profileStatus === "incomplete" && !allowProvisional) {
+    throw new Error(`Incomplete profile: ${incompleteFields.join(", ")} missing`);
+  }
 
   return {
     academy: academyId,
@@ -404,6 +426,10 @@ const normalizeImportRow = async ({
     lastName,
     gender: normalizeGender(row.gender),
     dateOfBirth,
+    profileStatus,
+    profileIncompleteFields: incompleteFields,
+    importSource: row.importSource === "excel-attendance" ? "excel-attendance" : "excel-record",
+    legacySourceSheets: normalizeStringArray(row.legacySourceSheets || row.sourceSheet),
     phone: cleanPhone(row.phone),
     email: cleanString(row.email, 120).toLowerCase(),
     schoolName: cleanString(row.schoolName, 200),
@@ -470,6 +496,7 @@ export const importStudents = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const students = Array.isArray(req.body?.students) ? req.body.students : [];
   const duplicateMode = req.body?.duplicateMode || "skip";
+  const allowProvisional = req.body?.allowProvisional === true;
 
   const summary = {
     totalRows: students.length,
@@ -514,6 +541,7 @@ export const importStudents = asyncHandler(async (req, res) => {
         userId,
         batchLookup,
         usedAdmissionNumbers,
+        allowProvisional,
       });
 
       const admissionKey = studentPayload.admissionNumber.toLowerCase();
@@ -530,12 +558,36 @@ export const importStudents = asyncHandler(async (req, res) => {
 
       usedAdmissionNumbers.add(admissionKey);
 
-      const existing = await Student.findOne({
-        academy: academyId,
-        admissionNumber: studentPayload.admissionNumber,
-      }).select("_id admissionNumber");
+      const identityFilters = [{ admissionNumber: studentPayload.admissionNumber }];
+      if (studentPayload.phone) {
+        identityFilters.push({
+          phone: studentPayload.phone,
+          firstName: studentPayload.firstName,
+          lastName: studentPayload.lastName,
+        });
+      }
+      let existing = await Student.findOne({ academy: academyId, $or: identityFilters })
+        .select("_id admissionNumber phone profileStatus profileIncompleteFields legacySourceSheets");
+
+      if (!existing && !studentPayload.phone) {
+        const sameName = await Student.find({
+          academy: academyId,
+          firstName: studentPayload.firstName,
+          lastName: studentPayload.lastName,
+        }).select("_id admissionNumber profileStatus profileIncompleteFields legacySourceSheets").limit(2);
+        if (sameName.length === 1) existing = sameName[0];
+      }
 
       if (existing && duplicateMode === "skip") {
+        const mergedSheets = [...new Set([
+          ...(existing.legacySourceSheets || []),
+          ...(studentPayload.legacySourceSheets || []),
+        ])];
+        if (mergedSheets.length !== (existing.legacySourceSheets || []).length) {
+          existing.legacySourceSheets = mergedSheets;
+          existing.updatedBy = userId;
+          await existing.save();
+        }
         summary.skipped += 1;
         summary.warnings.push({
           rowNumber,
@@ -658,6 +710,21 @@ export const updateStudent = asyncHandler(async (req, res) => {
   Object.keys(payload).forEach((key) => {
     student[key] = payload[key];
   });
+
+  if (student.profileStatus === "incomplete") {
+    const supplied = new Set(Object.keys(req.body || {}));
+    const remaining = (student.profileIncompleteFields || []).filter((field) => {
+      if (field === "dateOfBirth" && supplied.has("dateOfBirth")) {
+        return !parseDateSafely(req.body.dateOfBirth, null);
+      }
+      if (field === "gender" && supplied.has("gender")) {
+        return !cleanString(req.body.gender);
+      }
+      return true;
+    });
+    student.profileIncompleteFields = remaining;
+    if (!remaining.length) student.profileStatus = "complete";
+  }
 
   if (req.file) {
     student.profilePhoto = getUploadedFilePath(req.file);

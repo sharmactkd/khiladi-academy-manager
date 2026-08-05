@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef } from "react";
+import { CalendarDays } from "lucide-react";
 import AttendanceCell from "./AttendanceCell.jsx";
 import AttendanceSummary from "./AttendanceSummary.jsx";
 
@@ -69,6 +70,90 @@ const formatEditableDueValue = (value) => {
   if (!raw || raw === "-") return raw;
   if (/^\d{1,2}$/.test(raw) || /[A-Za-z]/.test(raw)) return raw;
   return formatDateDDMMYY(raw);
+};
+
+const toDateInputValue = (value) => {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw === "-") return "";
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+
+  const dashMatch = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+  if (dashMatch) {
+    const [, dd, mm, rawYear] = dashMatch;
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+    return `${year}-${pad(mm)}-${pad(dd)}`;
+  }
+
+  const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (slashMatch) {
+    const [, mm, dd, rawYear] = slashMatch;
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+    return `${year}-${pad(mm)}-${pad(dd)}`;
+  }
+
+  return "";
+};
+
+const formatSelectedDate = (isoDate) => {
+  const match = String(isoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  return `${match[3]}-${match[2]}-${match[1].slice(-2)}`;
+};
+
+const DateMetaInput = ({ value, onChange, placeholder, disabled, ariaLabel }) => {
+  const pickerRef = useRef(null);
+
+  const openPicker = () => {
+    if (disabled || !pickerRef.current) return;
+    try {
+      if (typeof pickerRef.current.showPicker === "function") {
+        pickerRef.current.showPicker();
+      } else {
+        pickerRef.current.click();
+      }
+    } catch {
+      pickerRef.current.focus();
+      pickerRef.current.click();
+    }
+  };
+
+  return (
+    <div className="monthly-register__date-picker">
+      <input
+        type="text"
+        className="monthly-register__meta-input monthly-register__date-display"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onClick={openPicker}
+        placeholder={placeholder}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        autoComplete="off"
+      />
+      <button
+        type="button"
+        className="monthly-register__calendar-button"
+        onClick={openPicker}
+        disabled={disabled}
+        aria-label={`Open calendar: ${ariaLabel}`}
+        title="Select date"
+      >
+        <CalendarDays size={15} aria-hidden="true" />
+      </button>
+      <input
+        ref={pickerRef}
+        type="date"
+        className="monthly-register__native-date"
+        value={toDateInputValue(value)}
+        onChange={(event) => onChange(formatSelectedDate(event.target.value))}
+        disabled={disabled}
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    </div>
+  );
 };
 
 const getDueDateValue = (row) => {
@@ -281,43 +366,39 @@ const MonthlyAttendanceTable = ({
               </td>
 
               <td>
-                <input
-                  type="text"
-                  className="monthly-register__meta-input"
+                <DateMetaInput
                   value={displayValue(
                     formatEditableDueValue(getDueDateValue(row)),
                     ""
                   )}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     updateRowField(
                       rowIndex,
                       "importedDueDate",
-                      event.target.value
+                      value
                     )
                   }
                   placeholder="Due date"
                   disabled={!onRowsChange}
-                  aria-label={`Due date for ${
+                  ariaLabel={`Due date for ${
                     row.name || row.importedName || "student"
                   }`}
                 />
               </td>
 
               <td>
-                <input
-                  type="text"
-                  className="monthly-register__meta-input"
+                <DateMetaInput
                   value={displayValue(getPaidDateValue(row), "")}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     updateRowField(
                       rowIndex,
                       "importedPaidDate",
-                      event.target.value
+                      value
                     )
                   }
                   placeholder="DD-MM-YY"
                   disabled={!onRowsChange}
-                  aria-label={`Paid date for ${
+                  ariaLabel={`Paid date for ${
                     row.name || row.importedName || "student"
                   }`}
                 />
