@@ -4,6 +4,7 @@ import Attendance from "../models/Attendance.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import FeePayment from "../models/FeePayment.js";
+import AttendanceDayNote from "../models/AttendanceDayNote.js";
 
 const STATUS_MAP = {
   present: "P",
@@ -246,6 +247,8 @@ const buildRowFromRecord = ({ identity, attendance, index, fee }) => {
     contact: importedPhone || student?.phone || "-",
     status:
       student?.status || (identity.rowType === "raw-import" ? "imported" : "active"),
+    statusUpdatedAt:
+      student?.statusUpdatedAt || student?.updatedAt || student?.createdAt || null,
     feeDueDate:
       normalizedDueDate ||
       fee?.dueDate ||
@@ -280,10 +283,14 @@ const buildMonthlyRows = async ({
 
  const students = await Student.find({
   academy: academyObjectId,
-  status: "active",
+  $or: [
+    { batch: batchObjectId },
+    ...(markedStudentIds.length ? [{ _id: { $in: markedStudentIds } }] : []),
+  ],
+  status: { $in: ["active", "inactive"] },
 })
     .select(
-      "admissionNumber firstName lastName phone status joiningDate createdAt batch dob dateOfBirth fatherName schoolName address"
+      "admissionNumber firstName lastName phone status statusUpdatedAt joiningDate createdAt updatedAt batch dob dateOfBirth fatherName schoolName address"
     )
     .lean();
 
@@ -368,7 +375,19 @@ const buildMonthlyRows = async ({
           fee,
         });
       })
-      .sort((a, b) => Number(a.sortOrder || 999999) - Number(b.sortOrder || 999999))
+      .sort((a, b) => {
+        const rank = { active: 0, inactive: 1, imported: 2 };
+        const rankDifference = (rank[a.status] ?? 3) - (rank[b.status] ?? 3);
+        if (rankDifference) return rankDifference;
+
+        if (a.status === "inactive" && b.status === "inactive") {
+          const aTime = new Date(a.statusUpdatedAt || 0).getTime();
+          const bTime = new Date(b.statusUpdatedAt || 0).getTime();
+          if (aTime !== bTime) return bTime - aTime;
+        }
+
+        return Number(a.sortOrder || 999999) - Number(b.sortOrder || 999999);
+      })
       .map((row, index) => ({
         ...row,
         no: row.importedSerialNo || index + 1,
@@ -426,6 +445,27 @@ export const getMonthlyAttendanceRegister = async ({
     date: { $gte: start, $lte: end },
   }).lean();
 
+  const dayNoteDocs = await AttendanceDayNote.find({
+    academy: academyObjectId,
+    batch: batchObjectId,
+    date: { $gte: start, $lte: end },
+  }).lean();
+
+  const dayNotes = dayNoteDocs.reduce((map, note) => {
+    const dateKey = new Date(note.date).toISOString().slice(0, 10);
+    map[dateKey] = {
+      _id: note._id,
+      date: dateKey,
+      type: note.type,
+      title: note.title,
+      description: note.description || "",
+      color: note.color,
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
+    };
+    return map;
+  }, {});
+
   const { rows, students } = await buildMonthlyRows({
     academyObjectId,
     batchObjectId,
@@ -438,6 +478,7 @@ export const getMonthlyAttendanceRegister = async ({
     year: numericYear,
     batch,
     days,
+    dayNotes,
     students,
     rows,
   };

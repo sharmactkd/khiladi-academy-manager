@@ -1,6 +1,7 @@
 import Attendance from "../models/Attendance.js";
 import Batch from "../models/Batch.js";
 import Student from "../models/Student.js";
+import AttendanceDayNote from "../models/AttendanceDayNote.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import {
@@ -47,6 +48,21 @@ const normalizeName = (value) =>
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+const DAY_NOTE_TYPES = new Set([
+  "sick-leave",
+  "rainy-day",
+  "championship",
+  "festival",
+  "other",
+]);
+
+const parseDateKey = (value) => {
+  const raw = clean(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const date = new Date(`${raw}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 const getStudentName = (student) =>
   clean(`${student.firstName || ""} ${student.lastName || ""}`);
@@ -715,4 +731,61 @@ export const saveMonthlyRegister = asyncHandler(async (req, res) => {
   });
 
   return successResponse(res, "Monthly attendance register saved", data);
+});
+
+export const upsertAttendanceDayNote = asyncHandler(async (req, res) => {
+  const batchId = req.body?.batch;
+  const date = parseDateKey(req.body?.date);
+  const type = clean(req.body?.type).toLowerCase();
+  const title = clean(req.body?.title).slice(0, 100);
+  const description = clean(req.body?.description).slice(0, 500);
+  const color = clean(req.body?.color);
+
+  if (!date) return errorResponse(res, "Valid date is required", 400);
+  if (!DAY_NOTE_TYPES.has(type)) {
+    return errorResponse(res, "Invalid holiday/note type", 400);
+  }
+  if (!title) return errorResponse(res, "Holiday title is required", 400);
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
+    return errorResponse(res, "Valid six-digit HEX color is required", 400);
+  }
+
+  const batch = await Batch.findOne({ _id: batchId, academy: req.academyId })
+    .select("_id");
+  if (!batch) return errorResponse(res, "Batch not found", 404);
+
+  const note = await AttendanceDayNote.findOneAndUpdate(
+    { academy: req.academyId, batch: batch._id, date },
+    {
+      $set: { type, title, description, color, updatedBy: req.user._id },
+      $setOnInsert: {
+        academy: req.academyId,
+        batch: batch._id,
+        date,
+        createdBy: req.user._id,
+      },
+    },
+    { new: true, upsert: true, runValidators: true }
+  ).lean();
+
+  return successResponse(res, "Holiday/note saved", {
+    ...note,
+    date: note.date.toISOString().slice(0, 10),
+  });
+});
+
+export const removeAttendanceDayNote = asyncHandler(async (req, res) => {
+  const date = parseDateKey(req.body?.date);
+  if (!date) return errorResponse(res, "Valid date is required", 400);
+
+  const deleted = await AttendanceDayNote.findOneAndDelete({
+    academy: req.academyId,
+    batch: req.body?.batch,
+    date,
+  });
+
+  if (!deleted) return errorResponse(res, "Holiday/note not found", 404);
+  return successResponse(res, "Holiday/note removed", {
+    date: deleted.date.toISOString().slice(0, 10),
+  });
 });

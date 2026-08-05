@@ -330,6 +330,12 @@ const studentSchema = new mongoose.Schema(
       index: true,
     },
 
+    statusUpdatedAt: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
+
     monthlyFeeOverride: {
       type: Number,
       default: null,

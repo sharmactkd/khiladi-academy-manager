@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { Upload } from "lucide-react";
+import { Copy, Upload } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
 import { attendanceApi } from "../../api/attendanceApi.js";
+import { studentApi } from "../../api/studentApi.js";
 import MonthlyAttendanceTable from "../../components/attendance/MonthlyAttendanceTable.jsx";
 import AttendanceImportModal from "../../components/attendance/AttendanceImportModal.jsx";
 
@@ -45,6 +46,24 @@ const formatRows = (rows = []) =>
     ...row,
     contact: formatPhoneNumber(row.contact),
   }));
+
+const sortRegisterRows = (list = []) => [...list].sort((a, b) => {
+  const rank = (row) => row.rowType === "imported" ? 2 : row.status === "inactive" ? 1 : 0;
+  const difference = rank(a) - rank(b);
+  if (difference) return difference;
+  if (rank(a) === 1) return new Date(b.statusUpdatedAt || 0) - new Date(a.statusUpdatedAt || 0);
+  return Number(a.no || 0) - Number(b.no || 0);
+});
+
+const recalculateRow = (row, days) => {
+  const values = days.map((day) => row.attendance?.[day.dateKey] || "");
+  const presentCount = values.filter((v) => v === "P").length;
+  const absentCount = values.filter((v) => v === "A").length;
+  const leaveCount = values.filter((v) => v === "L").length;
+  const lateCount = values.filter((v) => v === "LT").length;
+  const marked = presentCount + absentCount + leaveCount + lateCount;
+  return { ...row, presentCount, absentCount, leaveCount, lateCount, attendancePercentage: marked ? Math.round((presentCount / marked) * 100) : 0 };
+};
 
 const buildExportRows = ({ rows, days }) => {
   return rows.map((row) => {
@@ -97,6 +116,8 @@ const MonthlyAttendanceRegister = () => {
   const [days, setDays] = useState([]);
   const [rows, setRows] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState(null);
+  const [dayNotes, setDayNotes] = useState({});
+  const [statusUpdatingIds, setStatusUpdatingIds] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -181,6 +202,7 @@ const MonthlyAttendanceRegister = () => {
         setDays(Array.isArray(data.days) ? data.days : []);
         setRows(Array.isArray(data.rows) ? data.rows : []);
         setSelectedBatch(data.batch || null);
+        setDayNotes(data.dayNotes || {});
       } catch (error) {
         if (error?.response?.status === 401) {
           toast.error("Session expired. Please login again.");
@@ -193,6 +215,7 @@ const MonthlyAttendanceRegister = () => {
         setDays([]);
         setRows([]);
         setSelectedBatch(null);
+        setDayNotes({});
       } finally {
         setLoading(false);
       }
@@ -221,6 +244,7 @@ const MonthlyAttendanceRegister = () => {
       setDays(Array.isArray(data.days) ? data.days : []);
       setRows(Array.isArray(data.rows) ? data.rows : []);
       setSelectedBatch(data.batch || null);
+      setDayNotes(data.dayNotes || {});
 
       toast.success("Monthly attendance saved successfully");
     } catch (error) {
@@ -234,6 +258,65 @@ const MonthlyAttendanceRegister = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveDayNote = async (note) => {
+    try {
+      const response = await attendanceApi.saveDayNote({ batch, ...note });
+      const saved = normalizeResponseData(response).note || normalizeResponseData(response);
+      setDayNotes((current) => ({ ...current, [note.date]: { ...note, ...saved, date: note.date } }));
+      toast.success("Date note saved");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Date note save nahi hua");
+      throw error;
+    }
+  };
+
+  const removeDayNote = async (date) => {
+    try {
+      await attendanceApi.removeDayNote({ batch, date });
+      setDayNotes((current) => { const next = { ...current }; delete next[date]; return next; });
+      toast.success("Date note removed");
+    } catch (error) { toast.error(error?.response?.data?.message || "Date note remove nahi hua"); }
+  };
+
+  const toggleStudentStatus = async (row, status) => {
+    if (!row.studentId || statusUpdatingIds.includes(row.studentId)) return;
+    const changedAt = new Date().toISOString();
+    const previous = rows;
+    setStatusUpdatingIds((ids) => [...ids, row.studentId]);
+    setRows((current) => sortRegisterRows(current.map((item) => item.studentId === row.studentId ? { ...item, status, statusUpdatedAt: changedAt } : item)));
+    try {
+      const response = await studentApi.updateStatus(row.studentId, status);
+      const saved = normalizeResponseData(response);
+      setRows((current) => sortRegisterRows(current.map((item) => item.studentId === row.studentId ? { ...item, status: saved.status || status, statusUpdatedAt: saved.statusUpdatedAt || changedAt } : item)));
+      toast.success(`${row.name || "Student"} marked ${status}`);
+    } catch (error) {
+      setRows(previous);
+      toast.error(error?.response?.data?.message || "Student status update failed");
+    } finally { setStatusUpdatingIds((ids) => ids.filter((id) => id !== row.studentId)); }
+  };
+
+  const repeatAttendance = () => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const eligible = days.filter((day) => !day.isSunday && !dayNotes[day.dateKey] && new Date(`${day.dateKey}T00:00:00`) <= today);
+    const isMarked = (dateKey) => rows.some((row) => ["P", "A", "L", "LT"].includes(row.attendance?.[dateKey]));
+    let sourceIndex = -1;
+    eligible.forEach((day, index) => { if (isMarked(day.dateKey)) sourceIndex = index; });
+    if (sourceIndex < 0) return toast.error("Repeat karne ke liye pehle kisi din attendance mark karein");
+    const target = eligible[sourceIndex + 1];
+    if (!target) return toast("Aaj tak koi next eligible date available nahi hai");
+    const source = eligible[sourceIndex];
+    let copied = 0;
+    const next = rows.map((row) => {
+      const value = row.attendance?.[source.dateKey];
+      if (!["P", "A", "L", "LT"].includes(value) || row.attendance?.[target.dateKey]) return row;
+      copied += 1;
+      return recalculateRow({ ...row, attendance: { ...row.attendance, [target.dateKey]: value } }, days);
+    });
+    if (!copied) return toast.error("Next date ke liye copy karne layak attendance nahi mili");
+    setRows(next);
+    toast.success(`${source.dateKey} se ${target.dateKey} tak ${copied} attendance copied. Save dabayein.`);
   };
 
   const handleImportAttendance = async (payload) => {
@@ -367,6 +450,10 @@ const MonthlyAttendanceRegister = () => {
             Import Attendance
           </button>
 
+          <button type="button" className="btn btn-secondary" onClick={repeatAttendance} disabled={loading || !rows.length} title="Copy latest marked day to only the next eligible day">
+            <Copy size={16} /> Repeat Attendance
+          </button>
+
           <button
             type="button"
             className="btn btn-secondary"
@@ -472,7 +559,12 @@ const MonthlyAttendanceRegister = () => {
         <MonthlyAttendanceTable
           days={days}
           rows={formattedRows}
+          dayNotes={dayNotes}
           onRowsChange={setRows}
+          onSaveDayNote={saveDayNote}
+          onRemoveDayNote={removeDayNote}
+          onToggleStudentStatus={toggleStudentStatus}
+          statusUpdatingIds={statusUpdatingIds}
           loading={loading}
         />
       </div>

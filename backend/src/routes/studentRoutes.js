@@ -5,6 +5,7 @@ import {
   getStudents,
   getStudentById,
   updateStudent,
+  updateStudentStatus,
   deleteStudent,
   importStudents,
 } from "../controllers/studentController.js";
@@ -34,6 +35,13 @@ router.use(resolveUserAcademy);
 router.use(requireResolvedAcademy);
 
 router.post("/import", importStudents);
+
+router.patch(
+  "/:id/status",
+  studentIdValidator,
+  validateRequest,
+  updateStudentStatus
+);
 
 router
   .route("/")

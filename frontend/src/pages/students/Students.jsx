@@ -55,6 +55,7 @@ const Students = () => {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [statusUpdatingIds, setStatusUpdatingIds] = useState([]);
 
   const [filters, setFilters] = useState({
     search: "",
@@ -102,6 +103,42 @@ const Students = () => {
       toast.error(error.response?.data?.message || "Students load nahi hue");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStatusToggle = async (student) => {
+    if (!student?._id || !["active", "inactive"].includes(student.status)) {
+      return;
+    }
+
+    const nextStatus = student.status === "active" ? "inactive" : "active";
+    const previousStatus = student.status;
+
+    setStatusUpdatingIds((current) => [...current, student._id]);
+    setStudents((current) =>
+      current.map((item) =>
+        item._id === student._id ? { ...item, status: nextStatus } : item
+      )
+    );
+
+    try {
+      await studentApi.updateStatus(student._id, nextStatus);
+      toast.success(`Student marked ${nextStatus}`);
+    } catch (error) {
+      setStudents((current) =>
+        current.map((item) =>
+          item._id === student._id
+            ? { ...item, status: previousStatus }
+            : item
+        )
+      );
+      toast.error(
+        error.response?.data?.message || "Student status update failed"
+      );
+    } finally {
+      setStatusUpdatingIds((current) =>
+        current.filter((id) => id !== student._id)
+      );
     }
   };
 
@@ -800,9 +837,37 @@ const Students = () => {
                       <td>{displayBelt(student)}</td>
                       <td>{student.bloodGroup || "-"}</td>
                       <td>
-                        <span className={`badge badge-${student.status}`}>
-                          {student.status}
-                        </span>
+                        {["active", "inactive"].includes(student.status) ? (
+                          <button
+                            type="button"
+                            className={`student-status-toggle student-status-toggle--${student.status}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleStatusToggle(student);
+                            }}
+                            disabled={statusUpdatingIds.includes(student._id)}
+                            aria-pressed={student.status === "active"}
+                            aria-label={`Mark ${fullName || "student"} as ${
+                              student.status === "active" ? "inactive" : "active"
+                            }`}
+                            title={`Click to mark ${
+                              student.status === "active" ? "inactive" : "active"
+                            }`}
+                          >
+                            <span className="student-status-toggle__track" aria-hidden="true">
+                              <span className="student-status-toggle__thumb" />
+                            </span>
+                            <span className="student-status-toggle__label">
+                              {statusUpdatingIds.includes(student._id)
+                                ? "Saving..."
+                                : student.status}
+                            </span>
+                          </button>
+                        ) : (
+                          <span className={`badge badge-${student.status}`}>
+                            {student.status}
+                          </span>
+                        )}
                       </td>
 
                       <td

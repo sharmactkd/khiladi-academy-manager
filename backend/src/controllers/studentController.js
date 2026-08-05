@@ -737,6 +737,39 @@ export const updateStudent = asyncHandler(async (req, res) => {
   return successResponse(res, "Student updated successfully", student);
 });
 
+export const updateStudentStatus = asyncHandler(async (req, res) => {
+  const nextStatus = cleanString(req.body?.status).toLowerCase();
+
+  if (!["active", "inactive"].includes(nextStatus)) {
+    return errorResponse(
+      res,
+      "Status must be either active or inactive",
+      400
+    );
+  }
+
+  const student = await Student.findOne({
+    _id: req.params.id,
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  });
+
+  if (!student) {
+    return errorResponse(res, "Student not found", 404);
+  }
+
+  student.status = nextStatus;
+  student.statusUpdatedAt = new Date();
+  student.updatedBy = req.user._id;
+  await student.save();
+
+  return successResponse(res, "Student status updated successfully", {
+    _id: student._id,
+    status: student.status,
+    statusUpdatedAt: student.statusUpdatedAt,
+  });
+});
+
 export const deleteStudent = asyncHandler(async (req, res) => {
   const student = await Student.findOne({
     _id: req.params.id,

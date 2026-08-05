@@ -35,6 +35,11 @@ export const studentApi = {
     return res.data;
   },
 
+  updateStatus: async (id, status) => {
+    const res = await api.patch(`/students/${id}/status`, { status });
+    return res.data;
+  },
+
   importBulk: async (payload = {}) => {
     const students = Array.isArray(payload) ? payload : payload.students || [];
     const destination = Array.isArray(payload) ? {} : payload.destination || {};

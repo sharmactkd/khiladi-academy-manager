@@ -10,6 +10,8 @@ import {
   getYearlyRegister,
   saveMonthlyRegister,
   importOldAttendance,
+  upsertAttendanceDayNote,
+  removeAttendanceDayNote,
 } from "../controllers/attendanceController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
@@ -37,6 +39,8 @@ router.use(requireResolvedAcademy);
 router.get("/monthly-register", getMonthlyRegister);
 router.get("/yearly-register", getYearlyRegister);
 router.post("/monthly-register", saveMonthlyRegister);
+router.put("/day-note", upsertAttendanceDayNote);
+router.delete("/day-note", removeAttendanceDayNote);
 
 router.post("/import", importOldAttendance);
 
