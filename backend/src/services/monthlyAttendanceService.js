@@ -281,14 +281,36 @@ const buildMonthlyRows = async ({
     });
   });
 
- const students = await Student.find({
-  academy: academyObjectId,
-  $or: [
-    { batch: batchObjectId },
-    ...(markedStudentIds.length ? [{ _id: { $in: markedStudentIds } }] : []),
-  ],
-  status: { $in: ["active", "inactive"] },
-})
+  const studentVisibilityFilters = [
+    // Normal roster: all active and inactive students assigned to this batch.
+    {
+      batch: batchObjectId,
+      status: { $in: ["active", "inactive"] },
+    },
+
+    // Backward compatibility for legacy/provisional profiles that were
+    // imported before batch assignment was available. Include inactive rows
+    // as well so the complete legacy roster stays visible below active rows.
+    // Mongoose's `batch: null` matches explicit null and a missing batch field.
+    {
+      batch: null,
+      status: { $in: ["active", "inactive"] },
+    },
+  ];
+
+  if (markedStudentIds.length) {
+    // Keep historical rows visible even if the student later became inactive
+    // or their current batch assignment changed.
+    studentVisibilityFilters.push({
+      _id: { $in: markedStudentIds },
+      status: { $in: ["active", "inactive"] },
+    });
+  }
+
+  const students = await Student.find({
+    academy: academyObjectId,
+    $or: studentVisibilityFilters,
+  })
     .select(
       "admissionNumber firstName lastName phone status statusUpdatedAt joiningDate createdAt updatedAt batch dob dateOfBirth fatherName schoolName address"
     )
