@@ -399,11 +399,17 @@ const OwnerDashboard = () => {
           </strong>
         </div>
 
-        <div className="owner-hero__decoration" aria-hidden="true">
-          <div className="owner-hero__dots" />
-          <i />
-          <i />
-        </div>
+       <div className="owner-hero__decoration" aria-hidden="true">
+ <div className="owner-hero__dots">
+  <span className="owner-hero__dot-layer owner-hero__dot-layer--small" />
+  <span className="owner-hero__dot-layer owner-hero__dot-layer--medium" />
+  <span className="owner-hero__dot-layer owner-hero__dot-layer--large" />
+</div>
+
+  <span className="owner-hero__stripe owner-hero__stripe--thin" />
+  <span className="owner-hero__stripe owner-hero__stripe--soft" />
+  <span className="owner-hero__stripe owner-hero__stripe--bold" />
+</div>
 
         <button
           type="button"

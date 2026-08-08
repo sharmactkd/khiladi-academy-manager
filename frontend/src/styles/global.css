@@ -2499,6 +2499,7 @@ Mobile par close button visible hoga.
 .owner-hero__brand button {
   position: relative;
   z-index: 1;
+  right: -20px!important;
   width: 86px;
   height: 86px;
   padding: 8px;
@@ -2522,8 +2523,14 @@ Mobile par close button visible hoga.
   z-index: 2;
   align-self: center;
   justify-self: center;
-  max-width: 720px;
-  padding: 30px 180px 30px 20px;
+
+  /* Heading ko ek line ke liye zyada width */
+  width: min(820px, calc(100% - 300px));
+  max-width: none;
+
+  /* Right padding kam ki */
+  padding: 30px 40px 30px 20px;
+
   text-align: center;
 }
 
@@ -2568,20 +2575,161 @@ Mobile par close button visible hoga.
   position: absolute;
   z-index: 1;
   inset: 0 0 0 auto;
-  width: 260px;
+
+  /* Reference image ke dot area ke proportion ke kareeb */
+  width: 25%;
+  height: 100%;
+
   overflow: hidden;
   pointer-events: none;
 }
 
 .owner-hero__dots {
   position: absolute;
-  top: 17px;
-  right: 25px;
-  width: 184px;
-  height: 130px;
-  opacity: 0.75;
-  background-image: radial-gradient(circle, #f7b9bc 1.5px, transparent 1.7px);
+  inset: 0;
+
+  /*
+   * Sirf shape parent par hogi.
+   * Yahan mask-image ya background-image nahi lagana.
+   */
+ clip-path: polygon(
+  22% 0%,
+  100% 0%,
+  100% 100%,
+  0% 100%
+);
+}
+
+/* Common settings for all three layers */
+.owner-hero__dot-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background-position: top left;
   background-size: 13px 13px;
+  pointer-events: none;
+}
+
+/* LEFT: small and light dots */
+.owner-hero__dot-layer--small {
+  background-image: radial-gradient(
+    circle,
+   rgba(207, 0, 6, 0.08) 0.85px,
+    transparent 1.75px
+  );
+
+  -webkit-mask-image: linear-gradient(
+    to top left,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.38) 10%,
+    #000000 22%,
+    #000000 34%,
+    rgba(0, 0, 0, 0.42) 43%,
+    transparent 52%
+  );
+
+  mask-image: linear-gradient(
+    to top left,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.38) 10%,
+    #000000 22%,
+    #000000 34%,
+    rgba(0, 0, 0, 0.42) 43%,
+    transparent 52%
+  );
+}
+
+/* CENTER: medium-size dots */
+.owner-hero__dot-layer--medium {
+  background-image: radial-gradient(
+    circle,
+  rgba(207, 0, 6, 0.14)   1.2px,
+    transparent 2.1px
+  );
+
+  -webkit-mask-image: linear-gradient(
+    to top left,
+    transparent 26%,
+    rgba(0, 0, 0, 0.3) 35%,
+    rgba(0, 0, 0, 0.82) 44%,
+    #000000 53%,
+    #000000 65%,
+    rgba(0, 0, 0, 0.45) 73%,
+    transparent 81%
+  );
+
+  mask-image: linear-gradient(
+    to top left,
+    transparent 26%,
+    rgba(0, 0, 0, 0.3) 35%,
+    rgba(0, 0, 0, 0.82) 44%,
+    #000000 53%,
+    #000000 65%,
+    rgba(0, 0, 0, 0.45) 73%,
+    transparent 81%
+  );
+}
+
+/* RIGHT: large and clearly visible dots */
+.owner-hero__dot-layer--large {
+  background-image: radial-gradient(
+    circle,
+    rgba(207, 0, 6, 0.20) 1.85px,
+    transparent 2.45px
+  );
+
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 58%,
+    rgba(0, 0, 0, 0.25) 66%,
+    rgba(0, 0, 0, 0.72) 75%,
+    #000000 84%,
+    #000000 100%
+  );
+
+  mask-image: linear-gradient(
+    to right,
+    transparent 58%,
+    rgba(0, 0, 0, 0.25) 66%,
+    rgba(0, 0, 0, 0.72) 75%,
+    #000000 84%,
+    #000000 100%
+  );
+}
+
+/* Common stripe */
+.owner-hero__stripe {
+  position: absolute;
+  display: block;
+  right: -30px;
+  bottom: -76px;
+  height: 285px;
+  border-radius: 2px;
+  transform: rotate(38deg);
+  transform-origin: center;
+}
+
+/* Reference ka left thin red slash */
+.owner-hero__stripe--thin {
+  right: 108px;
+  bottom: 25px;
+  width: 10px;
+  height: 116px;
+  background: #cf0006;
+}
+
+/* Beech ki pale-red stripe */
+.owner-hero__stripe--soft {
+  right: 28px;
+  width: 22px;
+  background: #f7b7ba;
+}
+
+/* Right side ki main bold red stripe */
+.owner-hero__stripe--bold {
+  right: -18px;
+  width: 42px;
+  background: #cf0006;
 }
 
 .owner-hero__decoration i {
@@ -2593,6 +2741,7 @@ Mobile par close button visible hoga.
   background: var(--od-red);
   transform: rotate(36deg);
 }
+
 
 .owner-hero__decoration i:last-child {
   right: 2px;
@@ -2851,3 +3000,7 @@ Mobile par close button visible hoga.
   .owner-dashboard__loader,
   .is-spinning { animation-duration: 2s; }
 }
+
+
+
+
