@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Award,
   BadgeIndianRupee,
+  Building2,
   CalendarCheck2,
   ChevronRight,
   CircleDollarSign,
@@ -11,6 +12,8 @@ import {
   GraduationCap,
   IdCard,
   IndianRupee,
+  Layers3,
+  MapPin,
   Medal,
   Plus,
   RefreshCw,
@@ -18,6 +21,7 @@ import {
   Trophy,
   UserCheck,
   UserPlus,
+  UserRound,
   UserRoundX,
   Users,
 } from "lucide-react";
@@ -37,6 +41,8 @@ import {
 } from "recharts";
 
 import { academyApi } from "../../api/academyApi.js";
+import { getBranches } from "../../api/branchApi.js";
+import { batchApi } from "../../api/batchApi.js";
 import { billingApi } from "../../api/billingApi.js";
 import {
   getAttendanceAnalytics,
@@ -71,6 +77,26 @@ const isEnabled = (value) =>
 const getPersonName = (person) =>
   `${person?.firstName || ""} ${person?.lastName || ""}`.trim() ||
   "Unknown student";
+
+const unwrapList = (response) => {
+  const candidates = [response?.data?.data, response?.data, response];
+  return candidates.find(Array.isArray) || [];
+};
+
+const joinAddressParts = (parts = []) => {
+  const uniqueParts = [];
+
+  parts.forEach((part) => {
+    const value = String(part || "").trim();
+    if (!value) return;
+
+    if (!uniqueParts.some((item) => item.toLowerCase() === value.toLowerCase())) {
+      uniqueParts.push(value);
+    }
+  });
+
+  return uniqueParts.join(", ");
+};
 
 const formatRelativeTime = (value) => {
   if (!value) return "";
@@ -127,6 +153,7 @@ const normalizeDailyAttendance = (items = []) => {
       const total = row.present + row.absent + row.leave + row.late;
       return {
         ...row,
+        markedCount: total,
         attendance: total ? Math.round((row.present / total) * 100) : 0,
       };
     });
@@ -154,6 +181,8 @@ const OwnerDashboard = () => {
   const { user } = useAuth();
 
   const [academy, setAcademy] = useState(null);
+  const [branches, setBranches] = useState(null);
+  const [batches, setBatches] = useState(null);
   const [billing, setBilling] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [attendanceAnalytics, setAttendanceAnalytics] = useState(null);
@@ -182,9 +211,49 @@ const OwnerDashboard = () => {
 
   const academyLogoUrl = academy?.logo ? getAcademyLogoUrl(academy) : "";
   const academyName = academy?.academyName || "KHILADI Academy";
-  const academyLocation = [academy?.city, academy?.state]
-    .filter(Boolean)
-    .join(", ");
+  const ownerName = academy?.ownerName || user?.name || "Academy Owner";
+
+  const activeBranches = useMemo(
+    () =>
+      Array.isArray(branches)
+        ? branches.filter((branch) => branch?.isActive !== false)
+        : [],
+    [branches]
+  );
+
+  const mainBranch = useMemo(
+    () =>
+      activeBranches.find((branch) => branch?.isMainBranch) ||
+      activeBranches[0] ||
+      null,
+    [activeBranches]
+  );
+
+  const mainBranchAddress = useMemo(() => {
+    if (mainBranch) {
+      return joinAddressParts([
+        mainBranch.address,
+        mainBranch.city,
+        mainBranch.state,
+        mainBranch.country,
+      ]);
+    }
+
+    return joinAddressParts([
+      academy?.address,
+      academy?.city,
+      academy?.state,
+      academy?.country,
+    ]);
+  }, [academy, mainBranch]);
+
+  const activeBranchCount = Array.isArray(branches)
+    ? activeBranches.length
+    : 0;
+
+  const activeBatchCount = Array.isArray(batches)
+    ? batches.filter((batch) => batch?.isActive !== false).length
+    : Number(dashboard?.totalBatches || 0);
 
   const loadDashboard = useCallback(
     async ({ quiet = false } = {}) => {
@@ -196,6 +265,22 @@ const OwnerDashboard = () => {
         const academyResponse = await academyApi.getMyAcademy();
         const academyData = academyResponse.data?.data?.academy || null;
         setAcademy(academyData);
+
+        const [branchesResult, batchesResult] = await Promise.allSettled([
+          getBranches({ status: "active" }),
+          batchApi.getAll(),
+        ]);
+
+        setBranches(
+          branchesResult.status === "fulfilled"
+            ? unwrapList(branchesResult.value)
+            : null
+        );
+        setBatches(
+          batchesResult.status === "fulfilled"
+            ? unwrapList(batchesResult.value)
+            : null
+        );
 
         let billingData = null;
         if (canManageBilling) {
@@ -274,6 +359,26 @@ const OwnerDashboard = () => {
       ),
     [attendanceAnalytics?.dailyAttendanceTrend]
   );
+
+  const lastAttendanceMarked = useMemo(() => {
+    const latestMarkedDay = [...attendanceChartData]
+      .reverse()
+      .find((item) => Number(item?.markedCount || 0) > 0);
+
+    if (!latestMarkedDay?.key) return null;
+
+    const [year, month, day] = latestMarkedDay.key
+      .split("-")
+      .map(Number);
+    const parsedDate = new Date(year, month - 1, day);
+
+    if (Number.isNaN(parsedDate.getTime())) return null;
+
+    return {
+      dateTime: latestMarkedDay.key,
+      label: dateFormatter.format(parsedDate),
+    };
+  }, [attendanceChartData]);
 
   const feeTotal =
     Number(dashboard?.monthlyFeesCollected || 0) +
@@ -393,10 +498,43 @@ const OwnerDashboard = () => {
         <div className="owner-hero__content">
           <span className="owner-hero__eyebrow">Academy command center</span>
           <h1>{academyName}</h1>
-          <p>{academyLocation || "Champions in training, leaders for life"}</p>
-          <strong>
-            <Sparkles size={15} aria-hidden="true" /> KHILADI Academy Manager
-          </strong>
+
+          <div className="owner-hero__details">
+            <div className="owner-hero__owner">
+              <UserRound size={14} aria-hidden="true" />
+              <span>Owner</span>
+              <strong>{ownerName}</strong>
+            </div>
+
+            <address className="owner-hero__address">
+              <MapPin size={14} aria-hidden="true" />
+              <span>
+                <b>{mainBranch?.branchName || "Main Branch"}</b>
+                <strong>
+                  {mainBranchAddress || "Complete main branch address not available"}
+                </strong>
+              </span>
+            </address>
+
+            <div
+              className="owner-hero__summary"
+              aria-label="Academy operational summary"
+            >
+              <span>
+                <Building2 size={14} aria-hidden="true" />
+                <strong>{activeBranchCount}</strong>
+                Active {activeBranchCount === 1 ? "Branch" : "Branches"}
+              </span>
+
+              <i aria-hidden="true" />
+
+              <span>
+                <Layers3 size={14} aria-hidden="true" />
+                <strong>{activeBatchCount}</strong>
+                Active {activeBatchCount === 1 ? "Batch" : "Batches"}
+              </span>
+            </div>
+          </div>
         </div>
 
        <div className="owner-hero__decoration" aria-hidden="true">
@@ -460,10 +598,46 @@ const OwnerDashboard = () => {
 
           <section className="owner-insights">
             <article className="owner-panel owner-panel--attendance">
-              <header className="owner-panel__header">
-                <div><span>Performance</span><h2>Attendance overview</h2></div>
-                <Link to="/analytics">Detailed analytics <ChevronRight size={15} /></Link>
-              </header>
+             <header className="owner-panel__header owner-attendance-header">
+  <div>
+    <span>Performance</span>
+    <h2>Attendance overview</h2>
+  </div>
+
+  <div className="owner-attendance-header__actions">
+    <div
+      className="owner-last-attendance"
+      title={
+        lastAttendanceMarked
+          ? `Latest marked attendance: ${lastAttendanceMarked.label}`
+          : "Attendance has not been marked yet"
+      }
+    >
+      <CalendarCheck2
+        size={15}
+        strokeWidth={2.2}
+        aria-hidden="true"
+      />
+
+      <span>Last attendance marked</span>
+
+      <strong>
+        {lastAttendanceMarked ? (
+          <time dateTime={lastAttendanceMarked.dateTime}>
+            {lastAttendanceMarked.label}
+          </time>
+        ) : (
+          "Not marked yet"
+        )}
+      </strong>
+    </div>
+
+    <Link to="/analytics">
+      Detailed analytics
+      <ChevronRight size={15} />
+    </Link>
+  </div>
+</header>
 
               {attendanceChartData.length ? (
                 <div className="owner-chart">

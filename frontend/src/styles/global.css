@@ -2523,18 +2523,13 @@ Mobile par close button visible hoga.
   z-index: 2;
   align-self: center;
   justify-self: center;
-
-  /* Heading ko ek line ke liye zyada width */
-  width: min(820px, calc(100% - 300px));
+  width: min(940px, calc(100% - 150px));
   max-width: none;
-
-  /* Right padding kam ki */
-  padding: 30px 40px 30px 20px;
-
+  padding: 14px 74px 14px 20px;
   text-align: center;
 }
 
-.owner-hero__eyebrow,
+
 .owner-panel__header span,
 .owner-management > header span,
 .owner-logo-modal header span {
@@ -2550,26 +2545,119 @@ Mobile par close button visible hoga.
 .owner-hero h1 {
   margin: 0;
   color: var(--od-navy);
-  font-size: clamp(26px, 3vw, 43px);
+  font-size: clamp(25px, 2.65vw, 40px);
   font-weight: 950;
   line-height: 1.06;
   letter-spacing: -0.035em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.owner-hero__content > p {
-  margin: 10px 0 14px;
-  color: #4b5563;
-  font-size: 15px;
+.owner-hero__details {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  margin-top: 8px;
 }
 
-.owner-hero__content > strong {
+.owner-hero__owner {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  color: var(--od-red);
-  font-size: 13px;
+  justify-content: center;
+  gap: 5px;
+  color: #475569;
+  font-size: 16px;
+  line-height: 1.2;
 }
+
+.owner-hero__owner svg,
+.owner-hero__address svg,
+.owner-hero__summary svg {
+  flex: 0 0 auto;
+  color: var(--od-red);
+  stroke: var(--od-red);
+}
+
+.owner-hero__owner > span {
+  color: var(--od-muted);
+  font-weight: 700;
+}
+
+.owner-hero__owner > span::after,
+.owner-hero__address b::after {
+  content: ":";
+}
+
+.owner-hero__owner strong {
+  color: #cf0006;
+  font-weight: 900;
+}
+
+.owner-hero__address {
+  max-width: 760px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  color: #475569;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.32;
+  text-align: center;
+}
+
+.owner-hero__address > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px 5px;
+}
+
+.owner-hero__address b {
+  color: var(--od-muted);
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.owner-hero__address strong {
+  color: #334155;
+  font-weight: 700;
+}
+
+.owner-hero__summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 2px;
+  padding: 5px 11px;
+ 
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.owner-hero__summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.owner-hero__summary strong {
+  color: var(--od-red);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.owner-hero__summary i {
+  width: 1px;
+  height: 14px;
+  background: #f2b9bc;
+}
+
 
 .owner-hero__decoration {
   position: absolute;
@@ -2955,7 +3043,15 @@ Mobile par close button visible hoga.
 
 @media (max-width: 1100px) {
   .owner-hero { grid-template-columns: 180px 1fr; }
-  .owner-hero__content { padding-right: 100px; }
+  .owner-hero__content {
+    width: min(760px, calc(100% - 80px));
+    padding: 14px 75px 14px 18px;
+  }
+  .owner-hero h1 {
+    font-size: clamp(23px, 3.3vw, 34px);
+    white-space: normal;
+  }
+  .owner-hero__address { max-width: 580px; }
   .owner-insights { grid-template-columns: 1fr; }
   .owner-management__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -2967,8 +3063,15 @@ Mobile par close button visible hoga.
   .owner-hero__brand::after { width: 52px; height: 52px; }
   .owner-hero__brand > svg { width: 34px; }
   .owner-hero__brand button { width: 47px; height: 47px; padding: 4px; }
-  .owner-hero__content { justify-self: stretch; padding: 20px 18px 58px; }
-  .owner-hero__content > p { font-size: 13px; }
+  .owner-hero__content {
+    justify-self: stretch;
+    width: auto;
+    padding: 18px 18px 62px;
+  }
+  .owner-hero__details { gap: 6px; }
+  .owner-hero__address { max-width: 100%; }
+  .owner-hero__summary { flex-wrap: wrap; border-radius: 12px; }
+  .owner-hero__summary i { display: none; }
   .owner-hero__decoration { display: none; }
   .owner-dashboard__refresh { right: 50%; transform: translateX(50%); }
   .owner-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -3000,7 +3103,145 @@ Mobile par close button visible hoga.
   .owner-dashboard__loader,
   .is-spinning { animation-duration: 2s; }
 }
+.owner-attendance-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
 
+/*
+ * Actions wrapper layout को प्रभावित नहीं करेगा।
+ * इसके दोनों children header grid का हिस्सा बन जाएंगे।
+ */
+.owner-attendance-header__actions {
+  display: contents;
+}
 
+/* Last Attendance — header के exact center में */
+.owner-last-attendance {
+  grid-column: 2;
+  justify-self: center;
 
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  justify-content: center;
+  column-gap: 7px;
+  row-gap: 3px;
 
+  min-width: max-content;
+  padding: 6px 11px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.owner-last-attendance svg {
+  grid-column: 1;
+  grid-row: 1;
+
+  flex: 0 0 auto;
+  color: #cf0006;
+  stroke: #cf0006;
+}
+
+/* “Last attendance marked” text */
+.owner-last-attendance > span {
+  grid-column: 2;
+  grid-row: 1;
+
+  color: #cf0006;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Date अब label के नीचे आएगी */
+.owner-last-attendance > strong {
+  grid-column: 1 / -1;
+  grid-row: 2;
+
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.owner-last-attendance time {
+  color: inherit;
+  font: inherit;
+}
+
+/* Detailed Analytics हमेशा right aligned */
+.owner-attendance-header__actions > a {
+  grid-column: 3;
+  justify-self: end;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  .owner-attendance-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .owner-last-attendance {
+    grid-column: 2;
+  }
+
+  .owner-attendance-header__actions > a {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .owner-attendance-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .owner-attendance-header__actions {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .owner-last-attendance {
+    min-width: 0;
+    justify-self: auto;
+    white-space: normal;
+  }
+
+  .owner-attendance-header__actions > a {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .owner-attendance-header__actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .owner-last-attendance {
+    align-self: center;
+  }
+
+  .owner-attendance-header__actions > a {
+    align-self: flex-end;
+  }
+}
