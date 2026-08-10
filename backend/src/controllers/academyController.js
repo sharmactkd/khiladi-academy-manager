@@ -14,6 +14,7 @@ const SAFE_ACADEMY_UPDATE_FIELDS = [
   "logo",
   "countryCode",
   "phone",
+  "phoneNumbers",
   "email",
   "address",
   "city",
@@ -73,6 +74,30 @@ const normalizeAffiliations = (value) => {
     .filter((item) => item.organizationName || item.registrationNumber);
 };
 
+const normalizePhoneNumbers = (value, fallback = {}) => {
+  const parsed = parseJsonIfNeeded(value, []);
+  const source = Array.isArray(parsed) ? parsed : [];
+
+  const normalized = source
+    .slice(0, 4)
+    .map((item, index) => ({
+      countryCode: String(item?.countryCode || "+91").trim() || "+91",
+      phone: String(item?.phone || "").trim(),
+      isPrimary: index === 0,
+    }))
+    .filter((item, index) => index === 0 || item.phone);
+
+  if (!normalized.length && (fallback.phone || fallback.countryCode)) {
+    normalized.push({
+      countryCode: String(fallback.countryCode || "+91").trim(),
+      phone: String(fallback.phone || "").trim(),
+      isPrimary: true,
+    });
+  }
+
+  return normalized;
+};
+
 const normalizeSocialLinks = (value) => {
   const parsed = parseJsonIfNeeded(value, {});
 
@@ -99,6 +124,19 @@ const normalizeAcademyPayload = (body = {}) => {
 
   if (Object.prototype.hasOwnProperty.call(body, "affiliations")) {
     payload.affiliations = normalizeAffiliations(body.affiliations);
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(body, "phoneNumbers") ||
+    Object.prototype.hasOwnProperty.call(body, "phone") ||
+    Object.prototype.hasOwnProperty.call(body, "countryCode")
+  ) {
+    payload.phoneNumbers = normalizePhoneNumbers(body.phoneNumbers, body);
+
+    if (payload.phoneNumbers[0]) {
+      payload.countryCode = payload.phoneNumbers[0].countryCode;
+      payload.phone = payload.phoneNumbers[0].phone;
+    }
   }
 
   if (Object.prototype.hasOwnProperty.call(body, "socialLinks")) {

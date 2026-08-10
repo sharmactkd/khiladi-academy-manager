@@ -78,6 +78,28 @@ const affiliationSchema = new mongoose.Schema(
   { _id: true }
 );
 
+const phoneNumberSchema = new mongoose.Schema(
+  {
+    countryCode: {
+      type: String,
+      default: "+91",
+      trim: true,
+      maxlength: [10, "Country code cannot exceed 10 characters"],
+    },
+    phone: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: [30, "Phone number cannot exceed 30 characters"],
+    },
+    isPrimary: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: false }
+);
+
 const academySchema = new mongoose.Schema(
   {
     owner: {
@@ -105,13 +127,7 @@ const academySchema = new mongoose.Schema(
 
     martialArts: {
       type: [String],
-      required: [true, "At least one martial art is required"],
-      validate: {
-        validator(value) {
-          return Array.isArray(value) && value.length > 0;
-        },
-        message: "At least one martial art is required",
-      },
+      default: [],
     },
 
     since: {
@@ -155,6 +171,17 @@ const academySchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+    },
+
+    phoneNumbers: {
+      type: [phoneNumberSchema],
+      default: [],
+      validate: {
+        validator(value) {
+          return Array.isArray(value) && value.length <= 4;
+        },
+        message: "Maximum 4 phone numbers are allowed",
+      },
     },
 
     email: {
@@ -253,6 +280,33 @@ const normalizeStringArray = (value) => {
 academySchema.pre("validate", function () {
   this.martialArts = normalizeStringArray(this.martialArts);
 
+  const sourcePhones = Array.isArray(this.phoneNumbers)
+    ? this.phoneNumbers.slice(0, 4)
+    : [];
+
+  const normalizedPhones = sourcePhones
+    .map((item, index) => ({
+      countryCode: String(item?.countryCode || "+91").trim() || "+91",
+      phone: String(item?.phone || "").trim(),
+      isPrimary: index === 0,
+    }))
+    .filter((item, index) => index === 0 || item.phone);
+
+  if (!normalizedPhones.length && (this.phone || this.countryCode)) {
+    normalizedPhones.push({
+      countryCode: this.countryCode || "+91",
+      phone: this.phone || "",
+      isPrimary: true,
+    });
+  }
+
+  this.phoneNumbers = normalizedPhones;
+
+  if (normalizedPhones[0]) {
+    this.countryCode = normalizedPhones[0].countryCode;
+    this.phone = normalizedPhones[0].phone;
+  }
+
   if (this.since === "" || this.since === undefined) {
     this.since = null;
   }
@@ -269,14 +323,25 @@ academySchema.pre("validate", function () {
 });
 
 academySchema.pre("save", function () {
-  if (this.countryCode === "+91" && this.phone) {
-    const digits = String(this.phone).replace(/\D/g, "").slice(0, 10);
+  const formatIndianPhone = (value) => {
+    const digits = String(value || "").replace(/\D/g, "").slice(0, 10);
+    return digits.length === 10
+      ? `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`
+      : String(value || "").trim();
+  };
 
-    if (digits.length === 10) {
-      this.phone = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(
-        6
-      )}`;
-    }
+  this.phoneNumbers = (this.phoneNumbers || []).map((item, index) => ({
+    countryCode: item.countryCode || "+91",
+    phone:
+      item.countryCode === "+91"
+        ? formatIndianPhone(item.phone)
+        : String(item.phone || "").trim(),
+    isPrimary: index === 0,
+  }));
+
+  if (this.phoneNumbers[0]) {
+    this.countryCode = this.phoneNumbers[0].countryCode;
+    this.phone = this.phoneNumbers[0].phone;
   }
 });
 

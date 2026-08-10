@@ -700,14 +700,44 @@ const OwnerDashboard = () => {
           <section className="owner-bottom-grid">
             <article className="owner-panel owner-quick-actions">
               <header className="owner-panel__header"><div><span>Shortcuts</span><h2>Quick actions</h2></div></header>
-              <div className="owner-quick-actions__grid">
-                <Link to="/attendance"><CalendarCheck2 /><span>Mark attendance</span></Link>
-                <Link to="/students/new"><UserPlus /><span>Add student</span></Link>
-                {canManageFees ? <Link to="/fees"><IndianRupee /><span>Collect fee</span></Link> : null}
-                <Link to="/attendance/monthly-register"><FileSpreadsheet /><span>Monthly register</span></Link>
-                <Link to="/id-cards/generate"><IdCard /><span>Generate ID</span></Link>
-                <Link to="/belt-tests"><Award /><span>Belt tests</span></Link>
-              </div>
+            <div className="owner-quick-actions__grid">
+  <Link to="/attendance">
+    <CalendarCheck2 />
+    <span>Mark attendance</span>
+  </Link>
+
+  <Link to="/students/new">
+    <UserPlus />
+    <span>Add student</span>
+  </Link>
+
+  {canManageFees ? (
+    <Link to="/fees">
+      <IndianRupee />
+      <span>Collect fee</span>
+    </Link>
+  ) : null}
+
+  <Link to="/attendance/monthly-register">
+    <FileSpreadsheet />
+    <span>Monthly register</span>
+  </Link>
+
+  <Link to="/id-cards/generate">
+    <IdCard />
+    <span>Generate ID</span>
+  </Link>
+
+  <Link to="/belt-tests">
+    <Award />
+    <span>Belt tests</span>
+  </Link>
+
+  <Link to="/championship-records">
+    <Trophy />
+    <span>Championships</span>
+  </Link>
+</div>
             </article>
 
             <article className="owner-panel owner-activity">
