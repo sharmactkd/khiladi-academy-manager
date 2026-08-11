@@ -40,6 +40,7 @@ const normalizeAdditionalCoaches = (value) => {
       name: String(coach?.name || "").trim(),
       countryCode: String(coach?.countryCode || "+91").trim(),
       phone: String(coach?.phone || "").trim(),
+      achievements: String(coach?.achievements || "").trim(),
     }))
     .filter((coach) => coach.name || coach.phone);
 };
@@ -70,6 +71,7 @@ const normalizeBoolean = (value, fallback = false) => {
 
 const normalizeBranchPayload = (body = {}) => {
   const payload = {
+   directorName: String(body.directorName || "").trim(),
     branchName: body.branchName,
     countryCode: body.countryCode || "+91",
     phone: body.phone || "",
@@ -82,16 +84,20 @@ const normalizeBranchPayload = (body = {}) => {
     headCoachName: body.headCoachName || "",
     headCoachCountryCode: body.headCoachCountryCode || "+91",
     headCoachPhone: body.headCoachPhone || "",
+    headCoachAchievements: body.headCoachAchievements || "",
 
     assistantCoachName: body.assistantCoachName || "",
     assistantCoachCountryCode: body.assistantCoachCountryCode || "+91",
     assistantCoachPhone: body.assistantCoachPhone || "",
+    assistantCoachAchievements: body.assistantCoachAchievements || "",
 
     additionalCoaches: normalizeAdditionalCoaches(body.additionalCoaches),
     branchSince: body.branchSince ? Number(body.branchSince) : null,
 
     facilities: normalizeStringArray(body.facilities),
+    customFacilities: normalizeStringArray(body.customFacilities),
     languagesSpoken: normalizeStringArray(body.languagesSpoken),
+    customLanguages: normalizeStringArray(body.customLanguages),
 
     isMainBranch: normalizeBoolean(body.isMainBranch, false),
     isActive: normalizeBoolean(body.isActive, true),
@@ -407,6 +413,17 @@ export const updateBranch = asyncHandler(async (req, res) => {
   }
 
   const payload = normalizeBranchPayload(req.body);
+
+  // New optional fields must not be erased by older edit clients that do not
+  // send them yet. Creation still receives the normalized defaults above.
+  [
+    "headCoachAchievements",
+    "assistantCoachAchievements",
+    "customFacilities",
+    "customLanguages",
+  ].forEach((field) => {
+    if (req.body[field] === undefined) delete payload[field];
+  });
 
   Object.assign(branch, payload);
 

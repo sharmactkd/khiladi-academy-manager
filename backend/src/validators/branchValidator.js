@@ -49,6 +49,16 @@ export const createBranchValidator = [
   body("country").optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
  
 
+
+  body("headCoachAchievements").optional({ checkFalsy: true }).trim().isLength({ max: 1000 }),
+  body("assistantCoachAchievements").optional({ checkFalsy: true }).trim().isLength({ max: 1000 }),
+  body("additionalCoaches").optional().isArray(),
+  body("additionalCoaches.*.achievements").optional({ checkFalsy: true }).trim().isLength({ max: 1000 }),
+  body("facilities").optional().isArray(),
+  body("customFacilities").optional().isArray(),
+  body("languagesSpoken").optional().isArray(),
+  body("customLanguages").optional().isArray(),
+
   body("manager")
     .optional({ nullable: true, checkFalsy: true })
     .custom((value) => {
@@ -99,7 +109,16 @@ export const updateBranchValidator = [
   body("city").optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
   body("state").optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
   body("country").optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
- 
+
+  body("headCoachAchievements").optional({ checkFalsy: true }).trim().isLength({ max: 1000 }),
+  body("assistantCoachAchievements").optional({ checkFalsy: true }).trim().isLength({ max: 1000 }),
+  body("additionalCoaches").optional().isArray(),
+  body("additionalCoaches.*.achievements").optional({ checkFalsy: true }).trim().isLength({ max: 1000 }),
+  body("facilities").optional().isArray(),
+  body("customFacilities").optional().isArray(),
+  body("languagesSpoken").optional().isArray(),
+  body("customLanguages").optional().isArray(),
+
   body("manager")
     .optional({ nullable: true, checkFalsy: true })
     .custom((value) => {
@@ -119,3 +138,4 @@ export const updateBranchValidator = [
   body("isMainBranch").optional().isBoolean(),
   body("isActive").optional().isBoolean(),
 ];
+

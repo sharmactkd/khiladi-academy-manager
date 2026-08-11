@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   Award,
   BadgeIndianRupee,
-  Building2,
   CalendarCheck2,
   ChevronRight,
   CircleDollarSign,
@@ -12,8 +11,6 @@ import {
   GraduationCap,
   IdCard,
   IndianRupee,
-  Layers3,
-  MapPin,
   Medal,
   Plus,
   RefreshCw,
@@ -21,7 +18,6 @@ import {
   Trophy,
   UserCheck,
   UserPlus,
-  UserRound,
   UserRoundX,
   Users,
 } from "lucide-react";
@@ -52,6 +48,7 @@ import {
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import useAuth from "../../hooks/useAuth.js";
 import UsageMeter from "../../components/billing/UsageMeter.jsx";
+import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 
 const moneyFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
@@ -484,83 +481,39 @@ const OwnerDashboard = () => {
 
   return (
     <div className="owner-dashboard">
-      <section className="owner-hero">
-        <div className="owner-hero__brand" aria-hidden="true">
-          {academyLogoUrl ? (
-            <button type="button" onClick={() => setShowLogoModal(true)}>
-              <img src={academyLogoUrl} alt="" />
-            </button>
-          ) : (
-            <GraduationCap size={58} strokeWidth={1.7} />
-          )}
-        </div>
-
-        <div className="owner-hero__content">
-          <span className="owner-hero__eyebrow">Academy command center</span>
-          <h1>{academyName}</h1>
-
-          <div className="owner-hero__details">
-            <div className="owner-hero__owner">
-              <UserRound size={14} aria-hidden="true" />
-              <span>Owner</span>
-              <strong>{ownerName}</strong>
-            </div>
-
-            <address className="owner-hero__address">
-              <MapPin size={14} aria-hidden="true" />
-              <span>
-                <b>{mainBranch?.branchName || "Main Branch"}</b>
-                <strong>
-                  {mainBranchAddress || "Complete main branch address not available"}
-                </strong>
-              </span>
-            </address>
-
-            <div
-              className="owner-hero__summary"
-              aria-label="Academy operational summary"
-            >
-              <span>
-                <Building2 size={14} aria-hidden="true" />
-                <strong>{activeBranchCount}</strong>
-                Active {activeBranchCount === 1 ? "Branch" : "Branches"}
-              </span>
-
-              <i aria-hidden="true" />
-
-              <span>
-                <Layers3 size={14} aria-hidden="true" />
-                <strong>{activeBatchCount}</strong>
-                Active {activeBatchCount === 1 ? "Batch" : "Batches"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-       <div className="owner-hero__decoration" aria-hidden="true">
- <div className="owner-hero__dots">
-  <span className="owner-hero__dot-layer owner-hero__dot-layer--small" />
-  <span className="owner-hero__dot-layer owner-hero__dot-layer--medium" />
-  <span className="owner-hero__dot-layer owner-hero__dot-layer--large" />
-</div>
-
-  <span className="owner-hero__stripe owner-hero__stripe--thin" />
-  <span className="owner-hero__stripe owner-hero__stripe--soft" />
-  <span className="owner-hero__stripe owner-hero__stripe--bold" />
-</div>
-
-        <button
-          type="button"
-          className="owner-dashboard__refresh"
-          onClick={() => loadDashboard({ quiet: true })}
-          disabled={refreshing}
-          aria-label="Refresh dashboard"
-          title="Refresh dashboard"
-        >
-          <RefreshCw size={17} className={refreshing ? "is-spinning" : ""} />
-          {refreshing ? "Refreshing" : "Refresh"}
-        </button>
-      </section>
+      <AcademyHeroHeader
+        academyName={academyName}
+        ownerName={ownerName}
+        logoUrl={academyLogoUrl}
+        addressLabel={mainBranch?.branchName || "Main Branch"}
+        address={mainBranchAddress}
+        onLogoClick={academyLogoUrl ? () => setShowLogoModal(true) : undefined}
+        summaryItems={[
+          {
+            type: "branches",
+            value: activeBranchCount,
+            label: `Active ${activeBranchCount === 1 ? "Branch" : "Branches"}`,
+          },
+          {
+            type: "batches",
+            value: activeBatchCount,
+            label: `Active ${activeBatchCount === 1 ? "Batch" : "Batches"}`,
+          },
+        ]}
+        action={
+          <button
+            type="button"
+            className="owner-dashboard__refresh"
+            onClick={() => loadDashboard({ quiet: true })}
+            disabled={refreshing}
+            aria-label="Refresh dashboard"
+            title="Refresh dashboard"
+          >
+            <RefreshCw size={17} className={refreshing ? "is-spinning" : ""} />
+            {refreshing ? "Refreshing" : "Refresh"}
+          </button>
+        }
+      />
 
       {error ? (
         <div className="owner-dashboard__error" role="alert">

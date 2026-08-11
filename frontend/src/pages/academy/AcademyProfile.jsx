@@ -15,10 +15,10 @@ import {
   Save,
   Trash2,
   Upload,
-  UserRound,
 } from "lucide-react";
 
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
+import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import { academyApi } from "../../api/academyApi.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 
@@ -506,64 +506,34 @@ const AcademyProfile = () => {
   return (
     <div className="academy-profile">
       <form onSubmit={handleSubmit}>
-        <section className="academy-profile-hero" aria-labelledby="academy-name">
-          <div className="academy-profile-hero__brand">
-            <div className="academy-profile-hero__logo-ring">
-              {logoPreview ? (
-                <img src={logoPreview} alt={`${academy.academyName} logo`} />
-              ) : (
-                <Building2 aria-hidden="true" />
-              )}
-            </div>
-          </div>
-
-          <div className="academy-profile-hero__content">
-            <h1 id="academy-name">
-              {academy.academyName || "Your Academy"}
-            </h1>
-            <p>
-              <UserRound size={16} aria-hidden="true" />
-              {academy.ownerName || "Owner / Director not added"}
-            </p>
-            <p>
-              <MapPin size={16} aria-hidden="true" />
-              {[academy.city, academy.state].filter(Boolean).join(", ") ||
-                "Location not added"}
-            </p>
-          </div>
-
-          <div className="academy-profile-hero__completion">
-            <div
-              className="academy-profile-progress-ring"
-              aria-label={`Profile ${profileCompletion}% complete`}
-            >
-              <svg viewBox="0 0 42 42" aria-hidden="true">
-                <circle className="academy-profile-progress-ring__track" cx="21" cy="21" r="17" />
-                <circle
-                  className="academy-profile-progress-ring__value"
-                  cx="21"
-                  cy="21"
-                  r="17"
-                  pathLength="100"
-                  strokeDasharray={`${profileCompletion} 100`}
-                />
-              </svg>
-              <span>{profileCompletion}%</span>
-            </div>
-            <div>
-              <strong>Profile Completion</strong>
-              <small>
-                {profileCompletion === 100
-                  ? "Your academy profile is complete."
-                  : "Complete missing details to strengthen your profile."}
-              </small>
-            </div>
-          </div>
-
-          <div className="academy-profile-hero__dots" aria-hidden="true" />
-          <span className="academy-profile-hero__stripe academy-profile-hero__stripe--one" aria-hidden="true" />
-          <span className="academy-profile-hero__stripe academy-profile-hero__stripe--two" aria-hidden="true" />
-        </section>
+        <AcademyHeroHeader
+          headingId="academy-name"
+          eyebrow="Academy profile"
+          academyName={academy.academyName || "Your Academy"}
+          ownerName={academy.ownerName || "Owner / Director not added"}
+          logoUrl={logoPreview}
+          addressLabel="Academy Address"
+          address={[
+            academy.address,
+            academy.city,
+            academy.state,
+            academy.country,
+          ]
+            .filter(Boolean)
+            .join(", ")}
+          summaryItems={[
+            {
+              type: "profile",
+              value: `${profileCompletion}%`,
+              label: "Profile Complete",
+            },
+            {
+              type: "since",
+              value: academy.since || "—",
+              label: "Established",
+            },
+          ]}
+        />
 
         <nav className="academy-profile-nav" aria-label="Profile sections">
           {PROFILE_SECTIONS.map(({ id, label, icon: Icon }, index) => (

@@ -9,6 +9,14 @@ const branchSchema = new mongoose.Schema(
       index: true,
     },
 
+    directorName: {
+  type: String,
+  required: [true, "Director name is required"],
+  trim: true,
+  maxlength: 120,
+  default: "",
+},
+
     branchName: {
       type: String,
       required: [true, "Branch name is required"],
@@ -93,6 +101,13 @@ const branchSchema = new mongoose.Schema(
       default: "",
     },
 
+    headCoachAchievements: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [1000, "Head coach achievements cannot exceed 1000 characters"],
+    },
+
     assistantCoachName: {
       type: String,
       trim: true,
@@ -116,6 +131,13 @@ const branchSchema = new mongoose.Schema(
       default: "",
     },
 
+    assistantCoachAchievements: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [1000, "Assistant coach achievements cannot exceed 1000 characters"],
+    },
+
     additionalCoaches: [
   {
     name: {
@@ -135,6 +157,12 @@ const branchSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    achievements: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [1000, "Coach achievements cannot exceed 1000 characters"],
+    },
   },
 ],
 
@@ -150,7 +178,17 @@ const branchSchema = new mongoose.Schema(
       default: [],
     },
 
+    customFacilities: {
+      type: [String],
+      default: [],
+    },
+
     languagesSpoken: {
+      type: [String],
+      default: [],
+    },
+
+    customLanguages: {
       type: [String],
       default: [],
     },
@@ -238,9 +276,15 @@ branchSchema.pre("validate", function () {
   }
 
  this.facilities = [...new Set(normalizeStringArray(this.facilities))];
+ this.customFacilities = [
+   ...new Set(normalizeStringArray(this.customFacilities)),
+ ];
 
 this.languagesSpoken = [
   ...new Set(normalizeStringArray(this.languagesSpoken)),
+];
+this.customLanguages = [
+  ...new Set(normalizeStringArray(this.customLanguages)),
 ];
 });
 
@@ -265,6 +309,7 @@ branchSchema.pre("save", function () {
       coach.countryCode === "+91" && coach.phone
         ? formatIndianPhone(coach.phone)
         : coach.phone || "",
+    achievements: coach.achievements || "",
   }));
 }
 });
