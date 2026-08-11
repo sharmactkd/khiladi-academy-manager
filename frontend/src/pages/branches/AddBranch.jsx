@@ -253,23 +253,10 @@ const AddBranch = () => {
           <section className="add-branch-card">
             <SectionHeader icon={Building2} eyebrow="Identity" title="Branch Identity" description="Primary branch identification and contact details." />
             <div className="add-branch-fields add-branch-fields--two">
-              
-               <label>
-    <span>Director Name <b>*</b></span>
-
-    <input
-      value={form.directorName}
-      onChange={(event) =>
-        updateField("directorName", event.target.value)
-      }
-      placeholder="Enter director name"
-      maxLength={120}
-    />
-  </label>
-
               <label><span>Branch Name <b>*</b></span><input value={form.branchName} onChange={(event) => updateField("branchName", event.target.value)} placeholder="Enter branch name" required maxLength={120} /></label>
               <label><span>Branch Code <b>*</b></span><input value={form.branchCode} onChange={(event) => updateField("branchCode", event.target.value.toUpperCase())} placeholder="Example: AGR-01" required maxLength={30} /></label>
-              <label className="add-branch-field-full"><span>Branch Since</span><select value={form.branchSince} onChange={(event) => updateField("branchSince", event.target.value)}><option value="">Select Year</option>{Array.from({ length: currentYear - 1949 }, (_, index) => currentYear - index).map((year) => <option key={year} value={year}>{year} ({currentYear - year} Years)</option>)}</select></label>
+              <label><span>Director Name <b>*</b></span><input value={form.directorName} onChange={(event) => updateField("directorName", event.target.value)} placeholder="Enter director name" required minLength={2} maxLength={120} /></label>
+              <label><span>Branch Since</span><select value={form.branchSince} onChange={(event) => updateField("branchSince", event.target.value)}><option value="">Select Year</option>{Array.from({ length: currentYear - 1949 }, (_, index) => currentYear - index).map((year) => <option key={year} value={year}>{year} ({currentYear - year} Years)</option>)}</select></label>
             </div>
             <div className="add-branch-toggle-row">
               <label className="add-branch-switch"><input type="checkbox" checked={form.isMainBranch} onChange={(event) => updateField("isMainBranch", event.target.checked)} /><span /><div><strong>Set as Main Branch</strong><small>Primary academy location for reports and defaults.</small></div></label>

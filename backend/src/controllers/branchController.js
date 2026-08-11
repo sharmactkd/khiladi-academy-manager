@@ -45,6 +45,21 @@ const normalizeAdditionalCoaches = (value) => {
     .filter((coach) => coach.name || coach.phone);
 };
 
+const normalizePhoneNumbers = (value) => {
+  const parsed = parseJsonIfNeeded(value, []);
+
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .slice(0, 4)
+    .map((item, index) => ({
+      countryCode: String(item?.countryCode || "+91").trim(),
+      phone: String(item?.phone || "").trim(),
+      isPrimary: index === 0,
+    }))
+    .filter((item, index) => index === 0 || item.phone);
+};
+
 const normalizeStringArray = (value) => {
   const parsed = parseJsonIfNeeded(value, value);
 
@@ -71,10 +86,11 @@ const normalizeBoolean = (value, fallback = false) => {
 
 const normalizeBranchPayload = (body = {}) => {
   const payload = {
-   directorName: String(body.directorName || "").trim(),
+    directorName: String(body.directorName || "").trim(),
     branchName: body.branchName,
     countryCode: body.countryCode || "+91",
     phone: body.phone || "",
+    phoneNumbers: normalizePhoneNumbers(body.phoneNumbers),
     email: body.email || "",
     address: body.address || "",
     city: body.city || "",
@@ -414,14 +430,8 @@ export const updateBranch = asyncHandler(async (req, res) => {
 
   const payload = normalizeBranchPayload(req.body);
 
-  // New optional fields must not be erased by older edit clients that do not
-  // send them yet. Creation still receives the normalized defaults above.
-  [
-    "headCoachAchievements",
-    "assistantCoachAchievements",
-    "customFacilities",
-    "customLanguages",
-  ].forEach((field) => {
+  // A partial update must never erase fields omitted by an older client.
+  Object.keys(payload).forEach((field) => {
     if (req.body[field] === undefined) delete payload[field];
   });
 
