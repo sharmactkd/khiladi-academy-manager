@@ -59,6 +59,13 @@ const toNullableNumber = (value) => {
   return Number.isNaN(number) ? null : number;
 };
 
+const normalizeStringArray = (value, fallback = []) => {
+  const parsed = parseJsonIfNeeded(value, []);
+  const items = Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+  const normalized = [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
+  return normalized.length ? normalized : fallback;
+};
+
 const normalizeAdditionalCoaches = (value) => {
   const parsed = parseJsonIfNeeded(value, []);
 
@@ -67,9 +74,11 @@ const normalizeAdditionalCoaches = (value) => {
   return parsed
     .map((coach) => ({
       name: String(coach?.name || "").trim(),
+      countryCode: String(coach?.countryCode || "+91").trim(),
       phone: String(coach?.phone || "").trim(),
+      achievements: String(coach?.achievements || "").trim(),
     }))
-    .filter((coach) => coach.name || coach.phone);
+    .filter((coach) => coach.name || coach.phone || coach.achievements);
 };
 
 const normalizeSchedule = (value) => {
@@ -86,36 +95,62 @@ const normalizeSchedule = (value) => {
     .filter((item) => item.day && item.startTime && item.endTime);
 };
 
-const normalizeBatchPayload = (body = {}) => ({
+const normalizeBatchPayload = (body = {}) => {
+  const martialArts = normalizeStringArray(body.martialArts, [String(body.martialArt || "Taekwondo").trim()]);
+  const batchTypes = normalizeStringArray(body.batchTypes, [String(body.batchType || "regular").trim()]);
+  const skillLevels = normalizeStringArray(body.skillLevels, [String(body.skillLevel || "beginner").trim()]);
+  const modes = normalizeStringArray(body.modes, [String(body.mode || "offline").trim()]);
+  const sessionSlots = normalizeStringArray(body.sessionSlots, [String(body.sessionSlot || "evening").trim()]);
+  const legacyBatchTypes = ["regular", "competition", "poomsae", "sparring", "fitness", "kids", "adults", "black-belt", "custom"];
+  const requestedBatchType = String(body.batchType || batchTypes[0] || "regular").trim();
+
+  return ({
   branch: body.branch || null,
 
   batchName: String(body.batchName || "").trim(),
   batchCode: String(body.batchCode || "").trim().toUpperCase(),
-  martialArt: String(body.martialArt || "Taekwondo").trim(),
+  martialArt: martialArts[0],
+  martialArts,
 genderGroup: ["male", "female", "both"].includes(body.genderGroup)
   ? body.genderGroup
   : "both",
   
-  batchType: body.batchType || "regular",
-  skillLevel: body.skillLevel || "beginner",
-  mode: body.mode || "offline",
-  sessionSlot: body.sessionSlot || "",
+  batchType: legacyBatchTypes.includes(requestedBatchType) ? requestedBatchType : "custom",
+  batchTypes,
+  customBatchTypes: normalizeStringArray(body.customBatchTypes),
+  skillLevel: skillLevels[0] || "beginner",
+  skillLevels,
+  mode: modes[0] || "offline",
+  modes,
+  sessionSlot: sessionSlots[0] || "evening",
+  sessionSlots,
   venue: String(body.venue || "").trim(),
   batchColor: String(body.batchColor || "").trim(),
 
   coach: body.coach || null,
   headCoachName: String(body.headCoachName || "").trim(),
+  headCoachCountryCode: String(body.headCoachCountryCode || "+91").trim(),
+  headCoachPhone: String(body.headCoachPhone || "").trim(),
+  headCoachAchievements: String(body.headCoachAchievements || "").trim(),
   assistantCoachName: String(body.assistantCoachName || "").trim(),
+  assistantCoachCountryCode: String(body.assistantCoachCountryCode || "+91").trim(),
+  assistantCoachPhone: String(body.assistantCoachPhone || "").trim(),
+  assistantCoachAchievements: String(body.assistantCoachAchievements || "").trim(),
   additionalCoaches: normalizeAdditionalCoaches(body.additionalCoaches),
 
   schedule: normalizeSchedule(body.schedule),
 
   capacity: toNumber(body.capacity ?? body.maxStudents, 0),
+  noCapacityLimit: normalizeBoolean(body.noCapacityLimit),
 
   minAge: toNullableNumber(body.minAge),
   maxAge: toNullableNumber(body.maxAge),
   minBelt: String(body.minBelt || "").trim(),
   maxBelt: String(body.maxBelt || "").trim(),
+  noMinAgeLimit: normalizeBoolean(body.noMinAgeLimit),
+  noMaxAgeLimit: normalizeBoolean(body.noMaxAgeLimit),
+  noMinBeltLimit: normalizeBoolean(body.noMinBeltLimit),
+  noMaxBeltLimit: normalizeBoolean(body.noMaxBeltLimit),
 
   monthlyFee: toNumber(body.monthlyFee, 0),
   quarterlyFee: toNumber(body.quarterlyFee, 0),
@@ -124,10 +159,14 @@ genderGroup: ["male", "female", "both"].includes(body.genderGroup)
   uniformFee: toNumber(body.uniformFee, 0),
   examinationFee: toNumber(body.examinationFee, 0),
   lateFee: toNumber(body.lateFee, 0),
+  noRegistrationFee: normalizeBoolean(body.noRegistrationFee),
+  noLateFee: normalizeBoolean(body.noLateFee),
 
   minimumAttendancePercentage: toNumber(body.minimumAttendancePercentage, 75),
 
   batchLanguage: String(body.batchLanguage || "").trim(),
+  batchLanguages: normalizeStringArray(body.batchLanguages),
+  customBatchLanguages: normalizeStringArray(body.customBatchLanguages),
   whatsappGroupLink: String(body.whatsappGroupLink || "").trim(),
   googleMeetLink: String(body.googleMeetLink || "").trim(),
 
@@ -135,7 +174,8 @@ genderGroup: ["male", "female", "both"].includes(body.genderGroup)
   isActive: normalizeBoolean(body.isActive, true),
 
   notes: String(body.notes || "").trim(),
-});
+  });
+};
 
 export const createBatch = asyncHandler(async (req, res) => {
   const payload = normalizeBatchPayload(req.body);

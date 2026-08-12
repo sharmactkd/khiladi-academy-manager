@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { TAEKWONDO_BELTS } from "../../components/taekwondoBelts/taekwondoBelts.js";
 import { batchApi } from "../../api/batchApi.js";
+import { getBranches } from "../../api/branchApi.js";
+import { ArrowLeft, CalendarDays, Plus, Save, UsersRound } from "lucide-react";
 
 const DAYS = [
   "monday",
@@ -66,6 +68,8 @@ const EditBatch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const [batchData, setBatchData] = useState(null);
+  const [branches, setBranches] = useState([]);
   const [additionalCoaches, setAdditionalCoaches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -79,6 +83,7 @@ const EditBatch = () => {
   } = useForm({
     defaultValues: {
       batchName: "",
+      branch: "",
       batchCode: "",
       martialArt: "Taekwondo",
       genderGroup: "both",
@@ -116,6 +121,15 @@ const EditBatch = () => {
   });
 
   useEffect(() => {
+    getBranches({ status: "active" })
+      .then((response) => {
+        const candidates = [response?.data?.data, response?.data, response];
+        setBranches(candidates.find(Array.isArray) || []);
+      })
+      .catch(() => setBranches([]));
+  }, []);
+
+  useEffect(() => {
     const fetchBatch = async () => {
       try {
         setLoading(true);
@@ -129,7 +143,10 @@ const EditBatch = () => {
           return;
         }
 
+        setBatchData(batch);
+
         reset({
+          branch: batch.branch?._id || batch.branch || "",
           batchName: batch.batchName || "",
           batchCode: batch.batchCode || "",
           martialArt: batch.martialArt || "Taekwondo",
@@ -213,6 +230,7 @@ genderGroup: batch.genderGroup || "both",
       setSaving(true);
 
       await batchApi.update(id, {
+        branch: values.branch || null,
         batchName: values.batchName,
         batchCode: values.batchCode || "",
         martialArt: values.martialArt || "Taekwondo",
@@ -278,17 +296,21 @@ genderGroup: values.genderGroup || "both",
   if (loading) return <p>Loading batch...</p>;
 
   return (
-    <div className="page">
-      <div className="page-header">
+    <div className="page batch-form-page edit-batch-page">
+      <BatchAcademyHeader />
+      <nav className="batch-breadcrumb"><Link to="/batches">Batches</Link><span>/</span><Link to={"/batches/" + id}>{batchData?.batchName || "Batch"}</Link><span>/</span><strong>Edit</strong></nav>
+      <div className="batch-form-heading">
         <div>
+          <span>Training setup</span>
           <h1>Edit Batch</h1>
-          <p>Batch details update karein</p>
+          <p>Update this batch's schedule, coaches, eligibility and fees.</p>
         </div>
+        <Link className="btn btn-outline" to={"/batches/" + id}><ArrowLeft size={16} /> Back to Details</Link>
       </div>
 
-      <form className="card form" onSubmit={handleSubmit(onSubmit)}>
-        <div className="card subtle-card">
-          <h3>Basic Batch Information</h3>
+      <form className="batch-form" onSubmit={handleSubmit(onSubmit)}>
+        <div className="batch-form-card">
+          <h3><span>01</span> Basic Batch Information</h3>
 
           <div className="grid grid-2">
             <label>
@@ -304,6 +326,18 @@ genderGroup: values.genderGroup || "both",
             <label>
               Batch Code
               <input {...register("batchCode")} placeholder="EV-TKD-MOR-01" />
+            </label>
+
+            <label>
+              Branch
+              <select {...register("branch")}>
+                <option value="">Academy level / Not assigned</option>
+                {branches.map((branch) => (
+                  <option key={branch._id} value={branch._id}>
+                    {branch.branchName}{branch.branchCode ? " (" + branch.branchCode + ")" : ""}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label>
@@ -394,8 +428,8 @@ genderGroup: values.genderGroup || "both",
           </div>
         </div>
 
-        <div className="card subtle-card">
-          <h3>Coach Assignment</h3>
+        <div className="batch-form-card">
+          <h3><span>02</span> Coach Assignment <UsersRound size={17} /></h3>
 
           <div className="grid grid-2">
             <label>
@@ -409,21 +443,20 @@ genderGroup: values.genderGroup || "both",
             </label>
           </div>
 
-          <div className="actions" style={{ marginTop: 12 }}>
+          <div className="batch-form-add-row">
             <button
               type="button"
               className="btn btn-secondary"
               onClick={addAdditionalCoach}
             >
-              + Add More Coach
+              <Plus size={15} /> Add More Coach
             </button>
           </div>
 
           {additionalCoaches.map((coach, index) => (
             <div
-              className="grid grid-3"
+              className="grid grid-3 batch-form-coach-row"
               key={index}
-              style={{ marginTop: 12, alignItems: "end" }}
             >
               <label>
                 Coach Name
@@ -456,8 +489,8 @@ genderGroup: values.genderGroup || "both",
           ))}
         </div>
 
-        <div className="card subtle-card">
-          <h3>Training Schedule</h3>
+        <div className="batch-form-card">
+          <h3><span>03</span> Training Schedule</h3>
 
           <div className="grid grid-2">
             <label>
@@ -471,10 +504,7 @@ genderGroup: values.genderGroup || "both",
             </label>
           </div>
 
-          <div
-            className="actions"
-            style={{ marginBottom: "16px", marginTop: "16px", flexWrap: "wrap" }}
-          >
+          <div className="batch-schedule-presets">
             <button type="button" onClick={() => setValue("days", DAYS)}>
               All Days
             </button>
@@ -541,8 +571,8 @@ genderGroup: values.genderGroup || "both",
           </div>
         </div>
 
-        <div className="card subtle-card">
-          <h3>Student Capacity & Eligibility</h3>
+        <div className="batch-form-card">
+          <h3><span>04</span> Student Capacity & Eligibility</h3>
 
           <div className="grid grid-2">
             <label>
@@ -594,8 +624,8 @@ genderGroup: values.genderGroup || "both",
           </div>
         </div>
 
-        <div className="card subtle-card">
-          <h3>Batch Fees</h3>
+        <div className="batch-form-card">
+          <h3><span>05</span> Batch Fees</h3>
           <p>
             Ye fees is batch ke sabhi students ke liye default use hogi.
             Student-specific fee override ho to wo priority lega.
@@ -674,8 +704,8 @@ genderGroup: values.genderGroup || "both",
           </div>
         </div>
 
-        <div className="card subtle-card">
-          <h3>Links & Communication</h3>
+        <div className="batch-form-card">
+          <h3><span>06</span> Links & Communication</h3>
 
           <div className="grid grid-2">
             <label>
@@ -709,14 +739,16 @@ genderGroup: values.genderGroup || "both",
           </div>
         </div>
 
-        <label>
+        <label className="batch-form-notes">
           Notes
           <textarea {...register("notes")} />
         </label>
 
-        <div className="form-actions">
+        <div className="batch-form-actions">
+          <div><CalendarDays size={17} /><span><strong>Ready to update this batch?</strong><small>Review all changes before saving.</small></span></div>
           <button
             type="button"
+            className="btn btn-outline"
             onClick={() => navigate(`/batches/${id}`)}
             disabled={saving}
           >
@@ -724,7 +756,7 @@ genderGroup: values.genderGroup || "both",
           </button>
 
           <button className="btn btn-primary" disabled={saving}>
-            {saving ? "Updating..." : "Update Batch"}
+            <Save size={16} /> {saving ? "Updating..." : "Update Batch"}
           </button>
         </div>
       </form>

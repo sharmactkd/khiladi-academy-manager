@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import { batchApi } from "../../api/batchApi.js";
 import { studentApi } from "../../api/studentApi.js";
 
+import { ArrowLeft, Edit3, Plus } from "lucide-react";
+
 const formatTime = (time) => {
   if (!time) return "-";
 
@@ -92,15 +94,17 @@ const BatchDetail = () => {
     fetchBatch();
   }, [id]);
 
-  if (loading) return <p>Loading batch...</p>;
-  if (!batch) return <p>Batch not found.</p>;
+  if (loading) return <div className="page batch-detail-state"><span className="batches-spinner" /><strong>Loading batch…</strong></div>;
+  if (!batch) return <div className="page batch-detail-state"><strong>Batch not found.</strong><Link className="btn btn-primary" to="/batches">Back to Batches</Link></div>;
 
   const firstSchedule = batch.schedule?.[0] || null;
   const availableSeats = getAvailableSeats(batch.capacity, studentCount);
 
   return (
-    <div className="page">
-      <div className="page-header">
+    <div className="page batch-detail-page">
+      <BatchAcademyHeader branch={batch.branch || null} />
+      <nav className="batch-breadcrumb"><Link to="/batches">Batches</Link><span>/</span><strong>{batch.batchName}</strong></nav>
+      <div className="batch-detail-heading">
         <div>
           <h1>{batch.batchName}</h1>
           <p>
@@ -109,36 +113,37 @@ const BatchDetail = () => {
           </p>
         </div>
 
-        <div className="actions">
-          <Link className="btn btn-primary" to="/students/new">
-            Add Student
+        <div className="batch-detail-heading__actions">
+          <Link className="btn btn-outline" to="/batches"><ArrowLeft size={16} /> Back</Link>
+          <Link className="btn btn-outline" to="/students/new">
+            <Plus size={16} /> Add Student
           </Link>
 
           <Link className="btn btn-primary" to={`/batches/${batch._id}/edit`}>
-            Edit Batch
+            <Edit3 size={16} /> Edit Batch
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-4">
-        <div className="card stat-card">
+      <div className="batch-detail-stats">
+        <div className="batch-detail-stat">
           <span>Status</span>
           <strong>{batch.isActive ? "active" : "inactive"}</strong>
         </div>
 
-        <div className="card stat-card">
+        <div className="batch-detail-stat">
           <span>Students</span>
           <strong>
             {studentCount} / {batch.capacity || 0}
           </strong>
         </div>
 
-        <div className="card stat-card">
+        <div className="batch-detail-stat">
           <span>Available Seats</span>
           <strong>{availableSeats}</strong>
         </div>
 
-        <div className="card stat-card">
+        <div className="batch-detail-stat">
           <span>Time</span>
           <strong>
             {formatTime(firstSchedule?.startTime)} -{" "}
@@ -146,31 +151,31 @@ const BatchDetail = () => {
           </strong>
         </div>
 
-        <div className="card stat-card">
+        <div className="batch-detail-stat">
           <span>Monthly Fee</span>
           <strong>{currency(batch.monthlyFee)}</strong>
         </div>
 
-        <div className="card stat-card">
+        <div className="batch-detail-stat">
           <span>Batch Type</span>
           <strong>{formatLabel(batch.batchType)}</strong>
         </div>
 
-        <div className="card stat-card">
+        <div className="batch-detail-stat">
           <span>Skill Level</span>
           <strong>{formatLabel(batch.skillLevel)}</strong>
         </div>
 
-        <div className="card stat-card">
+        <div className="batch-detail-stat">
           <span>Mode</span>
           <strong>{formatLabel(batch.mode)}</strong>
         </div>
       </div>
 
-      <div className="card">
+      <div className="batch-detail-card">
         <h2>Batch Details</h2>
 
-        <div className="details-grid">
+        <div className="batch-detail-grid">
           <p>
             <strong>Batch Code:</strong> {displayValue(batch.batchCode)}
           </p>
@@ -224,10 +229,10 @@ const BatchDetail = () => {
         </div>
       </div>
 
-      <div className="card">
+      <div className="batch-detail-card">
         <h2>Training Schedule</h2>
 
-        <div className="details-grid">
+        <div className="batch-detail-grid">
           <p>
             <strong>Days:</strong>{" "}
             {batch.schedule?.map((item) => item.day).join(", ") || "-"}
@@ -243,10 +248,10 @@ const BatchDetail = () => {
         </div>
       </div>
 
-      <div className="card">
+      <div className="batch-detail-card">
         <h2>Coach Assignment</h2>
 
-        <div className="details-grid">
+        <div className="batch-detail-grid">
           <p>
             <strong>System Coach:</strong> {batch.coach?.name || "-"}
           </p>
@@ -277,10 +282,10 @@ const BatchDetail = () => {
         </div>
       </div>
 
-      <div className="card">
+      <div className="batch-detail-card">
         <h2>Student Capacity & Eligibility</h2>
 
-        <div className="details-grid">
+        <div className="batch-detail-grid">
           <p>
             <strong>Capacity:</strong> {batch.capacity || 0}
           </p>
@@ -322,10 +327,10 @@ const BatchDetail = () => {
         </div>
       </div>
 
-      <div className="card">
+      <div className="batch-detail-card">
         <h2>Batch Fee Structure</h2>
 
-        <div className="details-grid">
+        <div className="batch-detail-grid">
           <p>
             <strong>Monthly Fee:</strong> {currency(batch.monthlyFee)}
           </p>
@@ -360,10 +365,10 @@ const BatchDetail = () => {
         </div>
       </div>
 
-      <div className="card">
+      <div className="batch-detail-card">
         <h2>Links & Communication</h2>
 
-        <div className="details-grid">
+        <div className="batch-detail-grid">
           <p>
             <strong>Batch Language:</strong> {displayValue(batch.batchLanguage)}
           </p>
@@ -396,8 +401,8 @@ const BatchDetail = () => {
         </div>
       </div>
 
-      <div className="card">
-        <div className="page-header">
+      <div className="batch-detail-card batch-detail-students">
+        <div className="batch-detail-card__heading">
           <div>
             <h2>Students in this Batch</h2>
             <p>Active students list</p>
@@ -409,8 +414,8 @@ const BatchDetail = () => {
         {students.length === 0 ? (
           <p>No active students in this batch.</p>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
+          <div className="batches-table-wrap">
+            <table className="batches-table">
               <thead>
                 <tr>
                   <th>Code</th>

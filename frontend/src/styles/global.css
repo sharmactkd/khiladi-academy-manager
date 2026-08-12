@@ -3103,6 +3103,45 @@ Mobile par close button visible hoga.
   .owner-dashboard__loader,
   .is-spinning { animation-duration: 2s; }
 }
+
+/* =========================================================
+   RECOMMENDED MULTI-TAG BATCH FORM
+   Kept in global.css to match the existing product setup.
+   ========================================================= */
+.batch-form-page input,
+.batch-form-page select,
+.batch-form-page textarea,
+.batch-form-page button { font-size: 14px; }
+.batch-tag-section-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.batch-tag-field { min-width: 0; }
+.batch-tag-field--wide { grid-column: 1 / -1; }
+.batch-field-label { display: block; margin-bottom: 8px; color: #334155; font-size: 14px; font-weight: 800; }
+.batch-field-label b { color: #cf0006; }
+.batch-multi-select-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.batch-multi-select-tags button { min-height: 38px; padding: 8px 14px; }
+.batch-custom-tag { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; max-width: 620px; }
+.batch-custom-tag input { flex: 1; }
+.batch-custom-tag button,
+.batch-limit-field > button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid #f2a7aa; border-radius: 9px; color: #b50005; background: #fff; font-weight: 800; }
+.batch-custom-tag button { white-space: nowrap; }
+.batch-limit-field { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
+.batch-limit-field > button { padding: 8px 12px; }
+.batch-limit-field > button.is-selected { border-color: #cf0006; color: #fff; background: #cf0006; }
+.batch-limit-field--belt { grid-column: 1 / -1; align-items: end; }
+.batch-limit-field--belt .batch-tag-field { min-width: 0; }
+.add-branch-coaches-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.add-branch-coach-card { padding: 16px; border: 1px solid #e1e7ef; border-radius: 12px; background: #fbfcfe; }
+.add-branch-coach-card h4 { margin: 0 0 14px; color: #08162f; font-size: 14px; }
+.batch-coach-phone { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 8px; }
+.batch-country-code { text-align: center; }
+.batch-add-coach { margin-top: 12px; }
+.add-branch-additional-coach { margin-top: 12px; }
+.batch-form-page .full-width { grid-column: 1 / -1; }
+@media (max-width: 800px) {
+  .batch-tag-section-grid,
+  .add-branch-coaches-grid { grid-template-columns: 1fr; }
+  .batch-limit-field { grid-template-columns: 1fr; }
+}
 .owner-attendance-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -3200,6 +3239,100 @@ Mobile par close button visible hoga.
   .owner-attendance-header__actions > a {
     grid-column: 1 / -1;
     justify-self: end;
+  }
+}
+
+/* ADD BATCH FIXED CHOICES AS SINGLE-SELECT TAGS */
+.batch-form-page {
+  --batch-control-font-size: 14px;
+}
+
+.batch-form-page input,
+.batch-form-page select,
+.batch-form-page textarea,
+.batch-form-page button {
+  font-size: var(--batch-control-font-size);
+}
+
+.batch-form-page .batch-form label {
+  font-size: 14px;
+}
+
+.batch-form-page .batch-form input,
+.batch-form-page .batch-form select {
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.batch-form-page .batch-form textarea {
+  font-size: 14px;
+}
+
+.batch-form-page .batch-tag-field {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.batch-form-page .batch-tag-field > input[type="hidden"] {
+  display: none;
+}
+
+.batch-single-select-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.batch-single-select-tags button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border: 1px solid #f0a9ad;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #9f0005;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.15;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.batch-single-select-tags button:hover {
+  border-color: #cf0006;
+  background: #fff7f7;
+  transform: translateY(-1px);
+}
+
+.batch-single-select-tags button.is-selected {
+  border-color: #cf0006;
+  background: #cf0006;
+  color: #ffffff;
+  box-shadow: 0 7px 16px rgba(207, 0, 6, 0.18);
+}
+
+.batch-single-select-tags button:focus-visible {
+  outline: 3px solid rgba(207, 0, 6, 0.18);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .batch-single-select-tags {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .batch-single-select-tags button {
+    width: 100%;
+    padding-inline: 8px;
   }
 }
 
@@ -4283,6 +4416,66 @@ Mobile par close button visible hoga.
   }
 }
 
+/* Final Add Batch refinements */
+.batch-identity-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.batch-identity-fields > label { display: grid; gap: 7px; }
+.batch-identity-branch { grid-column: 1 / -1; }
+.batch-schedule-times { margin-top: 18px; }
+.batch-coach-phone-field { min-width: 0; }
+.batch-coach-phone-field .phone-location-add-button,
+.batch-coach-phone-field .phone-location-phone-heading > span:last-child { display: none; }
+.batch-coach-phone-field .phone-location-primary-row { grid-template-columns: 125px minmax(0, 1fr); }
+.batch-coach-phone-field .phone-location-phone-group { gap: 6px; }
+.batch-belt-tags .batch-single-select-tags button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.batch-belt-icon {
+  position: relative;
+  width: 24px;
+  height: 10px;
+  display: inline-block;
+  flex: 0 0 24px;
+  border: 1px solid rgba(15, 23, 42, 0.22);
+  border-radius: 2px;
+  background: var(--belt-color, #cbd5e1);
+  box-shadow: inset 0 -2px rgba(0, 0, 0, 0.08);
+}
+.batch-belt-icon::before,
+.batch-belt-icon::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  width: 7px;
+  height: 2px;
+  background: var(--belt-color, #cbd5e1);
+}
+.batch-belt-icon::before { left: -6px; transform: rotate(-20deg); }
+.batch-belt-icon::after { right: -6px; transform: rotate(20deg); }
+.batch-belt-icon > span { position: absolute; inset: 0 auto 0 50%; width: 3px; transform: translateX(-50%); background: rgba(255,255,255,.72); }
+.batch-belt-icon--white { --belt-color: #fff; }
+.batch-belt-icon--yellow { --belt-color: #facc15; }
+.batch-belt-icon--green { --belt-color: #16a34a; }
+.batch-belt-icon--blue { --belt-color: #2563eb; }
+.batch-belt-icon--red { --belt-color: #dc2626; }
+.batch-belt-icon--black { --belt-color: #111827; }
+.batch-belt-icon--mixed { --belt-color: #f59e0b; }
+.batch-form-page .batch-form-actions {
+  position: static;
+  grid-area: auto;
+  margin-top: 2px;
+}
+@media (max-width: 720px) {
+  .batch-identity-fields { grid-template-columns: 1fr; }
+  .batch-identity-branch { grid-column: 1; }
+  .batch-coach-phone-field .phone-location-primary-row { grid-template-columns: 105px minmax(0, 1fr); }
+}
+
 /* =========================================================
    REUSABLE ACADEMY HERO HEADER
    Shared by dashboard, academy profile and future pages.
@@ -5054,3 +5247,2939 @@ Mobile par close button visible hoga.
 @media(max-width:980px){.branch-detail-primary-grid,.branch-detail-secondary-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.branch-detail-heading{align-items:flex-start;flex-direction:column}.branch-detail-heading__actions{width:100%}.branch-detail-heading__actions .btn{flex:1}.branch-detail-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.branch-detail-coach-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.branch-detail-metrics,.branch-detail-items{grid-template-columns:1fr}.branch-detail-item--wide{grid-column:auto}.branch-detail-coach dl{grid-template-columns:1fr}}
+
+/* PREMIUM BATCHES / ADD / DETAIL / EDIT — global.css */
+.batches-page,.batch-form-page,.batch-detail-page{--batch-red:#cf0006;--batch-navy:#08162f;--batch-muted:#64748b;--batch-line:#dfe5ec;display:grid;gap:14px;min-width:0;color:var(--batch-navy)}
+.batch-hero-refresh{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:8px 12px;border:1px solid #f2b9bc;border-radius:9px;background:#fff;color:var(--batch-red);font-weight:800}
+.batches-heading,.batch-form-heading,.batch-detail-heading{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.batches-heading>div:first-child>span,.batch-form-heading>div:first-child>span{display:block;margin-bottom:3px;color:var(--batch-red);font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+.batches-heading h1,.batch-form-heading h1,.batch-detail-heading h1{margin:0;color:var(--batch-navy);font-size:clamp(24px,2.3vw,32px);letter-spacing:-.035em}
+.batches-heading p,.batch-form-heading p,.batch-detail-heading p{margin:4px 0 0;color:var(--batch-muted);font-size:11px}
+.batches-heading__actions,.batch-detail-heading__actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.batches-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.batches-summary article{min-width:0;display:flex;align-items:center;gap:11px;min-height:88px;padding:14px;border:1px solid var(--batch-line);border-radius:13px;background:#fff;box-shadow:0 5px 18px rgba(8,22,47,.045)}
+.batches-summary article>span{flex:0 0 40px;width:40px;height:40px;display:grid;place-items:center;border-radius:50%;background:#feecee;color:var(--batch-red)}
+.batches-summary article>div{min-width:0;display:grid;gap:2px}.batches-summary small{color:#475569;font-size:10px;font-weight:700}.batches-summary strong{color:var(--batch-red);font-size:25px;font-weight:950}
+.batches-summary .is-green>span{background:#e8f7ed;color:#15803d}.batches-summary .is-green strong{color:#15803d}
+.batches-summary .is-slate>span{background:#eef2f7;color:#475569}.batches-summary .is-slate strong{color:#475569}
+.batches-summary .is-blue>span{background:#e5f4fc;color:#0369a1}.batches-summary .is-blue strong{color:#0369a1}
+.batches-filters{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:end;gap:18px;padding:14px 16px;border:1px solid var(--batch-line);border-radius:14px;background:#fff;box-shadow:0 5px 18px rgba(8,22,47,.04)}
+.batches-filters__title{display:flex;align-items:center;gap:9px;color:var(--batch-red)}.batches-filters__title>div{display:grid}.batches-filters__title strong{color:var(--batch-navy);font-size:12px}.batches-filters__title small{color:var(--batch-muted);font-size:9px}
+.batches-filters__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.batches-filters label{display:grid;gap:5px;color:#334155;font-size:9px;font-weight:750}
+.batches-table-card{overflow:hidden;border:1px solid var(--batch-line);border-radius:15px;background:#fff;box-shadow:0 7px 22px rgba(8,22,47,.05)}
+.batches-table-wrap{width:100%;overflow:auto}.batches-table{width:100%;border-collapse:collapse}.batches-table th{padding:11px 10px;background:#f5f7fa;color:#64748b;font-size:9px;font-weight:850;text-transform:uppercase;white-space:nowrap}.batches-table td{padding:11px 10px;border-bottom:1px solid #edf0f4;color:#334155;font-size:10px;vertical-align:middle}.batches-table tbody tr{cursor:pointer}.batches-table tbody tr:hover{background:#fff9f9}.batches-table td>strong{display:block;color:var(--batch-navy);font-size:11px}.batches-competition{display:block;margin-top:3px;color:var(--batch-red);font-size:8px;font-weight:750}
+.batches-status{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:9px;font-weight:850;text-transform:capitalize}.batches-status--active{background:#e8f7ed;color:#15803d}.batches-status--inactive{background:#f1f5f9;color:#64748b}
+.batches-actions{display:flex;align-items:center;gap:5px;white-space:nowrap}.batches-action{min-height:29px;padding:5px 7px;border:1px solid #dbe2ea;border-radius:7px;background:#fff;color:#475569;font-size:8px;font-weight:800}.batches-action--edit{color:var(--batch-red);border-color:#f2b9bc}.batches-action--delete{color:#b91c1c;border-color:#fecaca;background:#fff7f7}.batches-action--status.is-active{color:#b45309}.batches-action--status.is-inactive{color:#15803d}
+.batches-state,.batch-detail-state{min-height:260px;display:grid;place-content:center;justify-items:center;gap:9px;padding:25px;color:var(--batch-muted);text-align:center}.batches-state p{margin:0;font-size:10px}.batches-spinner{width:36px;height:36px;border:4px solid #fee2e2;border-top-color:var(--batch-red);border-radius:50%;animation:owner-spin .85s linear infinite}
+.batch-breadcrumb{display:flex;align-items:center;gap:8px;color:var(--batch-muted);font-size:10px;font-weight:700}.batch-breadcrumb a{color:var(--batch-red)}.batch-breadcrumb strong{color:#334155}
+.batch-form{display:grid;gap:12px}.batch-form-card,.batch-form-notes{min-width:0;padding:16px;border:1px solid var(--batch-line);border-radius:15px;background:#fff;box-shadow:0 7px 22px rgba(8,22,47,.045)}.batch-form-card>h3{display:flex;align-items:center;gap:8px;margin:-16px -16px 15px;padding:14px 16px;border-bottom:1px solid #edf0f4;color:var(--batch-navy);font-size:14px}.batch-form-card>h3>span{width:27px;height:27px;display:grid;place-items:center;border-radius:8px;background:#feecee;color:var(--batch-red);font-size:9px;font-weight:900}
+.batch-form label{color:#334155;font-size:10px;font-weight:750}.batch-form label>input,.batch-form label>select,.batch-form label>textarea{display:block;margin-top:6px}.batch-form input,.batch-form select{min-height:41px}.batch-form textarea{min-height:82px}
+.batch-form-add-row{display:flex;margin:12px 0}.batch-form-coach-row{align-items:end;margin-top:12px}.batch-schedule-presets{display:flex;flex-wrap:wrap;gap:7px;margin:15px 0}.batch-schedule-presets button{min-height:32px;padding:6px 10px;border:1px solid #f0a9ad;border-radius:8px;background:#fff8f8;color:#a90005;font-size:9px;font-weight:800}.batch-form .checkbox-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}.batch-form .checkbox-grid label{display:flex;align-items:center;justify-content:center;gap:5px;min-height:38px;padding:6px;border:1px solid #dfe5ec;border-radius:8px;background:#fafbfc;text-transform:capitalize}.batch-form .checkbox-grid input{width:auto;margin:0}
+.batch-form-notes{display:grid;gap:5px}.batch-form-actions{position:sticky;z-index:12;bottom:8px;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:11px 14px;border:1px solid var(--batch-line);border-radius:13px;background:rgba(255,255,255,.97);box-shadow:0 -8px 26px rgba(8,22,47,.08)}.batch-form-actions>div{margin-right:auto;display:flex;align-items:center;gap:8px;color:var(--batch-red)}.batch-form-actions>div span{display:grid}.batch-form-actions>div strong{color:var(--batch-navy);font-size:10px}.batch-form-actions>div small{color:var(--batch-muted);font-size:8px}
+.batch-detail-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.batch-detail-stat{min-width:0;display:grid;gap:4px;padding:14px;border:1px solid var(--batch-line);border-radius:12px;background:#fff;box-shadow:0 5px 16px rgba(8,22,47,.04)}.batch-detail-stat span{color:var(--batch-muted);font-size:9px;font-weight:700}.batch-detail-stat strong{overflow:hidden;color:var(--batch-red);font-size:18px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+.batch-detail-card{overflow:hidden;padding:16px;border:1px solid var(--batch-line);border-radius:15px;background:#fff;box-shadow:0 7px 22px rgba(8,22,47,.045)}.batch-detail-card>h2,.batch-detail-card__heading{margin:-16px -16px 15px;padding:14px 16px;border-bottom:1px solid #edf0f4}.batch-detail-card>h2{color:var(--batch-navy);font-size:14px}.batch-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.batch-detail-grid p{min-width:0;margin:0;padding:10px;border:1px solid #e7ebf1;border-radius:9px;background:#fbfcfe;color:#475569;font-size:10px;line-height:1.5}.batch-detail-grid p strong{display:block;margin-bottom:3px;color:#64748b;font-size:8px;text-transform:uppercase}.batch-detail-grid a{color:var(--batch-red);font-weight:800}.batch-detail-card__heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.batch-detail-card__heading h2{margin:0;font-size:14px}.batch-detail-card__heading p{margin:3px 0 0;color:var(--batch-muted);font-size:9px}.batch-detail-card__heading>a{color:var(--batch-red);font-size:10px;font-weight:800}
+@media(max-width:1100px){.batches-summary,.batch-detail-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-form .checkbox-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:760px){.batches-heading,.batch-form-heading,.batch-detail-heading{align-items:flex-start;flex-direction:column}.batches-heading__actions,.batch-detail-heading__actions{width:100%}.batches-heading__actions .btn,.batch-detail-heading__actions .btn{flex:1}.batches-filters{grid-template-columns:1fr}.batches-filters__grid{grid-template-columns:1fr}.batch-form .grid-2,.batch-form .grid-3{grid-template-columns:1fr}.batch-form .checkbox-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-form-actions{position:static;flex-wrap:wrap}.batch-form-actions>div{width:100%}.batch-form-actions .btn{flex:1}.batch-detail-grid{grid-template-columns:1fr}}
+@media(max-width:480px){.batches-summary,.batch-detail-stats{grid-template-columns:1fr}}
+
+/* =========================================================
+   ADD BATCH — ADD BRANCH THEME ALIGNMENT (FINAL OVERRIDE)
+   ========================================================= */
+.batch-form-page .batch-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "identity schedule"
+    "coaches coaches"
+    "eligibility fees"
+    "communication communication"
+    "notes notes"
+    "actions actions";
+  gap: 12px;
+}
+
+.batch-form-card--identity { grid-area: identity; }
+.batch-form-card--schedule { grid-area: schedule; }
+.batch-form-card--coaches { grid-area: coaches; }
+.batch-form-card--eligibility { grid-area: eligibility; }
+.batch-form-card--fees { grid-area: fees; }
+.batch-form-card--communication { grid-area: communication; }
+.batch-form-card--notes { grid-area: notes; }
+.batch-form-page .batch-form-actions { grid-area: actions; }
+
+.batch-form-page .batch-form-card,
+.batch-form-page .batch-form-notes {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #dfe5ec;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 7px 22px rgba(8, 22, 47, 0.045);
+}
+
+.batch-form-page .batch-form-card > h3 {
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 36px auto 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 9px;
+  margin: 0;
+  padding: 13px 16px;
+  border-bottom: 1px solid #edf0f4;
+  color: #08162f;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.batch-form-page .batch-form-card > h3 > span {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #feecee;
+  color: #cf0006;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.batch-form-page .batch-form-card > h3 > small {
+  grid-column: 2 / -1;
+  grid-row: 1;
+  color: #cf0006;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.batch-form-page .batch-form-card > h3 > svg {
+  grid-column: 4;
+  grid-row: 1 / 3;
+  color: #cf0006;
+}
+
+.batch-form-page .batch-form-card > .grid,
+.batch-form-page .batch-form-card > .batch-form-add-row,
+.batch-form-page .batch-form-card > .batch-form-coach-row,
+.batch-form-page .batch-form-card > .batch-schedule-presets,
+.batch-form-page .batch-form-card > .checkbox-grid,
+.batch-form-page .batch-form-card > p {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+.batch-form-page .batch-form-card > .grid:first-of-type {
+  margin-top: 15px;
+}
+
+.batch-form-page .batch-form-card > .grid:last-child,
+.batch-form-page .batch-form-card > .checkbox-grid:last-child {
+  margin-bottom: 17px;
+}
+
+.batch-form-page .batch-form-card--identity > .grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.batch-form-page .batch-form-card--schedule > .grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.batch-form-page .batch-form-card--schedule .checkbox-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.batch-form-page .batch-form-card--schedule .checkbox-grid label {
+  min-width: 0;
+  min-height: 36px;
+  padding: 5px 3px;
+  font-size: 8px;
+}
+
+.batch-form-page .batch-form-card--coaches > .grid:first-of-type {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.batch-form-page .batch-form-card--coaches .batch-form-add-row {
+  justify-content: flex-end;
+}
+
+.batch-form-page .batch-form-card--coaches .batch-form-coach-row {
+  padding: 12px;
+  border: 1px solid #e5eaf0;
+  border-radius: 10px;
+  background: #fafbfc;
+}
+
+.batch-form-page .batch-form-card--eligibility > .grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.batch-form-page .batch-form-card--eligibility > .grid label:nth-child(5),
+.batch-form-page .batch-form-card--eligibility > .grid label:nth-child(6) {
+  grid-column: span 2;
+}
+
+.batch-form-page .batch-form-card--fees > .grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.batch-form-page .batch-form-card--communication > .grid {
+  grid-template-columns: 0.8fr 1.15fr 1.15fr 0.8fr;
+}
+
+.batch-form-page .batch-form-card--notes {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+}
+
+.batch-form-page .batch-form-card--notes textarea {
+  min-height: 62px;
+  margin: 0;
+}
+
+.batch-form-page .batch-form-actions {
+  position: sticky;
+  z-index: 14;
+  bottom: 8px;
+  min-height: 62px;
+  padding: 10px 14px;
+  border: 1px solid #dfe5ec;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -8px 28px rgba(8, 22, 47, 0.08);
+}
+
+.batch-form-page .batch-form-actions .btn-primary {
+  min-width: 180px;
+  box-shadow: 0 8px 19px rgba(207, 0, 6, 0.2);
+}
+
+@media (max-width: 1250px) {
+  .batch-form-page .batch-form {
+    grid-template-areas:
+      "identity identity"
+      "schedule schedule"
+      "coaches coaches"
+      "eligibility eligibility"
+      "fees fees"
+      "communication communication"
+      "notes notes"
+      "actions actions";
+  }
+}
+
+@media (max-width: 900px) {
+  .batch-form-page .batch-form-card--identity > .grid,
+  .batch-form-page .batch-form-card--eligibility > .grid,
+  .batch-form-page .batch-form-card--fees > .grid,
+  .batch-form-page .batch-form-card--communication > .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .batch-form-page .batch-form-card--eligibility > .grid label:nth-child(5),
+  .batch-form-page .batch-form-card--eligibility > .grid label:nth-child(6) {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .batch-form-page .batch-form {
+    display: block;
+  }
+
+  .batch-form-page .batch-form > * + * {
+    margin-top: 12px;
+  }
+
+  .batch-form-page .batch-form-card--identity > .grid,
+  .batch-form-page .batch-form-card--schedule > .grid,
+  .batch-form-page .batch-form-card--coaches > .grid:first-of-type,
+  .batch-form-page .batch-form-card--eligibility > .grid,
+  .batch-form-page .batch-form-card--fees > .grid,
+  .batch-form-page .batch-form-card--communication > .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-form-page .batch-form-card--schedule .checkbox-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .batch-form-page .batch-form-card--notes {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-form-page .batch-form-actions {
+    position: static;
+  }
+}
+
+/* FINAL ADD BATCH FONT + TAG OVERRIDE — keep at end of global.css */
+.batch-form-page .batch-form label,
+.batch-form-page .batch-form input,
+.batch-form-page .batch-form select,
+.batch-form-page .batch-form textarea,
+.batch-form-page .batch-form button,
+.batch-form-page .batch-single-select-tags button {
+  font-size: 14px;
+}
+
+.batch-form-page .batch-tag-field {
+  grid-column: 1 / -1;
+}
+
+.batch-form-page .batch-tag-field > input[type="hidden"] {
+  display: none;
+}
+
+.batch-form-page .batch-single-select-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.batch-form-page .batch-single-select-tags button {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid #f0a9ad;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #9f0005;
+  font-weight: 750;
+}
+
+.batch-form-page .batch-single-select-tags button:hover {
+  border-color: #cf0006;
+  background: #fff7f7;
+}
+
+.batch-form-page .batch-single-select-tags button.is-selected {
+  border-color: #cf0006;
+  background: #cf0006;
+  color: #ffffff;
+  box-shadow: 0 7px 16px rgba(207, 0, 6, 0.18);
+}
+
+@media (max-width: 600px) {
+  .batch-form-page .batch-single-select-tags {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Keep the final confirmation bar in normal document flow, after every box. */
+.batch-form-page .batch-form-actions {
+  position: static;
+  grid-area: auto;
+  bottom: auto;
+  margin-top: 2px;
+}
+
+/* =========================================================
+   ADD BATCH — CLEAN PROFESSIONAL LAYOUT (LATEST OVERRIDE)
+   ========================================================= */
+.batch-form-page .batch-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "identity schedule"
+    "profile profile"
+    "coaches coaches"
+    "eligibility fees"
+    "languages communication"
+    "notes notes"
+    "actions actions";
+  align-items: start;
+  gap: 16px;
+}
+
+.batch-form-page .batch-form-card--identity { grid-area: identity; }
+.batch-form-page .batch-form-card--schedule { grid-area: schedule; }
+.batch-form-page .batch-form-card--profile { grid-area: profile; }
+.batch-form-page .batch-form-card--coaches { grid-area: coaches; }
+.batch-form-page .batch-form-card--eligibility { grid-area: eligibility; }
+.batch-form-page .batch-form-card--fees { grid-area: fees; }
+.batch-form-page .batch-form-card--languages { grid-area: languages; }
+.batch-form-page .batch-form-card--communication { grid-area: communication; }
+.batch-form-page .batch-form-card--notes { grid-area: notes; }
+.batch-form-page .batch-form-actions { grid-area: actions; }
+
+.batch-form-page .batch-form-card {
+  align-self: start;
+  width: 100%;
+}
+
+.batch-form-page .batch-form-card > h3 {
+  min-height: 70px;
+  padding: 14px 18px;
+}
+
+.batch-form-page .batch-identity-fields,
+.batch-form-page .batch-tag-section-grid,
+.batch-form-page .batch-language-content {
+  padding: 18px;
+}
+
+.batch-form-page .batch-identity-fields {
+  gap: 16px;
+}
+
+.batch-form-page .batch-tag-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
+}
+
+.batch-form-page .batch-tag-section-grid > .batch-tag-field--wide {
+  grid-column: auto;
+}
+
+.batch-form-page .batch-tag-section-grid > :first-child,
+.batch-form-page .batch-tag-section-grid > :nth-child(3),
+.batch-form-page .batch-tag-section-grid > .batch-custom-tag {
+  grid-column: 1 / -1;
+}
+
+.batch-form-page .batch-tag-section-grid .batch-single-select-tags,
+.batch-form-page .batch-language-content .batch-single-select-tags {
+  margin-top: 9px;
+}
+
+.batch-form-page .batch-language-content {
+  display: grid;
+  gap: 16px;
+}
+
+.batch-form-page .batch-language-content .batch-custom-tag {
+  max-width: none;
+}
+
+.batch-form-page .batch-form-card--schedule > .batch-field-label {
+  margin: 18px 18px 0;
+}
+
+.batch-form-page .batch-form-card--schedule > .batch-schedule-presets,
+.batch-form-page .batch-form-card--schedule > .checkbox-grid,
+.batch-form-page .batch-form-card--schedule > .batch-schedule-times {
+  margin-left: 18px;
+  margin-right: 18px;
+}
+
+.batch-form-page .batch-form-card--schedule > .batch-schedule-presets {
+  margin-top: 12px;
+  margin-bottom: 14px;
+}
+
+.batch-form-page .batch-form-card--schedule > .checkbox-grid {
+  margin-bottom: 18px;
+}
+
+.batch-form-page .batch-form-card--schedule > .batch-schedule-times {
+  margin-top: 0;
+  margin-bottom: 18px;
+  padding-top: 17px;
+  border-top: 1px solid #edf0f4;
+}
+
+.batch-form-page .batch-form-card--schedule .checkbox-grid label {
+  min-height: 48px;
+  background: #fbfcfe;
+}
+
+.batch-form-page .add-branch-coaches-grid {
+  padding: 18px;
+  gap: 16px;
+}
+
+.batch-form-page .add-branch-coach-card {
+  padding: 18px;
+  border-color: #dfe5ec;
+  background: #fbfcfe;
+}
+
+.batch-form-page .add-branch-additional-coach {
+  margin: 0 18px 14px;
+}
+
+.batch-form-page .batch-add-coach {
+  margin: 0 18px 18px;
+}
+
+.batch-form-page .batch-form-card--eligibility > .grid,
+.batch-form-page .batch-form-card--fees > .grid,
+.batch-form-page .batch-form-card--communication > .grid {
+  margin: 0;
+  padding: 18px;
+  gap: 16px;
+}
+
+.batch-form-page .batch-form-card--eligibility > .grid,
+.batch-form-page .batch-form-card--fees > .grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.batch-form-page .batch-form-card--communication > .grid {
+  grid-template-columns: 1fr;
+}
+
+.batch-form-page .batch-limit-field--belt {
+  grid-column: 1 / -1;
+}
+
+.batch-form-page .batch-single-select-tags button {
+  min-height: 40px;
+  padding: 9px 15px;
+}
+
+.batch-form-page .batch-form-notes {
+  padding: 16px 18px;
+}
+
+.batch-form-page .batch-form-actions {
+  position: static;
+  bottom: auto;
+  min-height: 72px;
+  margin: 0;
+  padding: 14px 18px;
+  box-shadow: 0 7px 22px rgba(8, 22, 47, 0.055);
+}
+
+@media (max-width: 1180px) {
+  .batch-form-page .batch-form {
+    grid-template-areas:
+      "identity identity"
+      "schedule schedule"
+      "profile profile"
+      "coaches coaches"
+      "eligibility eligibility"
+      "fees fees"
+      "languages languages"
+      "communication communication"
+      "notes notes"
+      "actions actions";
+  }
+}
+
+@media (max-width: 780px) {
+  .batch-form-page .batch-form {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "identity" "schedule" "profile" "coaches" "eligibility"
+      "fees" "languages" "communication" "notes" "actions";
+  }
+
+  .batch-form-page .batch-tag-section-grid,
+  .batch-form-page .add-branch-coaches-grid,
+  .batch-form-page .batch-form-card--eligibility > .grid,
+  .batch-form-page .batch-form-card--fees > .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-form-page .batch-tag-section-grid > *,
+  .batch-form-page .batch-limit-field--belt {
+    grid-column: 1;
+  }
+
+  .batch-form-page .batch-form-actions {
+    flex-wrap: wrap;
+  }
+
+  .batch-form-page .batch-form-actions > div {
+    width: 100%;
+  }
+}
+
+/* Active Batch switch: directly below the Branch selector. */
+.batch-form-page .batch-active-switch {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 58px;
+  margin-top: 2px;
+  padding: 11px 13px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  border-color: #dfe5ec;
+  background: #fbfcfe;
+}
+.batch-form-page .batch-active-switch > span {
+  width: 38px;
+  height: 21px;
+}
+.batch-form-page .batch-active-switch > span::after {
+  width: 15px;
+  height: 15px;
+}
+.batch-form-page .batch-active-switch input:checked + span::after {
+  transform: translateX(17px);
+}
+.batch-form-page .batch-active-switch input:checked + span {
+  background: #cf0006;
+}
+.batch-form-page .batch-active-switch strong {
+  color: #08162f;
+  font-size: 13px;
+  font-weight: 850;
+}
+.batch-form-page .batch-active-switch small {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   REUSABLE ACADEMY OPERATIONS FIELDS
+   Sports, languages, coaches and coloured belt tags.
+   ========================================================= */
+.operations-selection-section,
+.operations-coaches-section {
+  min-width: 0;
+  overflow: visible;
+  border: 1px solid #dfe5ec;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 7px 22px rgba(8,22,47,.045);
+}
+.operations-section-header {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf0f4;
+}
+.operations-section-header__icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #cf0006;
+  background: #feecee;
+}
+.operations-section-header > div { min-width: 0; }
+.operations-section-header small { display:block; color:#cf0006; font-size:8px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
+.operations-section-header h2 { margin:3px 0 0; color:#08162f; font-size:15px; font-weight:900; }
+.operations-section-header p { margin:3px 0 0; color:#64748b; font-size:9px; }
+.operations-selection-section__body { display:grid; gap:12px; padding:15px 16px 17px; }
+.operations-field-label { display:block; color:#334155; font-size:12px; font-weight:800; }
+.operations-tag-grid { display:flex; flex-wrap:wrap; gap:8px; }
+.operations-tag-grid button,
+.operations-belt-tags button {
+  min-height:36px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:7px 13px;
+  border:1px solid #f0a9ad;
+  border-radius:9px;
+  color:#a90005;
+  background:#fff;
+  font-size:11px;
+  font-weight:800;
+}
+.operations-tag-grid button:hover,
+.operations-belt-tags button:hover { border-color:#cf0006; background:#fff7f7; }
+.operations-tag-grid button.is-selected,
+.operations-belt-tags button.is-selected { border-color:#cf0006; color:#fff; background:#cf0006; box-shadow:0 7px 16px rgba(207,0,6,.18); }
+.operations-custom-tag {
+  width:min(520px,100%);
+  min-width:270px;
+  min-height:40px;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:3px 5px 3px 10px;
+  border:1px dashed #aeb9c7;
+  border-radius:9px;
+  color:#475569;
+  background:#f8fafc;
+}
+.operations-custom-tag input { flex:1 1 190px; min-width:150px; min-height:31px; padding:5px 0; border:0; border-radius:0; background:transparent; box-shadow:none; font-size:11px; }
+.operations-custom-tag input:focus { border:0; box-shadow:none; }
+.operations-custom-tag:focus-within { border-color:#cf0006; box-shadow:0 0 0 3px rgba(207,0,6,.1); }
+.operations-custom-tag button { flex:0 0 auto; min-height:30px; display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border:1px solid #cf0006; border-radius:7px; color:#fff; background:#cf0006; font-size:10px; font-weight:850; }
+.operations-custom-tag button:hover { background:#a90005; border-color:#a90005; }
+.operations-coaches-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:14px 16px; }
+.operations-coach-card { min-width:0; display:grid; gap:11px; padding:13px; border:1px solid #e2e8f0; border-radius:12px; background:#fbfcfe; }
+.operations-coach-card h3 { display:flex; align-items:center; gap:7px; margin:0; color:#08162f; font-size:12px; }
+.operations-coach-card h3 svg { color:#cf0006; }
+.operations-coach-card label { display:grid; gap:6px; color:#334155; font-size:10px; font-weight:750; }
+.operations-coach-card input,.operations-coach-card textarea { margin:0; }
+.operations-coach-card .phone-location-add-button { display:none; }
+.operations-coach-card .phone-location-primary-row { grid-template-columns:125px minmax(0,1fr); }
+.operations-additional-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 16px; padding:12px 0; border-top:1px solid #edf0f4; }
+.operations-additional-head > div { display:grid; gap:2px; }
+.operations-additional-head strong { font-size:12px; }
+.operations-additional-head small { color:#64748b; font-size:9px; }
+.operations-additional-head button { display:inline-flex; align-items:center; gap:5px; min-height:34px; padding:7px 10px; border:1px solid #d5dde7; border-radius:8px; color:#334155; background:#fff; font-size:10px; font-weight:750; }
+.operations-additional-list { display:grid; gap:8px; padding:0 16px 16px; }
+.operations-additional-list article { display:grid; grid-template-columns:28px minmax(150px,.7fr) minmax(280px,1.3fr) minmax(180px,1fr) 36px; align-items:end; gap:8px; padding:10px; border:1px solid #e4e9f0; border-radius:10px; background:#fafbfc; }
+.operations-additional-list article > span { align-self:center; width:25px; height:25px; display:grid; place-items:center; border-radius:50%; color:#cf0006; background:#feecee; font-size:9px; font-weight:900; }
+.operations-additional-list label { display:grid; gap:5px; color:#334155; font-size:9px; font-weight:750; }
+.operations-additional-list input { min-height:38px; }
+.operations-additional-list .phone-location-add-button,.operations-additional-list .phone-location-phone-heading > span { display:none; }
+.operations-additional-list .phone-location-primary-row { grid-template-columns:115px minmax(0,1fr); }
+.operations-additional-list article > button { width:36px; height:38px; display:grid; place-items:center; border:1px solid #fecaca; border-radius:8px; color:#cf0006; background:#fff5f5; }
+.operations-empty { margin:0 16px 16px; padding:12px; border:1px dashed #cbd5e1; border-radius:9px; color:#94a3b8; background:#fafbfc; font-size:9px; text-align:center; }
+.operations-belt-field { min-width:0; display:grid; gap:8px; }
+.operations-belt-tags { display:flex; flex-wrap:wrap; gap:8px; }
+.operations-belt-icon { --belt-color:#cbd5e1; position:relative; width:24px; height:10px; flex:0 0 24px; border:1px solid rgba(15,23,42,.22); border-radius:2px; background:var(--belt-color); box-shadow:inset 0 -2px rgba(0,0,0,.08); }
+.operations-belt-icon::before,.operations-belt-icon::after { content:""; position:absolute; top:3px; width:7px; height:2px; background:var(--belt-color); }
+.operations-belt-icon::before { left:-6px; transform:rotate(-20deg); }.operations-belt-icon::after { right:-6px; transform:rotate(20deg); }
+.operations-belt-icon > span { position:absolute; inset:0 auto 0 50%; width:3px; transform:translateX(-50%); background:rgba(255,255,255,.72); }
+.operations-belt-icon--white{--belt-color:#fff}.operations-belt-icon--yellow{--belt-color:#facc15}.operations-belt-icon--green{--belt-color:#16a34a}.operations-belt-icon--blue{--belt-color:#2563eb}.operations-belt-icon--red{--belt-color:#dc2626}.operations-belt-icon--black{--belt-color:#111827}.operations-belt-icon--mixed{--belt-color:#f59e0b}
+@media(max-width:900px){.operations-coaches-grid{grid-template-columns:1fr}.operations-additional-list article{grid-template-columns:28px 1fr}.operations-additional-list article .phone-location-phone-group,.operations-additional-list article label{grid-column:2}.operations-additional-list article>button{grid-column:2;width:100%}}
+@media(max-width:600px){.operations-custom-tag{min-width:0}.operations-custom-tag input{min-width:0}.operations-tag-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.operations-additional-head{align-items:flex-start;flex-direction:column}.operations-additional-head button{width:100%;justify-content:center}.operations-coach-card .phone-location-primary-row,.operations-additional-list .phone-location-primary-row{grid-template-columns:105px minmax(0,1fr)}}
+
+/* Embedded reusable sports field inside Batch Training Profile. */
+.batch-form-page .batch-form-card--profile .operations-selection-section {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.batch-form-page .batch-form-card--profile .operations-selection-section__body {
+  padding: 0;
+}
+.batch-form-page .batch-form-card--profile .operations-selection-section {
+  grid-column: 1 / -1;
+}
+
+/* =========================================================
+   BATCH IDENTITY — BRANCH + ACTIVE BATCH SAME ROW
+   ========================================================= */
+
+.batch-form-page .batch-identity-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 16px;
+}
+
+/* Batch Name */
+.batch-form-page .batch-identity-fields > label:nth-child(1) {
+  grid-column: 1;
+}
+
+/* Batch Code */
+.batch-form-page .batch-identity-fields > label:nth-child(2) {
+  grid-column: 2;
+}
+
+/* Branch — bottom-left */
+.batch-form-page .batch-identity-branch {
+  grid-column: 1;
+}
+
+/* Active Batch — bottom-right */
+.batch-form-page .batch-active-switch {
+  grid-column: 2;
+  align-self: end;
+
+  width: 100%;
+  min-height: 46px;
+  margin: 0;
+  padding: 8px 12px;
+}
+
+/* Switch ke text ko compact rakhein */
+.batch-form-page .batch-active-switch strong {
+  font-size: 13px;
+}
+
+.batch-form-page .batch-active-switch small {
+  font-size: 9px;
+}
+
+/* =========================================================
+   ADD BATCH — FINAL REFINED OVERRIDE
+   Keep this as the last Add Batch block in global.css.
+   It intentionally wins over older duplicate batch rules.
+   ========================================================= */
+
+/* Identity and Schedule remain equal-height cards on desktop. */
+.batch-form-page .batch-form {
+  align-items: stretch;
+}
+
+.batch-form-page .batch-form-card--identity,
+.batch-form-page .batch-form-card--schedule {
+  align-self: stretch;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-form-page .batch-form-card--identity > h3,
+.batch-form-page .batch-form-card--schedule > h3 {
+  flex: 0 0 auto;
+}
+
+.batch-form-page .batch-form-card--identity .batch-identity-fields {
+  flex: 1 1 auto;
+}
+
+.batch-form-page .batch-form-card--schedule .batch-schedule-times {
+  margin-top: auto;
+}
+
+/* Venue / Hall occupies the complete width of the Identity card. */
+.batch-form-page .batch-identity-fields .batch-venue-field {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.batch-form-page .batch-identity-fields .batch-venue-field input {
+  width: 100%;
+}
+
+/* Training Profile: preserve JSX order and place paired fields in rows. */
+.batch-form-page .batch-form-card--profile .batch-tag-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 20px 28px;
+}
+
+/* Row 1: Gender Group | Skill Levels */
+.batch-form-page .batch-form-card--profile .batch-tag-section-grid > :nth-child(1) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.batch-form-page .batch-form-card--profile .batch-tag-section-grid > :nth-child(2) {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+/* Row 2: Session Slot | Mode */
+.batch-form-page .batch-form-card--profile .batch-tag-section-grid > :nth-child(3) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.batch-form-page .batch-form-card--profile .batch-tag-section-grid > :nth-child(4) {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+/* Remaining fields retain their original JSX order, full width. */
+.batch-form-page .batch-form-card--profile .batch-tag-section-grid > :nth-child(n + 5) {
+  grid-column: 1 / -1;
+  grid-row: auto;
+}
+
+/* Custom Batch Type exactly follows the reusable martial-art custom box. */
+.batch-form-page .batch-form-card--profile .batch-custom-tag {
+  width: min(520px, 100%);
+  max-width: none;
+  min-width: 270px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 5px 3px 10px;
+  border: 1px dashed #aeb9c7;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.batch-form-page .batch-form-card--profile .batch-custom-tag input {
+  flex: 1 1 190px;
+  width: auto;
+  min-width: 150px;
+  min-height: 31px;
+  margin: 0;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #334155;
+  font-size: 11px;
+}
+
+.batch-form-page .batch-form-card--profile .batch-custom-tag input:hover,
+.batch-form-page .batch-form-card--profile .batch-custom-tag input:focus {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+.batch-form-page .batch-form-card--profile .batch-custom-tag:focus-within {
+  border-color: #cf0006;
+  box-shadow: 0 0 0 3px rgba(207, 0, 6, 0.1);
+}
+
+.batch-form-page .batch-form-card--profile .batch-custom-tag button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border: 1px solid #cf0006;
+  border-radius: 7px;
+  background: #cf0006;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.batch-form-page .batch-form-card--profile .batch-custom-tag button:hover,
+.batch-form-page .batch-form-card--profile .batch-custom-tag button:focus-visible {
+  border-color: #a90005;
+  background: #a90005;
+  color: #fff;
+}
+
+/* Make the complete native time input clickable, including clock icon. */
+.batch-form-page .batch-schedule-times input[type="time"] {
+  width: 100%;
+  cursor: pointer;
+  color-scheme: light;
+}
+
+.batch-form-page
+  .batch-schedule-times
+  input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
+}
+
+@media (max-width: 780px) {
+  .batch-form-page .batch-form-card--identity,
+  .batch-form-page .batch-form-card--schedule {
+    height: auto;
+  }
+
+  .batch-form-page .batch-form-card--profile .batch-tag-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-form-page
+    .batch-form-card--profile
+    .batch-tag-section-grid
+    > :nth-child(n) {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .batch-form-page .batch-form-card--profile .batch-custom-tag {
+    min-width: 0;
+  }
+
+  .batch-form-page .batch-form-card--profile .batch-custom-tag input {
+    min-width: 0;
+  }
+}
+
+/* =========================================================
+   PREMIUM ANALOG TIME PICKER
+   Reusable component: components/common/PremiumTimePicker.jsx
+   ========================================================= */
+
+.premium-time-field {
+  --ptp-red: #cf0006;
+  --ptp-red-dark: #a90005;
+  --ptp-navy: #08162f;
+  --ptp-muted: #64748b;
+  --ptp-border: #d4dce6;
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.premium-time-field__label {
+  color: #334155;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.premium-time-field__label > span {
+  color: var(--ptp-red);
+}
+
+.premium-time-field__trigger {
+  width: 100%;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--ptp-border);
+  border-radius: 11px;
+  background: #ffffff;
+  color: var(--ptp-navy);
+  font-size: 14px;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+}
+
+.premium-time-field__trigger:hover:not(:disabled) {
+  border-color: #aeb9c7;
+}
+
+.premium-time-field__trigger:focus-visible {
+  border-color: var(--ptp-red);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(207, 0, 6, 0.11);
+}
+
+.premium-time-field__trigger .is-placeholder {
+  color: #94a3b8;
+  font-weight: 650;
+}
+
+.premium-time-field__trigger svg {
+  flex: 0 0 auto;
+  color: var(--ptp-red);
+}
+
+.premium-time-field__trigger:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.premium-time-field.has-error .premium-time-field__trigger {
+  border-color: #dc2626;
+}
+
+.premium-time-field__error {
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.premium-time-picker__backdrop {
+  position: fixed;
+  z-index: 20000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 22, 47, 0.58);
+  backdrop-filter: blur(5px);
+  animation: premium-time-backdrop-in 160ms ease-out;
+}
+
+.premium-time-picker {
+  --ptp-red: #cf0006;
+  --ptp-red-dark: #a90005;
+  --ptp-navy: #08162f;
+  --ptp-muted: #64748b;
+  width: min(390px, 100%);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 24px;
+  background: #ffffff;
+  color: var(--ptp-navy);
+  box-shadow: 0 28px 80px rgba(8, 22, 47, 0.32);
+  outline: none;
+  animation: premium-time-dialog-in 190ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.premium-time-picker__header {
+  min-height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 17px;
+  border-bottom: 1px solid #edf0f4;
+  background: linear-gradient(135deg, #fff7f7 0%, #ffffff 74%);
+}
+
+.premium-time-picker__header span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ptp-red);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.premium-time-picker__header h2 {
+  margin: 0;
+  color: var(--ptp-navy);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.premium-time-picker__close,
+.premium-time-picker__mode {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.premium-time-picker__close:hover,
+.premium-time-picker__mode:hover {
+  border-color: #f3b1b4;
+  background: #fff5f5;
+  color: var(--ptp-red);
+}
+
+.premium-time-picker__display {
+  display: grid;
+  grid-template-columns: 82px 18px 82px 58px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 18px 16px 10px;
+}
+
+.premium-time-picker__display > button,
+.premium-time-picker__display > input {
+  width: 82px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: #f1f4f7;
+  color: var(--ptp-navy);
+  font-size: 38px;
+  font-weight: 750;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+}
+
+.premium-time-picker__display > button.is-active,
+.premium-time-picker__display > input:focus {
+  border-color: #f2a8ac;
+  background: #feecee;
+  color: var(--ptp-red);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(207, 0, 6, 0.08);
+}
+
+.premium-time-picker__display > strong {
+  color: var(--ptp-navy);
+  font-size: 34px;
+  line-height: 1;
+  text-align: center;
+}
+
+.premium-time-picker__period {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+}
+
+.premium-time-picker__period button {
+  width: 56px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.premium-time-picker__period button + button {
+  border-top: 1px solid #cbd5e1;
+}
+
+.premium-time-picker__period button.is-active {
+  background: var(--ptp-red);
+  color: #ffffff;
+}
+
+.premium-time-picker__clock {
+  position: relative;
+  width: 278px;
+  height: 278px;
+  margin: 8px auto 14px;
+  border: 1px solid #edf0f4;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, #ffffff 0 4px, transparent 5px),
+    radial-gradient(circle, #f8fafc 0 68%, #f3f6f9 69% 100%);
+}
+
+.premium-time-picker__clock::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ptp-red);
+  transform: translate(-50%, -50%);
+}
+
+.premium-time-picker__number {
+  position: absolute;
+  z-index: 5;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.premium-time-picker__number:hover {
+  background: #feecee;
+  color: var(--ptp-red);
+}
+
+.premium-time-picker__number.is-selected {
+  background: var(--ptp-red);
+  color: #ffffff;
+  box-shadow: 0 7px 18px rgba(207, 0, 6, 0.24);
+}
+
+.premium-time-picker__number--0 { top: 9%; left: 50%; }
+.premium-time-picker__number--1 { top: 14.5%; left: 70.5%; }
+.premium-time-picker__number--2 { top: 29.5%; left: 85.5%; }
+.premium-time-picker__number--3 { top: 50%; left: 91%; }
+.premium-time-picker__number--4 { top: 70.5%; left: 85.5%; }
+.premium-time-picker__number--5 { top: 85.5%; left: 70.5%; }
+.premium-time-picker__number--6 { top: 91%; left: 50%; }
+.premium-time-picker__number--7 { top: 85.5%; left: 29.5%; }
+.premium-time-picker__number--8 { top: 70.5%; left: 14.5%; }
+.premium-time-picker__number--9 { top: 50%; left: 9%; }
+.premium-time-picker__number--10 { top: 29.5%; left: 14.5%; }
+.premium-time-picker__number--11 { top: 14.5%; left: 29.5%; }
+
+.premium-time-picker__hand {
+  position: absolute;
+  z-index: 2;
+  top: calc(50% - 94px);
+  left: calc(50% - 1px);
+  width: 2px;
+  height: 94px;
+  border-radius: 999px;
+  background: var(--ptp-red);
+  transform-origin: 50% 100%;
+  pointer-events: none;
+}
+
+.premium-time-picker__hand::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ptp-red);
+  transform: translateX(-50%);
+}
+
+.premium-time-picker__hand--0 { transform: rotate(0deg); }
+.premium-time-picker__hand--1 { transform: rotate(30deg); }
+.premium-time-picker__hand--2 { transform: rotate(60deg); }
+.premium-time-picker__hand--3 { transform: rotate(90deg); }
+.premium-time-picker__hand--4 { transform: rotate(120deg); }
+.premium-time-picker__hand--5 { transform: rotate(150deg); }
+.premium-time-picker__hand--6 { transform: rotate(180deg); }
+.premium-time-picker__hand--7 { transform: rotate(210deg); }
+.premium-time-picker__hand--8 { transform: rotate(240deg); }
+.premium-time-picker__hand--9 { transform: rotate(270deg); }
+.premium-time-picker__hand--10 { transform: rotate(300deg); }
+.premium-time-picker__hand--11 { transform: rotate(330deg); }
+.premium-time-picker__hand--12 { transform: rotate(0deg); }
+
+.premium-time-picker__manual-minutes {
+  min-height: 292px;
+  display: grid;
+  align-content: center;
+  gap: 12px;
+  padding: 22px;
+}
+
+.premium-time-picker__manual-minutes > span {
+  color: var(--ptp-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.premium-time-picker__manual-minutes > div {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+}
+
+.premium-time-picker__manual-minutes button {
+  min-height: 36px;
+  padding: 4px;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.premium-time-picker__manual-minutes button:hover,
+.premium-time-picker__manual-minutes button.is-active {
+  border-color: var(--ptp-red);
+  background: #feecee;
+  color: var(--ptp-red);
+}
+
+.premium-time-picker__footer {
+  min-height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 17px;
+  border-top: 1px solid #edf0f4;
+  background: #ffffff;
+}
+
+.premium-time-picker__footer > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.premium-time-picker__cancel,
+.premium-time-picker__apply {
+  min-width: 76px;
+  min-height: 38px;
+  padding: 8px 15px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.premium-time-picker__cancel {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+}
+
+.premium-time-picker__cancel:hover {
+  background: #f8fafc;
+  color: var(--ptp-navy);
+}
+
+.premium-time-picker__apply {
+  border: 1px solid var(--ptp-red);
+  background: var(--ptp-red);
+  color: #ffffff;
+  box-shadow: 0 7px 16px rgba(207, 0, 6, 0.2);
+}
+
+.premium-time-picker__apply:hover {
+  border-color: var(--ptp-red-dark);
+  background: var(--ptp-red-dark);
+  transform: translateY(-1px);
+}
+
+@keyframes premium-time-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes premium-time-dialog-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 520px) {
+  .premium-time-picker__backdrop {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .premium-time-picker {
+    width: 100%;
+    max-height: 96vh;
+    overflow-y: auto;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .premium-time-picker__display {
+    grid-template-columns: 74px 16px 74px 54px;
+  }
+
+  .premium-time-picker__display > button,
+  .premium-time-picker__display > input {
+    width: 74px;
+    height: 62px;
+    font-size: 34px;
+  }
+
+  .premium-time-picker__period button {
+    width: 52px;
+  }
+
+  .premium-time-picker__clock {
+    width: 266px;
+    height: 266px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .premium-time-picker,
+  .premium-time-picker__backdrop {
+    animation: none;
+  }
+}
+
+/* =========================================================
+   ADD BATCH — PREMIUM CAPACITY, ELIGIBILITY & FEES
+   FINAL OVERRIDE: keep this block at the end of global.css.
+   ========================================================= */
+
+.batch-form-page {
+  --batch-premium-red: #cf0006;
+  --batch-premium-red-dark: #a90005;
+  --batch-premium-navy: #08162f;
+  --batch-premium-text: #334155;
+  --batch-premium-muted: #64748b;
+  --batch-premium-line: #dfe5ec;
+  --batch-premium-soft: #fafbfc;
+}
+
+/* Equal-height desktop cards. */
+.batch-form-page .batch-form-card--eligibility,
+.batch-form-page .batch-form-card--fees {
+  align-self: stretch;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-color: var(--batch-premium-line);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(8, 22, 47, 0.06);
+}
+
+.batch-form-page .batch-form-card--eligibility > h3,
+.batch-form-page .batch-form-card--fees > h3 {
+  min-height: 74px;
+  margin: 0;
+  padding: 16px 18px 8px;
+  border-bottom: 0;
+}
+
+.batch-form-page .batch-card-intro {
+  margin: -7px 18px 0 61px;
+  color: var(--batch-premium-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* ---------------------------------------------------------
+   CAPACITY & ELIGIBILITY
+   --------------------------------------------------------- */
+
+.batch-form-page .batch-eligibility-content {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 14px 12px;
+  margin: 0;
+  padding: 22px 18px 18px;
+}
+
+.batch-form-page .batch-eligibility-content > .batch-limit-field {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+}
+
+.batch-form-page .batch-limit-field__label,
+.batch-form-page .batch-fee-field__label {
+  display: block;
+  color: var(--batch-premium-navy);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.batch-form-page .batch-limit-control {
+  min-width: 0;
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid #d4dce6;
+  border-radius: 11px;
+  background: #ffffff;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.batch-form-page .batch-limit-control:focus-within {
+  border-color: var(--batch-premium-red);
+  box-shadow: 0 0 0 3px rgba(207, 0, 6, 0.09);
+}
+
+.batch-form-page .batch-limit-control > input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+  color: var(--batch-premium-navy);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.batch-form-page
+  .batch-limit-control
+  > input[type="number"]:focus {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+.batch-form-page
+  .batch-limit-control
+  > input[type="number"]:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.batch-form-page .batch-limit-control__option {
+  min-width: 102px;
+  min-height: 44px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 1px solid #dfe5ec;
+  background: #fbfcfe;
+  color: var(--batch-premium-navy);
+  cursor: pointer;
+  user-select: none;
+}
+
+.batch-form-page .batch-limit-control__option > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.batch-form-page .batch-limit-control__option > strong {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.batch-form-page .batch-limit-control__option > span {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #ef4444;
+  border-radius: 5px;
+  background: #ffffff;
+}
+
+.batch-form-page
+  .batch-limit-control__option
+  > input:checked
+  ~ span {
+  border-color: var(--batch-premium-red);
+  background: var(--batch-premium-red);
+}
+
+.batch-form-page
+  .batch-limit-control__option
+  > input:checked
+  ~ span::after {
+  content: "✓";
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.batch-form-page
+  .batch-limit-control__option:has(input:checked) {
+  background: #fff7f7;
+  color: var(--batch-premium-red);
+}
+
+/* Belt panels span all three eligibility columns. */
+.batch-form-page .batch-eligibility-content .batch-limit-field--belt {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: block;
+  padding: 15px 16px 16px;
+  border: 1px solid #e4e9f0;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  box-shadow: 0 3px 10px rgba(8, 22, 47, 0.025);
+}
+
+.batch-form-page .batch-limit-field--belt .operations-belt-field {
+  display: grid;
+  gap: 8px;
+}
+
+.batch-form-page
+  .batch-limit-field--belt
+  .operations-field-label {
+  margin: 0;
+  color: var(--batch-premium-navy);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.batch-form-page .operations-belt-description {
+  display: block;
+  margin: -2px 0 7px;
+  color: var(--batch-premium-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.batch-form-page .batch-limit-field--belt .operations-belt-tags {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.batch-form-page .batch-limit-field--belt .operations-belt-tags button {
+  position: relative;
+  min-width: 0;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid #d8dee8;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 850;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+/* Text-only belt palette — belt graphics intentionally removed. */
+.batch-form-page
+  .operations-belt-tags
+  button[data-belt-tone="white"] {
+  color: #475569;
+  text-shadow: 0 1px 0 #ffffff;
+}
+
+.batch-form-page
+  .operations-belt-tags
+  button[data-belt-tone="yellow"] {
+  color: #d69e00;
+}
+
+.batch-form-page
+  .operations-belt-tags
+  button[data-belt-tone="green"] {
+  color: #139447;
+}
+
+.batch-form-page
+  .operations-belt-tags
+  button[data-belt-tone="blue"] {
+  color: #2563d9;
+}
+
+.batch-form-page
+  .operations-belt-tags
+  button[data-belt-tone="red"] {
+  color: #cf0006;
+}
+
+.batch-form-page
+  .operations-belt-tags
+  button[data-belt-tone="black"] {
+  color: #111827;
+}
+
+.batch-form-page
+  .operations-belt-tags
+  button[data-belt-tone="mixed"] {
+  color: #7c3aed;
+}
+
+.batch-form-page .batch-limit-field--belt .operations-belt-tags button:hover {
+  border-color: #ef9a9e;
+  background: #fff9f9;
+  box-shadow: 0 4px 10px rgba(207, 0, 6, 0.05);
+  transform: translateY(-1px);
+}
+
+.batch-form-page
+  .batch-limit-field--belt
+  .operations-belt-tags
+  button.is-selected:not(.operations-belt-no-limit) {
+  border-color: currentColor;
+  background: #ffffff;
+  box-shadow:
+    inset 0 -3px 0 currentColor,
+    0 5px 12px rgba(8, 22, 47, 0.07);
+}
+
+.batch-form-page
+  .batch-limit-field--belt
+  .operations-belt-no-limit {
+  color: var(--batch-premium-red);
+}
+
+.batch-form-page
+  .batch-limit-field--belt
+  .operations-belt-no-limit.is-selected {
+  border-color: var(--batch-premium-red);
+  background: #ffffff;
+  color: var(--batch-premium-red);
+  box-shadow:
+    inset 0 -3px 0 var(--batch-premium-red),
+    0 5px 12px rgba(207, 0, 6, 0.08);
+}
+
+.batch-form-page
+  .batch-limit-field--belt
+  .operations-belt-no-limit.is-selected
+  svg {
+  width: 17px;
+  height: 17px;
+  padding: 3px;
+  border-radius: 50%;
+  background: var(--batch-premium-red);
+  color: #ffffff;
+}
+
+/* Old belt drawing classes must never appear in the redesigned section. */
+.batch-form-page .batch-limit-field--belt .operations-belt-icon,
+.batch-form-page .batch-limit-field--belt .batch-belt-icon {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------
+   BATCH FEE STRUCTURE — ONE UNIFIED 3 × 2 GRID
+   --------------------------------------------------------- */
+
+.batch-form-page .batch-fees-content {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: center;
+  gap: 28px 16px;
+  margin: 22px 18px 18px;
+  padding: 24px 18px;
+  border: 1px solid #e4e9f0;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  box-shadow: 0 3px 10px rgba(8, 22, 47, 0.025);
+}
+
+.batch-form-page .batch-fee-field {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+}
+
+.batch-form-page .batch-money-control {
+  min-width: 0;
+  min-height: 46px;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid #d4dce6;
+  border-radius: 11px;
+  background: #ffffff;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.batch-form-page .batch-money-control:focus-within {
+  border-color: var(--batch-premium-red);
+  box-shadow: 0 0 0 3px rgba(207, 0, 6, 0.09);
+}
+
+.batch-form-page .batch-money-control__prefix {
+  width: 45px;
+  flex: 0 0 45px;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid #dfe5ec;
+  background: #f8fafc;
+  color: var(--batch-premium-navy);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.batch-form-page .batch-money-control > input[type="number"] {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 46px;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+  color: var(--batch-premium-navy);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.batch-form-page .batch-money-control > input[type="number"]:focus {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+.batch-form-page .batch-money-control > input[type="number"]:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.batch-form-page .batch-money-control__option {
+  flex: 0 0 auto;
+  min-height: 44px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 11px;
+  border-left: 1px solid #dfe5ec;
+  background: #fbfcfe;
+  color: var(--batch-premium-navy);
+  cursor: pointer;
+  user-select: none;
+}
+
+.batch-form-page .batch-money-control__option > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.batch-form-page .batch-money-control__option > span {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #ef4444;
+  border-radius: 5px;
+  background: #ffffff;
+}
+
+.batch-form-page .batch-money-control__option > strong {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.batch-form-page
+  .batch-money-control__option
+  > input:checked
+  + span {
+  border-color: var(--batch-premium-red);
+  background: var(--batch-premium-red);
+}
+
+.batch-form-page
+  .batch-money-control__option
+  > input:checked
+  + span::after {
+  content: "✓";
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.batch-form-page
+  .batch-money-control__option:has(input:checked) {
+  background: #fff7f7;
+  color: var(--batch-premium-red);
+}
+
+@media (max-width: 1280px) {
+  .batch-form-page .batch-limit-field--belt .operations-belt-tags {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .batch-form-page .batch-fees-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+  }
+}
+
+@media (max-width: 900px) {
+  .batch-form-page .batch-eligibility-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .batch-form-page .batch-eligibility-content .batch-limit-field--belt {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .batch-form-page .batch-card-intro {
+    margin-left: 18px;
+  }
+
+  .batch-form-page .batch-eligibility-content,
+  .batch-form-page .batch-fees-content {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-form-page .batch-limit-field--belt .operations-belt-tags {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .batch-form-page .batch-fees-content {
+    margin-top: 18px;
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .batch-form-page .batch-form-card--eligibility *,
+  .batch-form-page .batch-form-card--fees * {
+    transition: none;
+  }
+}
+
+/* =========================================================
+   ADD BATCH — REQUESTED FIELD ORDER V6
+   FINAL OVERRIDE: keep this block at the end of global.css.
+   Uses explicit classes instead of fragile nth-child positioning.
+   ========================================================= */
+
+/* Page order: top pair, profile, belt eligibility, fees, coaches, lower cards. */
+.batch-form-page .batch-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "identity schedule"
+    "profile profile"
+    "eligibility eligibility"
+    "fees fees"
+    "coaches coaches"
+    "languages communication"
+    "actions actions";
+  align-items: stretch;
+  gap: 16px;
+}
+
+.batch-form-page .batch-form-card--identity { grid-area: identity; }
+.batch-form-page .batch-form-card--schedule { grid-area: schedule; }
+.batch-form-page .batch-form-card--profile { grid-area: profile; }
+.batch-form-page .batch-form-card--eligibility { grid-area: eligibility; }
+.batch-form-page .batch-form-card--fees { grid-area: fees; }
+.batch-form-page .batch-form-card--coaches { grid-area: coaches; }
+.batch-form-page .batch-form-card--languages { grid-area: languages; }
+.batch-form-page .batch-form-card--communication { grid-area: communication; }
+.batch-form-page .batch-form-actions { grid-area: actions; }
+
+/* Identity and Schedule remain equal-height on desktop. */
+.batch-form-page .batch-form-card--identity,
+.batch-form-page .batch-form-card--schedule {
+  align-self: stretch;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-form-page .batch-form-card--identity .batch-identity-fields {
+  flex: 1 1 auto;
+}
+
+/* Notes now lives below Venue / Hall inside Batch Identity. */
+.batch-form-page .batch-identity-notes {
+  grid-column: 1 / -1;
+  width: 100%;
+  display: grid;
+  gap: 7px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.batch-form-page .batch-identity-notes textarea {
+  width: 100%;
+  min-height: 86px;
+  margin: 0;
+  resize: vertical;
+}
+
+/* Schedule order: Days → Start/End time → Session Slot/Mode. */
+.batch-form-page .batch-form-card--schedule .batch-schedule-times {
+  margin-top: 0;
+}
+
+.batch-form-page .batch-schedule-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 18px 18px;
+  padding-top: 17px;
+  border-top: 1px solid #edf0f4;
+}
+
+.batch-form-page .batch-schedule-options .batch-tag-field {
+  min-width: 0;
+  grid-column: auto;
+}
+
+.batch-form-page .batch-schedule-options .batch-single-select-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.batch-form-page .batch-schedule-options .batch-single-select-tags button {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid #ef9a9e;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #9f0005;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.batch-form-page
+  .batch-schedule-options
+  .batch-single-select-tags
+  button.is-selected {
+  border-color: #cf0006;
+  background: #cf0006;
+  color: #ffffff;
+  box-shadow: 0 7px 16px rgba(207, 0, 6, 0.18);
+}
+
+/* ---------------------------------------------------------
+   TRAINING PROFILE
+   Row 1: Gender | Min Age + Max Age + Max Students
+   Row 2: Skill Levels | Batch Type
+   Row 3: Martial Art / Sport
+   --------------------------------------------------------- */
+
+.batch-form-page .batch-form-card--profile .batch-tag-section-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
+  grid-template-areas:
+    "gender limits"
+    "skills types"
+    "sports sports";
+  align-items: stretch;
+  gap: 14px 18px;
+  padding: 18px;
+}
+
+/* Reset all older positional rules. */
+.batch-form-page
+  .batch-form-card--profile
+  .batch-tag-section-grid
+  > :nth-child(n) {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.batch-form-page .batch-profile-gender {
+  grid-area: gender;
+}
+
+.batch-form-page .batch-profile-limits {
+  grid-area: limits;
+}
+
+.batch-form-page .batch-profile-skills {
+  grid-area: skills;
+}
+
+.batch-form-page .batch-profile-types {
+  grid-area: types;
+}
+
+.batch-form-page .batch-profile-sports {
+  grid-area: sports;
+}
+
+.batch-form-page .batch-profile-gender,
+.batch-form-page .batch-profile-limits,
+.batch-form-page .batch-profile-skills,
+.batch-form-page .batch-profile-types,
+.batch-form-page .batch-profile-sports {
+  min-width: 0;
+  padding: 15px 16px 16px;
+  border: 1px solid #e4e9f0;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+  box-shadow: 0 3px 11px rgba(8, 22, 47, 0.025);
+}
+
+.batch-form-page .batch-profile-gender .batch-tag-field,
+.batch-form-page .batch-profile-skills .batch-tag-field,
+.batch-form-page .batch-profile-types .batch-tag-field {
+  grid-column: auto;
+}
+
+/* Three limit fields in one line where Skill Levels previously appeared. */
+.batch-form-page .batch-profile-limits {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 10px;
+}
+
+.batch-form-page .batch-profile-limits .batch-limit-field {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.batch-form-page .batch-profile-limits .batch-limit-control {
+  grid-template-columns: minmax(42px, 1fr) auto;
+}
+
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-control__option {
+  min-width: 78px;
+  padding-inline: 8px;
+  gap: 5px;
+}
+
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-control__option
+  > strong {
+  font-size: 10px;
+}
+
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-control__option
+  > span {
+  width: 16px;
+  height: 16px;
+  flex-basis: 16px;
+}
+
+.batch-form-page .batch-profile-types {
+  display: grid;
+  align-content: start;
+  gap: 11px;
+}
+
+.batch-form-page .batch-profile-types .batch-custom-tag {
+  grid-column: auto;
+  width: min(520px, 100%);
+  max-width: 100%;
+  margin: 0;
+}
+
+/* Flatten reusable sports wrapper into its assigned premium panel. */
+.batch-form-page .batch-profile-sports.operations-selection-section {
+  overflow: visible;
+}
+
+.batch-form-page
+  .batch-profile-sports
+  .operations-selection-section__body {
+  display: grid;
+  gap: 11px;
+  padding: 0;
+}
+
+/* Capacity values moved out; this card now contains belt eligibility only. */
+.batch-form-page .batch-belt-eligibility-content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 14px;
+  padding: 22px 18px 18px;
+}
+
+.batch-form-page
+  .batch-belt-eligibility-content
+  .batch-limit-field--belt {
+  grid-column: auto;
+  height: 100%;
+}
+
+/* Fee Structure is one full-width standalone card above Coaches. */
+.batch-form-page .batch-form-card--fees {
+  width: 100%;
+}
+
+.batch-form-page .batch-form-card--fees .batch-fees-content {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+}
+
+@media (max-width: 1180px) {
+  .batch-form-page .batch-form-card--profile .batch-tag-section-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "gender"
+      "limits"
+      "skills"
+      "types"
+      "sports";
+  }
+
+  .batch-form-page .batch-profile-limits {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .batch-form-page .batch-form {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "identity"
+      "schedule"
+      "profile"
+      "eligibility"
+      "fees"
+      "coaches"
+      "languages"
+      "communication"
+      "actions";
+  }
+
+  .batch-form-page .batch-form-card--identity,
+  .batch-form-page .batch-form-card--schedule {
+    height: auto;
+  }
+
+  .batch-form-page .batch-belt-eligibility-content {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-form-page .batch-form-card--fees .batch-fees-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .batch-form-page .batch-profile-limits,
+  .batch-form-page .batch-schedule-options,
+  .batch-form-page .batch-form-card--fees .batch-fees-content {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-form-page .batch-profile-limits .batch-limit-control {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .batch-form-page
+    .batch-profile-limits
+    .batch-limit-control__option {
+    min-width: 102px;
+  }
+}
+
+/* =========================================================
+   ADD BATCH V7 — COMPACT LIMITS + INLINE CUSTOM TAG INPUTS
+   FINAL OVERRIDE: keep this block at the end of global.css.
+   ========================================================= */
+
+/* Keep numeric inputs compact so the complete “No Limit” text remains clear. */
+.batch-form-page .batch-profile-limits {
+  grid-template-columns: repeat(3, minmax(175px, 1fr));
+}
+
+.batch-form-page .batch-profile-limits .batch-limit-control {
+  grid-template-columns: 58px minmax(56px, 1fr);
+  width: 138px;
+}
+
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-control
+  > input[type="number"] {
+  width: 58px;
+  min-width: 58px;
+  padding-inline: 9px;
+  text-align: center;
+}
+
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-control__option {
+  min-width: 96px;
+  justify-content: center;
+  padding-inline: 9px;
+  gap: 6px;
+}
+
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-control__option
+  > strong {
+  overflow: visible;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Custom controls are the final flex item beside the last available tag. */
+.batch-form-page .operations-tag-grid > .operations-custom-tag,
+.batch-form-page
+  .batch-profile-types
+  .batch-single-select-tags
+  > .batch-custom-tag--inline {
+  width: auto;
+  min-width: 245px;
+  max-width: 330px;
+  min-height: 40px;
+  flex: 0 1 300px;
+  align-self: stretch;
+  margin: 0;
+}
+
+.batch-form-page
+  .operations-tag-grid
+  > .operations-custom-tag
+  input,
+.batch-form-page
+  .batch-profile-types
+  .batch-single-select-tags
+  > .batch-custom-tag--inline
+  input {
+  flex: 1 1 145px;
+  width: auto;
+  min-width: 120px;
+}
+
+/* Older rules placed the custom Batch Type control on a separate grid row. */
+.batch-form-page .batch-profile-types .batch-custom-tag--inline {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.batch-form-page .batch-profile-types .batch-single-select-tags {
+  align-items: stretch;
+}
+
+/* Reusable Sports/Languages bodies now contain only label + one wrapping row. */
+.batch-form-page
+  .operations-selection-section__body
+  > .operations-tag-grid:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 1180px) {
+  .batch-form-page .batch-profile-limits {
+    grid-template-columns: repeat(3, minmax(165px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .batch-form-page .batch-profile-limits {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-form-page .batch-profile-limits .batch-limit-control {
+    grid-template-columns: 72px minmax(110px, 1fr);
+    width: min(260px, 100%);
+  }
+
+  .batch-form-page
+    .batch-profile-limits
+    .batch-limit-control
+    > input[type="number"] {
+    width: 72px;
+  }
+}
+
+@media (max-width: 600px) {
+  .batch-form-page .operations-tag-grid > .operations-custom-tag,
+  .batch-form-page
+    .batch-profile-types
+    .batch-single-select-tags
+    > .batch-custom-tag--inline {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    flex-basis: 100%;
+  }
+}
+
+/* =========================================================
+   BATCH TRAINING PROFILE — REFERENCE BUTTON FORMAT
+   FINAL OVERRIDE: keep this block at the END of global.css.
+   Selected = solid red + white check
+   Unselected = white + red outline
+   ========================================================= */
+
+.batch-form-page .batch-form-card--profile {
+  --btp-red: #cf0006;
+  --btp-red-dark: #a90005;
+  --btp-navy: #08162f;
+  --btp-text: #334155;
+  --btp-line: #e1e7ef;
+  --btp-red-line: #ef9a9e;
+  --btp-red-soft: #fff7f7;
+}
+
+.batch-form-page .batch-form-card--profile .batch-tag-section-grid {
+  gap: 14px 18px;
+  padding: 18px;
+}
+
+.batch-form-page .batch-form-card--profile .batch-field-label,
+.batch-form-page .batch-form-card--profile .operations-field-label {
+  display: block;
+  margin: 0 0 10px;
+  color: var(--btp-navy);
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.batch-form-page .batch-form-card--profile .batch-field-label b,
+.batch-form-page .batch-form-card--profile .operations-field-label b {
+  color: var(--btp-red);
+}
+
+/* Premium inner panels shown in the reference design. */
+.batch-form-page
+  .batch-form-card--profile
+  .batch-tag-section-grid
+  > :nth-child(-n + 6) {
+  min-width: 0;
+  padding: 15px 16px 16px;
+  border: 1px solid #e4e9f0;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+  box-shadow: 0 3px 12px rgba(8, 22, 47, 0.025);
+}
+
+/* Reusable Martial Arts section must behave like an inner panel. */
+.batch-form-page
+  .batch-form-card--profile
+  .batch-tag-section-grid
+  > :nth-child(5).operations-selection-section {
+  overflow: visible;
+  box-shadow: 0 3px 12px rgba(8, 22, 47, 0.025);
+}
+
+.batch-form-page
+  .batch-form-card--profile
+  .batch-tag-section-grid
+  > :nth-child(5)
+  .operations-selection-section__body {
+  display: grid;
+  gap: 11px;
+  padding: 0;
+}
+
+/* All option containers retain the original JSX order. */
+.batch-form-page .batch-form-card--profile .batch-single-select-tags,
+.batch-form-page .batch-form-card--profile .operations-tag-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+/* Base button format: crisp white surface with fine red outline. */
+.batch-form-page .batch-form-card--profile .batch-single-select-tags button,
+.batch-form-page .batch-form-card--profile .operations-tag-grid button {
+  position: relative;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 15px;
+  border: 1px solid var(--btp-red-line);
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--btp-navy);
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+  transform: none;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.batch-form-page .batch-form-card--profile .batch-single-select-tags button:hover,
+.batch-form-page .batch-form-card--profile .operations-tag-grid button:hover {
+  border-color: var(--btp-red);
+  background: var(--btp-red-soft);
+  color: var(--btp-red-dark);
+  box-shadow: 0 4px 12px rgba(207, 0, 6, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Selected option: reference-style solid red button. */
+.batch-form-page
+  .batch-form-card--profile
+  .batch-single-select-tags
+  button.is-selected,
+.batch-form-page
+  .batch-form-card--profile
+  .operations-tag-grid
+  button.is-selected {
+  border-color: var(--btp-red);
+  background: linear-gradient(180deg, #df070d 0%, var(--btp-red) 100%);
+  color: #ffffff;
+  box-shadow: 0 7px 16px rgba(207, 0, 6, 0.18);
+  font-weight: 850;
+  transform: none;
+}
+
+.batch-form-page
+  .batch-form-card--profile
+  .batch-single-select-tags
+  button.is-selected:hover,
+.batch-form-page
+  .batch-form-card--profile
+  .operations-tag-grid
+  button.is-selected:hover {
+  border-color: var(--btp-red-dark);
+  background: var(--btp-red-dark);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(207, 0, 6, 0.22);
+  transform: translateY(-1px);
+}
+
+/* TagField/SingleTagField have no icon in JSX, so add a check via CSS. */
+.batch-form-page
+  .batch-form-card--profile
+  .batch-single-select-tags
+  button.is-selected::before {
+  content: "✓";
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--btp-red);
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+/* Reusable sports component already renders Plus/Check SVG icons. */
+.batch-form-page .batch-form-card--profile .operations-tag-grid button > svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex: 0 0 14px;
+  color: var(--btp-red);
+  stroke-width: 2;
+}
+
+.batch-form-page
+  .batch-form-card--profile
+  .operations-tag-grid
+  button.is-selected
+  > svg {
+  color: #ffffff;
+}
+
+.batch-form-page .batch-form-card--profile .batch-single-select-tags button:focus-visible,
+.batch-form-page .batch-form-card--profile .operations-tag-grid button:focus-visible {
+  outline: 3px solid rgba(207, 0, 6, 0.17);
+  outline-offset: 2px;
+}
+
+/* Top four groups use slightly wider controls, matching the reference. */
+.batch-form-page
+  .batch-form-card--profile
+  .batch-tag-section-grid
+  > :nth-child(-n + 4)
+  .batch-single-select-tags
+  button {
+  min-width: 100px;
+}
+
+.batch-form-page
+  .batch-form-card--profile
+  .batch-tag-section-grid
+  > :nth-child(1)
+  .batch-single-select-tags
+  button {
+  min-width: 116px;
+}
+
+/* Full-width Martial Arts and Batch Type rows. */
+.batch-form-page
+  .batch-form-card--profile
+  .batch-tag-section-grid
+  > :nth-child(5),
+.batch-form-page
+  .batch-form-card--profile
+  .batch-tag-section-grid
+  > :nth-child(6) {
+  grid-column: 1 / -1;
+}
+
+/* Custom Sport and Custom Batch Type controls. */
+.batch-form-page .batch-form-card--profile .operations-custom-tag,
+.batch-form-page .batch-form-card--profile .batch-custom-tag {
+  width: fit-content;
+  max-width: min(520px, 100%);
+  min-width: 270px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 5px 3px 9px;
+  border: 1px dashed #ef9a9e;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #64748b;
+  box-shadow: none;
+}
+
+.batch-form-page .batch-form-card--profile .operations-custom-tag > svg,
+.batch-form-page .batch-form-card--profile .batch-custom-tag > svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--btp-red);
+}
+
+.batch-form-page .batch-form-card--profile .operations-custom-tag input,
+.batch-form-page .batch-form-card--profile .batch-custom-tag input {
+  flex: 1 1 190px;
+  width: auto;
+  min-width: 150px;
+  min-height: 32px;
+  margin: 0;
+  padding: 5px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #334155;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.batch-form-page .batch-form-card--profile .operations-custom-tag input:focus,
+.batch-form-page .batch-form-card--profile .batch-custom-tag input:focus {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+.batch-form-page .batch-form-card--profile .operations-custom-tag:focus-within,
+.batch-form-page .batch-form-card--profile .batch-custom-tag:focus-within {
+  border-color: var(--btp-red);
+  box-shadow: 0 0 0 3px rgba(207, 0, 6, 0.09);
+}
+
+.batch-form-page .batch-form-card--profile .operations-custom-tag button,
+.batch-form-page .batch-form-card--profile .batch-custom-tag button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border: 1px solid var(--btp-red);
+  border-radius: 7px;
+  background: var(--btp-red);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.batch-form-page .batch-form-card--profile .operations-custom-tag button:hover,
+.batch-form-page .batch-form-card--profile .batch-custom-tag button:hover {
+  border-color: var(--btp-red-dark);
+  background: var(--btp-red-dark);
+  color: #ffffff;
+}
+
+/* Custom Batch Type follows the Batch Type panel. */
+.batch-form-page
+  .batch-form-card--profile
+  .batch-tag-section-grid
+  > :nth-child(7) {
+  grid-column: 1 / -1;
+  margin-top: -5px;
+}
+
+@media (max-width: 780px) {
+  .batch-form-page
+    .batch-form-card--profile
+    .batch-tag-section-grid
+    > :nth-child(-n + 6) {
+    padding: 13px;
+  }
+}
+
+@media (max-width: 600px) {
+  .batch-form-page .batch-form-card--profile .batch-single-select-tags,
+  .batch-form-page .batch-form-card--profile .operations-tag-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .batch-form-page .batch-form-card--profile .batch-single-select-tags button,
+  .batch-form-page .batch-form-card--profile .operations-tag-grid button {
+    min-width: 0 !important;
+    justify-content: flex-start;
+    white-space: normal;
+    text-align: left;
+  }
+
+  .batch-form-page .batch-form-card--profile .operations-custom-tag,
+  .batch-form-page .batch-form-card--profile .batch-custom-tag {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .batch-form-page .batch-form-card--profile .operations-custom-tag input,
+  .batch-form-page .batch-form-card--profile .batch-custom-tag input {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .batch-form-page .batch-form-card--profile button {
+    transition: none;
+  }
+}
+
+/* =========================================================
+   BATCH PROFILE — AGE & STUDENT LIMITS
+   ========================================================= */
+
+/*
+ * Teeno complete fields ke beech ka gap:
+ * Min Age → Max Age → Max Students
+ *
+ * column-gap ko kam/badha kar fields ke beech distance बदलें।
+ */
+.batch-form-page .batch-profile-limits {
+  width: 100%;
+  display: grid;
+
+  /* Flexible 1fr हटाकर fields को content के अनुसार compact रखता है */
+  grid-template-columns: repeat(3, max-content);
+
+  align-items: center;
+  justify-content: start;
+
+  column-gap: 28px; /* Complete fields ke beech ka gap */
+  row-gap: 14px;
+}
+
+/*
+ * Ek field ke andar:
+ * Label + combined input control
+ *
+ * 92px = label area
+ * 166px = number input + No Limit ki total width
+ * 4px   = label aur input ke beech gap
+ */
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-field {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: max-content 166px;
+  align-items: center;
+  justify-content: start;
+  gap: 14px;
+}
+
+/* Min Age, Max Age aur Max Students labels */
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-field__label {
+  min-width: 0;
+  margin: 0;
+  color: #08162f;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/*
+ * Complete combined control:
+ *
+ * 74px = number input ki width
+ * 92px = No Limit box ki width
+ * Total = 166px
+ */
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-control {
+  width: 166px;
+  min-width: 166px;
+  display: grid;
+  grid-template-columns: 74px 92px;
+  align-items: stretch;
+}
+
+/*
+ * Number input ki width:
+ * Isko badhana ho to 74px badhayein.
+ *
+ * Upar grid-template-columns ka pehla 74px
+ * aur total control width bhi accordingly update karna hoga.
+ */
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-control
+  > input[type="number"] {
+  width: 74px;
+  min-width: 74px;
+  padding-inline: 8px;
+  text-align: center;
+}
+
+/* No Limit section ki fixed width */
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-control__option {
+  width: 92px;
+  min-width: 92px;
+  padding-inline: 6px;
+  justify-content: center;
+  gap: 5px;
+}
+
+/* Tablet */
+@media (max-width: 1100px) {
+  .batch-form-page .batch-profile-limits {
+    grid-template-columns: repeat(2, max-content);
+    column-gap: 22px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 680px) {
+  .batch-form-page .batch-profile-limits {
+    grid-template-columns: 1fr;
+    row-gap: 14px;
+  }
+}
+
+/* =========================================================
+   AGE & CAPACITY GROUP
+   ========================================================= */
+
+/* Group heading—Gender Group और Skill Levels जैसी */
+.batch-form-page .batch-profile-limits__heading {
+  grid-column: 1 / -1;
+  margin: 0 0 2px;
+  color: #08162f;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* Heading के नीचे तीनों fields */
+.batch-form-page .batch-profile-limits {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  align-items: center;
+  justify-content: start;
+  column-gap: 28px;
+  row-gap: 10px;
+}
+
+/* हर label और उसके control के बीच बराबर gap */
+.batch-form-page
+  .batch-profile-limits
+  .batch-limit-field {
+  display: grid;
+  grid-template-columns: max-content 166px;
+  align-items: center;
+  column-gap: 10px;
+}

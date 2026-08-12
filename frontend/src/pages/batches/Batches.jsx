@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Trash2 } from "lucide-react";
+import { CheckCircle2, Dumbbell, Plus, Search, Trash2, UserPlus, UsersRound, XCircle } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
+import { academyApi } from "../../api/academyApi.js";
+import { getBranches } from "../../api/branchApi.js";
+import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import useAuth from "../../hooks/useAuth.js";
+import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 
 const formatTime = (time) => {
   if (!time) return "-";
@@ -40,21 +45,31 @@ const formatGenderGroup = (value) => {
 
 const Batches = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
+  const [academy, setAcademy] = useState(null);
+  const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
   const [status, setStatus] = useState("");
   const [batchType, setBatchType] = useState("");
   const [skillLevel, setSkillLevel] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const fetchBatches = async () => {
+  const fetchBatches = useCallback(async () => {
     try {
       setLoading(true);
 
-      const response = await batchApi.getAll({
-        batchType: batchType || undefined,
-        skillLevel: skillLevel || undefined,
-      });
+      const [batchResult, academyResult, branchResult] = await Promise.allSettled([
+        batchApi.getAll({
+          batchType: batchType || undefined,
+          skillLevel: skillLevel || undefined,
+        }),
+        academyApi.getMyAcademy(),
+        getBranches({ status: "all" }),
+      ]);
+
+      if (batchResult.status === "rejected") throw batchResult.reason;
+      const response = batchResult.value;
 
       const list = response.data?.data || [];
 
@@ -66,16 +81,39 @@ const Batches = () => {
             : list;
 
       setBatches(filteredList);
+      if (academyResult.status === "fulfilled") {
+        setAcademy(academyResult.value?.data?.data?.academy || academyResult.value?.data?.academy || null);
+      }
+      if (branchResult.status === "fulfilled") {
+        const candidates = [branchResult.value?.data?.data, branchResult.value?.data, branchResult.value];
+        setBranches(candidates.find(Array.isArray) || []);
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Batches load nahi hue");
     } finally {
       setLoading(false);
     }
-  };
+  }, [batchType, skillLevel, status]);
 
   useEffect(() => {
     fetchBatches();
-  }, [status, batchType, skillLevel]);
+  }, [fetchBatches]);
+
+  const summary = useMemo(() => ({
+    total: batches.length,
+    active: batches.filter((batch) => batch.isActive !== false).length,
+    inactive: batches.filter((batch) => batch.isActive === false).length,
+    students: batches.reduce((sum, batch) => sum + (batch.students?.length || 0), 0),
+  }), [batches]);
+
+  const activeBranches = branches.filter((branch) => branch?.isActive !== false);
+  const mainBranch = branches.find((branch) => branch?.isMainBranch) || activeBranches[0] || null;
+  const heroAddress = [
+    mainBranch?.address || academy?.address,
+    mainBranch?.city || academy?.city,
+    mainBranch?.state || academy?.state,
+    mainBranch?.country || academy?.country,
+  ].filter(Boolean).join(", ");
 
   const handleToggleStatus = async (batch) => {
     try {
@@ -117,26 +155,48 @@ const Batches = () => {
   };
 
   return (
-    <div className="page">
-      <div className="page-header">
+    <div className="page branches-page batches-page">
+      <AcademyHeroHeader
+        headingId="batches-academy-name"
+        academyName={academy?.academyName || "KHILADI Academy"}
+        ownerName={academy?.ownerName || user?.name || "Academy Owner"}
+        logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""}
+        addressLabel={mainBranch?.branchName || "Main Branch"}
+        address={heroAddress || "Complete main branch address not available"}
+        summaryItems={[
+          { key: "branches", type: "branches", value: activeBranches.length, label: "Active Branches" },
+          { key: "batches", type: "batches", value: summary.active, label: "Active Batches" },
+        ]}
+      />
+
+      <div className="batches-heading">
         <div>
+          <span>Training operations</span>
           <h1>Batches</h1>
-          <p>Classes aur training batches manage karein</p>
+          <p>Manage schedules, coaches, eligibility, capacity and fees from one workspace.</p>
         </div>
 
-        <div className="actions">
-          <Link className="btn btn-primary" to="/students/new">
-            Add Student
+        <div className="batches-heading__actions">
+          <Link className="btn btn-outline" to="/students/new">
+            <UserPlus size={16} /> Add Student
           </Link>
 
           <Link className="btn btn-primary" to="/batches/new">
-            Add Batch
+            <Plus size={16} /> Add Batch
           </Link>
         </div>
       </div>
 
-      <div className="card">
-        <div className="grid grid-3">
+      <section className="batches-summary">
+        <article><span><Dumbbell size={21} /></span><div><small>Total Batches</small><strong>{summary.total}</strong></div></article>
+        <article className="is-green"><span><CheckCircle2 size={21} /></span><div><small>Active Batches</small><strong>{summary.active}</strong></div></article>
+        <article className="is-slate"><span><XCircle size={21} /></span><div><small>Inactive Batches</small><strong>{summary.inactive}</strong></div></article>
+        <article className="is-blue"><span><UsersRound size={21} /></span><div><small>Enrolled Students</small><strong>{summary.students}</strong></div></article>
+      </section>
+
+      <div className="batches-filters">
+        <div className="batches-filters__title"><Search size={17} /><div><strong>Filter batches</strong><small>Narrow the training schedule.</small></div></div>
+        <div className="batches-filters__grid">
           <label>
             Status
             <select value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -182,14 +242,14 @@ const Batches = () => {
         </div>
       </div>
 
-      <div className="card">
+      <div className="batches-table-card">
         {loading ? (
-          <p>Loading batches...</p>
+          <div className="batches-state"><span className="batches-spinner" /><strong>Loading batches…</strong></div>
         ) : batches.length === 0 ? (
-          <p>No batches found.</p>
+          <div className="batches-state"><Dumbbell size={34} /><strong>No batches found</strong><p>Change the filters or create your first batch.</p><Link className="btn btn-primary" to="/batches/new"><Plus size={16} /> Add Batch</Link></div>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
+          <div className="batches-table-wrap">
+            <table className="batches-table">
               <thead>
                 <tr>
                   <th>Batch</th>
@@ -212,12 +272,11 @@ const Batches = () => {
                   <tr
                     key={batch._id}
                     onClick={() => navigate(`/batches/${batch._id}`)}
-                    style={{ cursor: "pointer" }}
                   >
                     <td>
                       <strong>{batch.batchName}</strong>
                       {batch.isCompetitionBatch ? (
-                        <div className="muted">Competition Batch</div>
+                        <small className="batches-competition">Competition Batch</small>
                       ) : null}
                     </td>
 
@@ -248,26 +307,20 @@ const Batches = () => {
                     <td>{batch.headCoachName || batch.coach?.name || "-"}</td>
 
                     <td>
-                      <span
-                        className={`badge badge-${
-                          batch.isActive ? "active" : "inactive"
-                        }`}
-                      >
+                      <span className={"batches-status batches-status--" + (batch.isActive ? "active" : "inactive")}>
                         {batch.isActive ? "active" : "inactive"}
                       </span>
                     </td>
 
                     <td
-                      className="actions"
+                      className="batches-actions"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      <Link to={`/batches/${batch._id}/edit`}>Edit</Link>
+                      <Link className="batches-action batches-action--edit" to={`/batches/${batch._id}/edit`}>Edit</Link>
 
                       <button
                         type="button"
-                        className={`btn ${
-                          batch.isActive ? "btn-danger" : "btn-success"
-                        }`}
+                        className={"batches-action batches-action--status " + (batch.isActive ? "is-active" : "is-inactive")}
                         onClick={() => handleToggleStatus(batch)}
                       >
                         {batch.isActive ? "Inactive" : "Active"}
@@ -275,7 +328,7 @@ const Batches = () => {
 
                       <button
                         type="button"
-                        className="btn btn-danger"
+                        className="batches-action batches-action--delete"
                         onClick={() => handleDelete(batch)}
                         title="Delete Batch"
                       >

@@ -41,6 +41,8 @@ const additionalCoachSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    countryCode: { type: String, trim: true, default: "+91" },
+    achievements: { type: String, trim: true, default: "", maxlength: 1000 },
   },
   { _id: false }
 );
@@ -71,7 +73,7 @@ const batchSchema = new mongoose.Schema(
       type: String,
       trim: true,
       uppercase: true,
-      default: "",
+      default: "evening",
       maxlength: [40, "Batch code cannot exceed 40 characters"],
     },
 
@@ -80,6 +82,7 @@ const batchSchema = new mongoose.Schema(
       trim: true,
       default: "Taekwondo",
     },
+    martialArts: { type: [String], default: [] },
 
     genderGroup: {
   type: String,
@@ -104,6 +107,8 @@ const batchSchema = new mongoose.Schema(
         "custom",
       ],
     },
+    batchTypes: { type: [String], default: [] },
+    customBatchTypes: { type: [String], default: [] },
 
     skillLevel: {
       type: String,
@@ -111,6 +116,7 @@ const batchSchema = new mongoose.Schema(
       default: "beginner",
       enum: ["beginner", "intermediate", "advanced", "elite", "mixed"],
     },
+    skillLevels: { type: [String], default: [] },
 
     mode: {
       type: String,
@@ -118,6 +124,7 @@ const batchSchema = new mongoose.Schema(
       default: "offline",
       enum: ["offline", "online", "hybrid"],
     },
+    modes: { type: [String], default: [] },
 
     sessionSlot: {
       type: String,
@@ -125,6 +132,7 @@ const batchSchema = new mongoose.Schema(
       default: "",
       enum: ["", "morning", "afternoon", "evening", "night"],
     },
+    sessionSlots: { type: [String], default: ["evening"] },
 
     venue: {
       type: String,
@@ -152,6 +160,9 @@ const batchSchema = new mongoose.Schema(
       default: "",
       maxlength: [120, "Head coach name cannot exceed 120 characters"],
     },
+    headCoachCountryCode: { type: String, trim: true, default: "+91" },
+    headCoachPhone: { type: String, trim: true, default: "" },
+    headCoachAchievements: { type: String, trim: true, default: "", maxlength: 1000 },
 
     assistantCoachName: {
       type: String,
@@ -159,6 +170,9 @@ const batchSchema = new mongoose.Schema(
       default: "",
       maxlength: [120, "Assistant coach name cannot exceed 120 characters"],
     },
+    assistantCoachCountryCode: { type: String, trim: true, default: "+91" },
+    assistantCoachPhone: { type: String, trim: true, default: "" },
+    assistantCoachAchievements: { type: String, trim: true, default: "", maxlength: 1000 },
 
     additionalCoaches: {
       type: [additionalCoachSchema],
@@ -261,6 +275,15 @@ const batchSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    batchLanguages: { type: [String], default: [] },
+    customBatchLanguages: { type: [String], default: [] },
+    noCapacityLimit: { type: Boolean, default: false },
+    noMinAgeLimit: { type: Boolean, default: false },
+    noMaxAgeLimit: { type: Boolean, default: false },
+    noMinBeltLimit: { type: Boolean, default: false },
+    noMaxBeltLimit: { type: Boolean, default: false },
+    noRegistrationFee: { type: Boolean, default: false },
+    noLateFee: { type: Boolean, default: false },
 
     whatsappGroupLink: {
       type: String,
@@ -327,6 +350,29 @@ const cleanNumberOrNull = (value) => {
 batchSchema.pre("validate", function () {
   this.minAge = cleanNumberOrNull(this.minAge);
   this.maxAge = cleanNumberOrNull(this.maxAge);
+  const unique = (value) => [...new Set((Array.isArray(value) ? value : []).map((item) => String(item || "").trim()).filter(Boolean))];
+  this.martialArts = unique(this.martialArts);
+  this.batchTypes = unique(this.batchTypes);
+  this.customBatchTypes = unique(this.customBatchTypes);
+  this.skillLevels = unique(this.skillLevels);
+  this.modes = unique(this.modes);
+  this.sessionSlots = unique(this.sessionSlots);
+  this.batchLanguages = unique(this.batchLanguages);
+  this.customBatchLanguages = unique(this.customBatchLanguages);
+  if (!this.martialArts.length && this.martialArt) this.martialArts = [this.martialArt];
+  if (!this.batchTypes.length && this.batchType) this.batchTypes = [this.batchType];
+  if (!this.skillLevels.length && this.skillLevel) this.skillLevels = [this.skillLevel];
+  if (!this.modes.length && this.mode) this.modes = [this.mode];
+  if (!this.sessionSlots.length) this.sessionSlots = [this.sessionSlot || "evening"];
+  if (!this.batchLanguages.length && this.batchLanguage) this.batchLanguages = [this.batchLanguage];
+
+  if (this.noCapacityLimit) this.capacity = 0;
+  if (this.noMinAgeLimit) this.minAge = null;
+  if (this.noMaxAgeLimit) this.maxAge = null;
+  if (this.noMinBeltLimit) this.minBelt = "";
+  if (this.noMaxBeltLimit) this.maxBelt = "";
+  if (this.noRegistrationFee) this.registrationFee = 0;
+  if (this.noLateFee) this.lateFee = 0;
 
   if (this.batchCode) {
     this.batchCode = String(this.batchCode).trim().toUpperCase();
@@ -336,9 +382,11 @@ batchSchema.pre("validate", function () {
     this.additionalCoaches = this.additionalCoaches
       .map((coach) => ({
         name: String(coach?.name || "").trim(),
+        countryCode: String(coach?.countryCode || "+91").trim(),
         phone: String(coach?.phone || "").trim(),
+        achievements: String(coach?.achievements || "").trim(),
       }))
-      .filter((coach) => coach.name || coach.phone);
+      .filter((coach) => coach.name || coach.phone || coach.achievements);
   }
 });
 
