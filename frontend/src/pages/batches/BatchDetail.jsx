@@ -1,428 +1,157 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import toast from "react-hot-toast";
+import { ArrowLeft, BadgeIndianRupee, CalendarDays, CheckCircle2, Clock3, Dumbbell, Edit3, ExternalLink, GraduationCap, Languages, Link2, MapPin, Plus, ShieldCheck, Target, UserRound, UsersRound, WalletCards, XCircle } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
 import { studentApi } from "../../api/studentApi.js";
-
-import { ArrowLeft, Edit3, Plus } from "lucide-react";
+import MetricGrid from "../../components/common/MetricGrid.jsx";
+import PageState from "../../components/common/PageState.jsx";
 import BatchAcademyHeader from "./components/BatchAcademyHeader.jsx";
-import BatchDetailStat from "./components/BatchDetailStat.jsx";
+import BatchDetailSectionHeader from "./components/BatchDetailSectionHeader.jsx";
+import { currency, displayValue, formatBatchLabel, formatBatchTime, formatGenderGroup, normalizeList } from "./batch.utils.js";
 import "./BatchDetail.module.css";
 
-const formatTime = (time) => {
-  if (!time) return "-";
-
-  const [hours, minutes] = time.split(":");
-
-  const date = new Date();
-  date.setHours(Number(hours));
-  date.setMinutes(Number(minutes));
-
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+const getStudentName = (student) => student?.name || `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "-";
+const availableSeats = (capacity, count) => Number(capacity || 0) ? Math.max(Number(capacity) - count, 0) : "No limit";
+const firstValue = (...values) => {
+  for (const value of values) {
+    const list = normalizeList(value);
+    if (list.length) return list[0];
+    if (value !== null && value !== undefined && String(value).trim()) return String(value).trim();
+  }
+  return "-";
 };
 
-const currency = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const DetailItem = ({ icon: Icon, label, children, wide, accent }) => (
+  <div className={`batch-detail-item${wide ? " batch-detail-item--wide" : ""}${accent ? " batch-detail-item--accent" : ""}`}>
+    <span className="batch-detail-item__icon"><Icon size={17} /></span>
+    <div><small>{label}</small><strong>{children}</strong></div>
+  </div>
+);
 
-const displayValue = (value) => {
-  const text = String(value || "").trim();
-  return text || "-";
-};
+const CoachCard = ({ title, name, countryCode, phone, achievements }) => (
+  <article className="batch-detail-coach">
+    <div className="batch-detail-coach__title"><span><UserRound size={18} /></span><div><small>Coach</small><h3>{title}</h3></div></div>
+    <dl>
+      <div><dt>Name</dt><dd>{displayValue(name)}</dd></div>
+      <div><dt>Mobile</dt><dd>{phone ? `${countryCode || "+91"} ${phone}` : "Not added"}</dd></div>
+      <div className="batch-detail-coach__achievement"><dt>Achievements / Qualifications</dt><dd>{displayValue(achievements)}</dd></div>
+    </dl>
+  </article>
+);
 
-const formatLabel = (value) => {
-  const text = String(value || "").trim();
-
-  if (!text) return "-";
-
-  return text
-    .split("-")
-    .map((item) => item.charAt(0).toUpperCase() + item.slice(1))
-    .join(" ");
-};
-
-const getStudentName = (student) => {
-  const fullName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
-  return student.name || fullName || "-";
-};
-
-const getAvailableSeats = (capacity, studentCount) => {
-  const max = Number(capacity || 0);
-  if (!max) return "-";
-
-  return Math.max(max - Number(studentCount || 0), 0);
-};
-
-const formatGenderGroup = (value) => {
-  if (value === "male") return "Male";
-  if (value === "female") return "Female";
-  return "Male & Female";
-};
+const ResourceLink = ({ href, label }) => href ? (
+  <a href={href} target="_blank" rel="noreferrer"><Link2 size={16} /><span>{label}</span><ExternalLink size={14} /></a>
+) : <span><Link2 size={16} /><span>{label} not added</span></span>;
 
 const BatchDetail = () => {
   const { id } = useParams();
-
   const [batch, setBatch] = useState(null);
-  const [studentCount, setStudentCount] = useState(0);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchBatch = async () => {
-      try {
-        const [batchRes, studentRes] = await Promise.all([
-          batchApi.getById(id),
-          studentApi.getAll({ batch: id, status: "active" }),
-        ]);
-
-        const batchData = batchRes.data?.data || null;
-
-        const studentList = Array.isArray(studentRes.data)
-          ? studentRes.data
-          : studentRes.data?.data?.students || studentRes.data?.data || [];
-
-        setBatch(batchData);
-        setStudentCount(studentList.length || batchData?.students?.length || 0);
-        setStudents(Array.isArray(studentList) ? studentList : []);
-      } catch (error) {
-        toast.error(error.response?.data?.message || "Batch load nahi hua");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBatch();
+  const loadPage = useCallback(async () => {
+    setLoading(true); setError("");
+    try {
+      const [batchResult, studentResult] = await Promise.allSettled([batchApi.getById(id), studentApi.getAll({ batch: id, status: "active" })]);
+      if (batchResult.status === "rejected") throw batchResult.reason;
+      setBatch(batchResult.value?.data?.data || batchResult.value?.data || null);
+      const response = studentResult.status === "fulfilled" ? studentResult.value : null;
+      setStudents([response?.data?.data?.students, response?.data?.data, response?.data].find(Array.isArray) || []);
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message || "Failed to load batch.");
+    } finally { setLoading(false); }
   }, [id]);
 
-  if (loading) return <div className="page batch-detail-state"><span className="batches-spinner" /><strong>Loading batch…</strong></div>;
-  if (!batch) return <div className="page batch-detail-state"><strong>Batch not found.</strong><Link className="btn btn-primary" to="/batches">Back to Batches</Link></div>;
+  useEffect(() => { loadPage(); }, [loadPage]);
+  const schedules = useMemo(() => Array.isArray(batch?.schedule) ? batch.schedule : [], [batch?.schedule]);
+  const extraCoaches = useMemo(() => Array.isArray(batch?.additionalCoaches) ? batch.additionalCoaches.filter((item) => item?.name || item?.phone || item?.achievements) : [], [batch?.additionalCoaches]);
+  const languages = useMemo(() => normalizeList(batch?.batchLanguages, batch?.batchLanguage), [batch?.batchLanguages, batch?.batchLanguage]);
 
-  const firstSchedule = batch.schedule?.[0] || null;
-  const availableSeats = getAvailableSeats(batch.capacity, studentCount);
+  if (loading) return <PageState className="batch-detail-state" loading title="Loading batch profile…" />;
+  if (error || !batch) return <PageState className="batch-detail-state batch-detail-state--error" icon={XCircle} title={error || "Batch not found."} action={<button className="btn btn-primary" type="button" onClick={loadPage}>Try Again</button>} />;
+
+  const count = students.length || batch.students?.length || 0;
+  const capacity = Number(batch.capacity || batch.maxStudents || 0);
+  const seats = availableSeats(capacity, count);
+  const firstSchedule = schedules[0] || {};
+  const type = formatBatchLabel(firstValue(batch.batchType, batch.batchTypes));
+  const level = formatBatchLabel(firstValue(batch.skillLevel, batch.skillLevels));
+  const sport = firstValue(batch.martialArt, batch.martialArts);
+  const mode = formatBatchLabel(firstValue(batch.mode, batch.modes));
+  const slot = formatBatchLabel(firstValue(batch.sessionSlot, batch.sessionSlots));
+  const branchName = batch.branch?.branchName || batch.branch?.branchCode || "Not assigned";
 
   return (
     <div className="page batch-detail-page">
       <BatchAcademyHeader branch={batch.branch || null} />
-      <nav className="batch-breadcrumb"><Link to="/batches">Batches</Link><span>/</span><strong>{batch.batchName}</strong></nav>
-      <div className="batch-detail-heading">
-        <div>
-          <h1>{batch.batchName}</h1>
-          <p>
-            {batch.martialArt || "-"}{" "}
-            {batch.batchCode ? `• ${batch.batchCode}` : ""}
-          </p>
-        </div>
+      <nav className="batch-detail-breadcrumb"><Link to="/batches">Batches</Link><span>/</span><strong>{batch.batchName}</strong></nav>
 
-        <div className="batch-detail-heading__actions">
-          <Link className="btn btn-outline" to="/batches"><ArrowLeft size={16} /> Back</Link>
-          <Link className="btn btn-outline" to="/students/new">
-            <Plus size={16} /> Add Student
-          </Link>
+      <header className="batch-detail-heading">
+        <div className="batch-detail-heading__title"><span><Dumbbell size={25} /></span><div>
+          <div className="batch-detail-heading__name-row"><h1>{batch.batchName}</h1><div className="batch-detail-heading__badges">
+            <code>{displayValue(batch.batchCode, "No code")}</code>
+            {batch.isCompetitionBatch ? <b><Target size={13} /> Competition</b> : null}
+            <i className={batch.isActive !== false ? "is-active" : "is-inactive"}>{batch.isActive !== false ? "Active" : "Inactive"}</i>
+          </div></div>
+          <p>{sport} training batch at {branchName}.</p>
+        </div></div>
+        <div className="batch-detail-heading__actions"><Link className="btn btn-outline" to="/batches"><ArrowLeft size={16} /> Back</Link><Link className="btn btn-outline" to="/students/new"><Plus size={16} /> Add Student</Link><Link className="btn btn-primary" to={`/batches/${batch._id}/edit`}><Edit3 size={16} /> Edit Batch</Link></div>
+      </header>
 
-          <Link className="btn btn-primary" to={`/batches/${batch._id}/edit`}>
-            <Edit3 size={16} /> Edit Batch
-          </Link>
-        </div>
+      <MetricGrid className="batch-detail-metrics" items={[
+        { id: "students", icon: UsersRound, label: "Active Students", value: count },
+        { id: "seats", className: "is-green", icon: CheckCircle2, label: "Available Seats", value: seats },
+        { id: "time", className: "is-blue", icon: Clock3, label: "Training Time", value: `${formatBatchTime(firstSchedule.startTime)} – ${formatBatchTime(firstSchedule.endTime)}` },
+        { id: "fee", className: "is-orange", icon: BadgeIndianRupee, label: "Monthly Fee", value: currency(batch.monthlyFee) },
+        { id: "level", className: "is-purple", icon: GraduationCap, label: "Skill Level", value: level },
+      ]} getCardProps={() => ({ iconSize: 21 })} />
+
+      <div className="batch-detail-primary-grid">
+        <section className="batch-detail-card"><BatchDetailSectionHeader icon={Dumbbell} eyebrow="Identity" title="Batch Information" description="Core training profile and operating setup." /><div className="batch-detail-items">
+          <DetailItem icon={Dumbbell} label="Batch Type">{type}</DetailItem><DetailItem icon={GraduationCap} label="Skill Level">{level}</DetailItem>
+          <DetailItem icon={Target} label="Martial Art / Sport">{sport}</DetailItem><DetailItem icon={UsersRound} label="Gender Group">{formatGenderGroup(batch.genderGroup)}</DetailItem>
+          <DetailItem icon={ShieldCheck} label="Training Mode">{mode}</DetailItem><DetailItem icon={Clock3} label="Session Slot">{slot}</DetailItem>
+          <DetailItem icon={MapPin} label="Branch">{branchName}</DetailItem><DetailItem icon={MapPin} label="Venue / Hall">{displayValue(batch.venue)}</DetailItem>
+          <DetailItem icon={Target} label="Batch Color Tag">{displayValue(batch.batchColor)}</DetailItem><DetailItem icon={Target} label="Competition Batch">{batch.isCompetitionBatch ? "Yes" : "No"}</DetailItem>
+          <DetailItem icon={Link2} label="Notes" wide>{displayValue(batch.notes)}</DetailItem>
+        </div></section>
+
+        <section className="batch-detail-card"><BatchDetailSectionHeader icon={CalendarDays} eyebrow="Timetable" title="Training Schedule" description="Weekly training days and session timings." /><div className="batch-detail-schedule">
+          {schedules.length ? schedules.map((item, index) => <div key={`${item.day}-${index}`}><span><CalendarDays size={16} /></span><strong>{formatBatchLabel(item.day)}</strong><time><Clock3 size={14} />{formatBatchTime(item.startTime)} – {formatBatchTime(item.endTime)}</time></div>) : <p>No training schedule added.</p>}
+        </div></section>
       </div>
 
-      <div className="batch-detail-stats">
-        <BatchDetailStat label="Status" value={batch.isActive ? "active" : "inactive"} />
+      <section className="batch-detail-card"><BatchDetailSectionHeader icon={UsersRound} eyebrow="Team" title="Coaches in Charge" description="Primary and supporting coaching team." /><div className="batch-detail-coach-grid">
+        <CoachCard title="Head Coach" name={batch.headCoachName || batch.coach?.name} countryCode={batch.headCoachCountryCode} phone={batch.headCoachPhone} achievements={batch.headCoachAchievements} />
+        <CoachCard title="Assistant Coach" name={batch.assistantCoachName} countryCode={batch.assistantCoachCountryCode} phone={batch.assistantCoachPhone} achievements={batch.assistantCoachAchievements} />
+        {extraCoaches.map((coach, index) => <CoachCard key={`coach-${index}`} title={`Additional Coach ${index + 1}`} {...coach} />)}
+      </div>{!extraCoaches.length ? <p className="batch-detail-empty-note">No additional coaches added.</p> : null}</section>
 
-        <BatchDetailStat label="Students" value={`${studentCount} / ${batch.capacity || 0}`} />
-
-        <BatchDetailStat label="Available Seats" value={availableSeats} />
-
-        <BatchDetailStat label="Time" value={`${formatTime(firstSchedule?.startTime)} - ${formatTime(firstSchedule?.endTime)}`} />
-
-        <BatchDetailStat label="Monthly Fee" value={currency(batch.monthlyFee)} />
-
-        <BatchDetailStat label="Batch Type" value={formatLabel(batch.batchType)} />
-
-        <BatchDetailStat label="Skill Level" value={formatLabel(batch.skillLevel)} />
-
-        <BatchDetailStat label="Mode" value={formatLabel(batch.mode)} />
+      <div className="batch-detail-secondary-grid">
+        <section className="batch-detail-card"><BatchDetailSectionHeader icon={Target} eyebrow="Eligibility" title="Capacity & Eligibility" description="Student limits, age range and belt requirements." /><div className="batch-detail-items">
+          <DetailItem icon={UsersRound} label="Capacity">{capacity || "No limit"}</DetailItem><DetailItem icon={UsersRound} label="Current Students">{count}</DetailItem>
+          <DetailItem icon={CheckCircle2} label="Available Seats">{seats}</DetailItem><DetailItem icon={GraduationCap} label="Minimum Age">{batch.minAge ?? "No limit"}</DetailItem>
+          <DetailItem icon={GraduationCap} label="Maximum Age">{batch.maxAge ?? "No limit"}</DetailItem><DetailItem icon={ShieldCheck} label="Minimum Belt">{displayValue(batch.minBelt)}</DetailItem>
+          <DetailItem icon={ShieldCheck} label="Maximum Belt">{displayValue(batch.maxBelt)}</DetailItem><DetailItem icon={Target} label="Minimum Attendance">{batch.minimumAttendancePercentage ?? 75}%</DetailItem>
+        </div></section>
+        <section className="batch-detail-card"><BatchDetailSectionHeader icon={WalletCards} eyebrow="Finance" title="Batch Fee Structure" description="Recurring and additional batch charges." /><div className="batch-detail-items">
+          <DetailItem icon={BadgeIndianRupee} label="Monthly Fee" accent>{currency(batch.monthlyFee)}</DetailItem><DetailItem icon={BadgeIndianRupee} label="Quarterly Fee" accent>{currency(batch.quarterlyFee)}</DetailItem>
+          <DetailItem icon={BadgeIndianRupee} label="Annual Fee" accent>{currency(batch.annualFee)}</DetailItem><DetailItem icon={BadgeIndianRupee} label="Registration Fee" accent>{currency(batch.registrationFee)}</DetailItem>
+          <DetailItem icon={BadgeIndianRupee} label="Uniform Fee" accent>{currency(batch.uniformFee)}</DetailItem><DetailItem icon={BadgeIndianRupee} label="Examination Fee" accent>{currency(batch.examinationFee)}</DetailItem>
+          <DetailItem icon={BadgeIndianRupee} label="Late Fee" accent>{currency(batch.lateFee)}</DetailItem><DetailItem icon={CalendarDays} label="Fee Due Day">Day {batch.feeDueDay || 10}</DetailItem>
+        </div></section>
       </div>
 
-      <div className="batch-detail-card">
-        <h2>Batch Details</h2>
+      <section className="batch-detail-card"><BatchDetailSectionHeader icon={Languages} eyebrow="Communication" title="Languages & Online Links" description="Communication languages and batch resources." /><div className="batch-detail-communication">
+        <div className="batch-detail-language-tags">{languages.length ? languages.map((item) => <span key={item}><Languages size={13} />{item}</span>) : <em>No languages added.</em>}</div>
+        <div className="batch-detail-links"><ResourceLink href={batch.whatsappGroupLink} label="Open WhatsApp Group" /><ResourceLink href={batch.googleMeetLink} label="Open Google Meet" /></div>
+      </div></section>
 
-        <div className="batch-detail-grid">
-          <p>
-            <strong>Batch Code:</strong> {displayValue(batch.batchCode)}
-          </p>
-
-          <p>
-            <strong>Martial Art / Sport:</strong>{" "}
-            {displayValue(batch.martialArt)}
-          </p>
-
-<p>
-  <strong>Gender Group:</strong> {formatGenderGroup(batch.genderGroup)}
-</p>
-
-          <p>
-            <strong>Branch:</strong>{" "}
-            {batch.branch?.branchName || batch.branch?.branchCode || "-"}
-          </p>
-
-          <p>
-            <strong>Batch Type:</strong> {formatLabel(batch.batchType)}
-          </p>
-
-          <p>
-            <strong>Skill Level:</strong> {formatLabel(batch.skillLevel)}
-          </p>
-
-          <p>
-            <strong>Mode:</strong> {formatLabel(batch.mode)}
-          </p>
-
-          <p>
-            <strong>Session Slot:</strong> {formatLabel(batch.sessionSlot)}
-          </p>
-
-          <p>
-            <strong>Venue / Hall:</strong> {displayValue(batch.venue)}
-          </p>
-
-          <p>
-            <strong>Batch Color Tag:</strong> {displayValue(batch.batchColor)}
-          </p>
-
-          <p>
-            <strong>Competition Batch:</strong>{" "}
-            {batch.isCompetitionBatch ? "Yes" : "No"}
-          </p>
-
-          <p>
-            <strong>Notes:</strong> {displayValue(batch.notes)}
-          </p>
-        </div>
-      </div>
-
-      <div className="batch-detail-card">
-        <h2>Training Schedule</h2>
-
-        <div className="batch-detail-grid">
-          <p>
-            <strong>Days:</strong>{" "}
-            {batch.schedule?.map((item) => item.day).join(", ") || "-"}
-          </p>
-
-          <p>
-            <strong>Start Time:</strong> {formatTime(firstSchedule?.startTime)}
-          </p>
-
-          <p>
-            <strong>End Time:</strong> {formatTime(firstSchedule?.endTime)}
-          </p>
-        </div>
-      </div>
-
-      <div className="batch-detail-card">
-        <h2>Coach Assignment</h2>
-
-        <div className="batch-detail-grid">
-          <p>
-            <strong>System Coach:</strong> {batch.coach?.name || "-"}
-          </p>
-
-          <p>
-            <strong>Head Coach:</strong> {displayValue(batch.headCoachName)}
-          </p>
-
-          <p>
-            <strong>Assistant Coach:</strong>{" "}
-            {displayValue(batch.assistantCoachName)}
-          </p>
-
-          <p>
-            <strong>Additional Coaches:</strong>{" "}
-            {Array.isArray(batch.additionalCoaches) &&
-            batch.additionalCoaches.length
-              ? batch.additionalCoaches
-                  .filter((coach) => coach?.name || coach?.phone)
-                  .map((coach) => {
-                    const name = coach.name || "Coach";
-                    const phone = coach.phone ? ` (${coach.phone})` : "";
-                    return `${name}${phone}`;
-                  })
-                  .join(", ")
-              : "-"}
-          </p>
-        </div>
-      </div>
-
-      <div className="batch-detail-card">
-        <h2>Student Capacity & Eligibility</h2>
-
-        <div className="batch-detail-grid">
-          <p>
-            <strong>Capacity:</strong> {batch.capacity || 0}
-          </p>
-
-          <p>
-            <strong>Current Students:</strong> {studentCount}
-          </p>
-
-          <p>
-            <strong>Available Seats:</strong> {availableSeats}
-          </p>
-
-          <p>
-            <strong>Min Age:</strong>{" "}
-            {batch.minAge === null || batch.minAge === undefined
-              ? "-"
-              : batch.minAge}
-          </p>
-
-          <p>
-            <strong>Max Age:</strong>{" "}
-            {batch.maxAge === null || batch.maxAge === undefined
-              ? "-"
-              : batch.maxAge}
-          </p>
-
-          <p>
-            <strong>Minimum Belt:</strong> {displayValue(batch.minBelt)}
-          </p>
-
-          <p>
-            <strong>Maximum Belt:</strong> {displayValue(batch.maxBelt)}
-          </p>
-
-          <p>
-            <strong>Minimum Attendance %:</strong>{" "}
-            {batch.minimumAttendancePercentage ?? 75}%
-          </p>
-        </div>
-      </div>
-
-      <div className="batch-detail-card">
-        <h2>Batch Fee Structure</h2>
-
-        <div className="batch-detail-grid">
-          <p>
-            <strong>Monthly Fee:</strong> {currency(batch.monthlyFee)}
-          </p>
-
-          <p>
-            <strong>Quarterly Fee:</strong> {currency(batch.quarterlyFee)}
-          </p>
-
-          <p>
-            <strong>Annual Fee:</strong> {currency(batch.annualFee)}
-          </p>
-
-          <p>
-            <strong>Registration Fee:</strong> {currency(batch.registrationFee)}
-          </p>
-
-          <p>
-            <strong>Uniform Fee:</strong> {currency(batch.uniformFee)}
-          </p>
-
-          <p>
-            <strong>Examination Fee:</strong> {currency(batch.examinationFee)}
-          </p>
-
-          <p>
-            <strong>Late Fee:</strong> {currency(batch.lateFee)}
-          </p>
-
-          <p>
-            <strong>Fee Due Day:</strong> {batch.feeDueDay || 10}
-          </p>
-        </div>
-      </div>
-
-      <div className="batch-detail-card">
-        <h2>Links & Communication</h2>
-
-        <div className="batch-detail-grid">
-          <p>
-            <strong>Batch Language:</strong> {displayValue(batch.batchLanguage)}
-          </p>
-
-          <p>
-            <strong>WhatsApp Group:</strong>{" "}
-            {batch.whatsappGroupLink ? (
-              <a
-                href={batch.whatsappGroupLink}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open Link
-              </a>
-            ) : (
-              "-"
-            )}
-          </p>
-
-          <p>
-            <strong>Google Meet:</strong>{" "}
-            {batch.googleMeetLink ? (
-              <a href={batch.googleMeetLink} target="_blank" rel="noreferrer">
-                Open Link
-              </a>
-            ) : (
-              "-"
-            )}
-          </p>
-        </div>
-      </div>
-
-      <div className="batch-detail-card batch-detail-students">
-        <div className="batch-detail-card__heading">
-          <div>
-            <h2>Students in this Batch</h2>
-            <p>Active students list</p>
-          </div>
-
-          <Link to={`/attendance/batch/${batch._id}`}>Attendance History</Link>
-        </div>
-
-        {students.length === 0 ? (
-          <p>No active students in this batch.</p>
-        ) : (
-          <div className="batches-table-wrap">
-            <table className="batches-table">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Name</th>
-                  <th>Phone</th>
-                  <th>Belt</th>
-                  <th>Batch Monthly Fee</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {students.map((student) => (
-                  <tr key={student._id}>
-                    <td>{student.studentCode || student.admissionNumber || "-"}</td>
-
-                    <td>
-                      <Link to={`/students/${student._id}`}>
-                        {getStudentName(student)}
-                      </Link>
-                    </td>
-
-                    <td>{student.phone || "-"}</td>
-
-                    <td>{student.beltRank || "-"}</td>
-
-                    <td>{currency(batch.monthlyFee)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <section className="batch-detail-card batch-detail-students"><div className="batch-detail-students__header"><div><span><UsersRound size={19} /></span><div><small>Students</small><h2>Students in this Batch</h2><p>Active students currently assigned to this batch.</p></div></div><Link to={`/attendance/batch/${batch._id}`}>Attendance History <ExternalLink size={14} /></Link></div>
+        {!students.length ? <div className="batch-detail-students__empty"><UsersRound size={30} /><strong>No active students</strong><p>Add students to begin managing this batch.</p><Link className="btn btn-primary" to="/students/new"><Plus size={15} /> Add Student</Link></div> : <div className="batch-detail-table-wrap"><table className="batch-detail-table"><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Belt</th><th>Monthly Fee</th></tr></thead><tbody>{students.map((student) => <tr key={student._id}><td><code>{student.studentCode || student.admissionNumber || "-"}</code></td><td><Link to={`/students/${student._id}`}>{getStudentName(student)}</Link></td><td>{student.phone || "-"}</td><td>{student.beltRank || "-"}</td><td><strong>{currency(batch.monthlyFee)}</strong></td></tr>)}</tbody></table></div>}
+      </section>
     </div>
   );
 };
