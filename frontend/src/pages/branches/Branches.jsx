@@ -20,7 +20,7 @@ import { deleteBranch, getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
-import BranchStatCard from "./components/BranchStatCard.jsx";
+import MetricGrid from "../../components/common/MetricGrid.jsx";
 import { PAGE_SIZE } from "./branch.config.js";
 import { joinAddressParts, unwrapList } from "./branch.utils.js";
 import "./Branches.module.css";
@@ -159,12 +159,12 @@ const Branches = () => {
         <Link to="/branches/new" className="btn btn-primary"><Plus size={17} /> Add Branch</Link>
       </header>
 
-      <section className="branches-stats" aria-label="Branch summary">
-        <BranchStatCard icon={Building2} label="Total branches" value={allBranches.length} />
-        <BranchStatCard icon={CheckCircle2} label="Active branches" value={activeBranches.length} tone="green" />
-        <BranchStatCard icon={XCircle} label="Inactive branches" value={inactiveBranches} tone="slate" />
-        <BranchStatCard icon={Crown} label="Main branch" value={mainBranch ? 1 : 0} tone="gold" />
-      </section>
+      <MetricGrid className="branches-stats" items={[
+        { id: "total", icon: Building2, label: "Total branches", value: allBranches.length, tone: "red" },
+        { id: "active", icon: CheckCircle2, label: "Active branches", value: activeBranches.length, tone: "green" },
+        { id: "inactive", icon: XCircle, label: "Inactive branches", value: inactiveBranches, tone: "slate" },
+        { id: "main", icon: Crown, label: "Main branch", value: mainBranch ? 1 : 0, tone: "gold" },
+      ]} getCardProps={(item) => ({ className: `branches-stat branches-stat--${item.tone}`, iconSize: 22 })} />
 
       <form className="branches-filters" onSubmit={applyFilters}>
         <label className="branches-search">

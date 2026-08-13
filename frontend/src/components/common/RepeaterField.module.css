@@ -1,0 +1,3 @@
+.root, .rows { min-width: 0; }
+.row { min-width: 0; position: relative; }
+.add, .remove { display: inline-flex; align-items: center; gap: 6px; }

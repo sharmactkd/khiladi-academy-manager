@@ -9,7 +9,7 @@ import { getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
-import BatchSummaryCard from "./components/BatchSummaryCard.jsx";
+import MetricGrid from "../../components/common/MetricGrid.jsx";
 import "./Batches.module.css";
 
 const formatTime = (time) => {
@@ -189,12 +189,12 @@ const Batches = () => {
         </div>
       </div>
 
-      <section className="batches-summary">
-        <BatchSummaryCard icon={Dumbbell} label="Total Batches" value={summary.total} />
-        <BatchSummaryCard className="is-green" icon={CheckCircle2} label="Active Batches" value={summary.active} />
-        <BatchSummaryCard className="is-slate" icon={XCircle} label="Inactive Batches" value={summary.inactive} />
-        <BatchSummaryCard className="is-blue" icon={UsersRound} label="Enrolled Students" value={summary.students} />
-      </section>
+      <MetricGrid className="batches-summary" items={[
+        { id: "total", icon: Dumbbell, label: "Total Batches", value: summary.total },
+        { id: "active", className: "is-green", icon: CheckCircle2, label: "Active Batches", value: summary.active },
+        { id: "inactive", className: "is-slate", icon: XCircle, label: "Inactive Batches", value: summary.inactive },
+        { id: "students", className: "is-blue", icon: UsersRound, label: "Enrolled Students", value: summary.students },
+      ]} getCardProps={() => ({ iconSize: 21 })} />
 
       <div className="batches-filters">
         <div className="batches-filters__title"><Search size={17} /><div><strong>Filter batches</strong><small>Narrow the training schedule.</small></div></div>

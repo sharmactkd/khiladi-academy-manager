@@ -1,0 +1,3 @@
+.root { display: grid; }
+.root label { display: grid; grid-template-columns: auto minmax(90px, auto) minmax(0, 1fr); align-items: center; gap: 10px; }
+.icon { display: grid; place-items: center; }

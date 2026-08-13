@@ -1,0 +1,5 @@
+.root { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.root > input { position: absolute; opacity: 0; pointer-events: none; }
+.control { width: 36px; height: 20px; flex: 0 0 36px; border-radius: 999px; background: var(--color-border-strong); transition: var(--transition-fast); }
+.root > input:checked + .control { background: var(--color-primary); }
+.root > div { display: grid; }

@@ -1,0 +1,6 @@
+.root { min-width: 0; }
+.label { display: block; margin-bottom: 8px; font-weight: 800; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.selected { color: var(--color-on-primary); background: var(--color-primary); }
+.custom { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 10px; }

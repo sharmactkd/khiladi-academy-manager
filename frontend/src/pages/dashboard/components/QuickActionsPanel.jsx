@@ -1,14 +1,5 @@
-import { Link } from "react-router-dom";
+import ActionGrid from "../../../components/common/ActionGrid.jsx";
 
-const QuickActionsPanel = ({ actions }) => (
-  <article className="owner-panel owner-quick-actions">
-    <header className="owner-panel__header"><div><span>Shortcuts</span><h2>Quick actions</h2></div></header>
-    <div className="owner-quick-actions__grid">
-      {actions.map(({ icon: Icon, label, to }) => (
-        <Link key={to} to={to}><Icon /><span>{label}</span></Link>
-      ))}
-    </div>
-  </article>
-);
+const QuickActionsPanel = ({ actions }) => <ActionGrid className="owner-panel owner-quick-actions" gridClassName="owner-quick-actions__grid" headerClassNames={{ root: "owner-panel__header", copy: "owner-panel__header-copy" }} eyebrow="Shortcuts" items={actions} title="Quick actions" />;
 
 export default QuickActionsPanel;

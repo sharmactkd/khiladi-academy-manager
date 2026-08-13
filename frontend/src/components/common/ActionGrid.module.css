@@ -1,0 +1,2 @@
+.panel, .grid { min-width: 0; }
+.grid { display: grid; }

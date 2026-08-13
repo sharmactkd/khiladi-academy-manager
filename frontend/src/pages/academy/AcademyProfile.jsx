@@ -16,6 +16,7 @@ import {
 
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import SocialLinksField from "../../components/common/SocialLinksField.jsx";
 import { academyApi } from "../../api/academyApi.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import AcademyProfileActions from "./components/AcademyProfileActions.jsx";
@@ -770,46 +771,7 @@ const AcademyProfile = () => {
           <section className="academy-profile-card academy-profile-social" id="social">
             <AcademyProfileCardHeader eyebrow="Online Presence" icon={Globe2} title="Website & Social Links" />
 
-            <div className="academy-profile-social__fields">
-              <label>
-                <span className="academy-profile-social__icon">W</span>
-                <span>Website</span>
-                <input
-                  value={academy.socialLinks?.website || ""}
-                  onChange={(event) => updateSocialLink("website", event.target.value)}
-                  placeholder="https://youracademy.com"
-                />
-              </label>
-              <label>
-                <span className="academy-profile-social__icon">
-                  <InstagramIcon size={15} aria-hidden="true" />
-                </span>
-                <span>Instagram</span>
-                <input
-                  value={academy.socialLinks?.instagram || ""}
-                  onChange={(event) => updateSocialLink("instagram", event.target.value)}
-                  placeholder="https://instagram.com/youracademy"
-                />
-              </label>
-              <label>
-                <span className="academy-profile-social__icon">f</span>
-                <span>Facebook</span>
-                <input
-                  value={academy.socialLinks?.facebook || ""}
-                  onChange={(event) => updateSocialLink("facebook", event.target.value)}
-                  placeholder="https://facebook.com/youracademy"
-                />
-              </label>
-              <label>
-                <span className="academy-profile-social__icon">▶</span>
-                <span>YouTube</span>
-                <input
-                  value={academy.socialLinks?.youtube || ""}
-                  onChange={(event) => updateSocialLink("youtube", event.target.value)}
-                  placeholder="https://youtube.com/@youracademy"
-                />
-              </label>
-            </div>
+            <SocialLinksField className="academy-profile-social__fields" value={academy.socialLinks} onChange={updateSocialLink} />
           </section>
         </div>
 
