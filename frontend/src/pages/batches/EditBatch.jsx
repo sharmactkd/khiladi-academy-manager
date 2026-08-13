@@ -1,87 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import toast from "react-hot-toast";
-import { ArrowLeft, BadgeIndianRupee, CalendarDays, Check, Clock3, Dumbbell, GraduationCap, Languages, Link2, MapPin, Plus, RefreshCw, Save, Settings2, ShieldCheck, Target, Trash2, UserRound, UsersRound, WalletCards, X, XCircle } from "lucide-react";
-
-import { batchApi } from "../../api/batchApi.js";
-import { getBranches } from "../../api/branchApi.js";
-import FormActionBar from "../../components/common/FormActionBar.jsx";
-import PageState from "../../components/common/PageState.jsx";
-import SwitchField from "../../components/common/SwitchField.jsx";
-import { TAEKWONDO_BELTS } from "../../components/taekwondoBelts/taekwondoBelts.js";
-import BatchAcademyHeader from "./components/BatchAcademyHeader.jsx";
-import BatchFormSectionHeader from "./components/BatchFormSectionHeader.jsx";
-import "../branches/BranchForm.module.css";
-import "./EditBatch.module.css";
-
-const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-const BATCH_TYPES = [["regular", "Regular"], ["competition", "Competition Team"], ["poomsae", "Poomsae Team"], ["sparring", "Sparring Team"], ["fitness", "Fitness Batch"], ["kids", "Kids Batch"], ["adults", "Adults Batch"], ["black-belt", "Black Belt Batch"], ["custom", "Custom"]];
-const SKILL_LEVELS = [["beginner", "Beginner"], ["intermediate", "Intermediate"], ["advanced", "Advanced"], ["elite", "Elite"], ["mixed", "Mixed"]];
-const MODES = [["offline", "Offline"], ["online", "Online"], ["hybrid", "Hybrid"]];
-const SESSION_SLOTS = [["", "Select Slot"], ["morning", "Morning"], ["afternoon", "Afternoon"], ["evening", "Evening"], ["night", "Night"]];
-const BELTS = ["", ...TAEKWONDO_BELTS];
-
-const defaults = { batchName:"",branch:"",batchCode:"",martialArt:"Taekwondo",genderGroup:"both",batchType:"regular",skillLevel:"beginner",mode:"offline",sessionSlot:"",venue:"",batchColor:"",headCoachName:"",assistantCoachName:"",startTime:"",endTime:"",maxStudents:0,minAge:"",maxAge:"",minBelt:"",maxBelt:"",isActive:true,days:[],monthlyFee:0,quarterlyFee:0,annualFee:0,registrationFee:0,uniformFee:0,examinationFee:0,lateFee:0,minimumAttendancePercentage:75,batchLanguage:"",whatsappGroupLink:"",googleMeetLink:"",isCompetitionBatch:false,notes:"" };
-
-const normalizeCoaches = (value) => Array.isArray(value) ? value.map((coach) => ({ name:coach?.name||"", phone:coach?.phone||"" })).filter((coach) => coach.name || coach.phone) : [];
-const Field = ({ label, error, children, className="" }) => <label className={className}><span>{label}</span>{children}{error ? <small className="edit-batch-error">{error}</small> : null}</label>;
-const Options = ({ values }) => values.map(([value,label]) => <option key={value || "empty"} value={value}>{label}</option>);
+import { useParams } from "react-router-dom";
+import BatchForm from "./AddBatch.jsx";
 
 const EditBatch = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const [batchData,setBatchData]=useState(null), [branches,setBranches]=useState([]), [coaches,setCoaches]=useState([]), [loading,setLoading]=useState(true), [saving,setSaving]=useState(false), [error,setError]=useState("");
-  const { register,handleSubmit,reset,setValue,watch,formState:{errors} } = useForm({ defaultValues:defaults });
-  const values=watch();
-
-  const loadPage=useCallback(async()=>{ setLoading(true);setError("");try{
-    const [batchResult,branchResult]=await Promise.allSettled([batchApi.getById(id),getBranches({status:"active"})]);
-    if(batchResult.status==="rejected") throw batchResult.reason;
-    const response=batchResult.value; const batch=response?.data?.data||response?.data?.batch||response?.data;
-    if(!batch) throw new Error("Batch not found.");
-    setBatchData(batch); setBranches(branchResult.status==="fulfilled"?[branchResult.value?.data?.data,branchResult.value?.data,branchResult.value].find(Array.isArray)||[]:[]);
-    reset({...defaults,branch:batch.branch?._id||batch.branch||"",batchName:batch.batchName||"",batchCode:batch.batchCode||"",martialArt:batch.martialArt||"Taekwondo",genderGroup:batch.genderGroup||"both",batchType:batch.batchType||"regular",skillLevel:batch.skillLevel||"beginner",mode:batch.mode||"offline",sessionSlot:batch.sessionSlot||"",venue:batch.venue||"",batchColor:batch.batchColor||"",headCoachName:batch.headCoachName||"",assistantCoachName:batch.assistantCoachName||"",startTime:batch.schedule?.[0]?.startTime||"",endTime:batch.schedule?.[0]?.endTime||"",maxStudents:batch.capacity||0,minAge:batch.minAge??"",maxAge:batch.maxAge??"",minBelt:batch.minBelt||"",maxBelt:batch.maxBelt||"",isActive:batch.isActive!==false,days:Array.isArray(batch.schedule)?[...new Set(batch.schedule.map((item)=>item.day).filter(Boolean))]:[],monthlyFee:batch.monthlyFee||0,quarterlyFee:batch.quarterlyFee||0,annualFee:batch.annualFee||0,registrationFee:batch.registrationFee||0,uniformFee:batch.uniformFee||0,examinationFee:batch.examinationFee||0,lateFee:batch.lateFee||0,minimumAttendancePercentage:batch.minimumAttendancePercentage??75,batchLanguage:batch.batchLanguage||"",whatsappGroupLink:batch.whatsappGroupLink||"",googleMeetLink:batch.googleMeetLink||"",isCompetitionBatch:Boolean(batch.isCompetitionBatch),notes:batch.notes||""});
-    setCoaches(normalizeCoaches(batch.additionalCoaches));
-  }catch(requestError){setError(requestError?.response?.data?.message||requestError.message||"Batch load nahi hua");}finally{setLoading(false)}},[id,reset]);
-  useEffect(()=>{loadPage()},[loadPage]);
-
-  const toggleDay=(day)=>setValue("days",values.days?.includes(day)?values.days.filter((item)=>item!==day):[...(values.days||[]),day],{shouldDirty:true});
-  const submit=async(form)=>{try{setSaving(true);setError("");await batchApi.update(id,{branch:form.branch||null,batchName:form.batchName.trim(),batchCode:form.batchCode.trim().toUpperCase(),martialArt:form.martialArt||"Taekwondo",genderGroup:form.genderGroup||"both",batchType:form.batchType||"regular",skillLevel:form.skillLevel||"beginner",mode:form.mode||"offline",sessionSlot:form.sessionSlot||"",venue:form.venue||"",batchColor:form.batchColor||"",headCoachName:form.headCoachName||"",assistantCoachName:form.assistantCoachName||"",additionalCoaches:coaches.filter((coach)=>coach.name.trim()||coach.phone.trim()),capacity:Number(form.maxStudents||0),minAge:form.minAge===""?null:Number(form.minAge),maxAge:form.maxAge===""?null:Number(form.maxAge),minBelt:form.minBelt||"",maxBelt:form.maxBelt||"",isActive:Boolean(form.isActive),isCompetitionBatch:Boolean(form.isCompetitionBatch),notes:form.notes||"",monthlyFee:Number(form.monthlyFee||0),quarterlyFee:Number(form.quarterlyFee||0),annualFee:Number(form.annualFee||0),registrationFee:Number(form.registrationFee||0),uniformFee:Number(form.uniformFee||0),examinationFee:Number(form.examinationFee||0),lateFee:Number(form.lateFee||0),minimumAttendancePercentage:Number(form.minimumAttendancePercentage||75),batchLanguage:form.batchLanguage||"",whatsappGroupLink:form.whatsappGroupLink||"",googleMeetLink:form.googleMeetLink||"",schedule:(form.days||[]).map((day)=>({day,startTime:form.startTime,endTime:form.endTime}))});toast.success("Batch update ho gaya");navigate(`/batches/${id}`)}catch(requestError){setError(requestError?.response?.data?.message||"Batch update nahi hua");window.scrollTo({top:0,behavior:"smooth"})}finally{setSaving(false)}};
-  if(loading)return <PageState className="edit-batch-state" loading title="Loading batch editor…"/>;
-  if(!batchData)return <PageState className="edit-batch-state" icon={XCircle} title={error||"Batch not found."} action={<button className="btn btn-primary" onClick={loadPage}>Try Again</button>}/>;
-
-  return <div className="page add-branch-page edit-batch-page">
-    <BatchAcademyHeader branch={batchData.branch||null}/>
-    <nav className="add-branch-breadcrumb"><Link to="/batches">Batches</Link><span>/</span><Link to={`/batches/${id}`}>{batchData.batchName}</Link><span>/</span><strong>Edit</strong></nav>
-    <header className="add-branch-heading"><div className="add-branch-heading__title"><span><Dumbbell size={25}/></span><div><h1>Edit Batch</h1><p>Update {batchData.batchName}'s complete training profile.</p></div></div><Link className="btn btn-outline" to={`/batches/${id}`}><ArrowLeft size={16}/> Back to Details</Link></header>
-    {error?<div className="add-branch-message add-branch-message--error"><ShieldCheck size={18}/><span>{error}</span><button type="button" onClick={()=>setError("")}><X size={16}/></button></div>:null}
-
-    <form className="add-branch-form edit-batch-form" onSubmit={handleSubmit(submit)}>
-      <div className="add-branch-primary-grid">
-        <section className="add-branch-card"><BatchFormSectionHeader icon={Dumbbell} eyebrow="Identity" title="Batch Identity" description="Primary batch identification and training setup."/><div className="add-branch-fields add-branch-fields--two">
-          <Field label="Batch Name *" error={errors.batchName?.message}><input {...register("batchName",{required:"Batch name required"})}/></Field><Field label="Batch Code"><input {...register("batchCode")} placeholder="EV-TKD-01"/></Field>
-          <Field label="Branch"><select {...register("branch")}><option value="">Academy level / Not assigned</option>{branches.map((branch)=><option key={branch._id} value={branch._id}>{branch.branchName}{branch.branchCode?` (${branch.branchCode})`:""}</option>)}</select></Field><Field label="Martial Art / Sport *" error={errors.martialArt?.message}><input {...register("martialArt",{required:"Martial art required"})}/></Field>
-          <Field label="Gender Group"><select {...register("genderGroup")}><option value="both">Male & Female</option><option value="male">Male Only</option><option value="female">Female Only</option></select></Field><Field label="Batch Type"><select {...register("batchType")}><Options values={BATCH_TYPES}/></select></Field>
-          <Field label="Skill Level"><select {...register("skillLevel")}><Options values={SKILL_LEVELS}/></select></Field><Field label="Training Mode"><select {...register("mode")}><Options values={MODES}/></select></Field>
-          <Field label="Session Slot"><select {...register("sessionSlot")}><Options values={SESSION_SLOTS}/></select></Field><Field label="Venue / Hall"><input {...register("venue")} placeholder="Hall A / Dojang 1"/></Field><Field label="Batch Color Tag"><input {...register("batchColor")} placeholder="Red / Black / #cf0006"/></Field>
-        </div><div className="add-branch-toggle-row"><SwitchField className="edit-batch-switch" checked={Boolean(values.isActive)} onChange={(checked)=>setValue("isActive",checked,{shouldDirty:true})} label="Active Batch" description="Allow operational use and student assignment."/><SwitchField className="edit-batch-switch" checked={Boolean(values.isCompetitionBatch)} onChange={(checked)=>setValue("isCompetitionBatch",checked,{shouldDirty:true})} label="Competition Batch" description="Mark as a dedicated competition training batch."/></div></section>
-
-        <section className="add-branch-card"><BatchFormSectionHeader icon={CalendarDays} eyebrow="Timetable" title="Training Schedule" description="Choose weekly days and session timings."/><div className="add-branch-fields add-branch-fields--two"><Field label="Start Time"><input type="time" {...register("startTime")}/></Field><Field label="End Time"><input type="time" {...register("endTime")}/></Field></div><div className="edit-batch-presets"><button type="button" onClick={()=>setValue("days",DAYS)}>All Days</button><button type="button" onClick={()=>setValue("days",DAYS.slice(0,6))}>Sunday Off</button><button type="button" onClick={()=>setValue("days",DAYS.slice(0,5))}>Weekdays</button><button type="button" onClick={()=>setValue("days",["monday","wednesday","friday"])}>M W F</button><button type="button" onClick={()=>setValue("days",["tuesday","thursday","saturday"])}>T T S</button><button type="button" onClick={()=>setValue("days",[])}>Clear</button></div><div className="add-branch-chip-grid edit-batch-days">{DAYS.map((day)=><button type="button" key={day} className={values.days?.includes(day)?"is-selected":""} onClick={()=>toggleDay(day)}>{values.days?.includes(day)?<Check size={13}/>:null}{day}</button>)}</div></section>
-      </div>
-
-      <section className="add-branch-card"><BatchFormSectionHeader icon={UsersRound} eyebrow="Team" title="Coaches in Charge" description="Assign primary and supporting coaching staff."/><div className="add-branch-coach-grid"><article><h3><UserRound size={16}/> Head Coach</h3><Field label="Coach Name"><input {...register("headCoachName")} placeholder="Enter head coach name"/></Field></article><article><h3><UserRound size={16}/> Assistant Coach</h3><Field label="Coach Name"><input {...register("assistantCoachName")} placeholder="Enter assistant coach name"/></Field></article></div><div className="add-branch-additional-head"><div><h3>Additional Coaches</h3><p>Add more coaching staff when required.</p></div><button type="button" className="btn btn-outline" onClick={()=>setCoaches((list)=>[...list,{name:"",phone:""}])}><Plus size={15}/> Add Coach</button></div>{coaches.length?<div className="add-branch-additional-list">{coaches.map((coach,index)=><article key={index}><span className="add-branch-coach-number">{index+1}</span><Field label="Coach Name"><input value={coach.name} onChange={(event)=>setCoaches((list)=>list.map((item,itemIndex)=>itemIndex===index?{...item,name:event.target.value}:item))}/></Field><Field label="Coach Phone"><input value={coach.phone} onChange={(event)=>setCoaches((list)=>list.map((item,itemIndex)=>itemIndex===index?{...item,phone:event.target.value}:item))}/></Field><button type="button" className="add-branch-remove-coach" onClick={()=>setCoaches((list)=>list.filter((_,itemIndex)=>itemIndex!==index))}><Trash2 size={16}/></button></article>)}</div>:<div className="add-branch-empty-coaches">No additional coaches added.</div>}</section>
-
-      <div className="add-branch-secondary-grid">
-        <section className="add-branch-card"><BatchFormSectionHeader icon={Target} eyebrow="Eligibility" title="Capacity & Eligibility" description="Student limits, age and belt requirements."/><div className="add-branch-fields add-branch-fields--two"><Field label="Maximum Students"><input type="number" min="0" {...register("maxStudents")}/></Field><Field label="Minimum Attendance %"><input type="number" min="0" max="100" {...register("minimumAttendancePercentage")}/></Field><Field label="Minimum Age"><input type="number" min="0" {...register("minAge")}/></Field><Field label="Maximum Age"><input type="number" min="0" {...register("maxAge")}/></Field><Field label="Minimum Belt"><select {...register("minBelt")}>{BELTS.map((belt)=><option key={belt||"none"} value={belt}>{belt||"Select Belt"}</option>)}</select></Field><Field label="Maximum Belt"><select {...register("maxBelt")}>{BELTS.map((belt)=><option key={belt||"none"} value={belt}>{belt||"Select Belt"}</option>)}</select></Field></div></section>
-        <section className="add-branch-card"><BatchFormSectionHeader icon={WalletCards} eyebrow="Finance" title="Batch Fee Structure" description="Default recurring and additional charges."/><div className="add-branch-fields add-branch-fields--two">{[["monthlyFee","Monthly Fee"],["quarterlyFee","Quarterly Fee"],["annualFee","Annual Fee"],["registrationFee","Registration Fee"],["uniformFee","Uniform Fee"],["examinationFee","Examination Fee"],["lateFee","Late Fee"]].map(([name,label])=><Field key={name} label={label}><div className="edit-batch-money"><BadgeIndianRupee size={15}/><input type="number" min="0" step="0.01" {...register(name)}/></div></Field>)}</div></section>
-      </div>
-
-      <section className="add-branch-card"><BatchFormSectionHeader icon={Languages} eyebrow="Communication" title="Links & Communication" description="Language preferences and online batch resources."/><div className="add-branch-fields edit-batch-communication"><Field label="Batch Language"><input {...register("batchLanguage")} placeholder="Hindi + English"/></Field><Field label="WhatsApp Group Link"><input {...register("whatsappGroupLink")} placeholder="https://chat.whatsapp.com/..."/></Field><Field label="Google Meet Link"><input {...register("googleMeetLink")} placeholder="https://meet.google.com/..."/></Field><Field label="Notes" className="edit-batch-notes"><textarea rows="4" {...register("notes")} placeholder="Add operational notes for this batch"/></Field></div></section>
-
-      <FormActionBar className="add-branch-actions edit-batch-actions" icon={Settings2} title="Ready to update this batch?" description="Review all changes before saving." actions={<><button type="button" className="btn btn-outline" onClick={()=>navigate(`/batches/${id}`)} disabled={saving}><X size={16}/> Cancel</button><button type="button" className="btn btn-outline" onClick={loadPage} disabled={saving}><RefreshCw size={16}/> Reset Changes</button><button type="submit" className="btn btn-primary" disabled={saving}><Save size={16}/> {saving?"Updating…":"Update Batch"}</button></>}/>
-    </form>
-  </div>;
+  return <BatchForm mode="edit" batchId={id} />;
 };
 
 export default EditBatch;

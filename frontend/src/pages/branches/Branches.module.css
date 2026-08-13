@@ -29,7 +29,8 @@
 :global(.branches-status-filter button.is-active) { color:#fff; background:var(--br-red); box-shadow:0 4px 12px rgba(207,0,6,.18); }
 :global(.branches-error) { display:flex; align-items:center; gap:10px; padding:13px 15px; border:1px solid #fecaca; border-radius:12px; color:#991b1b; background:#fff7f7; }
 :global(.branches-error button){margin-left:auto;color:#991b1b;background:transparent;font-weight:900}
-:global(.branches-table-card) { overflow:hidden; border:1px solid var(--br-line); border-radius:15px; background:#fff; box-shadow:0 7px 22px rgba(8,22,47,.05); }
+:global(.branches-results){min-width:0}
+:global(.branches-card-list){display:grid;gap:12px}
 :global(.branches-table-wrap) { overflow-x:auto; }
 :global(.branches-table){width:100%;min-width:1180px;border-collapse:collapse}
 :global(.branches-table th),

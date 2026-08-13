@@ -4,13 +4,9 @@ import {
   Building2,
   CheckCircle2,
   Crown,
-  MapPin,
-  Pencil,
   Plus,
-  Power,
   RefreshCw,
   Search,
-  UserRound,
   XCircle,
 } from "lucide-react";
 
@@ -21,16 +17,11 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import MetricGrid from "../../components/common/MetricGrid.jsx";
+import BranchCard from "./components/BranchCard.jsx";
 import { PAGE_SIZE } from "./branch.config.js";
 import { joinAddressParts, unwrapList } from "./branch.utils.js";
 import "./Branches.module.css";
 
-
-const displayValue = (value) => String(value ?? "").trim() || "-";
-const displayPhone = (countryCode, phone) => {
-  const number = String(phone ?? "").trim();
-  return number ? `${String(countryCode || "+91").trim()} ${number}` : "-";
-};
 
 const Branches = () => {
   const navigate = useNavigate();
@@ -181,26 +172,9 @@ const Branches = () => {
 
       {error ? <div className="branches-error" role="alert">{error}<button type="button" onClick={() => loadPage()}>Retry</button></div> : null}
 
-      <section className="branches-table-card" aria-busy={loading}>
+      <section className="branches-results" aria-busy={loading}>
         {loading ? <div className="branches-state"><span className="branches-spinner" /><strong>Loading branches…</strong></div> : visibleBranches.length ? (
-          <div className="branches-table-wrap">
-            <table className="branches-table">
-              <thead><tr><th>Branch</th><th>Code</th><th>District</th><th>Branch phone</th><th>Head coach</th><th>Coach phone</th><th>Main</th><th>Status</th><th>Actions</th></tr></thead>
-              <tbody>{visibleBranches.map((branch) => (
-                <tr key={branch._id} onClick={() => navigate(`/branches/${branch._id}`)}>
-                  <td><div className="branches-identity"><span><Building2 size={17} /></span><div><strong>{displayValue(branch.branchName)}</strong><small><MapPin size={11} /> {displayValue(branch.address || branch.city)}</small></div></div></td>
-                  <td><code>{displayValue(branch.branchCode)}</code></td>
-                  <td>{displayValue(branch.city || branch.district)}</td>
-                  <td>{displayPhone(branch.countryCode, branch.phone)}</td>
-                  <td><span className="branches-coach"><UserRound size={14} /> {displayValue(branch.headCoachName)}</span></td>
-                  <td>{displayPhone(branch.headCoachCountryCode, branch.headCoachPhone)}</td>
-                  <td>{branch.isMainBranch ? <span className="branches-main-badge"><Crown size={12} /> Main</span> : <span className="branches-muted">—</span>}</td>
-                  <td><span className={`branches-status ${branch.isActive !== false ? "branches-status--active" : "branches-status--inactive"}`}><i />{branch.isActive !== false ? "Active" : "Inactive"}</span></td>
-                  <td onClick={(event) => event.stopPropagation()}><div className="branches-actions"><Link to={`/branches/${branch._id}/edit`} title="Edit branch"><Pencil size={15} /><span>Edit</span></Link>{branch.isActive !== false ? <button type="button" onClick={() => handleDeactivate(branch)} disabled={deactivatingId === branch._id} title="Deactivate branch"><Power size={15} /><span>{deactivatingId === branch._id ? "Working" : "Deactivate"}</span></button> : null}</div></td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
+          <div className="branches-card-list">{visibleBranches.map((branch) => <BranchCard key={branch._id} branch={branch} busy={deactivatingId===branch._id} onOpen={(item)=>navigate(`/branches/${item._id}`)} onDeactivate={handleDeactivate}/>)}</div>
         ) : <div className="branches-state"><Building2 size={34} /><strong>No branches found</strong><p>Try another filter or add your first branch.</p><Link to="/branches/new" className="btn btn-primary"><Plus size={16} /> Add Branch</Link></div>}
 
         {!loading && branches.length > PAGE_SIZE ? <footer className="branches-pagination"><span>Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, branches.length)} of {branches.length}</span><div><button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)}>Previous</button>{Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => <button type="button" key={page} className={currentPage === page ? "is-active" : ""} onClick={() => setCurrentPage(page)}>{page}</button>)}<button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => page + 1)}>Next</button></div></footer> : null}
