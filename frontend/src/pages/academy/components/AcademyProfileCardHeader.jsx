@@ -1,11 +1,14 @@
-const AcademyProfileCardHeader = ({ eyebrow, icon: Icon, title }) => (
-  <header className="academy-profile-card__header">
-    <div>
-      <Icon aria-hidden="true" />
-      <span>{eyebrow}</span>
-      <h2>{title}</h2>
-    </div>
-  </header>
+import SectionHeader from "../../../components/common/SectionHeader.jsx";
+
+const AcademyProfileCardHeader = ({ eyebrow, icon, title }) => (
+  <SectionHeader
+    classNames={{ root: "academy-profile-card__header" }}
+    eyebrow={eyebrow}
+    eyebrowElement="span"
+    icon={icon}
+    iconInsideCopy
+    title={title}
+  />
 );
 
 export default AcademyProfileCardHeader;

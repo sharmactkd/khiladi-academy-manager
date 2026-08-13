@@ -1,14 +1,7 @@
-const DashboardStatCard = ({ icon: Icon, title, value, tone = "red", subtitle }) => (
-  <article className={`owner-stat owner-stat--${tone}`}>
-    <span className="owner-stat__icon" aria-hidden="true">
-      <Icon size={23} strokeWidth={2.2} />
-    </span>
-    <span className="owner-stat__copy">
-      <small>{title}</small>
-      <strong>{value}</strong>
-      {subtitle ? <span>{subtitle}</span> : null}
-    </span>
-  </article>
+import MetricCard from "../../../components/common/MetricCard.jsx";
+
+const DashboardStatCard = ({ icon, title, value, tone = "red", subtitle }) => (
+  <MetricCard className={`owner-stat owner-stat--${tone}`} classNames={{ icon: "owner-stat__icon", copy: "owner-stat__copy" }} copyAs="span" icon={icon} iconSize={23} iconStrokeWidth={2.2} label={title} value={value} subtitle={subtitle} />
 );
 
 export default DashboardStatCard;

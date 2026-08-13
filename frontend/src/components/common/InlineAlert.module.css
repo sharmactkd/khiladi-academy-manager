@@ -1,0 +1,6 @@
+.root { min-width: 0; }
+.root > span { flex: 1; }
+.error { color: var(--color-danger); }
+.success { color: var(--color-success); }
+.warning { color: var(--color-warning); }
+.info { color: var(--color-info); }

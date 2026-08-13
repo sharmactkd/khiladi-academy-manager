@@ -1,1 +1,44 @@
 :global(.batches-page) { isolation: isolate; }
+/* batches styles extracted from global.css. Selectors remain globally compatible during staged CSS Modules migration. */
+
+:global(.batches-summary){display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+:global(.batches-summary article){min-width:0;display:flex;align-items:center;gap:11px;min-height:88px;padding:14px;border:1px solid var(--batch-line);border-radius:13px;background:#fff;box-shadow:0 5px 18px rgba(8,22,47,.045)}
+:global(.batches-summary article>span){flex:0 0 40px;width:40px;height:40px;display:grid;place-items:center;border-radius:50%;background:#feecee;color:var(--batch-red)}
+:global(.batches-summary article>div){min-width:0;display:grid;gap:2px}
+:global(.batches-summary small){color:#475569;font-size:10px;font-weight:700}
+:global(.batches-summary strong){color:var(--batch-red);font-size:25px;font-weight:950}
+:global(.batches-summary .is-green>span){background:#e8f7ed;color:#15803d}
+:global(.batches-summary .is-green strong){color:#15803d}
+:global(.batches-summary .is-slate>span){background:#eef2f7;color:#475569}
+:global(.batches-summary .is-slate strong){color:#475569}
+:global(.batches-summary .is-blue>span){background:#e5f4fc;color:#0369a1}
+:global(.batches-summary .is-blue strong){color:#0369a1}
+:global(.batches-filters){display:grid;grid-template-columns:auto minmax(0,1fr);align-items:end;gap:18px;padding:14px 16px;border:1px solid var(--batch-line);border-radius:14px;background:#fff;box-shadow:0 5px 18px rgba(8,22,47,.04)}
+:global(.batches-filters__title){display:flex;align-items:center;gap:9px;color:var(--batch-red)}
+:global(.batches-filters__title>div){display:grid}
+:global(.batches-filters__title strong){color:var(--batch-navy);font-size:12px}
+:global(.batches-filters__title small){color:var(--batch-muted);font-size:9px}
+:global(.batches-filters__grid){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+:global(.batches-filters label){display:grid;gap:5px;color:#334155;font-size:9px;font-weight:750}
+:global(.batches-table-card){overflow:hidden;border:1px solid var(--batch-line);border-radius:15px;background:#fff;box-shadow:0 7px 22px rgba(8,22,47,.05)}
+:global(.batches-table-wrap){width:100%;overflow:auto}
+:global(.batches-table){width:100%;border-collapse:collapse}
+:global(.batches-table th){padding:11px 10px;background:#f5f7fa;color:#64748b;font-size:9px;font-weight:850;text-transform:uppercase;white-space:nowrap}
+:global(.batches-table td){padding:11px 10px;border-bottom:1px solid #edf0f4;color:#334155;font-size:10px;vertical-align:middle}
+:global(.batches-table tbody tr){cursor:pointer}
+:global(.batches-table tbody tr:hover){background:#fff9f9}
+:global(.batches-table td>strong){display:block;color:var(--batch-navy);font-size:11px}
+:global(.batches-competition){display:block;margin-top:3px;color:var(--batch-red);font-size:8px;font-weight:750}
+:global(.batches-status){display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:9px;font-weight:850;text-transform:capitalize}
+:global(.batches-status--active){background:#e8f7ed;color:#15803d}
+:global(.batches-status--inactive){background:#f1f5f9;color:#64748b}
+:global(.batches-actions){display:flex;align-items:center;gap:5px;white-space:nowrap}
+:global(.batches-action){min-height:29px;padding:5px 7px;border:1px solid #dbe2ea;border-radius:7px;background:#fff;color:#475569;font-size:8px;font-weight:800}
+:global(.batches-action--edit){color:var(--batch-red);border-color:#f2b9bc}
+:global(.batches-action--delete){color:#b91c1c;border-color:#fecaca;background:#fff7f7}
+:global(.batches-action--status.is-active){color:#b45309}
+:global(.batches-action--status.is-inactive){color:#15803d}
+:global(.batches-state p){margin:0;font-size:10px}
+:global(.batches-spinner){width:36px;height:36px;border:4px solid #fee2e2;border-top-color:var(--batch-red);border-radius:50%;animation:owner-spin .85s linear infinite}
+@media (max-width:760px){:global(.batches-filters){grid-template-columns:1fr}}
+@media (max-width:760px){:global(.batches-filters__grid){grid-template-columns:1fr}}

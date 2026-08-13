@@ -1,17 +1,17 @@
 import { AlertTriangle } from "lucide-react";
+import InlineAlert from "../../../components/common/InlineAlert.jsx";
 
 const DashboardErrorBanner = ({ error, onRetry }) => {
   if (!error) return null;
 
-  return (
-    <div className="owner-dashboard__error" role="alert">
-      <AlertTriangle size={18} />
-      <span>{error}</span>
-      <button type="button" onClick={onRetry}>
+  return <InlineAlert
+    action={<button type="button" onClick={onRetry}>
         Retry
-      </button>
-    </div>
-  );
+      </button>}
+    className="owner-dashboard__error"
+    icon={AlertTriangle}
+    message={error}
+  />;
 };
 
 export default DashboardErrorBanner;

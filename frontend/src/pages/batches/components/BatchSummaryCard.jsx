@@ -1,8 +1,5 @@
-const BatchSummaryCard = ({ className = "", icon: Icon, label, value }) => (
-  <article className={className}>
-    <span><Icon size={21} aria-hidden="true" /></span>
-    <div><small>{label}</small><strong>{value}</strong></div>
-  </article>
-);
+import MetricCard from "../../../components/common/MetricCard.jsx";
+
+const BatchSummaryCard = (props) => <MetricCard iconSize={21} {...props} />;
 
 export default BatchSummaryCard;

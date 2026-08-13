@@ -1,5 +1,7 @@
+import MetricCard from "../../../components/common/MetricCard.jsx";
+
 const BatchDetailStat = ({ label, value }) => (
-  <div className="batch-detail-stat"><span>{label}</span><strong>{value}</strong></div>
+  <MetricCard as="div" className="batch-detail-stat" flat label={label} value={value} />
 );
 
 export default BatchDetailStat;

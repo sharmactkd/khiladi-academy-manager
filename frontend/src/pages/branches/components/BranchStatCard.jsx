@@ -1,8 +1,7 @@
-const BranchStatCard = ({ icon: Icon, label, value, tone = "red" }) => (
-  <article className={`branches-stat branches-stat--${tone}`}>
-    <span><Icon size={22} aria-hidden="true" /></span>
-    <div><small>{label}</small><strong>{value}</strong></div>
-  </article>
+import MetricCard from "../../../components/common/MetricCard.jsx";
+
+const BranchStatCard = ({ icon, label, value, tone = "red" }) => (
+  <MetricCard className={`branches-stat branches-stat--${tone}`} icon={icon} iconSize={22} label={label} value={value} />
 );
 
 export default BranchStatCard;

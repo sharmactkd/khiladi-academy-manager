@@ -1,7 +1,8 @@
 import { ChevronRight, LoaderCircle, Save } from "lucide-react";
+import FormActionBar from "../../../components/common/FormActionBar.jsx";
 
 const AcademyProfileActions = ({ onCancel, saving }) => (
-  <footer className="academy-profile-actions">
+  <FormActionBar className="academy-profile-actions" actions={<>
     <a href="#identity" className="academy-profile-actions__back">
       Back to top <ChevronRight size={15} aria-hidden="true" />
     </a>
@@ -16,7 +17,7 @@ const AcademyProfileActions = ({ onCancel, saving }) => (
       )}
       {saving ? "Saving…" : "Update Academy"}
     </button>
-  </footer>
+  </>} />
 );
 
 export default AcademyProfileActions;

@@ -7,6 +7,7 @@ import {
   MapPin,
   UserRound,
 } from "lucide-react";
+import "./AcademyHeroHeader.module.css";
 
 const SUMMARY_ICONS = {
   branches: Building2,

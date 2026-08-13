@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Country, State, City } from "country-state-city";
 import ReactCountryFlag from "react-country-flag";
 import { Plus, Trash2 } from "lucide-react";
+import "./PhoneLocationFields.module.css";
 
 const DEFAULT_COUNTRY_ISO = "IN";
 const DEFAULT_DIAL_CODE = "+91";
