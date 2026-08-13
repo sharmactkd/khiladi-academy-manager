@@ -10,6 +10,16 @@ const emergencyContactSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const personContactSchema = new mongoose.Schema(
+  {
+    name: { type: String, trim: true, maxlength: 150, default: "" },
+    relation: { type: String, trim: true, maxlength: 80, default: "" },
+    countryCode: { type: String, trim: true, default: "+91" },
+    phone: { type: String, trim: true, default: "" },
+  },
+  { _id: false }
+);
+
 const educationSchema = new mongoose.Schema(
   {
     schoolName: { type: String, trim: true, maxlength: 200, default: "" },
@@ -199,6 +209,11 @@ const studentSchema = new mongoose.Schema(
       default: "",
     },
 
+    parentContacts: {
+      type: [personContactSchema],
+      default: [],
+    },
+
     address: {
       type: String,
       trim: true,
@@ -370,6 +385,11 @@ const studentSchema = new mongoose.Schema(
     emergencyContact: {
       type: emergencyContactSchema,
       default: () => ({}),
+    },
+
+    emergencyContacts: {
+      type: [personContactSchema],
+      default: [],
     },
 
     notes: {

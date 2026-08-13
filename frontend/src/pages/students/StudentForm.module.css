@@ -1,0 +1,340 @@
+:global(.student-form-page) {
+  --student-red: #e30613;
+  --student-ink: #09162d;
+  --student-muted: #64748b;
+  --student-border: #dbe4ef;
+  --student-surface: #fff;
+}
+
+:global(.student-form) {
+  display: grid;
+  gap: 16px;
+}
+
+:global(.student-form-grid) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+:global(.student-form-card) {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--student-border);
+  border-radius: 15px;
+  background: var(--student-surface);
+  box-shadow: 0 10px 28px rgb(15 23 42 / 5%);
+}
+
+:global(.student-form-card__header) {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e8edf4;
+  background: linear-gradient(180deg, #fff 0%, #fdfefe 100%);
+}
+
+:global(.student-form-card__header > div:last-child:not(:nth-child(2))) {
+  margin-left: auto;
+}
+
+:global(.student-form-card__icon) {
+  color: var(--student-red);
+  background: #fff0f1;
+}
+
+:global(.student-form-card__header [class*="eyebrow"]) {
+  color: var(--student-red);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+:global(.student-form-card__header h2),
+:global(.student-form-card__header h3) {
+  color: var(--student-ink);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+:global(.student-form-card__header p) {
+  color: var(--student-muted);
+  font-size: 10px;
+}
+
+:global(.student-identity-actions) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+:global(.student-identity-actions > label) {
+  display: grid;
+  gap: 4px;
+  min-width: 190px;
+  color: var(--student-ink);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+:global(.student-identity-actions select) {
+  min-height: 38px;
+  border: 1px solid #d5deea;
+  border-radius: 8px;
+  background: #fff;
+  padding: 7px 10px;
+  color: var(--student-ink);
+  font-size: 10px;
+}
+
+:global(.student-identity-actions > label:last-child) {
+  min-width: 245px;
+  min-height: 48px;
+  border: 1px solid #dbe4ef;
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+:global(.student-form-body),
+:global(.student-form-fields),
+:global(.student-form-identity) {
+  padding: 16px;
+}
+
+:global(.student-form-identity) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 18px;
+  align-items: start;
+}
+
+:global(.student-form-identity .student-form-fields) {
+  padding: 0;
+}
+
+:global(.student-form-fields) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 13px;
+}
+
+:global(.student-form-fields--two) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+:global(.student-form-fields--three) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+:global(.student-chip-field) {
+  min-width: 0;
+}
+
+:global(.student-chip-field--wide) {
+  grid-column: span 1;
+}
+
+:global(.student-chip-field--padded) {
+  padding: 15px 16px 4px;
+}
+
+:global(.student-chip-field [class*="label"]) {
+  color: var(--student-ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+:global(.student-chip-field [class*="chips"]) {
+  gap: 7px;
+}
+
+:global(.student-chip-field [class*="chip"]) {
+  min-height: 37px;
+  border: 1px solid #ff8f96;
+  border-radius: 9px;
+  background: #fff;
+  padding: 8px 14px;
+  color: var(--student-ink);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+:global(.student-chip-field [class*="chip"] svg) {
+  display: none;
+}
+
+:global(.student-chip-field [class*="selected"]) {
+  border-color: var(--student-red);
+  background: var(--student-red);
+  color: #fff;
+  box-shadow: 0 7px 15px rgb(227 6 19 / 14%);
+}
+
+:global(.student-form-body) {
+  display: grid;
+  gap: 14px;
+}
+
+:global(.student-form-fields > label),
+:global(.student-form-body > label),
+:global(.student-form-wide) {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--student-ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+:global(.student-form-fields > label > span b),
+:global(.student-form-body > label > span b) {
+  color: var(--student-red);
+}
+
+:global(.student-form input:not([type="checkbox"]):not([type="file"])),
+:global(.student-form select),
+:global(.student-form textarea) {
+  width: 100%;
+  min-height: 41px;
+  border: 1px solid #cfd9e6;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--student-ink);
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+:global(.student-form textarea) {
+  min-height: 76px;
+  resize: vertical;
+}
+
+:global(.student-form input:focus),
+:global(.student-form select:focus),
+:global(.student-form textarea:focus) {
+  border-color: #f15b64;
+  box-shadow: 0 0 0 3px rgb(227 6 19 / 8%);
+}
+
+:global(.student-form input[readonly]) {
+  background: #f5f7fa;
+  color: #526078;
+}
+
+:global(.student-form-fields > label > small),
+:global(.student-form-body > label > small) {
+  color: #dc2626;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+:global(.student-form-wide) {
+  margin: 0 16px 16px;
+}
+
+:global(.student-form-body .student-form-wide) {
+  margin: 0;
+}
+
+:global(.student-medical-options) {
+  display: grid;
+  gap: 8px;
+  padding: 0 16px 14px;
+}
+
+:global(.student-medical-options > strong) {
+  color: var(--student-ink);
+  font-size: 10px;
+}
+
+:global(.student-medical-options__grid) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+:global(.student-medical-options__grid label) {
+  display: inline-flex;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 31px;
+  border: 1px solid #ff9ca3;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+:global(.student-medical-options__grid label.is-selected) {
+  border-color: var(--student-red);
+  background: var(--student-red);
+  color: #fff;
+}
+
+:global(.student-medical-options__grid input) {
+  accent-color: var(--student-red);
+}
+
+:global(.student-form-actions) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 13px 15px;
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  border: 1px solid var(--student-border);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 12px 34px rgb(15 23 42 / 12%);
+  backdrop-filter: blur(12px);
+}
+
+:global(.student-form-actions > div:first-child) {
+  margin-right: auto;
+}
+
+:global(.student-form-actions .btn) {
+  min-height: 39px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+@media (max-width: 1080px) {
+  :global(.student-form-identity) { grid-template-columns: 1fr; }
+  :global(.student-form-identity > :last-child) { max-width: 420px; }
+}
+
+@media (max-width: 860px) {
+  :global(.student-form-grid) { grid-template-columns: 1fr; }
+  :global(.student-form-fields--three) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :global(.student-identity-actions) { align-items: stretch; flex-direction: column; }
+  :global(.student-form-card__header) { align-items: flex-start; flex-wrap: wrap; }
+  :global(.student-form-card__header > div:last-child:not(:nth-child(2))) { width: 100%; margin-left: 0; }
+}
+
+@media (max-width: 560px) {
+  :global(.student-form-fields--two),
+  :global(.student-form-fields--three) { grid-template-columns: 1fr; }
+  :global(.student-form-card__header),
+  :global(.student-form-body),
+  :global(.student-form-fields),
+  :global(.student-form-identity) { padding: 13px; }
+  :global(.student-form-wide) { margin: 0 13px 13px; }
+  :global(.student-form-actions) { position: static; flex-wrap: wrap; }
+  :global(.student-form-actions > div:first-child) { width: 100%; margin: 0 0 4px; }
+  :global(.student-form-actions .btn) { flex: 1 1 140px; }
+}

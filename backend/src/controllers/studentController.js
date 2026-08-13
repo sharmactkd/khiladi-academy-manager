@@ -237,6 +237,35 @@ const normalizeStudentPayload = (body = {}) => {
   payload.parentCountryCode = cleanString(payload.parentCountryCode || "+91", 10);
   payload.parentPhone = cleanPhone(payload.parentPhone);
 
+  const normalizeContacts = (value) => {
+    let rows = value;
+    if (typeof rows === "string") {
+      try { rows = JSON.parse(rows); } catch { rows = []; }
+    }
+    if (!Array.isArray(rows)) return [];
+    return rows.slice(0, 6).map((contact) => ({
+      name: cleanString(contact?.name, 150),
+      relation: cleanString(contact?.relation, 80),
+      countryCode: cleanString(contact?.countryCode || "+91", 10),
+      phone: cleanPhone(contact?.phone),
+    })).filter((contact) => contact.name || contact.phone);
+  };
+
+  payload.parentContacts = normalizeContacts(payload.parentContacts);
+  if (payload.parentContacts.length) {
+    const primaryParent = payload.parentContacts[0];
+    payload.parentName = primaryParent.name;
+    payload.parentCountryCode = primaryParent.countryCode;
+    payload.parentPhone = primaryParent.phone;
+  } else if (payload.parentName || payload.parentPhone) {
+    payload.parentContacts = [{
+      name: payload.parentName,
+      relation: cleanString(payload.parentRelation, 80),
+      countryCode: payload.parentCountryCode,
+      phone: payload.parentPhone,
+    }];
+  }
+
   payload.schoolName = cleanString(payload.schoolName, 200);
   payload.className = cleanString(payload.className, 80);
   payload.section = cleanString(payload.section, 40);
@@ -304,6 +333,13 @@ const normalizeStudentPayload = (body = {}) => {
     };
   }
 
+  payload.emergencyContacts = normalizeContacts(payload.emergencyContacts);
+  if (payload.emergencyContacts.length) {
+    payload.emergencyContact = payload.emergencyContacts[0];
+  } else if (payload.emergencyContact?.name || payload.emergencyContact?.phone) {
+    payload.emergencyContacts = [payload.emergencyContact];
+  }
+
   payload.status = normalizeStatus(payload.status);
 
   delete payload.studentCode;
@@ -314,6 +350,7 @@ const normalizeStudentPayload = (body = {}) => {
   delete payload.emergencyContactPhone;
   delete payload.emergencyContactRelation;
   delete payload.emergencyContactCountryCode;
+  delete payload.parentRelation;
 
   return payload;
 };

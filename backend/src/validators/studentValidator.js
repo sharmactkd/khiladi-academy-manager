@@ -24,6 +24,25 @@ const phoneValidator = (field, label) =>
       return true;
     });
 
+const contactArrayValidator = (field, label) =>
+  body(field).optional().custom((value) => {
+    let contacts = value;
+    if (typeof contacts === "string") {
+      try { contacts = JSON.parse(contacts); } catch { throw new Error(`${label} must be valid JSON`); }
+    }
+    if (!Array.isArray(contacts) || contacts.length > 6) {
+      throw new Error(`${label} must contain at most 6 contacts`);
+    }
+    const valid = contacts.every((contact) =>
+      contact && typeof contact === "object" &&
+      String(contact.name || "").length <= 150 &&
+      String(contact.relation || "").length <= 80 &&
+      String(contact.phone || "").replace(/\D/g, "").length <= 15
+    );
+    if (!valid) throw new Error(`${label} contains invalid contact details`);
+    return true;
+  });
+
 export const studentIdValidator = [
   param("id").isMongoId().withMessage("Invalid student ID"),
 ];
@@ -56,11 +75,14 @@ export const createStudentValidator = [
     .withMessage("DOB must be a valid date"),
 
   body("batch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
+  body("branch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
   body("gender").isIn(["male", "female", "other"]).withMessage("Invalid gender"),
   body("email").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
 
   phoneValidator("phone", "Phone"),
   phoneValidator("emergencyContactPhone", "Emergency contact phone"),
+  contactArrayValidator("parentContacts", "Parent contacts"),
+  contactArrayValidator("emergencyContacts", "Emergency contacts"),
 
   body("schoolName")
   .optional({ checkFalsy: true })
@@ -93,6 +115,7 @@ export const updateStudentValidator = [
     .withMessage("Last name cannot exceed 100 characters"),
 
   body("batch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
+  body("branch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
   body("gender").optional().isIn(["male", "female", "other"]),
 
   body("dateOfBirth")
@@ -110,6 +133,8 @@ export const updateStudentValidator = [
   phoneValidator("phone", "Phone"),
   phoneValidator("parentPhone", "Parent phone"),
   phoneValidator("emergencyContactPhone", "Emergency contact phone"),
+  contactArrayValidator("parentContacts", "Parent contacts"),
+  contactArrayValidator("emergencyContacts", "Emergency contacts"),
 
   body("schoolName")
   .optional({ checkFalsy: true })
