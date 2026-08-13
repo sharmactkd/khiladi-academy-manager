@@ -1,0 +1,18 @@
+/*
+ * Academy Profile feature boundary.
+ * Existing academy-profile-* declarations remain in global.css during the
+ * compatibility migration so the current premium Dashboard-aligned cascade
+ * stays pixel-identical. New Academy Profile styling belongs in this module.
+ */
+
+:global(.academy-profile) {
+  isolation: isolate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(.academy-profile *),
+  :global(.academy-profile *::before),
+  :global(.academy-profile *::after) {
+    scroll-behavior: auto;
+  }
+}

@@ -25,6 +25,8 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import BranchFormSectionHeader from "./components/BranchFormSectionHeader.jsx";
+import "./BranchForm.module.css";
 
 const FACILITY_OPTIONS = [
   "Mat Area", "Changing Room", "Washroom", "Drinking Water", "Parking",
@@ -139,13 +141,6 @@ const joinAddressParts = (parts = []) => {
   });
   return values.join(", ");
 };
-
-const SectionHeader = ({ icon: Icon, eyebrow, title, description }) => (
-  <header className="add-branch-card__header">
-    <span className="add-branch-card__icon"><Icon size={19} aria-hidden="true" /></span>
-    <div><small>{eyebrow}</small><h2>{title}</h2>{description ? <p>{description}</p> : null}</div>
-  </header>
-);
 
 const EditBranch = () => {
   const { id } = useParams();
@@ -317,7 +312,7 @@ const EditBranch = () => {
       <form className="add-branch-form" onSubmit={handleSubmit}>
         <div className="add-branch-primary-grid">
           <section className="add-branch-card">
-            <SectionHeader icon={Building2} eyebrow="Identity" title="Branch Identity" description="Primary branch identification and contact details." />
+            <BranchFormSectionHeader icon={Building2} eyebrow="Identity" title="Branch Identity" description="Primary branch identification and contact details." />
             <div className="add-branch-fields add-branch-fields--two">
               <label><span>Branch Name <b>*</b></span><input value={form.branchName} onChange={(event) => updateField("branchName", event.target.value)} placeholder="Enter branch name" required maxLength={120} /></label>
               <label><span>Branch Code <b>*</b></span><input value={form.branchCode} onChange={(event) => updateField("branchCode", event.target.value.toUpperCase())} placeholder="Example: AGR-01" required maxLength={30} /></label>
@@ -331,7 +326,7 @@ const EditBranch = () => {
           </section>
 
           <section className="add-branch-card add-branch-location-card">
-            <SectionHeader icon={MapPin} eyebrow="Contact" title="Location & Contact" description="Complete address and official branch phone numbers." />
+            <BranchFormSectionHeader icon={MapPin} eyebrow="Contact" title="Location & Contact" description="Complete address and official branch phone numbers." />
             <div className="academy-profile-location-fields">
               <PhoneLocationFields countryCode={form.countryCode} phone={form.phone} phoneNumbers={form.phoneNumbers} maxPhones={4} country={form.country} state={form.state} city={form.city} phoneLabel="Phone" onChange={updateField} />
               <label className="academy-profile-contact-email"><span>Email</span><input type="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} placeholder="branch@example.com" /></label>
@@ -341,7 +336,7 @@ const EditBranch = () => {
         </div>
 
         <section className="add-branch-card">
-          <SectionHeader icon={UsersRound} eyebrow="Team" title="Coaches & Branch In-charge" description="Assign the primary coaching team. Additional coaches are optional." />
+          <BranchFormSectionHeader icon={UsersRound} eyebrow="Team" title="Coaches & Branch In-charge" description="Assign the primary coaching team. Additional coaches are optional." />
           <div className="add-branch-coach-grid">
             <article><h3><UserRound size={16} /> Head Coach / Branch In-charge</h3><label><span>Name</span><input value={form.headCoachName} onChange={(event) => updateField("headCoachName", event.target.value)} placeholder="Enter head coach name" maxLength={120} /></label><PhoneLocationFields countryCode={form.headCoachCountryCode} phone={form.headCoachPhone} maxPhones={1} phoneLabel="Mobile Number" showLocation={false} onChange={handleCoachPhoneChange("headCoach")} /><label><span>Achievements / Qualifications</span><textarea value={form.headCoachAchievements} onChange={(event) => updateField("headCoachAchievements", event.target.value)} placeholder="Dan rank, certifications, medals, coaching experience…" rows={3} maxLength={1000} /></label></article>
             <article><h3><UserRound size={16} /> Assistant Coach</h3><label><span>Name</span><input value={form.assistantCoachName} onChange={(event) => updateField("assistantCoachName", event.target.value)} placeholder="Enter assistant coach name" maxLength={120} /></label><PhoneLocationFields countryCode={form.assistantCoachCountryCode} phone={form.assistantCoachPhone} maxPhones={1} phoneLabel="Mobile Number" showLocation={false} onChange={handleCoachPhoneChange("assistantCoach")} /><label><span>Achievements / Qualifications</span><textarea value={form.assistantCoachAchievements} onChange={(event) => updateField("assistantCoachAchievements", event.target.value)} placeholder="Dan rank, certifications, medals, coaching experience…" rows={3} maxLength={1000} /></label></article>
@@ -353,13 +348,13 @@ const EditBranch = () => {
 
         <div className="add-branch-secondary-grid">
           <section className="add-branch-card add-branch-selection-card">
-            <SectionHeader icon={Warehouse} eyebrow="Infrastructure" title="Facilities" description="Select everything available at this location." />
+            <BranchFormSectionHeader icon={Warehouse} eyebrow="Infrastructure" title="Facilities" description="Select everything available at this location." />
             <div className="add-branch-chip-grid">{[...new Set([...FACILITY_OPTIONS, ...form.customFacilities])].map((facility) => <button type="button" key={facility} className={form.facilities.includes(facility) ? "is-selected" : ""} onClick={() => toggleArrayValue("facilities", facility)}>{form.facilities.includes(facility) ? <Check size={13} /> : <Plus size={13} />}{facility}</button>)}</div>
             <div className="add-branch-custom-row"><input value={form.customFacility} onChange={(event) => updateField("customFacility", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customFacility", "facilities")} placeholder="Add custom facility" /><button type="button" onClick={() => addCustomValue("customFacility", "facilities")} disabled={!form.customFacility.trim()}><Plus size={14} /> Add</button></div>
           </section>
 
           <section className="add-branch-card add-branch-selection-card">
-            <SectionHeader icon={Languages} eyebrow="Communication" title="Languages Spoken" description="Languages supported by the branch team." />
+            <BranchFormSectionHeader icon={Languages} eyebrow="Communication" title="Languages Spoken" description="Languages supported by the branch team." />
             <div className="add-branch-chip-grid">{[...new Set([...LANGUAGE_OPTIONS, ...form.customLanguages])].map((language) => <button type="button" key={language} className={form.languagesSpoken.includes(language) ? "is-selected" : ""} onClick={() => toggleArrayValue("languagesSpoken", language)}>{form.languagesSpoken.includes(language) ? <Check size={13} /> : <Plus size={13} />}{language}</button>)}</div>
             <div className="add-branch-custom-row"><input value={form.customLanguage} onChange={(event) => updateField("customLanguage", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customLanguage", "languagesSpoken")} placeholder="Add custom language" /><button type="button" onClick={() => addCustomValue("customLanguage", "languagesSpoken")} disabled={!form.customLanguage.trim()}><Plus size={14} /> Add</button></div>
           </section>

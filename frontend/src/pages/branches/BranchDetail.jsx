@@ -11,6 +11,8 @@ import { getBranchById } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import BranchDetailSectionHeader from "./components/BranchDetailSectionHeader.jsx";
+import "./BranchDetail.module.css";
 
 const displayValue = (value, fallback = "Not added") =>
   String(value ?? "").trim() || fallback;
@@ -50,13 +52,6 @@ const MetricCard = ({ icon: Icon, label, value, tone = "red" }) => (
     <span><Icon size={22} aria-hidden="true" /></span>
     <div><small>{label}</small><strong>{value}</strong></div>
   </article>
-);
-
-const SectionHeader = ({ icon: Icon, eyebrow, title, description }) => (
-  <header className="branch-detail-card__header">
-    <span className="branch-detail-card__icon"><Icon size={19} aria-hidden="true" /></span>
-    <div><small>{eyebrow}</small><h2>{title}</h2>{description ? <p>{description}</p> : null}</div>
-  </header>
 );
 
 const CoachCard = ({ title, name, countryCode, phone, achievements }) => (
@@ -189,7 +184,7 @@ const BranchDetail = () => {
 
       <div className="branch-detail-primary-grid">
         <section className="branch-detail-card">
-          <SectionHeader icon={Building2} eyebrow="Identity" title="Branch Information" description="Core identity and operating status." />
+          <BranchDetailSectionHeader icon={Building2} eyebrow="Identity" title="Branch Information" description="Core identity and operating status." />
           <div className="branch-detail-items">
             <DetailItem icon={UserRound} label="Director Name">{displayValue(branch.directorName)}</DetailItem>
             <DetailItem icon={Building2} label="Branch Code">{displayValue(branch.branchCode)}</DetailItem>
@@ -198,7 +193,7 @@ const BranchDetail = () => {
           </div>
         </section>
         <section className="branch-detail-card">
-          <SectionHeader icon={MapPin} eyebrow="Contact" title="Phone & Location" description="Official communication and complete address." />
+          <BranchDetailSectionHeader icon={MapPin} eyebrow="Contact" title="Phone & Location" description="Official communication and complete address." />
           <div className="branch-detail-items">
             {phones.length ? phones.map((item, index) => <DetailItem key={item.countryCode + item.phone + index} icon={Phone} label={index === 0 ? "Primary Phone" : "Additional Phone " + (index + 1)}>{item.countryCode} {item.phone}</DetailItem>) : <DetailItem icon={Phone} label="Phone">Not added</DetailItem>}
             <DetailItem icon={Mail} label="Email">{displayValue(branch.email)}</DetailItem>
@@ -210,7 +205,7 @@ const BranchDetail = () => {
       </div>
 
       <section className="branch-detail-card">
-        <SectionHeader icon={UsersRound} eyebrow="Team" title="Coaches & Branch In-charge" description="Primary and supporting coaching team." />
+        <BranchDetailSectionHeader icon={UsersRound} eyebrow="Team" title="Coaches & Branch In-charge" description="Primary and supporting coaching team." />
         <div className="branch-detail-coach-grid">
           <CoachCard title="Head Coach / Branch In-charge" name={branch.headCoachName} countryCode={branch.headCoachCountryCode} phone={branch.headCoachPhone} achievements={branch.headCoachAchievements} />
           <CoachCard title="Assistant Coach" name={branch.assistantCoachName} countryCode={branch.assistantCoachCountryCode} phone={branch.assistantCoachPhone} achievements={branch.assistantCoachAchievements} />
@@ -221,11 +216,11 @@ const BranchDetail = () => {
 
       <div className="branch-detail-secondary-grid">
         <section className="branch-detail-card branch-detail-tags-card">
-          <SectionHeader icon={Warehouse} eyebrow="Infrastructure" title="Facilities" description="Infrastructure available at this branch." />
+          <BranchDetailSectionHeader icon={Warehouse} eyebrow="Infrastructure" title="Facilities" description="Infrastructure available at this branch." />
           <div className="branch-detail-tags">{facilities.length ? facilities.map((item) => <span key={item}><CheckCircle2 size={13} />{item}</span>) : <p>No facilities added.</p>}</div>
         </section>
         <section className="branch-detail-card branch-detail-tags-card">
-          <SectionHeader icon={Languages} eyebrow="Communication" title="Languages Spoken" description="Languages supported by the branch team." />
+          <BranchDetailSectionHeader icon={Languages} eyebrow="Communication" title="Languages Spoken" description="Languages supported by the branch team." />
           <div className="branch-detail-tags">{languages.length ? languages.map((item) => <span key={item}><Languages size={13} />{item}</span>) : <p>No languages added.</p>}</div>
         </section>
       </div>

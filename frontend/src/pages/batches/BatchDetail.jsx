@@ -6,6 +6,9 @@ import { batchApi } from "../../api/batchApi.js";
 import { studentApi } from "../../api/studentApi.js";
 
 import { ArrowLeft, Edit3, Plus } from "lucide-react";
+import BatchAcademyHeader from "./components/BatchAcademyHeader.jsx";
+import BatchDetailStat from "./components/BatchDetailStat.jsx";
+import "./BatchDetail.module.css";
 
 const formatTime = (time) => {
   if (!time) return "-";
@@ -126,50 +129,21 @@ const BatchDetail = () => {
       </div>
 
       <div className="batch-detail-stats">
-        <div className="batch-detail-stat">
-          <span>Status</span>
-          <strong>{batch.isActive ? "active" : "inactive"}</strong>
-        </div>
+        <BatchDetailStat label="Status" value={batch.isActive ? "active" : "inactive"} />
 
-        <div className="batch-detail-stat">
-          <span>Students</span>
-          <strong>
-            {studentCount} / {batch.capacity || 0}
-          </strong>
-        </div>
+        <BatchDetailStat label="Students" value={`${studentCount} / ${batch.capacity || 0}`} />
 
-        <div className="batch-detail-stat">
-          <span>Available Seats</span>
-          <strong>{availableSeats}</strong>
-        </div>
+        <BatchDetailStat label="Available Seats" value={availableSeats} />
 
-        <div className="batch-detail-stat">
-          <span>Time</span>
-          <strong>
-            {formatTime(firstSchedule?.startTime)} -{" "}
-            {formatTime(firstSchedule?.endTime)}
-          </strong>
-        </div>
+        <BatchDetailStat label="Time" value={`${formatTime(firstSchedule?.startTime)} - ${formatTime(firstSchedule?.endTime)}`} />
 
-        <div className="batch-detail-stat">
-          <span>Monthly Fee</span>
-          <strong>{currency(batch.monthlyFee)}</strong>
-        </div>
+        <BatchDetailStat label="Monthly Fee" value={currency(batch.monthlyFee)} />
 
-        <div className="batch-detail-stat">
-          <span>Batch Type</span>
-          <strong>{formatLabel(batch.batchType)}</strong>
-        </div>
+        <BatchDetailStat label="Batch Type" value={formatLabel(batch.batchType)} />
 
-        <div className="batch-detail-stat">
-          <span>Skill Level</span>
-          <strong>{formatLabel(batch.skillLevel)}</strong>
-        </div>
+        <BatchDetailStat label="Skill Level" value={formatLabel(batch.skillLevel)} />
 
-        <div className="batch-detail-stat">
-          <span>Mode</span>
-          <strong>{formatLabel(batch.mode)}</strong>
-        </div>
+        <BatchDetailStat label="Mode" value={formatLabel(batch.mode)} />
       </div>
 
       <div className="batch-detail-card">

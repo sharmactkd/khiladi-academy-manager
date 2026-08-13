@@ -1,0 +1,7 @@
+:global(.add-branch-page) { isolation: isolate; }
+
+@media (prefers-reduced-motion: reduce) {
+  :global(.add-branch-page *), :global(.branch-detail-page *), :global(.branches-page *) {
+    scroll-behavior: auto;
+  }
+}

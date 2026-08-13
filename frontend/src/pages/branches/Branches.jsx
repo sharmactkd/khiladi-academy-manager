@@ -20,42 +20,17 @@ import { deleteBranch, getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import BranchStatCard from "./components/BranchStatCard.jsx";
+import { PAGE_SIZE } from "./branch.config.js";
+import { joinAddressParts, unwrapList } from "./branch.utils.js";
+import "./Branches.module.css";
 
-
-const PAGE_SIZE = 7;
 
 const displayValue = (value) => String(value ?? "").trim() || "-";
 const displayPhone = (countryCode, phone) => {
   const number = String(phone ?? "").trim();
   return number ? `${String(countryCode || "+91").trim()} ${number}` : "-";
 };
-
-const unwrapList = (response) => {
-  const candidates = [
-    response?.data?.data,
-    response?.data,
-    response,
-  ];
-  return candidates.find(Array.isArray) || [];
-};
-
-const joinAddressParts = (parts = []) => {
-  const values = [];
-  parts.forEach((part) => {
-    const value = String(part ?? "").trim();
-    if (value && !values.some((item) => item.toLowerCase() === value.toLowerCase())) {
-      values.push(value);
-    }
-  });
-  return values.join(", ");
-};
-
-const BranchStat = ({ icon: Icon, label, value, tone = "red" }) => (
-  <article className={`branches-stat branches-stat--${tone}`}>
-    <span><Icon size={22} aria-hidden="true" /></span>
-    <div><small>{label}</small><strong>{value}</strong></div>
-  </article>
-);
 
 const Branches = () => {
   const navigate = useNavigate();
@@ -185,10 +160,10 @@ const Branches = () => {
       </header>
 
       <section className="branches-stats" aria-label="Branch summary">
-        <BranchStat icon={Building2} label="Total branches" value={allBranches.length} />
-        <BranchStat icon={CheckCircle2} label="Active branches" value={activeBranches.length} tone="green" />
-        <BranchStat icon={XCircle} label="Inactive branches" value={inactiveBranches} tone="slate" />
-        <BranchStat icon={Crown} label="Main branch" value={mainBranch ? 1 : 0} tone="gold" />
+        <BranchStatCard icon={Building2} label="Total branches" value={allBranches.length} />
+        <BranchStatCard icon={CheckCircle2} label="Active branches" value={activeBranches.length} tone="green" />
+        <BranchStatCard icon={XCircle} label="Inactive branches" value={inactiveBranches} tone="slate" />
+        <BranchStatCard icon={Crown} label="Main branch" value={mainBranch ? 1 : 0} tone="gold" />
       </section>
 
       <form className="branches-filters" onSubmit={applyFilters}>

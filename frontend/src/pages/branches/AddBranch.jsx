@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -25,102 +25,15 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
-
-const FACILITY_OPTIONS = [
-  "Mat Area",
-  "Changing Room",
-  "Washroom",
-  "Drinking Water",
-  "Parking",
-  "CCTV",
-  "First Aid",
-  "PSS / Sensor System",
-  "Gym Equipment",
-  "Waiting Area",
-];
-
-const LANGUAGE_OPTIONS = [
-  "Hindi",
-  "English",
-  "Urdu",
-  "Punjabi",
-  "Bengali",
-  "Marathi",
-  "Tamil",
-  "Telugu",
-  "Kannada",
-  "Malayalam",
-];
-
-const currentYear = new Date().getFullYear();
-
-const createInitialForm = () => ({
-  directorName: "",
-  branchName: "",
-  branchCode: "",
-  countryCode: "+91",
-  phone: "",
-  phoneNumbers: [],
-  email: "",
-  address: "",
-  city: "",
-  state: "",
-  country: "India",
-  headCoachName: "",
-  headCoachCountryCode: "+91",
-  headCoachPhone: "",
-  headCoachAchievements: "",
-  assistantCoachName: "",
-  assistantCoachCountryCode: "+91",
-  assistantCoachPhone: "",
-  assistantCoachAchievements: "",
-  additionalCoaches: [],
-  customFacility: "",
-  customLanguage: "",
-  customFacilities: [],
-  customLanguages: [],
-  branchSince: "",
-  facilities: [],
-  languagesSpoken: [],
-  isMainBranch: false,
-  isActive: true,
-});
-
-const unwrapList = (response) => {
-  const candidates = [response?.data?.data, response?.data, response];
-  return candidates.find(Array.isArray) || [];
-};
-
-const joinAddressParts = (parts = []) => {
-  const values = [];
-  parts.forEach((part) => {
-    const value = String(part ?? "").trim();
-    if (
-      value &&
-      !values.some((item) => item.toLowerCase() === value.toLowerCase())
-    )
-      values.push(value);
-  });
-  return values.join(", ");
-};
-
-const SectionHeader = ({ icon: Icon, eyebrow, title, description }) => (
-  <header className="add-branch-card__header">
-    <span className="add-branch-card__icon">
-      <Icon size={19} aria-hidden="true" />
-    </span>
-    <div>
-      <small>{eyebrow}</small>
-      <h2>{title}</h2>
-      {description ? <p>{description}</p> : null}
-    </div>
-  </header>
-);
+import BranchFormSectionHeader from "./components/BranchFormSectionHeader.jsx";
+import { currentYear, FACILITY_OPTIONS, LANGUAGE_OPTIONS } from "./branch.config.js";
+import { createBranchPayload, createInitialBranchForm, joinAddressParts, unwrapList } from "./branch.utils.js";
+import "./BranchForm.module.css";
 
 const AddBranch = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [form, setForm] = useState(createInitialForm);
+  const [form, setForm] = useState(createInitialBranchForm);
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
@@ -267,23 +180,11 @@ const AddBranch = () => {
       setSavingMode(mode);
       setError("");
       setSuccess("");
-      const payload = {
-        ...form,
-        directorName: form.directorName.trim(),
-        branchName: form.branchName.trim(),
-        branchCode: form.branchCode.trim().toUpperCase(),
-        email: form.email.trim(),
-        address: form.address.trim(),
-        additionalCoaches: form.additionalCoaches.filter(
-          (coach) => coach.name?.trim() || coach.phone?.trim(),
-        ),
-      };
-      delete payload.customFacility;
-      delete payload.customLanguage;
+      const payload = createBranchPayload(form);
       await createBranch(payload);
 
       if (mode === "create-another") {
-        setForm(createInitialForm());
+        setForm(createInitialBranchForm());
         setSuccess(
           `${payload.branchName} created successfully. You can add another branch.`,
         );
@@ -398,7 +299,7 @@ const AddBranch = () => {
       <form className="add-branch-form" onSubmit={handleSubmit}>
         <div className="add-branch-primary-grid">
           <section className="add-branch-card">
-            <SectionHeader
+            <BranchFormSectionHeader
               icon={Building2}
               eyebrow="Identity"
               title="Branch Identity"
@@ -505,7 +406,7 @@ const AddBranch = () => {
           </section>
 
           <section className="add-branch-card add-branch-location-card">
-            <SectionHeader
+            <BranchFormSectionHeader
               icon={MapPin}
               eyebrow="Contact"
               title="Location & Contact"
@@ -549,7 +450,7 @@ const AddBranch = () => {
         </div>
 
         <section className="add-branch-card">
-          <SectionHeader
+          <BranchFormSectionHeader
             icon={UsersRound}
             eyebrow="Team"
             title="Coaches & Branch In-charge"
@@ -586,7 +487,7 @@ const AddBranch = () => {
                   onChange={(event) =>
                     updateField("headCoachAchievements", event.target.value)
                   }
-                  placeholder="Dan rank, certifications, medals, coaching experience…"
+                  placeholder="Dan rank, certifications, medals, coaching experienceâ€¦"
                   rows={3}
                   maxLength={1000}
                 />
@@ -625,7 +526,7 @@ const AddBranch = () => {
                       event.target.value,
                     )
                   }
-                  placeholder="Dan rank, certifications, medals, coaching experience…"
+                  placeholder="Dan rank, certifications, medals, coaching experienceâ€¦"
                   rows={3}
                   maxLength={1000}
                 />
@@ -709,7 +610,7 @@ const AddBranch = () => {
 
         <div className="add-branch-secondary-grid">
           <section className="add-branch-card add-branch-selection-card">
-            <SectionHeader
+            <BranchFormSectionHeader
               icon={Warehouse}
               eyebrow="Infrastructure"
               title="Facilities"
@@ -758,7 +659,7 @@ const AddBranch = () => {
           </section>
 
           <section className="add-branch-card add-branch-selection-card">
-            <SectionHeader
+            <BranchFormSectionHeader
               icon={Languages}
               eyebrow="Communication"
               title="Languages Spoken"
@@ -841,7 +742,7 @@ const AddBranch = () => {
             disabled={isSaving}
           >
             <Plus size={16} />{" "}
-            {savingMode === "create-another" ? "Saving…" : "Save & Add Another"}
+            {savingMode === "create-another" ? "Savingâ€¦" : "Save & Add Another"}
           </button>
           <button
             type="submit"
@@ -851,7 +752,7 @@ const AddBranch = () => {
             disabled={isSaving}
           >
             <Save size={16} />{" "}
-            {savingMode === "create" ? "Creating…" : "Create Branch"}
+            {savingMode === "create" ? "Creatingâ€¦" : "Create Branch"}
           </button>
         </footer>
       </form>
@@ -860,3 +761,4 @@ const AddBranch = () => {
 };
 
 export default AddBranch;
+

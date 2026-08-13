@@ -1,0 +1,7 @@
+:global(.batch-form-page), :global(.edit-batch-page) { isolation: isolate; }
+
+@media (prefers-reduced-motion: reduce) {
+  :global(.batches-page *), :global(.batch-detail-page *), :global(.batch-form-page *) {
+    scroll-behavior: auto;
+  }
+}

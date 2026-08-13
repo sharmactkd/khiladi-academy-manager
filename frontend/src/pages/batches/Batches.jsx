@@ -9,6 +9,8 @@ import { getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import BatchSummaryCard from "./components/BatchSummaryCard.jsx";
+import "./Batches.module.css";
 
 const formatTime = (time) => {
   if (!time) return "-";
@@ -188,10 +190,10 @@ const Batches = () => {
       </div>
 
       <section className="batches-summary">
-        <article><span><Dumbbell size={21} /></span><div><small>Total Batches</small><strong>{summary.total}</strong></div></article>
-        <article className="is-green"><span><CheckCircle2 size={21} /></span><div><small>Active Batches</small><strong>{summary.active}</strong></div></article>
-        <article className="is-slate"><span><XCircle size={21} /></span><div><small>Inactive Batches</small><strong>{summary.inactive}</strong></div></article>
-        <article className="is-blue"><span><UsersRound size={21} /></span><div><small>Enrolled Students</small><strong>{summary.students}</strong></div></article>
+        <BatchSummaryCard icon={Dumbbell} label="Total Batches" value={summary.total} />
+        <BatchSummaryCard className="is-green" icon={CheckCircle2} label="Active Batches" value={summary.active} />
+        <BatchSummaryCard className="is-slate" icon={XCircle} label="Inactive Batches" value={summary.inactive} />
+        <BatchSummaryCard className="is-blue" icon={UsersRound} label="Enrolled Students" value={summary.students} />
       </section>
 
       <div className="batches-filters">

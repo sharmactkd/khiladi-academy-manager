@@ -4,15 +4,12 @@ import {
   Award,
   Building2,
   Check,
-  ChevronRight,
   Dumbbell,
   Globe2,
   Image as ImageIcon,
   Info,
-  LoaderCircle,
   MapPin,
   Plus,
-  Save,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -21,6 +18,16 @@ import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import { academyApi } from "../../api/academyApi.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import AcademyProfileActions from "./components/AcademyProfileActions.jsx";
+import AcademyProfileCardHeader from "./components/AcademyProfileCardHeader.jsx";
+import AcademyProfileNav from "./components/AcademyProfileNav.jsx";
+import AcademyProfileState from "./components/AcademyProfileState.jsx";
+import {
+  CREDENTIAL_TYPES,
+  MARTIAL_ART_OPTIONS,
+  PROFILE_SECTIONS,
+} from "./academyProfile.config.js";
+import "./AcademyProfile.module.css";
 
 const InstagramIcon = ({ size = 18, ...props }) => (
   <svg
@@ -40,25 +47,6 @@ const InstagramIcon = ({ size = 18, ...props }) => (
     <path d="M17.5 6.5h.01" />
   </svg>
 );
-
-const MARTIAL_ART_OPTIONS = [
-  "Taekwondo",
-  "Karate",
-  "Judo",
-  "Boxing",
-  "Kickboxing",
-  "Wrestling",
-  "MMA",
-  "Kung Fu",
-  "Wushu",
-  "Muay Thai",
-  "Brazilian Jiu-Jitsu",
-  "Self Defence",
-  "Fitness",
-  "Yoga",
-];
-
-const CREDENTIAL_TYPES = ["affiliation", "recognition", "registration"];
 
 const createEmptyCredential = (type = "affiliation") => ({
   type,
@@ -105,15 +93,6 @@ const normalizePhoneNumbers = (value, academyData = {}) => {
 
   return normalized;
 };
-
-const PROFILE_SECTIONS = [
-  { id: "identity", label: "Identity", icon: Building2 },
-  { id: "contact", label: "Contact", icon: MapPin },
-  { id: "martial-arts", label: "Martial Arts", icon: Dumbbell },
-  { id: "about", label: "About", icon: Info },
-  { id: "affiliations", label: "Affiliations", icon: Award },
-  { id: "social", label: "Social", icon: Globe2 },
-];
 
 const normalizeMartialArts = (value) => {
   if (Array.isArray(value)) {
@@ -483,24 +462,11 @@ const AcademyProfile = () => {
   };
 
   if (loading) {
-    return (
-      <div className="academy-profile-state" aria-live="polite">
-        <LoaderCircle className="academy-profile-state__spinner" />
-        <strong>Loading academy profile…</strong>
-      </div>
-    );
+    return <AcademyProfileState loading />;
   }
 
   if (!academy) {
-    return (
-      <div className="academy-profile-state academy-profile-state--error">
-        <Building2 />
-        <strong>Academy not found.</strong>
-        <button type="button" className="btn btn-primary" onClick={loadAcademy}>
-          Retry
-        </button>
-      </div>
-    );
+    return <AcademyProfileState loading={false} onRetry={loadAcademy} />;
   }
 
   return (
@@ -535,24 +501,11 @@ const AcademyProfile = () => {
           ]}
         />
 
-        <nav className="academy-profile-nav" aria-label="Profile sections">
-          {PROFILE_SECTIONS.map(({ id, label, icon: Icon }, index) => (
-            <a key={id} href={`#${id}`} className={index === 0 ? "is-active" : ""}>
-              <Icon size={17} aria-hidden="true" />
-              <span>{label}</span>
-            </a>
-          ))}
-        </nav>
+        <AcademyProfileNav sections={PROFILE_SECTIONS} />
 
         <div className="academy-profile-grid academy-profile-grid--top" id="identity">
           <section className="academy-profile-card academy-profile-logo-card">
-            <header className="academy-profile-card__header">
-              <div>
-                <ImageIcon aria-hidden="true" />
-                <span>Identity</span>
-                <h2>Academy Logo</h2>
-              </div>
-            </header>
+            <AcademyProfileCardHeader eyebrow="Identity" icon={ImageIcon} title="Academy Logo" />
 
             <div className="academy-profile-logo-card__body">
               <label
@@ -582,13 +535,7 @@ const AcademyProfile = () => {
           </section>
 
           <section className="academy-profile-card academy-profile-basic-card">
-            <header className="academy-profile-card__header">
-              <div>
-                <Building2 aria-hidden="true" />
-                <span>Identity</span>
-                <h2>Basic Information</h2>
-              </div>
-            </header>
+            <AcademyProfileCardHeader eyebrow="Identity" icon={Building2} title="Basic Information" />
 
             <div className="academy-profile-fields academy-profile-fields--stacked">
               <label>
@@ -630,13 +577,7 @@ const AcademyProfile = () => {
           </section>
 
           <section className="academy-profile-card academy-profile-contact-card" id="contact">
-            <header className="academy-profile-card__header">
-              <div>
-                <MapPin aria-hidden="true" />
-                <span>Contact</span>
-                <h2>Phone & Location</h2>
-              </div>
-            </header>
+            <AcademyProfileCardHeader eyebrow="Contact" icon={MapPin} title="Phone & Location" />
 
             <div className="academy-profile-location-fields">
               <PhoneLocationFields
@@ -675,13 +616,7 @@ const AcademyProfile = () => {
         </div>
 
         <section className="academy-profile-card academy-profile-martial" id="martial-arts">
-          <header className="academy-profile-card__header">
-            <div>
-              <Dumbbell aria-hidden="true" />
-              <span>Training</span>
-              <h2>Sports / Martial Arts</h2>
-            </div>
-          </header>
+          <AcademyProfileCardHeader eyebrow="Training" icon={Dumbbell} title="Sports / Martial Arts" />
 
           <div className="academy-profile-martial__chips">
             {MARTIAL_ART_OPTIONS.map((item) => {
@@ -746,13 +681,7 @@ const AcademyProfile = () => {
 
         <div className="academy-profile-grid academy-profile-grid--editorial academy-profile-grid--editorial-single" id="about">
           <section className="academy-profile-card academy-profile-text-card">
-            <header className="academy-profile-card__header">
-              <div>
-                <Info aria-hidden="true" />
-                <span>Story</span>
-                <h2>About Academy</h2>
-              </div>
-            </header>
+            <AcademyProfileCardHeader eyebrow="Story" icon={Info} title="About Academy" />
             <textarea
               value={academy.about || ""}
               onChange={(event) => updateField("about", event.target.value)}
@@ -765,13 +694,7 @@ const AcademyProfile = () => {
 
         <div className="academy-profile-grid academy-profile-grid--bottom">
           <section className="academy-profile-card academy-profile-affiliations" id="affiliations">
-            <header className="academy-profile-card__header">
-              <div>
-                <Award aria-hidden="true" />
-                <span>Credentials</span>
-                <h2>Affiliation / Recognition / Registration</h2>
-              </div>
-            </header>
+            <AcademyProfileCardHeader eyebrow="Credentials" icon={Award} title="Affiliation / Recognition / Registration" />
 
             <div className="academy-profile-affiliations__head" aria-hidden="true">
               <span>Type</span>
@@ -845,13 +768,7 @@ const AcademyProfile = () => {
           </section>
 
           <section className="academy-profile-card academy-profile-social" id="social">
-            <header className="academy-profile-card__header">
-              <div>
-                <Globe2 aria-hidden="true" />
-                <span>Online Presence</span>
-                <h2>Website & Social Links</h2>
-              </div>
-            </header>
+            <AcademyProfileCardHeader eyebrow="Online Presence" icon={Globe2} title="Website & Social Links" />
 
             <div className="academy-profile-social__fields">
               <label>
@@ -896,22 +813,7 @@ const AcademyProfile = () => {
           </section>
         </div>
 
-        <footer className="academy-profile-actions">
-          <a href="#identity" className="academy-profile-actions__back">
-            Back to top <ChevronRight size={15} aria-hidden="true" />
-          </a>
-          <button type="reset" className="btn btn-secondary" disabled={saving} onClick={loadAcademy}>
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? (
-              <LoaderCircle className="academy-profile-state__spinner" size={18} aria-hidden="true" />
-            ) : (
-              <Save size={18} aria-hidden="true" />
-            )}
-            {saving ? "Saving…" : "Update Academy"}
-          </button>
-        </footer>
+        <AcademyProfileActions onCancel={loadAcademy} saving={saving} />
       </form>
     </div>
   );

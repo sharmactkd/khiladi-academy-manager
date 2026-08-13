@@ -26,6 +26,7 @@ import {
 } from "../../components/common/AcademyOperationsFields.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import "./BatchForm.module.css";
 
 const DAYS = [
   "monday",

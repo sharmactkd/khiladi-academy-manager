@@ -1,0 +1,21 @@
+/*
+ * Dashboard style entry point.
+ *
+ * The current production dashboard selectors remain in global.css during the
+ * compatibility phase so AcademyHeroHeader and other already-shared classes
+ * keep their exact cascade and pixel output. Importing this module from the
+ * page creates the permanent feature-level boundary; the verified owner-*
+ * rules can now be moved here section-by-section without changing JSX again.
+ */
+
+:global(.owner-dashboard) {
+  isolation: isolate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(.owner-dashboard *),
+  :global(.owner-dashboard *::before),
+  :global(.owner-dashboard *::after) {
+    scroll-behavior: auto;
+  }
+}
