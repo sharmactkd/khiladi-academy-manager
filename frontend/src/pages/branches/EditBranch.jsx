@@ -349,13 +349,13 @@ const EditBranch = () => {
         <div className="add-branch-secondary-grid">
           <section className="add-branch-card add-branch-selection-card">
             <BranchFormSectionHeader icon={Warehouse} eyebrow="Infrastructure" title="Facilities" description="Select everything available at this location." />
-            <div className="add-branch-chip-grid">{[...new Set([...FACILITY_OPTIONS, ...form.customFacilities])].map((facility) => <button type="button" key={facility} className={form.facilities.includes(facility) ? "is-selected" : ""} onClick={() => toggleArrayValue("facilities", facility)}>{form.facilities.includes(facility) ? <Check size={13} /> : <Plus size={13} />}{facility}</button>)}</div>
+            <div className="add-branch-chip-grid">{[...new Set([...FACILITY_OPTIONS, ...form.customFacilities])].map((facility) => <button type="button" key={facility} className={form.facilities.includes(facility) ? "is-selected" : ""} onClick={() => toggleArrayValue("facilities", facility)}>{form.facilities.includes(facility) ? <Check size={13} /> : null}{facility}</button>)}</div>
             <div className="add-branch-custom-row"><input value={form.customFacility} onChange={(event) => updateField("customFacility", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customFacility", "facilities")} placeholder="Add custom facility" /><button type="button" onClick={() => addCustomValue("customFacility", "facilities")} disabled={!form.customFacility.trim()}><Plus size={14} /> Add</button></div>
           </section>
 
           <section className="add-branch-card add-branch-selection-card">
             <BranchFormSectionHeader icon={Languages} eyebrow="Communication" title="Languages Spoken" description="Languages supported by the branch team." />
-            <div className="add-branch-chip-grid">{[...new Set([...LANGUAGE_OPTIONS, ...form.customLanguages])].map((language) => <button type="button" key={language} className={form.languagesSpoken.includes(language) ? "is-selected" : ""} onClick={() => toggleArrayValue("languagesSpoken", language)}>{form.languagesSpoken.includes(language) ? <Check size={13} /> : <Plus size={13} />}{language}</button>)}</div>
+            <div className="add-branch-chip-grid">{[...new Set([...LANGUAGE_OPTIONS, ...form.customLanguages])].map((language) => <button type="button" key={language} className={form.languagesSpoken.includes(language) ? "is-selected" : ""} onClick={() => toggleArrayValue("languagesSpoken", language)}>{form.languagesSpoken.includes(language) ? <Check size={13} /> : null}{language}</button>)}</div>
             <div className="add-branch-custom-row"><input value={form.customLanguage} onChange={(event) => updateField("customLanguage", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customLanguage", "languagesSpoken")} placeholder="Add custom language" /><button type="button" onClick={() => addCustomValue("customLanguage", "languagesSpoken")} disabled={!form.customLanguage.trim()}><Plus size={14} /> Add</button></div>
           </section>
         </div>

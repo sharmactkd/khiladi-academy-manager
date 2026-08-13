@@ -160,12 +160,15 @@ const BranchDetail = () => {
         <div className="branch-detail-heading__title">
           <span><Building2 size={25} /></span>
           <div>
-            <div className="branch-detail-heading__badges">
-              <code>{displayValue(branch.branchCode, "No code")}</code>
-              {branch.isMainBranch ? <b><Crown size={12} /> Main Branch</b> : null}
-              <i className={branch.isActive !== false ? "is-active" : "is-inactive"}>{branch.isActive !== false ? "Active" : "Inactive"}</i>
+            <div className="branch-detail-heading__name-row">
+              <h1>{branch.branchName}</h1>
+              <div className="branch-detail-heading__badges" aria-label="Branch status">
+                <code>{displayValue(branch.branchCode, "No code")}</code>
+                {branch.isMainBranch ? <b><Crown size={13} /> Main Branch</b> : null}
+                <i className={branch.isActive !== false ? "is-active" : "is-inactive"}>{branch.isActive !== false ? "Active" : "Inactive"}</i>
+              </div>
             </div>
-            <h1>{branch.branchName}</h1><p>A complete operational view of this academy location.</p>
+            <p>A complete operational view of this academy location.</p>
           </div>
         </div>
         <div className="branch-detail-heading__actions">

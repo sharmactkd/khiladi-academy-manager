@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { CheckCircle2, Dumbbell, Plus, Search, Trash2, UserPlus, UsersRound, XCircle } from "lucide-react";
+import { CheckCircle2, Dumbbell, Plus, Search, UserPlus, UsersRound, XCircle } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
 import { academyApi } from "../../api/academyApi.js";
@@ -10,40 +10,8 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import MetricGrid from "../../components/common/MetricGrid.jsx";
+import BatchCard from "./components/BatchCard.jsx";
 import "./Batches.module.css";
-
-const formatTime = (time) => {
-  if (!time) return "-";
-
-  const [hours, minutes] = time.split(":");
-
-  const date = new Date();
-  date.setHours(Number(hours));
-  date.setMinutes(Number(minutes));
-
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-};
-
-const formatLabel = (value) => {
-  const text = String(value || "").trim();
-
-  if (!text) return "-";
-
-  return text
-    .split("-")
-    .map((item) => item.charAt(0).toUpperCase() + item.slice(1))
-    .join(" ");
-};
-
-const formatGenderGroup = (value) => {
-  if (value === "male") return "Male";
-  if (value === "female") return "Female";
-  return "Male & Female";
-};
 
 const Batches = () => {
   const navigate = useNavigate();
@@ -244,103 +212,22 @@ const Batches = () => {
         </div>
       </div>
 
-      <div className="batches-table-card">
+      <div className="batches-results">
         {loading ? (
           <div className="batches-state"><span className="batches-spinner" /><strong>Loading batches…</strong></div>
         ) : batches.length === 0 ? (
           <div className="batches-state"><Dumbbell size={34} /><strong>No batches found</strong><p>Change the filters or create your first batch.</p><Link className="btn btn-primary" to="/batches/new"><Plus size={16} /> Add Batch</Link></div>
         ) : (
-          <div className="batches-table-wrap">
-            <table className="batches-table">
-              <thead>
-                <tr>
-                  <th>Batch</th>
-                  <th>Code</th>
-                  <th>Type</th>
-                  <th>Level</th>
-                  <th>Martial Art</th>
-                  <th>Gender</th>
-                  <th>Days</th>
-                  <th>Time</th>
-                  <th>Students</th>
-                  <th>Coach</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {batches.map((batch) => (
-                  <tr
-                    key={batch._id}
-                    onClick={() => navigate(`/batches/${batch._id}`)}
-                  >
-                    <td>
-                      <strong>{batch.batchName}</strong>
-                      {batch.isCompetitionBatch ? (
-                        <small className="batches-competition">Competition Batch</small>
-                      ) : null}
-                    </td>
-
-                    <td>{batch.batchCode || "-"}</td>
-
-                    <td>{formatLabel(batch.batchType)}</td>
-
-                    <td>{formatLabel(batch.skillLevel)}</td>
-
-                    <td>{batch.martialArt || "-"}</td>
-
-                    <td>{formatGenderGroup(batch.genderGroup)}</td>
-
-                    <td>
-                      {batch.schedule?.map((item) => item.day).join(", ") ||
-                        "-"}
-                    </td>
-
-                    <td>
-                      {formatTime(batch.schedule?.[0]?.startTime)} -{" "}
-                      {formatTime(batch.schedule?.[0]?.endTime)}
-                    </td>
-
-                    <td>
-                      {batch.students?.length || 0} / {batch.capacity || 0}
-                    </td>
-
-                    <td>{batch.headCoachName || batch.coach?.name || "-"}</td>
-
-                    <td>
-                      <span className={"batches-status batches-status--" + (batch.isActive ? "active" : "inactive")}>
-                        {batch.isActive ? "active" : "inactive"}
-                      </span>
-                    </td>
-
-                    <td
-                      className="batches-actions"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <Link className="batches-action batches-action--edit" to={`/batches/${batch._id}/edit`}>Edit</Link>
-
-                      <button
-                        type="button"
-                        className={"batches-action batches-action--status " + (batch.isActive ? "is-active" : "is-inactive")}
-                        onClick={() => handleToggleStatus(batch)}
-                      >
-                        {batch.isActive ? "Inactive" : "Active"}
-                      </button>
-
-                      <button
-                        type="button"
-                        className="batches-action batches-action--delete"
-                        onClick={() => handleDelete(batch)}
-                        title="Delete Batch"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="batches-card-list">
+            {batches.map((batch) => (
+              <BatchCard
+                key={batch._id}
+                batch={batch}
+                onOpen={(selectedBatch) => navigate(`/batches/${selectedBatch._id}`)}
+                onToggleStatus={handleToggleStatus}
+                onDelete={handleDelete}
+              />
+            ))}
           </div>
         )}
       </div>

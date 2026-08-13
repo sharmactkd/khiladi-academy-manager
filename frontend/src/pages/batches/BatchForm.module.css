@@ -2103,3 +2103,96 @@
   align-items: center;
   column-gap: 10px;
 }
+
+/* Keep Add/Edit Batch typography identical to the Add/Edit Branch form. */
+:global(.batch-form-page .batch-form label),
+:global(.batch-form-page .batch-field-label),
+:global(.batch-form-page .operations-field-label),
+:global(.batch-form-page .batch-profile-limits .batch-limit-field__label),
+:global(.batch-form-page .batch-profile-limits__heading) {
+  color: #334155;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: normal;
+}
+
+:global(.batch-form-page .batch-form input),
+:global(.batch-form-page .batch-form select),
+:global(.batch-form-page .batch-form textarea) {
+  font-size: 12px;
+}
+
+:global(.batch-form-page .batch-form-card > h3) {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+:global(.batch-form-page .batch-form-card > h3 > small) {
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.14em;
+}
+
+:global(.batch-form-page .batch-card-intro) {
+  font-size: 10px;
+}
+
+:global(.batch-form-page .batch-single-select-tags button),
+:global(.batch-form-page .operations-tag-grid button),
+:global(.batch-form-page .batch-schedule-presets button),
+:global(.batch-form-page .batch-form .checkbox-grid label) {
+  font-size: 9px;
+  font-weight: 800;
+}
+
+:global(.batch-form-page .batch-custom-tag input),
+:global(.batch-form-page .operations-custom-tag input) {
+  font-size: 12px;
+}
+
+:global(.batch-form-page .batch-custom-tag button),
+:global(.batch-form-page .operations-custom-tag button),
+:global(.batch-form-page .batch-form-actions .btn) {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+:global(.batch-form-page .batch-active-switch strong),
+:global(.batch-form-page .batch-form-actions strong) {
+  font-size: 10px;
+}
+
+:global(.batch-form-page .batch-active-switch small),
+:global(.batch-form-page .batch-form-actions small) {
+  font-size: 8px;
+}
+
+/* Batch Profile tags — exact Add Branch tag typography */
+:global(
+  .batch-form-page
+    .batch-form-card--profile
+    .batch-single-select-tags
+    button
+),
+:global(
+  .batch-form-page
+    .batch-form-card--profile
+    .operations-tag-grid
+    button
+),
+:global(
+  .batch-form-page
+    .batch-form-card--profile
+    .batch-single-select-tags
+    button.is-selected
+),
+:global(
+  .batch-form-page
+    .batch-form-card--profile
+    .operations-tag-grid
+    button.is-selected
+) {
+  font-size: 12px;
+  font-weight: 800;
+}

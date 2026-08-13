@@ -630,9 +630,7 @@ const AddBranch = () => {
                 >
                   {form.facilities.includes(facility) ? (
                     <Check size={13} />
-                  ) : (
-                    <Plus size={13} />
-                  )}
+                  ) : null}
                   {facility}
                 </button>
               ))}
@@ -682,9 +680,7 @@ const AddBranch = () => {
                   >
                     {form.languagesSpoken.includes(language) ? (
                       <Check size={13} />
-                    ) : (
-                      <Plus size={13} />
-                    )}
+                    ) : null}
                     {language}
                   </button>
                 ),
@@ -761,4 +757,3 @@ const AddBranch = () => {
 };
 
 export default AddBranch;
-

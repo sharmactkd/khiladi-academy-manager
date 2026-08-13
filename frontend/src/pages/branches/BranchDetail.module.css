@@ -8,13 +8,14 @@
 :global(.branch-detail-heading){display:flex;align-items:center;justify-content:space-between;gap:20px}
 :global(.branch-detail-heading__title){min-width:0;display:flex;align-items:center;gap:12px}
 :global(.branch-detail-heading__title>span){flex:0 0 48px;width:48px;height:48px;display:grid;place-items:center;border-radius:13px;background:#feecee;color:var(--branch-red)}
-:global(.branch-detail-heading h1){margin:3px 0 2px;color:var(--branch-navy);font-size:clamp(23px,2.2vw,31px);line-height:1.1;letter-spacing:-.035em}
+:global(.branch-detail-heading__name-row){min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px}
+:global(.branch-detail-heading h1){margin:0;color:var(--branch-navy);font-size:clamp(23px,2.2vw,31px);line-height:1.1;letter-spacing:-.035em}
 :global(.branch-detail-heading p){margin:0;color:var(--branch-muted);font-size:11px}
 :global(.branch-detail-heading__badges),
 :global(.branch-detail-heading__actions){display:flex;align-items:center;flex-wrap:wrap;gap:7px}
 :global(.branch-detail-heading__badges code),
 :global(.branch-detail-heading__badges b),
-:global(.branch-detail-heading__badges i){display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:850;font-style:normal;line-height:1}
+:global(.branch-detail-heading__badges i){display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:800;font-style:normal;line-height:1}
 :global(.branch-detail-heading__badges code){background:#eef2f7;color:#334155}
 :global(.branch-detail-heading__badges b){background:#fff7df;color:#9a6700}
 :global(.branch-detail-heading__badges i.is-active){background:#e8f7ed;color:#15803d}
