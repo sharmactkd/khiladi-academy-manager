@@ -1,393 +1,292 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import toast from "react-hot-toast";
+import {
+  Activity, ArrowLeft, Award, BadgeIndianRupee, BookOpen, CalendarCheck2,
+  CalendarDays, CheckCircle2, Clock3, Edit3, ExternalLink, GraduationCap,
+  HeartPulse, IdCard, Mail, MapPin, Phone, ReceiptIndianRupee, Ruler,
+  ShieldCheck, ShieldPlus, UserRound, UsersRound, WalletCards, Weight, XCircle,
+} from "lucide-react";
 
 import { studentApi } from "../../api/studentApi.js";
+import MetricGrid from "../../components/common/MetricGrid.jsx";
+import PageState from "../../components/common/PageState.jsx";
+import BatchAcademyHeader from "../batches/components/BatchAcademyHeader.jsx";
+import BatchDetailSectionHeader from "../batches/components/BatchDetailSectionHeader.jsx";
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import "./StudentProfile.module.css";
 
-const getStudentName = (student) => {
-  const fullName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
-  return fullName || student?.name || "Student";
-};
-
+const text = (value, fallback = "Not added") => String(value ?? "").trim() || fallback;
+const studentName = (student) => text(
+  [student?.firstName, student?.lastName].filter(Boolean).join(" ") || student?.name,
+  "Student"
+);
 const formatDate = (value) => {
-  if (!value) return "-";
-
+  if (!value) return "Not added";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
-  return date.toLocaleDateString("en-IN");
+  return Number.isNaN(date.getTime())
+    ? "Not added"
+    : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 };
-
-const displayValue = (value) => {
-  const text = String(value ?? "").trim();
-  return text || "-";
+const formatPhone = (countryCode, phone) =>
+  String(phone || "").trim() ? `${countryCode || "+91"} ${phone}` : "Not added";
+const currency = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const calculateAge = (value) => {
+  const birth = value ? new Date(value) : null;
+  if (!birth || Number.isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age -= 1;
+  return age >= 0 ? age : null;
 };
-
-const displayPhone = (countryCode, phone) => {
-  const cleanPhone = String(phone || "").trim();
-  if (!cleanPhone) return "-";
-
-  return `${countryCode || "+91"} ${cleanPhone}`;
+const normalizeList = (value) => {
+  if (Array.isArray(value)) return value.flatMap(normalizeList);
+  if (typeof value !== "string" || !value.trim()) return [];
+  try { return normalizeList(JSON.parse(value)); }
+  catch { return value.split(",").map((item) => item.trim()).filter(Boolean); }
 };
-
-const displayBelt = (student) => {
-  const belt = student?.beltRank || "-";
-
-  if (belt === "Black" && student?.danRank) {
-    return `${belt} (${student.danRank})`;
-  }
-
-  return belt;
+const normalizeContacts = (contacts, legacy) => {
+  const list = Array.isArray(contacts) ? contacts.filter((item) => item?.name || item?.phone) : [];
+  return list.length ? list : (legacy?.name || legacy?.phone ? [legacy] : []);
 };
+const beltLabel = (student) =>
+  student?.beltRank === "Black" && student?.danRank
+    ? `Black · ${student.danRank}`
+    : text(student?.beltRank);
+const joinAddress = (student) =>
+  [student?.address, student?.city, student?.state, student?.country]
+    .map((part) => String(part || "").trim()).filter(Boolean)
+    .filter((part, index, items) => items.findIndex((item) => item.toLowerCase() === part.toLowerCase()) === index)
+    .join(", ");
 
-const displayList = (value) => {
-  if (!Array.isArray(value) || !value.length) return "-";
-  return value.filter(Boolean).join(", ") || "-";
-};
+const DetailItem = ({ icon: Icon, label, children, wide = false, accent = false }) => (
+  <div className={`student-detail-item${wide ? " student-detail-item--wide" : ""}${accent ? " student-detail-item--accent" : ""}`}>
+    <span className="student-detail-item__icon"><Icon size={17} aria-hidden="true" /></span>
+    <div><small>{label}</small><strong>{children}</strong></div>
+  </div>
+);
 
-const getHeight = (student) => {
-  const value = student?.heightCm ?? student?.physicalInfo?.heightCm;
-  return value ? `${value} cm` : "-";
-};
-
-const getWeight = (student) => {
-  const value = student?.weightKg ?? student?.physicalInfo?.weightKg;
-  return value ? `${value} kg` : "-";
-};
+const ContactCard = ({ title, eyebrow, contact }) => (
+  <article className="student-detail-contact">
+    <div className="student-detail-contact__title">
+      <span><UserRound size={18} /></span>
+      <div><small>{eyebrow}</small><h3>{title}</h3></div>
+    </div>
+    <dl>
+      <div><dt>Name</dt><dd>{text(contact?.name)}</dd></div>
+      <div><dt>Relation</dt><dd>{text(contact?.relation)}</dd></div>
+      <div><dt>Mobile</dt><dd>{formatPhone(contact?.countryCode, contact?.phone)}</dd></div>
+      <div><dt>Email</dt><dd>{text(contact?.email)}</dd></div>
+    </dl>
+  </article>
+);
 
 const StudentProfile = () => {
   const { id } = useParams();
-
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchStudent = async () => {
-      try {
-        const response = await studentApi.getById(id);
-        const studentData =
-          response?.data?.data || response?.data?.student || response?.data || null;
-
-        setStudent(studentData);
-      } catch (error) {
-        toast.error(error.response?.data?.message || "Student load nahi hua");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStudent();
+  const loadPage = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await studentApi.getById(id);
+      const payload = response?.data;
+      setStudent(payload?.data?.student || payload?.data || payload?.student || payload || null);
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message || "Failed to load student.");
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  if (loading) return <p>Loading student...</p>;
-  if (!student) return <p>Student not found.</p>;
+  useEffect(() => { loadPage(); }, [loadPage]);
+
+  const parents = useMemo(() => normalizeContacts(student?.parentContacts, {
+    name: student?.parentName,
+    countryCode: student?.parentCountryCode,
+    phone: student?.parentPhone,
+    relation: "Parent / Guardian",
+  }), [student]);
+  const emergencyContacts = useMemo(() => normalizeContacts(student?.emergencyContacts, {
+    name: student?.emergencyContact?.name || student?.emergencyContactName,
+    countryCode: student?.emergencyContact?.countryCode || student?.emergencyContactCountryCode,
+    phone: student?.emergencyContact?.phone || student?.emergencyContactPhone,
+    relation: "Emergency Contact",
+  }), [student]);
+  const conditions = useMemo(
+    () => normalizeList(student?.medicalConditions || student?.medicalInfo?.medicalConditions),
+    [student]
+  );
+
+  if (loading) return <PageState className="student-detail-state" loading title="Loading student profile…" />;
+  if (error || !student) return <PageState className="student-detail-state student-detail-state--error" icon={XCircle} title={error || "Student not found."} action={<button className="btn btn-primary" type="button" onClick={loadPage}>Try Again</button>} />;
+
+  const name = studentName(student);
+  const age = student.age ?? calculateAge(student.dateOfBirth || student.dob);
+  const status = String(student.status || "inactive").toLowerCase();
+  const active = status === "active";
+  const branchName = student.branch?.branchName || "Not assigned";
+  const batchName = student.batch?.batchName || "Not assigned";
+  const height = student.heightCm ?? student.physicalInfo?.heightCm;
+  const weight = student.weightKg ?? student.physicalInfo?.weightKg;
+  const address = joinAddress(student);
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>{getStudentName(student)}</h1>
-          <p>{student.admissionNumber || student.studentCode || "-"}</p>
-        </div>
+    <div className="page student-detail-page">
+      <BatchAcademyHeader branch={student.branch || null} />
 
-        <Link className="btn btn-primary" to={`/students/${student._id}/edit`}>
-          Edit Student
-        </Link>
-      </div>
+      <nav className="student-detail-breadcrumb" aria-label="Breadcrumb">
+        <Link to="/students">Students</Link><span>/</span><strong>{name}</strong>
+      </nav>
 
-      <div className="grid grid-4">
-        <div className="card stat-card">
-          <span>Status</span>
-          <strong>{student.status || "-"}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span>Age</span>
-          <strong>{student.age !== null && student.age !== undefined ? `${student.age} Years` : "-"}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span>Age Category</span>
-          <strong>{student.ageCategory || "-"}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span>Belt Rank</span>
-          <strong>{displayBelt(student)}</strong>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Student Details</h2>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginBottom: "24px",
-          }}
-        >
-          <img
-            src={getStudentPhotoUrl(student)}
-            alt={getStudentName(student)}
-            onError={(event) => {
-              event.currentTarget.src = "/default-avatar.png";
-            }}
-            style={{
-              width: "160px",
-              height: "200px",
-              objectFit: "cover",
-              borderRadius: "12px",
-              border: "1px solid #d1d5db",
-              background: "#fff",
-            }}
-          />
-        </div>
-
-        <div className="details-grid">
-          <p>
-            <strong>Admission Number:</strong>{" "}
-            {displayValue(student.admissionNumber || student.studentCode)}
-          </p>
-
-          <p>
-            <strong>Aadhaar Number:</strong> {displayValue(student.aadhaarNumber)}
-          </p>
-
-          <p>
-            <strong>Gender:</strong> {displayValue(student.gender)}
-          </p>
-
-          <p>
-            <strong>DOB:</strong> {formatDate(student.dateOfBirth || student.dob)}
-          </p>
-
-          <p>
-            <strong>Age:</strong>{" "}
-            {student.age !== null && student.age !== undefined
-              ? `${student.age} Years`
-              : "-"}
-          </p>
-
-          <p>
-            <strong>Age Category:</strong> {displayValue(student.ageCategory)}
-          </p>
-
-          <p>
-            <strong>Phone:</strong>{" "}
-            {displayPhone(student.countryCode, student.phone)}
-          </p>
-
-          <p>
-            <strong>Email:</strong> {displayValue(student.email)}
-          </p>
-
-          <p>
-            <strong>Branch:</strong> {displayValue(student.branch?.branchName)}
-          </p>
-
-          <p>
-            <strong>Batch:</strong> {displayValue(student.batch?.batchName)}
-          </p>
-
-          <p>
-            <strong>City:</strong> {displayValue(student.city)}
-          </p>
-
-          <p>
-            <strong>State:</strong> {displayValue(student.state)}
-          </p>
-
-          <p>
-            <strong>Country:</strong> {displayValue(student.country)}
-          </p>
-        </div>
-
-        <hr />
-
-        <p>
-          <strong>Address:</strong> {displayValue(student.address)}
-        </p>
-      </div>
-
-      <div className="card">
-        <h2>Education Information</h2>
-
-        <div className="details-grid">
-          <p>
-            <strong>School Name:</strong>{" "}
-            {displayValue(student.schoolName || student.education?.schoolName)}
-          </p>
-
-          <p>
-            <strong>Class:</strong>{" "}
-            {displayValue(student.className || student.education?.className)}
-          </p>
-
-          <p>
-            <strong>Section:</strong>{" "}
-            {displayValue(student.section || student.education?.section)}
-          </p>
-
-          <p>
-            <strong>College Name:</strong>{" "}
-            {displayValue(student.collegeName || student.education?.collegeName)}
-          </p>
-
-          <p>
-            <strong>Occupation:</strong>{" "}
-            {displayValue(student.occupation || student.education?.occupation)}
-          </p>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Training Information</h2>
-
-        <div className="details-grid">
-          <p>
-            <strong>Martial Art / Sport:</strong>{" "}
-            {displayValue(student.martialArt)}
-          </p>
-
-          <p>
-            <strong>Belt Rank:</strong> {displayBelt(student)}
-          </p>
-
-          <p>
-            <strong>Joining Date:</strong> {formatDate(student.joiningDate)}
-          </p>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Physical Information</h2>
-
-        <div className="details-grid">
-          <p>
-            <strong>Height:</strong> {getHeight(student)}
-          </p>
-
-          <p>
-            <strong>Weight:</strong> {getWeight(student)}
-          </p>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Medical Information</h2>
-
-        <div className="details-grid">
-          <p>
-            <strong>Blood Group:</strong>{" "}
-            {displayValue(student.bloodGroup || student.medicalInfo?.bloodGroup)}
-          </p>
-
-          <p>
-            <strong>Medical Conditions:</strong>{" "}
-            {displayList(
-              student.medicalConditions || student.medicalInfo?.medicalConditions
-            )}
-          </p>
-        </div>
-
-        <p>
-          <strong>Medical Notes:</strong>{" "}
-          {displayValue(student.notes || student.medicalInfo?.notes)}
-        </p>
-      </div>
-
-      <div className="card">
-        <h2>Parent & Emergency Contact</h2>
-
-        <div className="details-grid">
-          <p>
-            <strong>Parent Name:</strong> {displayValue(student.parentName)}
-          </p>
-
-          <p>
-            <strong>Parent Phone:</strong>{" "}
-            {displayPhone(student.parentCountryCode, student.parentPhone)}
-          </p>
-
-          <p>
-            <strong>Emergency Contact Name:</strong>{" "}
-            {displayValue(student.emergencyContact?.name)}
-          </p>
-
-          <p>
-            <strong>Emergency Contact Phone:</strong>{" "}
-            {displayPhone(
-              student.emergencyContact?.countryCode,
-              student.emergencyContact?.phone
-            )}
-          </p>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Quick Links</h2>
-
-        <div className="actions">
-          <Link to={`/attendance/student/${student._id}`}>Attendance History</Link>
-          <Link to={`/fees/student/${student._id}`}>Fee History</Link>
-          <Link to={`/students/${student._id}/belt-history`}>Belt History</Link>
-          <Link to={`/students/${student._id}/championship-history`}>
-            Championship History
-          </Link>
-          <Link to={`/students/${student._id}/tournament-history`}>
-            Tournament History
-          </Link>
-          <Link to={`/students/${student._id}/timeline`}>Progress Timeline</Link>
-          <Link to={`/students/${student._id}/id-cards`}>ID Cards</Link>
-          <Link to={`/students/${student._id}/certificates`}>Certificates</Link>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="page-header">
+      <header className="student-detail-heading">
+        <div className="student-detail-heading__title">
+          <span><UserRound size={25} /></span>
           <div>
-            <h2>Fees</h2>
-            <p>Student fee summary</p>
-          </div>
-
-          <Link className="btn btn-primary" to={`/fees/student/${student._id}`}>
-            View Fee History
-          </Link>
-        </div>
-
-        <div className="grid grid-4">
-          <div className="stat-card">
-            <span>Monthly Fee</span>
-            <strong>
-              ₹{Number(student.monthlyFeeOverride || 0).toLocaleString("en-IN")}
-            </strong>
-          </div>
-
-          <div className="stat-card">
-            <span>Fee Due Day</span>
-            <strong>{student.feeDueDay || "-"}</strong>
-          </div>
-
-          <div className="stat-card">
-            <span>Scholarship</span>
-            <strong>
-              ₹{Number(student.scholarshipAmount || 0).toLocaleString("en-IN")}
-            </strong>
-          </div>
-
-          <div className="stat-card">
-            <span>Discount %</span>
-            <strong>{student.discountPercent || 0}%</strong>
+            <div className="student-detail-heading__name-row">
+              <h1>{name}</h1>
+              <div className="student-detail-heading__badges">
+                <code>{text(student.admissionNumber || student.studentCode, "No code")}</code>
+                {student.beltRank ? <b><Award size={13} /> {beltLabel(student)}</b> : null}
+                <i className={active ? "is-active" : "is-inactive"}>{active ? "Active" : text(student.status, "Inactive")}</i>
+              </div>
+            </div>
+            <p>Complete student identity, training, health and academy activity profile.</p>
           </div>
         </div>
-
-        <div style={{ marginTop: "16px" }}>
-          <Link className="btn btn-primary" to={`/fees/collect?student=${student._id}`}>
-            Collect Fee
-          </Link>
+        <div className="student-detail-heading__actions">
+          <Link className="btn btn-outline" to="/students"><ArrowLeft size={16} /> Back</Link>
+          <Link className="btn btn-primary" to={`/students/${student._id}/edit`}><Edit3 size={16} /> Edit Student</Link>
         </div>
+      </header>
+
+      <MetricGrid className="student-detail-metrics" items={[
+        { id: "status", icon: CheckCircle2, label: "Student Status", value: active ? "Active" : text(student.status, "Inactive") },
+        { id: "age", className: "is-blue", icon: CalendarDays, label: "Current Age", value: age === null ? "—" : `${age} Years` },
+        { id: "category", className: "is-purple", icon: GraduationCap, label: "Age Category", value: text(student.ageCategory) },
+        { id: "belt", className: "is-orange", icon: Award, label: "Belt Rank", value: beltLabel(student) },
+        { id: "batch", className: "is-green", icon: UsersRound, label: "Assigned Batch", value: batchName },
+      ]} getCardProps={() => ({ iconSize: 21 })} />
+
+      <div className="student-detail-identity-grid">
+        <section className="student-detail-photo-card">
+          <div className="student-detail-photo">
+            <img src={getStudentPhotoUrl(student)} alt={name} onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }} />
+            <span className={active ? "is-active" : "is-inactive"}>{active ? "Active Student" : text(student.status, "Inactive")}</span>
+          </div>
+          <div className="student-detail-photo-card__body">
+            <small>Student Profile</small><h2>{name}</h2>
+            <code>{text(student.admissionNumber || student.studentCode, "No admission code")}</code>
+            <div><span><MapPin size={14} />{branchName}</span><span><UsersRound size={14} />{batchName}</span></div>
+          </div>
+        </section>
+
+        <section className="student-detail-card">
+          <BatchDetailSectionHeader icon={IdCard} eyebrow="Identity" title="Personal Information" description="Core identity, membership and demographic details." />
+          <div className="student-detail-items">
+            <DetailItem icon={IdCard} label="Admission Number">{text(student.admissionNumber || student.studentCode)}</DetailItem>
+            <DetailItem icon={ShieldCheck} label="Aadhaar Number">{text(student.aadhaarNumber)}</DetailItem>
+            <DetailItem icon={UserRound} label="Gender">{text(student.gender)}</DetailItem>
+            <DetailItem icon={CalendarDays} label="Date of Birth">{formatDate(student.dateOfBirth || student.dob)}</DetailItem>
+            <DetailItem icon={CalendarCheck2} label="Joining Date">{formatDate(student.joiningDate)}</DetailItem>
+            <DetailItem icon={GraduationCap} label="Age / Category">{age === null ? "Not added" : `${age} Years · ${text(student.ageCategory)}`}</DetailItem>
+            <DetailItem icon={MapPin} label="Branch">{branchName}</DetailItem>
+            <DetailItem icon={UsersRound} label="Batch">{batchName}</DetailItem>
+          </div>
+        </section>
+      </div>
+
+      <div className="student-detail-primary-grid">
+        <section className="student-detail-card">
+          <BatchDetailSectionHeader icon={MapPin} eyebrow="Contact" title="Contact & Location" description="Primary communication and residential address." />
+          <div className="student-detail-items">
+            <DetailItem icon={Phone} label="Student Phone">{formatPhone(student.countryCode, student.phone)}</DetailItem>
+            <DetailItem icon={Mail} label="Email">{text(student.email)}</DetailItem>
+            <DetailItem icon={MapPin} label="City">{text(student.city)}</DetailItem>
+            <DetailItem icon={MapPin} label="State & Country">{[student.state, student.country].filter(Boolean).join(", ") || "Not added"}</DetailItem>
+            <DetailItem icon={MapPin} label="Complete Address" wide>{address || "Not added"}</DetailItem>
+          </div>
+        </section>
+
+        <section className="student-detail-card">
+          <BatchDetailSectionHeader icon={BookOpen} eyebrow="Education" title="Education & Occupation" description="Academic or professional information." />
+          <div className="student-detail-items">
+            <DetailItem icon={BookOpen} label="School Name">{text(student.schoolName || student.education?.schoolName)}</DetailItem>
+            <DetailItem icon={GraduationCap} label="Class">{text(student.className || student.education?.className)}</DetailItem>
+            <DetailItem icon={BookOpen} label="Section">{text(student.section || student.education?.section)}</DetailItem>
+            <DetailItem icon={GraduationCap} label="College / Firm">{text(student.collegeName || student.education?.collegeName)}</DetailItem>
+            <DetailItem icon={UserRound} label="Occupation" wide>{text(student.occupation || student.education?.occupation)}</DetailItem>
+          </div>
+        </section>
+      </div>
+
+      <div className="student-detail-primary-grid">
+        <section className="student-detail-card">
+          <BatchDetailSectionHeader icon={Award} eyebrow="Training" title="Training Information" description="Sport, belt rank and academy assignment." />
+          <div className="student-detail-items">
+            <DetailItem icon={Activity} label="Martial Art / Sport">{text(student.martialArt)}</DetailItem>
+            <DetailItem icon={Award} label="Belt Rank" accent>{beltLabel(student)}</DetailItem>
+            <DetailItem icon={ShieldPlus} label="Dan Rank">{text(student.danRank)}</DetailItem>
+            <DetailItem icon={CalendarCheck2} label="Training Since">{formatDate(student.joiningDate)}</DetailItem>
+            <DetailItem icon={MapPin} label="Training Branch">{branchName}</DetailItem>
+            <DetailItem icon={UsersRound} label="Current Batch">{batchName}</DetailItem>
+          </div>
+        </section>
+
+        <section className="student-detail-card">
+          <BatchDetailSectionHeader icon={HeartPulse} eyebrow="Health" title="Medical & Physical Information" description="Important health and safe-training information." />
+          <div className="student-detail-items">
+            <DetailItem icon={Ruler} label="Height">{height ? `${height} cm` : "Not added"}</DetailItem>
+            <DetailItem icon={Weight} label="Weight">{weight ? `${weight} kg` : "Not added"}</DetailItem>
+            <DetailItem icon={HeartPulse} label="Blood Group" accent>{text(student.bloodGroup || student.medicalInfo?.bloodGroup)}</DetailItem>
+            <DetailItem icon={Activity} label="Medical Notes">{text(student.notes || student.medicalInfo?.notes)}</DetailItem>
+          </div>
+          <div className="student-detail-tags">
+            {conditions.length ? conditions.map((condition) => <span key={condition}><HeartPulse size={13} />{condition}</span>) : <p>No medical conditions added.</p>}
+          </div>
+        </section>
+      </div>
+
+      <section className="student-detail-card">
+        <BatchDetailSectionHeader icon={ShieldPlus} eyebrow="Safety" title="Parent & Emergency Contacts" description="People to contact for student support or an urgent situation." />
+        <div className="student-detail-contact-grid">
+          {parents.map((contact, index) => <ContactCard key={`parent-${index}`} title={parents.length > 1 ? `Parent / Guardian ${index + 1}` : "Parent / Guardian"} eyebrow="Guardian" contact={contact} />)}
+          {emergencyContacts.map((contact, index) => <ContactCard key={`emergency-${index}`} title={emergencyContacts.length > 1 ? `Emergency Contact ${index + 1}` : "Emergency Contact"} eyebrow="Safety" contact={contact} />)}
+        </div>
+        {!parents.length && !emergencyContacts.length ? <p className="student-detail-empty-note">No parent or emergency contacts added.</p> : null}
+      </section>
+
+      <div className="student-detail-secondary-grid">
+        <section className="student-detail-card">
+          <BatchDetailSectionHeader icon={WalletCards} eyebrow="Finance" title="Student Fee Setup" description="Fee, scholarship and discount configuration." />
+          <div className="student-detail-items">
+            <DetailItem icon={BadgeIndianRupee} label="Monthly Fee" accent>{currency(student.monthlyFeeOverride)}</DetailItem>
+            <DetailItem icon={CalendarDays} label="Fee Due Day">{student.feeDueDay ? `Day ${student.feeDueDay}` : "Not added"}</DetailItem>
+            <DetailItem icon={BadgeIndianRupee} label="Scholarship" accent>{currency(student.scholarshipAmount)}</DetailItem>
+            <DetailItem icon={ReceiptIndianRupee} label="Discount">{Number(student.discountPercent || 0)}%</DetailItem>
+          </div>
+          <div className="student-detail-card-action">
+            <Link className="btn btn-outline" to={`/fees/student/${student._id}`}>Fee History <ExternalLink size={14} /></Link>
+            <Link className="btn btn-primary" to={`/fees/collect?student=${student._id}`}><BadgeIndianRupee size={15} /> Collect Fee</Link>
+          </div>
+        </section>
+
+        <section className="student-detail-card student-detail-quick-links">
+          <BatchDetailSectionHeader icon={ExternalLink} eyebrow="Activity" title="Quick Links" description="Open student records and academy workflows." />
+          <div className="student-detail-link-grid">
+            {[
+              [CalendarCheck2, "Attendance History", `/attendance/student/${student._id}`],
+              [WalletCards, "Fee History", `/fees/student/${student._id}`],
+              [Award, "Belt History", `/students/${student._id}/belt-history`],
+              [Award, "Championship History", `/students/${student._id}/championship-history`],
+              [Activity, "Tournament History", `/students/${student._id}/tournament-history`],
+              [Clock3, "Progress Timeline", `/students/${student._id}/timeline`],
+              [IdCard, "ID Cards", `/students/${student._id}/id-cards`],
+              [GraduationCap, "Certificates", `/students/${student._id}/certificates`],
+            ].map(([Icon, label, href]) => <Link key={label} to={href}><Icon size={16} /><span>{label}</span><ExternalLink size={13} /></Link>)}
+          </div>
+        </section>
       </div>
     </div>
   );
