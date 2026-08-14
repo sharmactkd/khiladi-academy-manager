@@ -221,12 +221,21 @@ const AddStudent = () => {
           </div>
         </div><ProfilePhotoField previewUrl={photoPreview} onChange={changePhoto} onRemove={() => { setPhoto(null); setPhotoPreview(""); }} disabled={saving} /></div>
       </StudentFormSection>
-      <div className="student-contact-layout">
-        <StudentFormSection eyebrow="CONTACT" title="Contact & Location" description="Primary contact and residential location." icon={MapPin}><div className="student-form-body"><PhoneLocationFields {...studentContact} phoneLabel="Student Phone" onChange={contactUpdater(setStudentContact)} afterPhone={<label className="student-contact-email"><span>Email</span><input type="email" autoComplete="email" {...register("email")} /></label>} /><label className="student-form-wide"><span>Address</span><textarea rows="3" {...register("address")} /></label></div></StudentFormSection>
-        <div className="student-contact-layout__side">
-          <StudentFormSection eyebrow="GUARDIAN" title="Parent Contact" description="Parent or guardian contact details." icon={Phone}><PersonContactRepeater items={parentContacts} onChange={setParentContacts} addLabel="Add More Parent / Guardian" /></StudentFormSection>
-          <StudentFormSection eyebrow="SAFETY" title="Emergency Contact" description="Contacts to use in an urgent situation." icon={ShieldAlert}><PersonContactRepeater items={emergencyContacts} onChange={setEmergencyContacts} addLabel="Add More Emergency Contact" /></StudentFormSection>
+      <StudentFormSection className="student-contact-card" eyebrow="CONTACT" title="Contact & Location" description="Primary contact and residential location." icon={MapPin}>
+        <div className="student-form-body">
+          <PhoneLocationFields
+            {...studentContact}
+            phoneLabel="Student Phone"
+            maxPhones={4}
+            onChange={contactUpdater(setStudentContact)}
+            phoneTrailingContent={<label className="student-contact-email"><span>Email</span><input type="email" autoComplete="email" {...register("email")} /></label>}
+          />
+          <label className="student-form-wide"><span>Address</span><textarea rows="3" {...register("address")} /></label>
         </div>
+      </StudentFormSection>
+      <div className="student-form-grid student-people-contact-grid">
+        <StudentFormSection eyebrow="GUARDIAN" title="Parent Contact" description="Parent or guardian contact details." icon={Phone}><PersonContactRepeater items={parentContacts} onChange={setParentContacts} addLabel="Add More Parent / Guardian" /></StudentFormSection>
+        <StudentFormSection eyebrow="SAFETY" title="Emergency Contact" description="Contacts to use in an urgent situation." icon={ShieldAlert}><PersonContactRepeater items={emergencyContacts} onChange={setEmergencyContacts} addLabel="Add More Emergency Contact" /></StudentFormSection>
       </div>
       <div className="student-form-grid student-training-medical-grid">
         <StudentFormSection eyebrow="TRAINING" title="Training Information" description="Martial art, belt and rank assignment." icon={BookOpen}>

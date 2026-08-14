@@ -1,4 +1,3 @@
-
 /* phone styles extracted from global.css. Selectors remain globally compatible during staged CSS Modules migration. */
 
 :global(.phone-location-phone-group) {
@@ -211,4 +210,23 @@
 
 @media (max-width:600px) {:global(.operations-coach-card .phone-location-primary-row),
 :global(.operations-additional-list .phone-location-primary-row){grid-template-columns:105px minmax(0,1fr)}
+}
+
+:global(.phone-location-primary-row--with-trailing) {
+  grid-template-columns: 120px minmax(180px, 1fr) auto minmax(220px, 1fr);
+  align-items: end;
+}
+
+:global(.phone-location-primary-trailing) {
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  :global(.phone-location-primary-row--with-trailing) {
+    grid-template-columns: 105px minmax(0, 1fr);
+  }
+
+  :global(.phone-location-primary-trailing) {
+    grid-column: 1 / -1;
+  }
 }

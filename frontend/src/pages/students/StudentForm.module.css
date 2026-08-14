@@ -31,6 +31,32 @@
   gap: 16px;
 }
 
+:global(.student-contact-card .student-form-body) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+:global(.student-contact-card .phone-location-phone-group),
+:global(.student-contact-card .student-form-wide) {
+  grid-column: 1 / -1;
+}
+
+:global(.student-contact-email) {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--student-ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+:global(.student-people-contact-grid) {
+  grid-template-columns: 1fr;
+}
+
+:global(.student-training-medical-grid) {
+  grid-template-columns: 1fr;
+}
+
 :global(.student-form-card) {
   min-width: 0;
   overflow: hidden;
@@ -397,6 +423,7 @@
 
 :global(.student-training-components .batch-form-card--profile) {
   display: grid;
+  grid-template-columns: 1fr !important;
   gap: 14px;
   border: 0;
   border-radius: 0;
@@ -477,4 +504,10 @@
   :global(.student-form-actions .btn) { flex: 1 1 140px; }
   :global(.student-demographics-row) { grid-template-columns: 1fr; }
   :global(.student-medical-measurements) { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  :global(.student-contact-card .student-form-body) {
+    grid-template-columns: 1fr;
+  }
 }

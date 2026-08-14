@@ -18,6 +18,8 @@ const formatPhone = (digits) => {
 
 const PhoneLocationFields = ({
   afterPhone = null,
+  phoneTrailingContent = null,
+  showAddPhone = true,
   countryCode = DEFAULT_DIAL_CODE,
   phone = "",
   phoneNumbers = [],
@@ -237,7 +239,11 @@ const PhoneLocationFields = ({
           <span>{normalizedPhones.length}/{maxPhones}</span>
         </div>
 
-        <div className="phone-location-primary-row">
+        <div
+          className={`phone-location-primary-row${
+            phoneTrailingContent ? " phone-location-primary-row--with-trailing" : ""
+          }`}
+        >
           <div className="phone-location-code-picker">
             <button
               type="button"
@@ -308,15 +314,23 @@ const PhoneLocationFields = ({
             maxLength={countryCode === "+91" ? 12 : 20}
           />
 
-          <button
-            type="button"
-            className="phone-location-add-button"
-            onClick={addPhoneNumber}
-            disabled={normalizedPhones.length >= maxPhones}
-          >
-            <Plus size={15} aria-hidden="true" />
-            {normalizedPhones.length >= maxPhones ? "Maximum 4" : "Add More"}
-          </button>
+          {showAddPhone ? (
+            <button
+              type="button"
+              className="phone-location-add-button"
+              onClick={addPhoneNumber}
+              disabled={normalizedPhones.length >= maxPhones}
+            >
+              <Plus size={15} aria-hidden="true" />
+              {normalizedPhones.length >= maxPhones ? `Maximum ${maxPhones}` : "Add More"}
+            </button>
+          ) : null}
+
+          {phoneTrailingContent ? (
+            <div className="phone-location-primary-trailing">
+              {phoneTrailingContent}
+            </div>
+          ) : null}
         </div>
 
         {normalizedPhones.slice(1).map((number, offset) => {
