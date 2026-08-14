@@ -351,48 +351,6 @@
   margin: 0;
 }
 
-:global(.student-medical-options) {
-  display: grid;
-  gap: 8px;
-  padding: 0 16px 14px;
-}
-
-:global(.student-medical-options > strong) {
-  color: var(--student-ink);
-  font-size: 10px;
-}
-
-:global(.student-medical-options__grid) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-:global(.student-medical-options__grid label) {
-  display: inline-flex;
-  grid-auto-flow: column;
-  align-items: center;
-  gap: 6px;
-  min-height: 31px;
-  border: 1px solid #ff9ca3;
-  border-radius: 8px;
-  padding: 6px 10px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 9px;
-  font-weight: 600;
-}
-
-:global(.student-medical-options__grid label.is-selected) {
-  border-color: var(--student-red);
-  background: var(--student-red);
-  color: #fff;
-}
-
-:global(.student-medical-options__grid input) {
-  accent-color: var(--student-red);
-}
-
 :global(.student-form-actions) {
   display: flex;
   align-items: center;
@@ -525,20 +483,196 @@
   align-items: center;
 }
 
+:global(.student-medical-content) {
+  display: grid;
+  gap: 0;
+  padding: 18px;
+}
+
 :global(.student-medical-measurements) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 15px 16px 4px;
+  gap: 18px;
+  padding: 0 0 16px;
 }
 
-:global(.student-medical-measurements > label) {
+:global(.student-medical-measurements > label),
+:global(.student-medical-notes) {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
   color: var(--student-ink);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+:global(.student-medical-measurements input) {
+  min-height: 48px !important;
+}
+
+:global(.student-medical-selector) {
+  display: grid;
+  gap: 11px;
+  padding: 14px 0;
+  border-top: 1px solid #edf1f5;
+}
+
+:global(.student-medical-selector__heading) {
+  display: grid;
+  gap: 3px;
+}
+
+:global(.student-medical-selector__heading strong) {
+  color: var(--student-ink);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+:global(.student-medical-selector__heading small) {
+  color: #718096;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+:global(.student-blood-group-grid) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+:global(.student-blood-group-grid > button) {
+  min-width: 76px;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 8px 13px !important;
+  border: 1px solid #d8e0ea !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #17233b !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  line-height: 1;
+  box-shadow: 0 2px 5px rgb(15 23 42 / 3%);
+  transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+:global(.student-blood-group-grid > button:hover) {
+  border-color: #f08b92 !important;
+  background: #fff8f8 !important;
+  transform: translateY(-1px);
+}
+
+:global(.student-blood-group-grid > button:focus-visible) {
+  outline: 3px solid rgb(227 6 19 / 14%);
+  outline-offset: 2px;
+}
+
+:global(.student-blood-group-grid > button.is-selected) {
+  border-color: var(--student-red) !important;
+  background: var(--student-red) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 18px rgb(227 6 19 / 18%);
+}
+
+:global(.student-selector-check) {
+  width: 19px;
+  height: 19px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--student-red);
+}
+
+:global(.student-medical-selector--conditions) {
+  padding-bottom: 16px;
+}
+
+:global(.student-medical-conditions-grid) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+:global(.student-medical-conditions-grid > label) {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  border: 1px solid #d8e0ea;
+  border-radius: 10px;
+  background: #fff;
+  color: #26344d;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgb(15 23 42 / 3%);
+  transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+:global(.student-medical-conditions-grid > label:hover) {
+  border-color: #f08b92;
+  background: #fffafa;
+  transform: translateY(-1px);
+}
+
+:global(.student-medical-conditions-grid > label:focus-within) {
+  outline: 3px solid rgb(227 6 19 / 12%);
+  outline-offset: 2px;
+}
+
+:global(.student-medical-conditions-grid > label.is-selected) {
+  border-color: #ef5962;
+  background: #fff4f4;
+  color: #8f0a11;
+  box-shadow: 0 6px 14px rgb(227 6 19 / 9%);
+}
+
+:global(.student-medical-conditions-grid input) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+:global(.student-condition-check) {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1.5px solid #aeb9c7;
+  border-radius: 50%;
+  background: #fff;
+  color: #fff;
+}
+
+:global(.student-medical-conditions-grid > label.is-selected .student-condition-check) {
+  border-color: var(--student-red);
+  background: var(--student-red);
+}
+
+:global(.student-medical-notes) {
+  padding-top: 14px;
+  border-top: 1px solid #edf1f5;
+}
+
+:global(.student-medical-notes textarea) {
+  min-height: 84px;
 }
 
 @media (max-width: 1080px) {

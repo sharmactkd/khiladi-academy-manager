@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
-import { ArrowLeft, BookOpen, HeartPulse, IdCard, MapPin, Phone, Save, ShieldAlert, UserRound } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, HeartPulse, IdCard, MapPin, Phone, Save, ShieldAlert, UserRound } from "lucide-react";
 import { academyApi } from "../../api/academyApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { getBranches } from "../../api/branchApi.js";
@@ -253,7 +253,59 @@ const AddStudent = () => {
             {showBeltSelect && beltRank === "Black" ? <label className="student-dan-rank"><span>Dan Rank</span><select {...register("danRank")}><option value="">Select Dan</option>{TAEKWONDO_DAN_RANKS.map((dan) => <option key={dan}>{dan}</option>)}</select></label> : null}
           </div></div>
         </StudentFormSection>
-        <StudentFormSection eyebrow="HEALTH" title="Medical Information" description="Health details important for safe training." icon={HeartPulse}><div className="student-medical-measurements"><label><span>Height (cm)</span><input type="number" min="0" step="0.1" {...register("heightCm")} /></label><label><span>Weight (kg)</span><input type="number" min="0" step="0.1" {...register("weightKg")} /></label></div><div className="student-chip-field student-chip-field--padded"><OptionChipsField label="Blood Group" multiple={false} options={BLOOD_GROUPS} value={bloodGroup} onChange={(value) => setValue("bloodGroup", value)} /></div><div className="student-medical-options"><strong>Medical Conditions</strong><div className="student-medical-options__grid">{MEDICAL_CONDITIONS.map((condition) => <label key={condition} className={medicalConditions.includes(condition) ? "is-selected" : ""}><input type="checkbox" checked={medicalConditions.includes(condition)} onChange={() => toggleCondition(condition)} />{condition}</label>)}</div></div><label className="student-form-wide"><span>Medical Notes</span><textarea rows="3" {...register("medicalNotes")} /></label></StudentFormSection>
+        <StudentFormSection eyebrow="HEALTH" title="Medical Information" description="Health details important for safe training." icon={HeartPulse}>
+          <div className="student-medical-content">
+            <div className="student-medical-measurements">
+              <label><span>Height (cm)</span><input type="number" min="0" step="0.1" {...register("heightCm")} /></label>
+              <label><span>Weight (kg)</span><input type="number" min="0" step="0.1" {...register("weightKg")} /></label>
+            </div>
+
+            <section className="student-medical-selector" aria-labelledby="student-blood-group-label">
+              <div className="student-medical-selector__heading">
+                <strong id="student-blood-group-label">Blood Group</strong>
+                <small>Select one</small>
+              </div>
+              <div className="student-blood-group-grid" role="radiogroup" aria-labelledby="student-blood-group-label">
+                {BLOOD_GROUPS.map((group) => {
+                  const selected = bloodGroup === group;
+                  return <button
+                    key={group}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={selected ? "is-selected" : ""}
+                    onClick={() => setValue("bloodGroup", group, { shouldDirty: true })}
+                  >
+                    <span>{group}</span>
+                    {selected ? <span className="student-selector-check" aria-hidden="true"><Check size={13} /></span> : null}
+                  </button>;
+                })}
+              </div>
+            </section>
+
+            <section className="student-medical-selector student-medical-selector--conditions" aria-labelledby="student-medical-conditions-label">
+              <div className="student-medical-selector__heading">
+                <strong id="student-medical-conditions-label">Medical Conditions</strong>
+                <small>Select all that apply</small>
+              </div>
+              <div className="student-medical-conditions-grid">
+                {MEDICAL_CONDITIONS.map((condition) => {
+                  const selected = medicalConditions.includes(condition);
+                  return <label key={condition} className={selected ? "is-selected" : ""}>
+                    <input type="checkbox" checked={selected} onChange={() => toggleCondition(condition)} />
+                    <span className="student-condition-check" aria-hidden="true">{selected ? <Check size={12} /> : null}</span>
+                    <span>{condition}</span>
+                  </label>;
+                })}
+              </div>
+            </section>
+
+            <label className="student-medical-notes">
+              <span>Medical Notes</span>
+              <textarea rows="3" {...register("medicalNotes")} />
+            </label>
+          </div>
+        </StudentFormSection>
       </div>
       <FormActionBar
         className="student-form-actions"
