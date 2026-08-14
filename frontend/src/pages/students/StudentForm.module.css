@@ -432,7 +432,9 @@
     var(--student-training-columns, repeat(2, minmax(0, 1fr))) !important;
   grid-template-areas: none !important;
   align-items: start;
-  gap: 18px;
+  justify-content: center;
+  column-gap: clamp(28px, 4vw, 64px);
+  row-gap: 18px;
   padding: 16px;
   border: 0;
   border-radius: 0;
@@ -511,7 +513,10 @@
   display: flex;
   align-items: center;
   margin: 0 !important;
-  line-height: 16px;
+  color: #09162d !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+  line-height: 1.2 !important;
 }
 
 :global(.student-training-components .operations-tag-grid),
