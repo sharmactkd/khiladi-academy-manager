@@ -244,12 +244,14 @@ const AddStudent = () => {
             style={{
               "--student-training-columns":
                 showBeltSelect && beltRank === "Black"
-                  ? "max-content max-content 192px"
-                  : "max-content max-content",
+                  ? "max-content minmax(0, 1fr) 192px"
+                  : "max-content minmax(0, 1fr)",
             }}
           >
             <SportsMartialArtsField className="batch-profile-sports" showHeader={false} allowCustom={false} options={academyMartialArts} selected={martialArt ? [martialArt] : []} customOptions={[]} onChange={(items) => setValue("martialArt", items.at(-1) || "")} />
-            <BeltTagsField label="Belt Rank" value={beltRank} includeNoLimit={false} onChange={(value) => setValue("beltRank", value)} />
+            <div className="batch-limit-field--belt student-belt-field">
+              <BeltTagsField label="Belt Rank" value={beltRank} includeNoLimit={false} onChange={(value) => setValue("beltRank", value)} />
+            </div>
             {showBeltSelect && beltRank === "Black" ? <label className="student-dan-rank"><span>Dan Rank</span><select {...register("danRank")}><option value="">Select Dan</option>{TAEKWONDO_DAN_RANKS.map((dan) => <option key={dan}>{dan}</option>)}</select></label> : null}
           </div></div>
         </StudentFormSection>
