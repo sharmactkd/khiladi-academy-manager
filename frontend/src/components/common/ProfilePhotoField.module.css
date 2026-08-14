@@ -1,1 +1,140 @@
-.root{display:grid;gap:12px;padding:13px;border:1px solid #e1e7ef;border-radius:11px;background:#fbfcfe}.preview{width:100%;aspect-ratio:1;display:grid;place-items:center;overflow:hidden;border:1px dashed #ef9ca0;border-radius:12px;background:#fff1f2;color:#cf0006}.preview img{width:100%;height:100%;object-fit:cover}.copy{min-width:0;display:grid;gap:4px}.copy strong{color:#08162f;font-size:11px}.copy small{color:#64748b;font-size:8px}.actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.actions label,.actions button{min-height:30px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 9px;border:1px solid #efb4b7;border-radius:7px;background:#fff;color:#cf0006;font-size:9px;font-weight:700;cursor:pointer}.actions label input{position:absolute;width:1px;height:1px;opacity:0}.actions button{border-color:#fecaca;background:#fff7f7}.actions button:disabled,.actions label:has(input:disabled){opacity:.55;cursor:not-allowed}@media(max-width:480px){.preview{max-height:250px}}
+.root {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #e1e7ef;
+  border-radius: 11px;
+  background: #fbfcfe;
+}
+
+.preview {
+  position: relative;
+  width: 100%;
+  height: 190px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px dashed #ef9ca0;
+  border-radius: 11px;
+  background: #fff1f2;
+  color: #cf0006;
+  cursor: pointer;
+}
+
+.preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview > input {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 14px;
+  background: rgba(184, 123, 123, 0.644);
+  color: #fff;
+  text-align: center;
+  opacity: 0;
+  transform: scale(.97);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.preview:not(.hasImage) .upload,
+.preview:hover .upload,
+.preview:focus-within .upload {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.preview:not(.hasImage) > svg {
+  opacity: 0;
+}
+
+.upload strong {
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.upload small {
+  max-width: 140px;
+  color: rgb(255 255 255 / 76%);
+  font-size: 7px;
+  line-height: 1.35;
+}
+
+.disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.disabled > input {
+  cursor: not-allowed;
+}
+
+.copy {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.copy > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.copy strong {
+  color: #08162f;
+  font-size: 10px;
+}
+
+.copy small {
+  color: #64748b;
+  font-size: 7px;
+}
+
+.copy button {
+  min-height: 29px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  background: #fff7f7;
+  color: #cf0006;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.copy button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .preview {
+    height: 175px;
+  }
+}

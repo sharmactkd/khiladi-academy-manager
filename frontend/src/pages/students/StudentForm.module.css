@@ -66,11 +66,11 @@
 
 :global(.student-identity-actions) {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
-:global(.student-identity-actions > label) {
+:global(.student-assignment-field) {
   display: grid;
   gap: 4px;
   min-width: 190px;
@@ -79,7 +79,8 @@
   font-weight: 700;
 }
 
-:global(.student-identity-actions select) {
+:global(.student-assignment-field select),
+:global(.student-assignment-field > strong) {
   min-height: 38px;
   border: 1px solid #d5deea;
   border-radius: 8px;
@@ -89,13 +90,32 @@
   font-size: 10px;
 }
 
-:global(.student-identity-actions > label:last-child) {
+:global(.student-assignment-field > strong) {
+  display: flex;
+  align-items: center;
+  min-width: 150px;
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+:global(.student-status-switch) {
   min-width: 245px;
   min-height: 48px;
-  border: 1px solid #dbe4ef;
-  border-radius: 9px;
-  padding: 8px 10px;
-  background: #fff;
+}
+
+:global(.student-status-field) {
+  display: grid;
+  gap: 4px;
+  min-width: 245px;
+  color: var(--student-ink);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+:global(.student-status-field .student-status-switch) {
+  width: 100%;
+  min-height: 38px;
+  padding-block: 6px;
 }
 
 :global(.student-form-body),
@@ -129,6 +149,37 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+:global(.student-form-identity .student-form-fields--three) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+:global(.student-demographics-row) {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+:global(.student-demographics-row > label) {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--student-ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+:global(.student-demographics-row > label > span b) {
+  color: var(--student-red);
+}
+
+:global(.student-demographics-row > label > small) {
+  color: #dc2626;
+  font-size: 9px;
+  font-weight: 600;
+}
+
 :global(.student-chip-field) {
   min-width: 0;
 }
@@ -149,6 +200,13 @@
 
 :global(.student-chip-field [class*="chips"]) {
   gap: 7px;
+}
+
+:global(.student-gender-field [class*="chips"]) {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
 }
 
 :global(.student-chip-field [class*="chip"]) {
@@ -316,19 +374,24 @@
 @media (max-width: 1080px) {
   :global(.student-form-identity) { grid-template-columns: 1fr; }
   :global(.student-form-identity > :last-child) { max-width: 420px; }
+  :global(.student-form-identity .student-form-fields--three) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  :global(.student-demographics-row) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 860px) {
   :global(.student-form-grid) { grid-template-columns: 1fr; }
   :global(.student-form-fields--three) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :global(.student-form-identity .student-form-fields--three) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   :global(.student-identity-actions) { align-items: stretch; flex-direction: column; }
   :global(.student-form-card__header) { align-items: flex-start; flex-wrap: wrap; }
   :global(.student-form-card__header > div:last-child:not(:nth-child(2))) { width: 100%; margin-left: 0; }
+  :global(.student-demographics-row) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 560px) {
   :global(.student-form-fields--two),
   :global(.student-form-fields--three) { grid-template-columns: 1fr; }
+  :global(.student-form-identity .student-form-fields--three) { grid-template-columns: 1fr; }
   :global(.student-form-card__header),
   :global(.student-form-body),
   :global(.student-form-fields),
@@ -337,4 +400,5 @@
   :global(.student-form-actions) { position: static; flex-wrap: wrap; }
   :global(.student-form-actions > div:first-child) { width: 100%; margin: 0 0 4px; }
   :global(.student-form-actions .btn) { flex: 1 1 140px; }
+  :global(.student-demographics-row) { grid-template-columns: 1fr; }
 }

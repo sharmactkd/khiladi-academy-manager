@@ -13,7 +13,6 @@ import OptionChipsField from "../../components/common/OptionChipsField.jsx";
 import PersonContactRepeater, { createPersonContact } from "../../components/common/PersonContactRepeater.jsx";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import ProfilePhotoField from "../../components/common/ProfilePhotoField.jsx";
-import SwitchField from "../../components/common/SwitchField.jsx";
 import { TAEKWONDO_BELTS, TAEKWONDO_DAN_RANKS, isTaekwondoSport } from "../../components/taekwondoBelts/taekwondoBelts.js";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
@@ -34,6 +33,18 @@ const calculateAge = (dob) => {
 };
 const ageCategoryFor = (age) => age === "" ? "" : age <= 11 ? "Sub-Junior" : age <= 14 ? "Cadet" : age <= 17 ? "Junior" : "Senior";
 const appendValue = (body, key, value) => body.append(key, typeof value === "object" && !(value instanceof File) ? JSON.stringify(value) : value ?? "");
+const unwrapList = (response, key) => {
+  const candidates = [
+    response,
+    response?.data,
+    response?.data?.data,
+    response?.data?.data?.data,
+    response?.[key],
+    response?.data?.[key],
+    response?.data?.data?.[key],
+  ];
+  return candidates.find(Array.isArray) || [];
+};
 
 const AddStudent = () => {
   const navigate = useNavigate();
@@ -49,7 +60,7 @@ const AddStudent = () => {
   const [emergencyContacts, setEmergencyContacts] = useState([createPersonContact()]);
   const [medicalConditions, setMedicalConditions] = useState([]);
   const { register, handleSubmit, control, setValue, formState: { errors } } = useForm({
-    defaultValues: { gender: "male", status: "active", martialArt: "", beltRank: "", danRank: "", bloodGroup: "" },
+    defaultValues: { branch: "", batch: "", gender: "male", status: "active", martialArt: "", beltRank: "", danRank: "", bloodGroup: "" },
   });
   const dob = useWatch({ control, name: "dob" });
   const martialArt = useWatch({ control, name: "martialArt" });
@@ -76,14 +87,18 @@ const AddStudent = () => {
         if (academyData?.martialArts?.length) setValue("martialArt", academyData.martialArts[0]);
       }
       if (branchResult.status === "fulfilled") {
-        const branchData = branchResult.value?.data?.data;
-        const branchList = Array.isArray(branchData) ? branchData : branchData?.branches || (Array.isArray(branchResult.value?.data) ? branchResult.value.data : []);
-        setBranches(branchList.filter((branch) => branch?.isActive !== false));
+        const activeBranches = unwrapList(branchResult.value, "branches").filter((branch) => branch?.isActive !== false);
+        setBranches(activeBranches);
+        if (activeBranches.length === 1) {
+          setValue("branch", activeBranches[0]._id, { shouldValidate: true });
+        }
       }
       if (batchResult.status === "fulfilled") {
-        const batchData = batchResult.value?.data?.data;
-        const batchList = Array.isArray(batchData) ? batchData : batchData?.batches || (Array.isArray(batchResult.value?.data) ? batchResult.value.data : []);
-        setBatches(batchList.filter((batch) => batch?.isActive !== false));
+        const activeBatches = unwrapList(batchResult.value, "batches").filter((batch) => batch?.isActive !== false);
+        setBatches(activeBatches);
+        if (activeBatches.length === 1) {
+          setValue("batch", activeBatches[0]._id, { shouldValidate: true });
+        }
       }
     });
     return () => { mounted = false; };
@@ -119,7 +134,7 @@ const AddStudent = () => {
       const payload = {
         admissionNumber: values.admissionNumber, aadhaarNumber: values.aadhaarNumber || "",
         firstName: names[0] || "", lastName: names.slice(1).join(" "), gender: values.gender, dateOfBirth: values.dob,
-        batch: values.batch || "", ...studentContact, email: values.email || "", address: values.address || "",
+        branch: values.branch || "", batch: values.batch || "", ...studentContact, email: values.email || "", address: values.address || "",
         parentContacts: parentContacts.map(({ id, customRelation, ...contact }) => ({ ...contact, relation: contact.relation === "Other" ? customRelation : contact.relation })),
         emergencyContacts: emergencyContacts.map(({ id, customRelation, ...contact }) => ({ ...contact, relation: contact.relation === "Other" ? customRelation : contact.relation })),
         schoolName: values.schoolName || "", className: values.className || "",
@@ -164,21 +179,42 @@ const AddStudent = () => {
       <Link className="btn btn-outline" to="/students"><ArrowLeft size={16} /> Back to Students</Link>
     </div>
     <form className="student-form" onSubmit={handleSubmit(onSubmit)} noValidate>
-      <StudentFormSection eyebrow="IDENTITY" title="Basic Information" description="Student identity, admission and membership details." icon={IdCard} action={<div className="student-identity-actions"><label><span>Batch</span><select {...register("batch")}><option value="">No Batch</option>{batches.map((batch) => <option key={batch._id} value={batch._id}>{batch.batchName}</option>)}</select></label><SwitchField checked={status === "active"} label={status === "active" ? "Active Student" : "Inactive Student"} description={status === "active" ? "Student can use academy services." : "Student access remains paused."} onChange={(checked) => setValue("status", checked ? "active" : "inactive")} /></div>}>
+      <StudentFormSection eyebrow="IDENTITY" title="Basic Information" description="Student identity, admission and membership details." icon={IdCard} action={<div className="student-identity-actions">
+        <div className="student-assignment-field">
+          <span>Branch</span>
+          {branches.length > 1 ? <select {...register("branch")}><option value="">Select Branch</option>{branches.map((branch) => <option key={branch._id} value={branch._id}>{branch.branchName}</option>)}</select> : <strong>{branches[0]?.branchName || "No Active Branch"}</strong>}
+        </div>
+        <div className="student-assignment-field">
+          <span>Batch</span>
+          {batches.length > 1 ? <select {...register("batch")}><option value="">Select Batch</option>{batches.map((batch) => <option key={batch._id} value={batch._id}>{batch.batchName}</option>)}</select> : <strong>{batches[0]?.batchName || "No Active Batch"}</strong>}
+        </div>
+        <div className="student-status-field">
+          <span>Status</span>
+          <label className="add-branch-switch student-status-switch">
+            <input type="checkbox" checked={status === "active"} onChange={(event) => setValue("status", event.target.checked ? "active" : "inactive")} />
+            <span />
+            <div><strong>{status === "active" ? "Active Student" : "Inactive Student"}</strong><small>{status === "active" ? "Allow operational use immediately after creation." : "Student remains unavailable for operations."}</small></div>
+          </label>
+        </div>
+      </div>}>
         <div className="student-form-identity"><div className="student-form-fields student-form-fields--three">
           <label><span>Full Name <b>*</b></span><input autoComplete="name" {...register("name", { required: "Name required" })} />{errorFor("name")}</label>
           <label><span>Admission Number <b>*</b></span><input {...register("admissionNumber", { required: "Admission number required" })} />{errorFor("admissionNumber")}</label>
           <label><span>Aadhaar Number</span><input maxLength={12} inputMode="numeric" placeholder="12 digit Aadhaar number" {...register("aadhaarNumber", { pattern: { value: /^\d{12}$/, message: "Enter a valid 12 digit Aadhaar number" } })} />{errorFor("aadhaarNumber")}</label>
-          <div className="student-chip-field"><OptionChipsField label="Gender" multiple={false} options={["Male", "Female"]} value={gender === "female" ? "Female" : "Male"} onChange={(value) => setValue("gender", value.toLowerCase())} /></div>
-          <label><span>Date of Birth <b>*</b></span><input type="date" max={new Date().toISOString().split("T")[0]} {...register("dob", { required: "Date of birth required" })} />{errorFor("dob")}</label>
-          <label><span>Age</span><input value={age === "" ? "" : `${age} Years`} readOnly /></label>
-          <label><span>Age Category</span><input value={ageCategory} readOnly /></label>
-          <label><span>Joining Date</span><input type="date" {...register("joiningDate")} /></label>
+          <div className="student-chip-field student-gender-field"><OptionChipsField label="Gender" multiple={false} options={["Male", "Female"]} value={gender === "female" ? "Female" : "Male"} onChange={(value) => setValue("gender", value.toLowerCase())} /></div>
+          <div className="student-demographics-row">
+            <label><span>Joining Date</span><input type="date" {...register("joiningDate")} /></label>
+            <label><span>Date of Birth <b>*</b></span><input type="date" max={new Date().toISOString().split("T")[0]} {...register("dob", { required: "Date of birth required" })} />{errorFor("dob")}</label>
+            <label><span>Age</span><input value={age === "" ? "" : `${age} Years`} readOnly /></label>
+            <label><span>Age Category</span><input value={ageCategory} readOnly /></label>
+           
+       <label><span>School Name</span><input {...register("schoolName")} /></label><label><span>Class</span><input {...register("className")} /></label><label><span>Company / Firm Name</span><input {...register("collegeName")} /></label><label><span>Occupation</span><input {...register("occupation")} /></label>
+          </div>
         </div><ProfilePhotoField previewUrl={photoPreview} onChange={changePhoto} onRemove={() => { setPhoto(null); setPhotoPreview(""); }} disabled={saving} /></div>
       </StudentFormSection>
       <div className="student-form-grid">
         <StudentFormSection eyebrow="CONTACT" title="Contact & Location" description="Primary contact and residential location." icon={MapPin}><div className="student-form-body"><PhoneLocationFields {...studentContact} phoneLabel="Student Phone" onChange={contactUpdater(setStudentContact)} /><label><span>Email</span><input type="email" autoComplete="email" {...register("email")} /></label><label className="student-form-wide"><span>Address</span><textarea rows="3" {...register("address")} /></label></div></StudentFormSection>
-        <StudentFormSection eyebrow="EDUCATION" title="Education Information" description="Current school, company or occupation." icon={GraduationCap}><div className="student-form-fields student-form-fields--two"><label><span>School Name</span><input {...register("schoolName")} /></label><label><span>Class</span><input {...register("className")} /></label><label><span>Company / Firm Name</span><input {...register("collegeName")} /></label><label><span>Occupation</span><input {...register("occupation")} /></label></div></StudentFormSection>
+       
       </div>
       <div className="student-form-grid">
         <StudentFormSection eyebrow="GUARDIAN" title="Parent Contact" description="Parent or guardian contact details." icon={Phone}><PersonContactRepeater items={parentContacts} onChange={setParentContacts} addLabel="Add More Parent / Guardian" /></StudentFormSection>
@@ -190,8 +226,8 @@ const AddStudent = () => {
         {showBeltSelect && beltRank === "Black" ? <label><span>Dan Rank</span><select {...register("danRank")}><option value="">Select Dan</option>{TAEKWONDO_DAN_RANKS.map((dan) => <option key={dan}>{dan}</option>)}</select></label> : null}
       </div></StudentFormSection>
       <div className="student-form-grid">
-        <StudentFormSection eyebrow="FITNESS" title="Physical Information" description="Current body measurements." icon={Activity}><div className="student-form-fields student-form-fields--two"><label><span>Height (cm)</span><input type="number" min="0" step="0.1" {...register("heightCm")} /></label><label><span>Weight (kg)</span><input type="number" min="0" step="0.1" {...register("weightKg")} /></label></div></StudentFormSection>
-        <StudentFormSection eyebrow="HEALTH" title="Medical Information" description="Health details important for safe training." icon={HeartPulse}><div className="student-chip-field student-chip-field--padded"><OptionChipsField label="Blood Group" multiple={false} options={BLOOD_GROUPS} value={bloodGroup} onChange={(value) => setValue("bloodGroup", value)} /></div><div className="student-medical-options"><strong>Medical Conditions</strong><div className="student-medical-options__grid">{MEDICAL_CONDITIONS.map((condition) => <label key={condition} className={medicalConditions.includes(condition) ? "is-selected" : ""}><input type="checkbox" checked={medicalConditions.includes(condition)} onChange={() => toggleCondition(condition)} />{condition}</label>)}</div></div><label className="student-form-wide"><span>Medical Notes</span><textarea rows="3" {...register("medicalNotes")} /></label></StudentFormSection>
+       
+        <StudentFormSection eyebrow="HEALTH" title="Medical Information" description="Health details important for safe training." icon={HeartPulse}><div className="student-chip-field student-chip-field--padded"><label><span>Height (cm)</span><input type="number" min="0" step="0.1" {...register("heightCm")} /></label><label><span>Weight (kg)</span><input type="number" min="0" step="0.1" {...register("weightKg")} /></label><OptionChipsField label="Blood Group" multiple={false} options={BLOOD_GROUPS} value={bloodGroup} onChange={(value) => setValue("bloodGroup", value)} /></div><div className="student-medical-options"><strong>Medical Conditions</strong><div className="student-medical-options__grid">{MEDICAL_CONDITIONS.map((condition) => <label key={condition} className={medicalConditions.includes(condition) ? "is-selected" : ""}><input type="checkbox" checked={medicalConditions.includes(condition)} onChange={() => toggleCondition(condition)} />{condition}</label>)}</div></div><label className="student-form-wide"><span>Medical Notes</span><textarea rows="3" {...register("medicalNotes")} /></label></StudentFormSection>
       </div>
       <FormActionBar
         className="student-form-actions"
