@@ -265,7 +265,7 @@ const AddStudent = () => {
             <section className="student-medical-selector" aria-labelledby="student-blood-group-label">
               <div className="student-medical-selector__heading">
                 <strong id="student-blood-group-label">Blood Group</strong>
-                <small>Select one</small>
+                <small>Optional · click the selected group again to clear</small>
               </div>
               <div className="student-blood-group-grid" role="radiogroup" aria-labelledby="student-blood-group-label">
                 {BLOOD_GROUPS.map((group) => {
@@ -276,7 +276,7 @@ const AddStudent = () => {
                     role="radio"
                     aria-checked={selected}
                     className={selected ? "is-selected" : ""}
-                    onClick={() => setValue("bloodGroup", group, { shouldDirty: true })}
+                    onClick={() => setValue("bloodGroup", selected ? "" : group, { shouldDirty: true })}
                   >
                     <span>{group}</span>
                     {selected ? <span className="student-selector-check" aria-hidden="true"><Check size={13} /></span> : null}
