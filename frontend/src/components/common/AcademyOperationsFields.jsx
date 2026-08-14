@@ -139,6 +139,7 @@ export const SportsMartialArtsField = ({
   required = false,
   showHeader = true,
   className = "",
+  allowCustom = true,
 }) => {
   const [customValue, setCustomValue] = useState("");
   const allOptions = uniqueValues([...options, ...customOptions, ...selected]);
@@ -177,7 +178,7 @@ export const SportsMartialArtsField = ({
           options={allOptions}
           selected={selected}
           onToggle={toggle}
-          trailingContent={
+          trailingContent={allowCustom ? (
             <CustomTagInput
               value={customValue}
               onChange={setCustomValue}
@@ -185,7 +186,7 @@ export const SportsMartialArtsField = ({
               placeholder="Add custom sport / martial art"
               buttonLabel="Add Sport"
             />
-          }
+          ) : null}
         />
       </div>
     </section>
