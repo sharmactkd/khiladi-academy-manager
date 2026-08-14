@@ -244,8 +244,8 @@ const AddStudent = () => {
             style={{
               "--student-training-columns":
                 showBeltSelect && beltRank === "Black"
-                  ? "max-content minmax(0, 1fr) 192px"
-                  : "max-content minmax(0, 1fr)",
+                  ? "max-content max-content 192px"
+                  : "max-content max-content",
             }}
           >
             <SportsMartialArtsField className="batch-profile-sports" showHeader={false} allowCustom={false} options={academyMartialArts} selected={martialArt ? [martialArt] : []} customOptions={[]} onChange={(items) => setValue("martialArt", items.at(-1) || "")} />
