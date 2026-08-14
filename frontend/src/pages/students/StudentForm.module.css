@@ -428,7 +428,8 @@
 :global(.student-training-components .student-training-grid) {
   width: 100%;
   display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-columns:
+    var(--student-training-columns, repeat(2, minmax(0, 1fr))) !important;
   grid-template-areas: none !important;
   align-items: start;
   gap: 18px;
@@ -437,10 +438,6 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-}
-
-:global(.student-training-components .student-training-grid.has-dan-rank) {
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
 
 :global(.student-training-components .operations-selection-section),
@@ -456,6 +453,10 @@
   .batch-profile-sports
   .operations-selection-section__body
 ) {
+  display: grid !important;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 10px !important;
   padding: 0 !important;
 }
 
@@ -466,6 +467,11 @@
   grid-column: 1 !important;
   grid-row: 1 !important;
   order: initial !important;
+  align-self: start;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 :global(.student-training-components .operations-belt-field) {
@@ -474,7 +480,12 @@
   grid-column: 2 !important;
   grid-row: 1 !important;
   order: initial !important;
-  padding: 0;
+  align-self: start;
+  display: grid !important;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 10px !important;
+  padding: 0 !important;
 }
 
 :global(.student-training-components .student-dan-rank) {
@@ -484,8 +495,11 @@
   grid-column: 3 !important;
   grid-row: 1 !important;
   order: initial !important;
-  gap: 0;
-  padding: 0;
+  align-self: start;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 10px !important;
+  padding: 0 !important;
   color: var(--student-ink);
   font-size: 10px;
   font-weight: 700;
@@ -496,7 +510,7 @@
   min-height: 16px;
   display: flex;
   align-items: center;
-  margin: 0 0 10px;
+  margin: 0 !important;
   line-height: 16px;
 }
 
