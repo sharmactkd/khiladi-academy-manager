@@ -2,22 +2,24 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
-import { Activity, ArrowLeft, BookOpen, GraduationCap, HeartPulse, IdCard, MapPin, Phone, Save, ShieldAlert, UserRound } from "lucide-react";
+import { ArrowLeft, BookOpen, HeartPulse, IdCard, MapPin, Phone, Save, ShieldAlert, UserRound } from "lucide-react";
 import { academyApi } from "../../api/academyApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { studentApi } from "../../api/studentApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import { BeltTagsField, SportsMartialArtsField } from "../../components/common/AcademyOperationsFields.jsx";
 import FormActionBar from "../../components/common/FormActionBar.jsx";
 import OptionChipsField from "../../components/common/OptionChipsField.jsx";
 import PersonContactRepeater, { createPersonContact } from "../../components/common/PersonContactRepeater.jsx";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import ProfilePhotoField from "../../components/common/ProfilePhotoField.jsx";
-import { TAEKWONDO_BELTS, TAEKWONDO_DAN_RANKS, isTaekwondoSport } from "../../components/taekwondoBelts/taekwondoBelts.js";
+import { TAEKWONDO_DAN_RANKS, isTaekwondoSport } from "../../components/taekwondoBelts/taekwondoBelts.js";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import StudentFormSection from "./components/StudentFormSection.jsx";
 import "../branches/BranchForm.module.css";
+import "../batches/BatchForm.module.css";
 import "./StudentForm.module.css";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -45,6 +47,11 @@ const unwrapList = (response, key) => {
   ];
   return candidates.find(Array.isArray) || [];
 };
+const normalizeOptions = (value) => {
+  if (Array.isArray(value)) return [...new Set(value.flatMap(normalizeOptions))];
+  if (typeof value !== "string" || !value.trim()) return [];
+  try { return normalizeOptions(JSON.parse(value)); } catch { return value.split(",").map((item) => item.trim()).filter(Boolean); }
+};
 
 const AddStudent = () => {
   const navigate = useNavigate();
@@ -70,6 +77,7 @@ const AddStudent = () => {
   const bloodGroup = useWatch({ control, name: "bloodGroup" });
   const age = useMemo(() => calculateAge(dob), [dob]);
   const ageCategory = useMemo(() => ageCategoryFor(age), [age]);
+  const academyMartialArts = useMemo(() => normalizeOptions(academy?.martialArts), [academy?.martialArts]);
   const showBeltSelect = isTaekwondoSport(martialArt);
 
   useEffect(() => { if (beltRank !== "Black") setValue("danRank", ""); }, [beltRank, setValue]);
@@ -84,7 +92,8 @@ const AddStudent = () => {
       if (academyResult.status === "fulfilled") {
         const academyData = academyResult.value?.data?.data?.academy || academyResult.value?.data?.academy || null;
         setAcademy(academyData);
-        if (academyData?.martialArts?.length) setValue("martialArt", academyData.martialArts[0]);
+        const sports = normalizeOptions(academyData?.martialArts);
+        if (sports.length) setValue("martialArt", sports[0]);
       }
       if (branchResult.status === "fulfilled") {
         const activeBranches = unwrapList(branchResult.value, "branches").filter((branch) => branch?.isActive !== false);
@@ -212,22 +221,22 @@ const AddStudent = () => {
           </div>
         </div><ProfilePhotoField previewUrl={photoPreview} onChange={changePhoto} onRemove={() => { setPhoto(null); setPhotoPreview(""); }} disabled={saving} /></div>
       </StudentFormSection>
-      <div className="student-form-grid">
-        <StudentFormSection eyebrow="CONTACT" title="Contact & Location" description="Primary contact and residential location." icon={MapPin}><div className="student-form-body"><PhoneLocationFields {...studentContact} phoneLabel="Student Phone" onChange={contactUpdater(setStudentContact)} /><label><span>Email</span><input type="email" autoComplete="email" {...register("email")} /></label><label className="student-form-wide"><span>Address</span><textarea rows="3" {...register("address")} /></label></div></StudentFormSection>
-       
+      <div className="student-contact-layout">
+        <StudentFormSection eyebrow="CONTACT" title="Contact & Location" description="Primary contact and residential location." icon={MapPin}><div className="student-form-body"><PhoneLocationFields {...studentContact} phoneLabel="Student Phone" onChange={contactUpdater(setStudentContact)} afterPhone={<label className="student-contact-email"><span>Email</span><input type="email" autoComplete="email" {...register("email")} /></label>} /><label className="student-form-wide"><span>Address</span><textarea rows="3" {...register("address")} /></label></div></StudentFormSection>
+        <div className="student-contact-layout__side">
+          <StudentFormSection eyebrow="GUARDIAN" title="Parent Contact" description="Parent or guardian contact details." icon={Phone}><PersonContactRepeater items={parentContacts} onChange={setParentContacts} addLabel="Add More Parent / Guardian" /></StudentFormSection>
+          <StudentFormSection eyebrow="SAFETY" title="Emergency Contact" description="Contacts to use in an urgent situation." icon={ShieldAlert}><PersonContactRepeater items={emergencyContacts} onChange={setEmergencyContacts} addLabel="Add More Emergency Contact" /></StudentFormSection>
+        </div>
       </div>
-      <div className="student-form-grid">
-        <StudentFormSection eyebrow="GUARDIAN" title="Parent Contact" description="Parent or guardian contact details." icon={Phone}><PersonContactRepeater items={parentContacts} onChange={setParentContacts} addLabel="Add More Parent / Guardian" /></StudentFormSection>
-        <StudentFormSection eyebrow="SAFETY" title="Emergency Contact" description="Contacts to use in an urgent situation." icon={ShieldAlert}><PersonContactRepeater items={emergencyContacts} onChange={setEmergencyContacts} addLabel="Add More Emergency Contact" /></StudentFormSection>
-      </div>
-      <StudentFormSection eyebrow="TRAINING" title="Training Information" description="Martial art, belt and rank assignment." icon={BookOpen}><div className="student-form-fields student-form-fields--three">
-        <div className="student-chip-field student-chip-field--wide"><OptionChipsField label="Martial Art / Sport" multiple={false} options={academy?.martialArts?.length ? academy.martialArts : ["Taekwondo"]} value={martialArt} onChange={(value) => setValue("martialArt", value)} /></div>
-        <div className="student-chip-field student-chip-field--wide"><OptionChipsField label="Belt Rank" multiple={false} options={TAEKWONDO_BELTS} value={beltRank} onChange={(value) => setValue("beltRank", value)} /></div>
-        {showBeltSelect && beltRank === "Black" ? <label><span>Dan Rank</span><select {...register("danRank")}><option value="">Select Dan</option>{TAEKWONDO_DAN_RANKS.map((dan) => <option key={dan}>{dan}</option>)}</select></label> : null}
-      </div></StudentFormSection>
-      <div className="student-form-grid">
-       
-        <StudentFormSection eyebrow="HEALTH" title="Medical Information" description="Health details important for safe training." icon={HeartPulse}><div className="student-chip-field student-chip-field--padded"><label><span>Height (cm)</span><input type="number" min="0" step="0.1" {...register("heightCm")} /></label><label><span>Weight (kg)</span><input type="number" min="0" step="0.1" {...register("weightKg")} /></label><OptionChipsField label="Blood Group" multiple={false} options={BLOOD_GROUPS} value={bloodGroup} onChange={(value) => setValue("bloodGroup", value)} /></div><div className="student-medical-options"><strong>Medical Conditions</strong><div className="student-medical-options__grid">{MEDICAL_CONDITIONS.map((condition) => <label key={condition} className={medicalConditions.includes(condition) ? "is-selected" : ""}><input type="checkbox" checked={medicalConditions.includes(condition)} onChange={() => toggleCondition(condition)} />{condition}</label>)}</div></div><label className="student-form-wide"><span>Medical Notes</span><textarea rows="3" {...register("medicalNotes")} /></label></StudentFormSection>
+      <div className="student-form-grid student-training-medical-grid">
+        <StudentFormSection eyebrow="TRAINING" title="Training Information" description="Martial art, belt and rank assignment." icon={BookOpen}>
+          <div className="batch-form-page student-training-components"><div className="batch-form-card--profile">
+            <SportsMartialArtsField className="batch-profile-sports" showHeader={false} options={academyMartialArts.length ? academyMartialArts : ["Taekwondo"]} selected={martialArt ? [martialArt] : []} customOptions={[]} onChange={(items) => setValue("martialArt", items.at(-1) || "")} />
+            <BeltTagsField label="Belt Rank" value={beltRank} includeNoLimit={false} onChange={(value) => setValue("beltRank", value)} />
+            {showBeltSelect && beltRank === "Black" ? <label className="student-dan-rank"><span>Dan Rank</span><select {...register("danRank")}><option value="">Select Dan</option>{TAEKWONDO_DAN_RANKS.map((dan) => <option key={dan}>{dan}</option>)}</select></label> : null}
+          </div></div>
+        </StudentFormSection>
+        <StudentFormSection eyebrow="HEALTH" title="Medical Information" description="Health details important for safe training." icon={HeartPulse}><div className="student-medical-measurements"><label><span>Height (cm)</span><input type="number" min="0" step="0.1" {...register("heightCm")} /></label><label><span>Weight (kg)</span><input type="number" min="0" step="0.1" {...register("weightKg")} /></label></div><div className="student-chip-field student-chip-field--padded"><OptionChipsField label="Blood Group" multiple={false} options={BLOOD_GROUPS} value={bloodGroup} onChange={(value) => setValue("bloodGroup", value)} /></div><div className="student-medical-options"><strong>Medical Conditions</strong><div className="student-medical-options__grid">{MEDICAL_CONDITIONS.map((condition) => <label key={condition} className={medicalConditions.includes(condition) ? "is-selected" : ""}><input type="checkbox" checked={medicalConditions.includes(condition)} onChange={() => toggleCondition(condition)} />{condition}</label>)}</div></div><label className="student-form-wide"><span>Medical Notes</span><textarea rows="3" {...register("medicalNotes")} /></label></StudentFormSection>
       </div>
       <FormActionBar
         className="student-form-actions"

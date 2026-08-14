@@ -17,6 +17,7 @@ const formatPhone = (digits) => {
 };
 
 const PhoneLocationFields = ({
+  afterPhone = null,
   countryCode = DEFAULT_DIAL_CODE,
   phone = "",
   phoneNumbers = [],
@@ -429,6 +430,8 @@ const PhoneLocationFields = ({
           );
         })}
       </div>
+
+      {afterPhone}
 
       {showLocation && (
         <>

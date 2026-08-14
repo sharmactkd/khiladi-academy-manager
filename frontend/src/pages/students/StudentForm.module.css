@@ -18,6 +18,19 @@
   align-items: stretch;
 }
 
+:global(.student-contact-layout) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+:global(.student-contact-layout__side) {
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+
 :global(.student-form-card) {
   min-width: 0;
   overflow: hidden;
@@ -203,10 +216,21 @@
 }
 
 :global(.student-gender-field [class*="chips"]) {
+  width: 100%;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 7px;
   border: 0 !important;
   background: transparent !important;
   padding: 0 !important;
   box-shadow: none !important;
+}
+
+:global(.student-gender-field [class*="chip"]) {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  justify-content: center;
 }
 
 :global(.student-chip-field [class*="chip"]) {
@@ -371,6 +395,56 @@
   gap: 7px;
 }
 
+:global(.student-training-components .batch-form-card--profile) {
+  display: grid;
+  gap: 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:global(.student-training-components .operations-selection-section),
+:global(.student-training-components .operations-selection-section__body) {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+:global(.student-training-components .operations-selection-section__body) {
+  padding: 15px 16px 4px !important;
+}
+
+:global(.student-training-components .operations-belt-field) {
+  padding: 0 16px 16px;
+}
+
+:global(.student-dan-rank) {
+  display: grid;
+  gap: 6px;
+  padding: 0 16px 16px;
+  color: var(--student-ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+:global(.student-medical-measurements) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 15px 16px 4px;
+}
+
+:global(.student-medical-measurements > label) {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--student-ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+
 @media (max-width: 1080px) {
   :global(.student-form-identity) { grid-template-columns: 1fr; }
   :global(.student-form-identity > :last-child) { max-width: 420px; }
@@ -380,6 +454,7 @@
 
 @media (max-width: 860px) {
   :global(.student-form-grid) { grid-template-columns: 1fr; }
+  :global(.student-contact-layout) { grid-template-columns: 1fr; }
   :global(.student-form-fields--three) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   :global(.student-form-identity .student-form-fields--three) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   :global(.student-identity-actions) { align-items: stretch; flex-direction: column; }
@@ -401,4 +476,5 @@
   :global(.student-form-actions > div:first-child) { width: 100%; margin: 0 0 4px; }
   :global(.student-form-actions .btn) { flex: 1 1 140px; }
   :global(.student-demographics-row) { grid-template-columns: 1fr; }
+  :global(.student-medical-measurements) { grid-template-columns: 1fr; }
 }
