@@ -250,7 +250,12 @@ const AddStudent = () => {
           >
             <SportsMartialArtsField className="batch-profile-sports" showHeader={false} allowCustom={false} options={academyMartialArts} selected={martialArt ? [martialArt] : []} customOptions={[]} onChange={(items) => setValue("martialArt", items.at(-1) || "")} />
             <div className="batch-limit-field--belt student-belt-field">
-              <BeltTagsField label="Belt Rank" value={beltRank} includeNoLimit={false} onChange={(value) => setValue("beltRank", value)} />
+              <BeltTagsField
+                label="Belt Rank"
+                value={beltRank}
+                includeNoLimit={false}
+                onChange={(value) => setValue("beltRank", value === beltRank ? "" : value, { shouldDirty: true })}
+              />
             </div>
             {showBeltSelect && beltRank === "Black" ? <label className="student-dan-rank"><span>Dan Rank</span><select {...register("danRank")}><option value="">Select Dan</option>{TAEKWONDO_DAN_RANKS.map((dan) => <option key={dan}>{dan}</option>)}</select></label> : null}
           </div></div>
