@@ -239,7 +239,7 @@ const AddStudent = () => {
       </div>
       <div className="student-form-grid student-training-medical-grid">
         <StudentFormSection eyebrow="TRAINING" title="Training Information" description="Martial art, belt and rank assignment." icon={BookOpen}>
-          <div className="batch-form-page student-training-components"><div className="batch-form-card--profile">
+          <div className="batch-form-page student-training-components"><div className={`batch-form-card--profile student-training-grid${showBeltSelect && beltRank === "Black" ? " has-dan-rank" : ""}`}>
             <SportsMartialArtsField className="batch-profile-sports" showHeader={false} allowCustom={false} options={academyMartialArts} selected={martialArt ? [martialArt] : []} customOptions={[]} onChange={(items) => setValue("martialArt", items.at(-1) || "")} />
             <BeltTagsField label="Belt Rank" value={beltRank} includeNoLimit={false} onChange={(value) => setValue("beltRank", value)} />
             {showBeltSelect && beltRank === "Black" ? <label className="student-dan-rank"><span>Dan Rank</span><select {...register("danRank")}><option value="">Select Dan</option>{TAEKWONDO_DAN_RANKS.map((dan) => <option key={dan}>{dan}</option>)}</select></label> : null}

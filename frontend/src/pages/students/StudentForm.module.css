@@ -425,17 +425,22 @@
   width: 100%;
 }
 
-:global(.student-training-components .batch-form-card--profile) {
+:global(.student-training-components .student-training-grid) {
   width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   grid-template-areas: none !important;
-  align-items: stretch;
-  gap: 14px;
+  align-items: start;
+  gap: 18px;
+  padding: 16px;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+:global(.student-training-components .student-training-grid.has-dan-rank) {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
 
 :global(.student-training-components .operations-selection-section),
@@ -446,41 +451,59 @@
   box-shadow: none !important;
 }
 
-:global(.student-training-components .operations-selection-section__body) {
-  padding: 15px 16px 4px !important;
+:global(
+  .student-training-components
+  .batch-profile-sports
+  .operations-selection-section__body
+) {
+  padding: 0 !important;
 }
 
 :global(.student-training-components .batch-profile-sports) {
   width: 100%;
   min-width: 0;
   grid-area: auto !important;
-  grid-column: 1 / -1 !important;
-  grid-row: auto !important;
-  order: 1;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  order: initial !important;
 }
 
 :global(.student-training-components .operations-belt-field) {
   width: 100%;
   min-width: 0;
-  grid-column: 1 / -1 !important;
-  grid-row: auto !important;
-  order: 2;
-  padding: 0 16px 16px;
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  order: initial !important;
+  padding: 0;
 }
 
 :global(.student-training-components .student-dan-rank) {
-  grid-column: 1 / -1 !important;
-  grid-row: auto !important;
-  order: 3;
-}
-
-:global(.student-dan-rank) {
+  width: 100%;
+  min-width: 0;
   display: grid;
-  gap: 6px;
-  padding: 0 16px 16px;
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  order: initial !important;
+  gap: 0;
+  padding: 0;
   color: var(--student-ink);
   font-size: 10px;
   font-weight: 700;
+}
+
+:global(.student-training-components .operations-field-label),
+:global(.student-training-components .student-dan-rank > span) {
+  min-height: 16px;
+  display: flex;
+  align-items: center;
+  margin: 0 0 10px;
+  line-height: 16px;
+}
+
+:global(.student-training-components .operations-tag-grid),
+:global(.student-training-components .operations-belt-tags) {
+  align-content: start;
+  align-items: center;
 }
 
 :global(.student-medical-measurements) {
@@ -507,6 +530,18 @@
 }
 
 @media (max-width: 860px) {
+  :global(.student-training-components .student-training-grid),
+  :global(.student-training-components .student-training-grid.has-dan-rank) {
+    grid-template-columns: 1fr !important;
+  }
+
+  :global(.student-training-components .batch-profile-sports),
+  :global(.student-training-components .operations-belt-field),
+  :global(.student-training-components .student-dan-rank) {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+
   :global(.student-form-grid) { grid-template-columns: 1fr; }
   :global(.student-contact-layout) { grid-template-columns: 1fr; }
   :global(.student-form-fields--three) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
