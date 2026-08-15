@@ -371,7 +371,7 @@ const AttendanceTable = ({
     );
   }
 
-  const tableWidth = 828 + days.length * 42 + 316;
+  const tableWidth = 728 + days.length * 42 + 316;
 
   return (
     <>
@@ -384,9 +384,8 @@ const AttendanceTable = ({
             <col style={{ width: 56 }} />
             <col style={{ width: 190 }} />
             <col style={{ width: 130 }} />
+            <col style={{ width: 156 }} />
             <col style={{ width: 112 }} />
-            <col style={{ width: 112 }} />
-            <col style={{ width: 144 }} />
             <col style={{ width: 84 }} />
             {days.map((day) => <col key={`column-${day.dateKey}`} style={{ width: 42 }} />)}
             <col style={{ width: 54 }} />
@@ -411,7 +410,6 @@ const AttendanceTable = ({
 
               <th className="sticky-col sticky-due-date" rowSpan="2">Due Date</th>
               <th className="sticky-col sticky-paid-date" rowSpan="2">Paid Date</th>
-              <th className="sticky-col sticky-membership" rowSpan="2">Membership</th>
               <th className="sticky-col sticky-fee-status" rowSpan="2">Fee Status</th>
 
               {days.map((day) => {
@@ -536,15 +534,13 @@ const AttendanceTable = ({
 
                   <td className="sticky-col sticky-due-date">
                     {row.rowType === "student" && row.studentId ? (
-                      <button
-                        type="button"
-                        className="membership-due-date"
+                      <MembershipBadge
+                        membership={row.membership}
+                        fallbackDueDate={getDueDateValue(row)}
                         onClick={canManageMembership ? () => onOpenMembership?.(row) : undefined}
                         disabled={!canManageMembership}
-                        title="Manage this date from Membership"
-                      >
-                        {displayValue(formatEditableDueValue(getDueDateValue(row)), "-")}
-                      </button>
+                        className="membership-due-date"
+                      />
                     ) : (
                       <DateMetaInput
                         value={displayValue(
@@ -578,18 +574,6 @@ const AttendanceTable = ({
                         row.name || row.importedName || "student"
                       }`}
                     />
-                  </td>
-
-                  <td className="sticky-col sticky-membership">
-                    {row.rowType === "student" && row.studentId ? (
-                      <MembershipBadge
-                        membership={row.membership}
-                        onClick={canManageMembership ? () => onOpenMembership?.(row) : undefined}
-                        disabled={!canManageMembership}
-                      />
-                    ) : (
-                      <span className="membership-unavailable">—</span>
-                    )}
                   </td>
 
                   <td
