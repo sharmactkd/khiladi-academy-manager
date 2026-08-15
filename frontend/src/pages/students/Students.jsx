@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Download, FileText, Printer, Trash2, Upload } from "lucide-react";
+import {
+  ChevronDown, ChevronLeft, ChevronRight, Columns3, Download, Edit3,
+  FileText, Filter, MoreVertical, Printer, Search, Trash2, Upload,
+  UserCheck, UserPlus, UsersRound, UserX, X,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -9,7 +13,11 @@ import autoTable from "jspdf-autotable";
 import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { getBranches } from "../../api/branchApi.js";
+import { academyApi } from "../../api/academyApi.js";
 import StudentImportModal from "../../components/students/StudentImportModal.jsx";
+import useAuth from "../../hooks/useAuth.js";
+import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import "./Students.module.css";
 
 const BLOOD_GROUPS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -47,8 +55,10 @@ const displayBelt = (student) => {
 
 const Students = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [students, setStudents] = useState([]);
+  const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +66,10 @@ const Students = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [statusUpdatingIds, setStatusUpdatingIds] = useState([]);
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [pageNumber, setPageNumber] = useState(1);
+  const PAGE_SIZE = 8;
 
   const [filters, setFilters] = useState({
     search: "",
@@ -82,6 +96,35 @@ const Students = () => {
     return selectedStudents.length > 0 ? selectedStudents : students;
   }, [selectedStudents, students]);
 
+  const totalPages = Math.max(1, Math.ceil(students.length / PAGE_SIZE));
+  const visibleStudents = useMemo(() => {
+    const start = (pageNumber - 1) * PAGE_SIZE;
+    return students.slice(start, start + PAGE_SIZE);
+  }, [students, pageNumber]);
+
+  const activeCount = useMemo(
+    () => students.filter((student) => student.status === "active").length,
+    [students]
+  );
+  const incompleteCount = useMemo(
+    () => students.filter((student) => student.profileStatus === "incomplete").length,
+    [students]
+  );
+  const newThisMonthCount = useMemo(() => {
+    const now = new Date();
+    return students.filter((student) => {
+      const created = new Date(student.createdAt || student.joiningDate || "");
+      return !Number.isNaN(created.getTime()) &&
+        created.getMonth() === now.getMonth() &&
+        created.getFullYear() === now.getFullYear();
+    }).length;
+  }, [students]);
+
+  const activeFilterCount = useMemo(
+    () => Object.values(filters).filter((value) => String(value || "").trim()).length,
+    [filters]
+  );
+
   const fetchStudents = async () => {
     try {
       setLoading(true);
@@ -99,6 +142,7 @@ const Students = () => {
 
       setStudents(Array.isArray(list) ? list : []);
       setSelectedIds([]);
+      setPageNumber(1);
     } catch (error) {
       toast.error(error.response?.data?.message || "Students load nahi hue");
     } finally {
@@ -172,6 +216,9 @@ const Students = () => {
   useEffect(() => {
     fetchBranches();
     fetchBatches();
+    academyApi.getMyAcademy()
+      .then((response) => setAcademy(response?.data?.data?.academy || response?.data?.academy || null))
+      .catch(() => setAcademy(null));
   }, []);
 
   useEffect(() => {
@@ -181,9 +228,12 @@ const Students = () => {
 
   const toggleSelectAll = () => {
     if (allVisibleSelected) {
-      setSelectedIds([]);
+      const visibleIds = visibleStudents.map((student) => student._id);
+      setSelectedIds((current) => current.filter((id) => !visibleIds.includes(id)));
     } else {
-      setSelectedIds(students.map((student) => student._id));
+      setSelectedIds((current) => [
+        ...new Set([...current, ...visibleStudents.map((student) => student._id)]),
+      ]);
     }
   };
 
@@ -574,6 +624,116 @@ const Students = () => {
     }
   };
 
+  const clearFilters = () => setFilters({
+    search: "", status: "", batch: "", martialArt: "",
+    beltRank: "", ageCategory: "", bloodGroup: "",
+  });
+
+  const academyLocation = [academy?.city, academy?.state, academy?.country]
+    .filter(Boolean).join(", ") || "Academy operations";
+
+  return (
+    <div className="page students-page">
+      <StudentImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleImportStudents}
+        branches={branches}
+        batches={batches}
+      />
+
+      <section className="students-academy-bar" aria-label="Academy identity">
+        <div className="students-academy-bar__logo">
+          {academy?.logo ? <img src={getAcademyLogoUrl(academy)} alt="" /> : <UsersRound size={27} />}
+        </div>
+        <div>
+          <span>Academy</span>
+          <h2>{academy?.academyName || "KHILADI Academy"}</h2>
+          <p>{academyLocation}</p>
+        </div>
+        <b><i /> Active</b>
+      </section>
+
+      <header className="students-heading-card">
+        <div className="students-heading-card__copy">
+          <span>Student Management</span>
+          <div className="students-heading-card__title-row">
+            <h1>Students</h1>
+            <b><UsersRound size={16} /> {students.length} Students</b>
+          </div>
+          <p>Manage academy students, profiles and enrollment records.</p>
+        </div>
+        <div className="students-heading-card__actions">
+          <button type="button" className="students-button" onClick={() => setImportModalOpen(true)}>
+            <Upload size={17} /> Import Excel
+          </button>
+          <div className="students-export">
+            <button type="button" className="students-button" onClick={() => setExportMenuOpen((open) => !open)} aria-expanded={exportMenuOpen}>
+              <Download size={17} /> Export <ChevronDown size={15} />
+            </button>
+            {exportMenuOpen ? <div className="students-export__menu">
+              <button type="button" onClick={() => { handleExportExcel(); setExportMenuOpen(false); }}><Download size={15} /> Export Excel</button>
+              <button type="button" onClick={() => { handleSavePdf(); setExportMenuOpen(false); }}><FileText size={15} /> Save PDF</button>
+              <button type="button" onClick={() => { handlePrint(); setExportMenuOpen(false); }}><Printer size={15} /> Print List</button>
+            </div> : null}
+          </div>
+          <Link className="students-button students-button--primary" to="/students/new"><UserPlus size={17} /> Add Student</Link>
+        </div>
+      </header>
+
+      <section className="students-metrics" aria-label="Student overview">
+        <article className="students-metric students-metric--red"><span><UsersRound /></span><div><small>Total Students</small><strong>{students.length}</strong></div></article>
+        <article className="students-metric students-metric--green"><span><UserCheck /></span><div><small>Active</small><strong>{activeCount}</strong></div></article>
+        <article className="students-metric students-metric--amber"><span><UserX /></span><div><small>Profile Incomplete</small><strong>{incompleteCount}</strong></div></article>
+        <article className="students-metric students-metric--blue"><span><UserPlus /></span><div><small>New This Month</small><strong>{newThisMonthCount}</strong></div></article>
+      </section>
+
+      <section className="students-filters" aria-label="Student filters">
+        <div className="students-filters__primary">
+          <label className="students-search"><Search size={18} /><input placeholder="Search name, phone, code or Aadhaar" value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} /></label>
+          <select aria-label="Status" value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="">All Status</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="left">Left</option></select>
+          <select aria-label="Batch" value={filters.batch} onChange={(event) => setFilters((current) => ({ ...current, batch: event.target.value }))}><option value="">All Batches</option>{batches.map((batch) => <option key={batch._id} value={batch._id}>{batch.batchName}</option>)}</select>
+          <button type="button" className="students-more-filter" onClick={() => setMoreFiltersOpen((open) => !open)}><Filter size={16} /> More Filters {activeFilterCount > 0 ? <b>{activeFilterCount}</b> : null}</button>
+        </div>
+        {moreFiltersOpen ? <div className="students-filters__more">
+          <input placeholder="Martial Art" value={filters.martialArt} onChange={(event) => setFilters((current) => ({ ...current, martialArt: event.target.value }))} />
+          <input placeholder="Belt Rank" value={filters.beltRank} onChange={(event) => setFilters((current) => ({ ...current, beltRank: event.target.value }))} />
+          <select value={filters.ageCategory} onChange={(event) => setFilters((current) => ({ ...current, ageCategory: event.target.value }))}>{AGE_CATEGORIES.map((category) => <option key={category || "all"} value={category}>{category || "All Age Categories"}</option>)}</select>
+          <select value={filters.bloodGroup} onChange={(event) => setFilters((current) => ({ ...current, bloodGroup: event.target.value }))}>{BLOOD_GROUPS.map((group) => <option key={group || "all"} value={group}>{group || "All Blood Groups"}</option>)}</select>
+          <button type="button" onClick={clearFilters}>Clear all</button>
+        </div> : null}
+        {activeFilterCount > 0 ? <div className="students-filter-chips">{Object.entries(filters).filter(([, value]) => value).map(([key, value]) => <button type="button" key={key} onClick={() => setFilters((current) => ({ ...current, [key]: "" }))}>{String(value)} <X size={13} /></button>)}</div> : null}
+      </section>
+
+      <section className="students-table-card">
+        <div className="students-table-toolbar">
+          <div><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} /> <span>{selectedIds.length ? `${selectedIds.length} selected` : `${students.length} records`}</span>{selectedIds.length > 0 ? <button type="button" onClick={handleBulkDelete} disabled={bulkDeleting}><Trash2 size={15} /> {bulkDeleting ? "Deleting…" : "Delete Selected"}</button> : null}</div>
+          <div><span><Columns3 size={16} /> Complete student view</span></div>
+        </div>
+        {loading ? <div className="students-state"><span /> Loading students…</div> : students.length === 0 ? <div className="students-state"><UsersRound size={31} /><strong>No students found</strong><p>Try changing your filters or add a new student.</p></div> : <div className="students-table-wrap"><table className="students-table">
+          <thead><tr><th><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} /></th><th>Student</th><th>Code</th><th>Age / Category</th><th>Contact</th><th>School / Class</th><th>Batch</th><th>Martial Art</th><th>Belt</th><th>Blood</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>{visibleStudents.map((student) => {
+            const fullName = getStudentFullName(student);
+            const selected = selectedIds.includes(student._id);
+            return <tr key={student._id} className={selected ? "is-selected" : ""} onClick={() => navigate(`/students/${student._id}`)}>
+              <td onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected} onChange={() => toggleSelectOne(student._id)} /></td>
+              <td><div className="students-person"><img src={getStudentPhotoUrl(student)} alt="" /><span><strong>{fullName || "Unnamed Student"}</strong><small>{student.profileStatus === "incomplete" ? <em>Profile Incomplete</em> : `Admitted ${formatDate(student.joiningDate || student.createdAt) || "—"}`}</small></span></div></td>
+              <td><code>{student.studentCode || student.admissionNumber || "—"}</code></td>
+              <td><strong>{student.age ?? "—"}</strong><small>{student.ageCategory || "Not added"}</small></td>
+              <td><strong>{student.phone || "—"}</strong><small>{student.email || "Not added"}</small></td>
+              <td><strong>{student.schoolName || student.education?.schoolName || "—"}</strong><small>{[student.className, student.section].filter(Boolean).join(" - ") || "Not added"}</small></td>
+              <td><strong>{student.batch?.batchName || "—"}</strong></td><td><strong>{student.martialArt || "—"}</strong></td><td><strong>{displayBelt(student)}</strong></td><td><b className="students-blood">{student.bloodGroup || "—"}</b></td>
+              <td onClick={(event) => event.stopPropagation()}>{["active", "inactive"].includes(student.status) ? <button type="button" className={`students-status is-${student.status}`} onClick={() => handleStatusToggle(student)} disabled={statusUpdatingIds.includes(student._id)}><i><span /></i>{statusUpdatingIds.includes(student._id) ? "Saving…" : student.status}</button> : <span className="students-left-status">{student.status || "—"}</span>}</td>
+              <td onClick={(event) => event.stopPropagation()}><div className="students-row-actions"><Link to={`/students/${student._id}/edit`} title="Edit student"><Edit3 size={16} /></Link><button type="button" title="Delete student" onClick={() => handleDelete(student)}><MoreVertical size={17} /></button></div></td>
+            </tr>;
+          })}</tbody>
+        </table></div>}
+        {!loading && students.length > 0 ? <footer className="students-pagination"><span>Showing {(pageNumber - 1) * PAGE_SIZE + 1}–{Math.min(pageNumber * PAGE_SIZE, students.length)} of {students.length} students</span><div><button type="button" disabled={pageNumber === 1} onClick={() => setPageNumber((page) => page - 1)}><ChevronLeft size={16} /> Previous</button><b>{pageNumber}</b><span>of {totalPages}</span><button type="button" disabled={pageNumber === totalPages} onClick={() => setPageNumber((page) => page + 1)}>Next <ChevronRight size={16} /></button></div></footer> : null}
+      </section>
+    </div>
+  );
+
+  /* Legacy markup kept below temporarily unreachable during the scoped redesign. */
   return (
     <div className="page">
       <StudentImportModal
