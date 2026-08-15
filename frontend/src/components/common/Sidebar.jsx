@@ -234,19 +234,12 @@ const Sidebar = ({
                 onNavigate={handleNavigate}
               />
 
-              <SidebarLink
-                to="/attendance"
-                label="Attendance"
-                icon={ClipboardCheck}
-                onNavigate={handleNavigate}
-              />
-
-              <SidebarLink
-                to="/attendance/monthly-register"
-                label="Monthly Attendance"
-                icon={CalendarCheck2}
-                onNavigate={handleNavigate}
-              />
+             <SidebarLink
+  to="/attendance"
+  label="Attendance"
+  icon={CalendarCheck2}
+  onNavigate={handleNavigate}
+/>
 
               <SidebarLink
                 to="/students"

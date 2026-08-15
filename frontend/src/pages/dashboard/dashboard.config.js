@@ -1,7 +1,6 @@
 import {
   Award,
   CalendarCheck2,
-  FileSpreadsheet,
   IdCard,
   IndianRupee,
   Medal,
@@ -11,13 +10,38 @@ import {
 } from "lucide-react";
 
 export const getQuickActions = (canManageFees) => [
-  { icon: CalendarCheck2, label: "Mark attendance", to: "/attendance" },
-  { icon: UserPlus, label: "Add student", to: "/students/new" },
-  canManageFees ? { icon: IndianRupee, label: "Collect fee", to: "/fees" } : null,
-  { icon: FileSpreadsheet, label: "Monthly register", to: "/attendance/monthly-register" },
-  { icon: IdCard, label: "Generate ID", to: "/id-cards/generate" },
-  { icon: Award, label: "Belt tests", to: "/belt-tests" },
-  { icon: Trophy, label: "Championships", to: "/championship-records" },
+  {
+    icon: CalendarCheck2,
+    label: "Attendance",
+    to: "/attendance",
+  },
+  {
+    icon: UserPlus,
+    label: "Add student",
+    to: "/students/new",
+  },
+  canManageFees
+    ? {
+        icon: IndianRupee,
+        label: "Collect fee",
+        to: "/fees",
+      }
+    : null,
+  {
+    icon: IdCard,
+    label: "Generate ID",
+    to: "/id-cards/generate",
+  },
+  {
+    icon: Award,
+    label: "Belt tests",
+    to: "/belt-tests",
+  },
+  {
+    icon: Trophy,
+    label: "Championships",
+    to: "/championship-records",
+  },
 ].filter(Boolean);
 
 export const MANAGEMENT_GROUPS = [

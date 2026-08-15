@@ -26,8 +26,7 @@ import AddBatch from "../pages/batches/AddBatch.jsx";
 import EditBatch from "../pages/batches/EditBatch.jsx";
 import BatchDetail from "../pages/batches/BatchDetail.jsx";
 
-import AttendanceSheet from "../pages/attendance/AttendanceSheet.jsx";
-import MonthlyAttendanceRegister from "../pages/attendance/MonthlyAttendanceRegister.jsx";
+import Attendance from "../pages/attendance/Attendance.jsx";
 import StudentAttendanceHistory from "../pages/attendance/StudentAttendanceHistory.jsx";
 import BatchAttendanceHistory from "../pages/attendance/BatchAttendanceHistory.jsx";
 
@@ -424,27 +423,27 @@ const AppRoutes = () => {
               element={<EditBatch />}
             />
 
-            {/* ATTENDANCE */}
+           {/* ATTENDANCE */}
 
-            <Route
-              path="/attendance"
-              element={<AttendanceSheet />}
-            />
+<Route
+  path="/attendance"
+  element={<Attendance />}
+/>
 
-            <Route
-              path="/attendance/monthly-register"
-              element={<MonthlyAttendanceRegister />}
-            />
+<Route
+  path="/attendance/monthly-register"
+  element={<Navigate to="/attendance" replace />}
+/>
 
-            <Route
-              path="/attendance/student/:studentId"
-              element={<StudentAttendanceHistory />}
-            />
+<Route
+  path="/attendance/student/:studentId"
+  element={<StudentAttendanceHistory />}
+/>
 
-            <Route
-              path="/attendance/batch/:batchId"
-              element={<BatchAttendanceHistory />}
-            />
+<Route
+  path="/attendance/batch/:batchId"
+  element={<BatchAttendanceHistory />}
+/>
 
             {/* FEES */}
 
