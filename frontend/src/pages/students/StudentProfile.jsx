@@ -48,6 +48,11 @@ const normalizeContacts = (contacts, legacy) => {
   const list = Array.isArray(contacts) ? contacts.filter((item) => item?.name || item?.phone) : [];
   return list.length ? list : (legacy?.name || legacy?.phone ? [legacy] : []);
 };
+const normalizePhones = (student) => {
+  const stored = Array.isArray(student?.phoneNumbers) ? student.phoneNumbers.filter((item) => item?.phone) : [];
+  if (stored.length) return stored;
+  return student?.phone ? [{ countryCode: student.countryCode || "+91", phone: student.phone }] : [];
+};
 const beltLabel = (student) =>
   student?.beltRank === "Black" && student?.danRank
     ? `Black · ${student.danRank}`
@@ -75,7 +80,6 @@ const ContactCard = ({ title, eyebrow, contact }) => (
       <div><dt>Name</dt><dd>{text(contact?.name)}</dd></div>
       <div><dt>Relation</dt><dd>{text(contact?.relation)}</dd></div>
       <div><dt>Mobile</dt><dd>{formatPhone(contact?.countryCode, contact?.phone)}</dd></div>
-      <div><dt>Email</dt><dd>{text(contact?.email)}</dd></div>
     </dl>
   </article>
 );
@@ -118,6 +122,7 @@ const StudentProfile = () => {
     () => normalizeList(student?.medicalConditions || student?.medicalInfo?.medicalConditions),
     [student]
   );
+  const phones = useMemo(() => normalizePhones(student), [student]);
 
   if (loading) return <PageState className="student-detail-state" loading title="Loading student profile…" />;
   if (error || !student) return <PageState className="student-detail-state student-detail-state--error" icon={XCircle} title={error || "Student not found."} action={<button className="btn btn-primary" type="button" onClick={loadPage}>Try Again</button>} />;
@@ -170,6 +175,27 @@ const StudentProfile = () => {
       ]} getCardProps={() => ({ iconSize: 21 })} />
 
       <div className="student-detail-identity-grid">
+        <section className="student-detail-card">
+          <BatchDetailSectionHeader icon={IdCard} eyebrow="Identity" title="Basic Information" description="Student identity, admission and membership details." />
+          <div className="student-detail-items">
+            <DetailItem icon={MapPin} label="Branch">{branchName}</DetailItem>
+            <DetailItem icon={UsersRound} label="Batch">{batchName}</DetailItem>
+            <DetailItem icon={CheckCircle2} label="Status" accent>{active ? "Active Student" : text(student.status, "Inactive Student")}</DetailItem>
+            <DetailItem icon={UserRound} label="Full Name">{name}</DetailItem>
+            <DetailItem icon={IdCard} label="Admission Number">{text(student.admissionNumber || student.studentCode)}</DetailItem>
+            <DetailItem icon={ShieldCheck} label="Aadhaar Number">{text(student.aadhaarNumber)}</DetailItem>
+            <DetailItem icon={UserRound} label="Gender">{text(student.gender)}</DetailItem>
+            <DetailItem icon={CalendarCheck2} label="Joining Date">{formatDate(student.joiningDate)}</DetailItem>
+            <DetailItem icon={CalendarDays} label="Date of Birth">{formatDate(student.dateOfBirth || student.dob)}</DetailItem>
+            <DetailItem icon={CalendarDays} label="Age">{age === null ? "Not added" : `${age} Years`}</DetailItem>
+            <DetailItem icon={GraduationCap} label="Age Category">{text(student.ageCategory)}</DetailItem>
+            <DetailItem icon={BookOpen} label="School Name">{text(student.schoolName || student.education?.schoolName)}</DetailItem>
+            <DetailItem icon={GraduationCap} label="Class">{text(student.className || student.education?.className)}</DetailItem>
+            <DetailItem icon={GraduationCap} label="Company / Firm Name">{text(student.collegeName || student.education?.collegeName)}</DetailItem>
+            <DetailItem icon={UserRound} label="Occupation">{text(student.occupation || student.education?.occupation)}</DetailItem>
+          </div>
+        </section>
+
         <section className="student-detail-photo-card">
           <div className="student-detail-photo">
             <img src={getStudentPhotoUrl(student)} alt={name} onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }} />
@@ -181,81 +207,65 @@ const StudentProfile = () => {
             <div><span><MapPin size={14} />{branchName}</span><span><UsersRound size={14} />{batchName}</span></div>
           </div>
         </section>
+      </div>
+
+      <section className="student-detail-card">
+        <BatchDetailSectionHeader icon={MapPin} eyebrow="Contact" title="Contact & Location" description="Primary contact and residential location." />
+        <div className="student-detail-items">
+          {phones.length
+            ? phones.map((item, index) => <DetailItem key={`${item.countryCode}-${item.phone}-${index}`} icon={Phone} label={index === 0 ? "Student Phone" : `Additional Phone ${index + 1}`}>{formatPhone(item.countryCode, item.phone)}</DetailItem>)
+            : <DetailItem icon={Phone} label="Student Phone">Not added</DetailItem>}
+          <DetailItem icon={Mail} label="Email">{text(student.email)}</DetailItem>
+          <DetailItem icon={MapPin} label="Country">{text(student.country)}</DetailItem>
+          <DetailItem icon={MapPin} label="State">{text(student.state)}</DetailItem>
+          <DetailItem icon={MapPin} label="District">{text(student.city)}</DetailItem>
+          <DetailItem icon={MapPin} label="Address" wide>{address || "Not added"}</DetailItem>
+        </div>
+      </section>
+
+      <div className="student-detail-primary-grid">
+        <section className="student-detail-card">
+          <BatchDetailSectionHeader icon={UserRound} eyebrow="Guardian" title="Parent Contact" description="Parent or guardian contact details." />
+          <div className="student-detail-contact-grid student-detail-contact-grid--single">
+            {parents.map((contact, index) => <ContactCard key={`parent-${index}`} title={parents.length > 1 ? `Parent / Guardian ${index + 1}` : "Parent / Guardian"} eyebrow="Guardian" contact={contact} />)}
+          </div>
+          {!parents.length ? <p className="student-detail-empty-note">No parent or guardian contact added.</p> : null}
+        </section>
 
         <section className="student-detail-card">
-          <BatchDetailSectionHeader icon={IdCard} eyebrow="Identity" title="Personal Information" description="Core identity, membership and demographic details." />
-          <div className="student-detail-items">
-            <DetailItem icon={IdCard} label="Admission Number">{text(student.admissionNumber || student.studentCode)}</DetailItem>
-            <DetailItem icon={ShieldCheck} label="Aadhaar Number">{text(student.aadhaarNumber)}</DetailItem>
-            <DetailItem icon={UserRound} label="Gender">{text(student.gender)}</DetailItem>
-            <DetailItem icon={CalendarDays} label="Date of Birth">{formatDate(student.dateOfBirth || student.dob)}</DetailItem>
-            <DetailItem icon={CalendarCheck2} label="Joining Date">{formatDate(student.joiningDate)}</DetailItem>
-            <DetailItem icon={GraduationCap} label="Age / Category">{age === null ? "Not added" : `${age} Years · ${text(student.ageCategory)}`}</DetailItem>
-            <DetailItem icon={MapPin} label="Branch">{branchName}</DetailItem>
-            <DetailItem icon={UsersRound} label="Batch">{batchName}</DetailItem>
+          <BatchDetailSectionHeader icon={ShieldPlus} eyebrow="Safety" title="Emergency Contact" description="Contacts to use in an urgent situation." />
+          <div className="student-detail-contact-grid student-detail-contact-grid--single">
+            {emergencyContacts.map((contact, index) => <ContactCard key={`emergency-${index}`} title={emergencyContacts.length > 1 ? `Emergency Contact ${index + 1}` : "Emergency Contact"} eyebrow="Safety" contact={contact} />)}
           </div>
+          {!emergencyContacts.length ? <p className="student-detail-empty-note">No emergency contact added.</p> : null}
         </section>
       </div>
 
       <div className="student-detail-primary-grid">
         <section className="student-detail-card">
-          <BatchDetailSectionHeader icon={MapPin} eyebrow="Contact" title="Contact & Location" description="Primary communication and residential address." />
-          <div className="student-detail-items">
-            <DetailItem icon={Phone} label="Student Phone">{formatPhone(student.countryCode, student.phone)}</DetailItem>
-            <DetailItem icon={Mail} label="Email">{text(student.email)}</DetailItem>
-            <DetailItem icon={MapPin} label="City">{text(student.city)}</DetailItem>
-            <DetailItem icon={MapPin} label="State & Country">{[student.state, student.country].filter(Boolean).join(", ") || "Not added"}</DetailItem>
-            <DetailItem icon={MapPin} label="Complete Address" wide>{address || "Not added"}</DetailItem>
-          </div>
-        </section>
-
-        <section className="student-detail-card">
-          <BatchDetailSectionHeader icon={BookOpen} eyebrow="Education" title="Education & Occupation" description="Academic or professional information." />
-          <div className="student-detail-items">
-            <DetailItem icon={BookOpen} label="School Name">{text(student.schoolName || student.education?.schoolName)}</DetailItem>
-            <DetailItem icon={GraduationCap} label="Class">{text(student.className || student.education?.className)}</DetailItem>
-            <DetailItem icon={BookOpen} label="Section">{text(student.section || student.education?.section)}</DetailItem>
-            <DetailItem icon={GraduationCap} label="College / Firm">{text(student.collegeName || student.education?.collegeName)}</DetailItem>
-            <DetailItem icon={UserRound} label="Occupation" wide>{text(student.occupation || student.education?.occupation)}</DetailItem>
-          </div>
-        </section>
-      </div>
-
-      <div className="student-detail-primary-grid">
-        <section className="student-detail-card">
-          <BatchDetailSectionHeader icon={Award} eyebrow="Training" title="Training Information" description="Sport, belt rank and academy assignment." />
+          <BatchDetailSectionHeader icon={Award} eyebrow="Training" title="Training Information" description="Martial art, belt and rank assignment." />
           <div className="student-detail-items">
             <DetailItem icon={Activity} label="Martial Art / Sport">{text(student.martialArt)}</DetailItem>
             <DetailItem icon={Award} label="Belt Rank" accent>{beltLabel(student)}</DetailItem>
-            <DetailItem icon={ShieldPlus} label="Dan Rank">{text(student.danRank)}</DetailItem>
-            <DetailItem icon={CalendarCheck2} label="Training Since">{formatDate(student.joiningDate)}</DetailItem>
-            <DetailItem icon={MapPin} label="Training Branch">{branchName}</DetailItem>
-            <DetailItem icon={UsersRound} label="Current Batch">{batchName}</DetailItem>
+            {student.beltRank === "Black" ? <DetailItem icon={ShieldPlus} label="Dan Rank">{text(student.danRank)}</DetailItem> : null}
           </div>
         </section>
 
         <section className="student-detail-card">
-          <BatchDetailSectionHeader icon={HeartPulse} eyebrow="Health" title="Medical & Physical Information" description="Important health and safe-training information." />
+          <BatchDetailSectionHeader icon={HeartPulse} eyebrow="Health" title="Medical Information" description="Health details important for safe training." />
           <div className="student-detail-items">
             <DetailItem icon={Ruler} label="Height">{height ? `${height} cm` : "Not added"}</DetailItem>
             <DetailItem icon={Weight} label="Weight">{weight ? `${weight} kg` : "Not added"}</DetailItem>
             <DetailItem icon={HeartPulse} label="Blood Group" accent>{text(student.bloodGroup || student.medicalInfo?.bloodGroup)}</DetailItem>
-            <DetailItem icon={Activity} label="Medical Notes">{text(student.notes || student.medicalInfo?.notes)}</DetailItem>
           </div>
           <div className="student-detail-tags">
             {conditions.length ? conditions.map((condition) => <span key={condition}><HeartPulse size={13} />{condition}</span>) : <p>No medical conditions added.</p>}
           </div>
+          <div className="student-detail-items student-detail-items--notes">
+            <DetailItem icon={Activity} label="Medical Notes" wide>{text(student.notes || student.medicalInfo?.notes)}</DetailItem>
+          </div>
         </section>
       </div>
-
-      <section className="student-detail-card">
-        <BatchDetailSectionHeader icon={ShieldPlus} eyebrow="Safety" title="Parent & Emergency Contacts" description="People to contact for student support or an urgent situation." />
-        <div className="student-detail-contact-grid">
-          {parents.map((contact, index) => <ContactCard key={`parent-${index}`} title={parents.length > 1 ? `Parent / Guardian ${index + 1}` : "Parent / Guardian"} eyebrow="Guardian" contact={contact} />)}
-          {emergencyContacts.map((contact, index) => <ContactCard key={`emergency-${index}`} title={emergencyContacts.length > 1 ? `Emergency Contact ${index + 1}` : "Emergency Contact"} eyebrow="Safety" contact={contact} />)}
-        </div>
-        {!parents.length && !emergencyContacts.length ? <p className="student-detail-empty-note">No parent or emergency contacts added.</p> : null}
-      </section>
 
       <div className="student-detail-secondary-grid">
         <section className="student-detail-card">
