@@ -25,6 +25,37 @@ export const createBeltTestValidator = [
     .isLength({ max: 80 })
     .withMessage("Promoted belt cannot exceed 80 characters"),
 
+  body("currentDanRank")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 40 })
+    .withMessage("Current Dan rank cannot exceed 40 characters"),
+
+  body("promotedToDanRank")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 40 })
+    .withMessage("Promoted Dan rank cannot exceed 40 characters"),
+
+  body("marks")
+    .optional({ nullable: true, checkFalsy: true })
+    .isFloat({ min: 0 })
+    .withMessage("Marks cannot be negative"),
+
+  body("outOf")
+    .optional({ nullable: true, checkFalsy: true })
+    .isFloat({ min: 0.01 })
+    .withMessage("Total marks must be greater than zero"),
+
+  body().custom((_, { req }) => {
+    if (req.body.marks === null || req.body.marks === "" || req.body.marks === undefined) return true;
+    if (req.body.outOf === null || req.body.outOf === "" || req.body.outOf === undefined) return true;
+    if (Number(req.body.marks) > Number(req.body.outOf)) {
+      throw new Error("Marks obtained cannot exceed total marks");
+    }
+    return true;
+  }),
+
   body("testDate")
     .notEmpty()
     .withMessage("Test date is required")
@@ -79,6 +110,23 @@ export const updateBeltTestValidator = [
     .notEmpty()
     .withMessage("Promoted belt cannot be empty")
     .isLength({ max: 80 }),
+
+  body("currentDanRank").optional({ checkFalsy: true }).trim().isLength({ max: 40 }),
+
+  body("promotedToDanRank").optional({ checkFalsy: true }).trim().isLength({ max: 40 }),
+
+  body("marks").optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }),
+
+  body("outOf").optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0.01 }),
+
+  body().custom((_, { req }) => {
+    if (req.body.marks === null || req.body.marks === "" || req.body.marks === undefined) return true;
+    if (req.body.outOf === null || req.body.outOf === "" || req.body.outOf === undefined) return true;
+    if (Number(req.body.marks) > Number(req.body.outOf)) {
+      throw new Error("Marks obtained cannot exceed total marks");
+    }
+    return true;
+  }),
 
   body("testDate")
     .optional()
