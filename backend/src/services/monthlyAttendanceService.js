@@ -591,6 +591,7 @@ export const getStudentYearlyAttendanceProfile = async ({
     _id: studentObjectId,
     academy: academyObjectId,
   })
+    .populate("branch", "branchName address city state country isMainBranch")
     .populate("batch", "batchName martialArt")
     .lean();
 
@@ -679,8 +680,13 @@ export const getStudentYearlyAttendanceProfile = async ({
       firstName: student.firstName || "",
       lastName: student.lastName || "",
       admissionNumber: student.admissionNumber || "",
+      profilePhoto: student.profilePhoto || "",
+      status: student.status || "active",
+      age: student.age ?? null,
+      ageCategory: student.ageCategory || "",
       phone: student.phone || "",
       contact: firstImportedRecord?.importedPhone || student.phone || "",
+      branch: student.branch || null,
       batch: student.batch || null,
       dob: student.dob || student.dateOfBirth || null,
       fatherName: student.fatherName || "",
