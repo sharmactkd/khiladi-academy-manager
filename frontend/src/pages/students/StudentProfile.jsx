@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import {
   Activity, ArrowLeft, Award, BadgeIndianRupee, BookOpen, CalendarCheck2,
   CalendarDays, CheckCircle2, Clock3, Edit3, ExternalLink, GraduationCap,
-  HeartPulse, IdCard, Mail, MapPin, Phone, ReceiptIndianRupee, Ruler,
+  HeartPulse, IdCard, MapPin, Phone, ReceiptIndianRupee, Ruler,
   ShieldCheck, ShieldPlus, UserRound, UsersRound, WalletCards, Weight, XCircle,
 } from "lucide-react";
 
@@ -70,17 +70,21 @@ const DetailItem = ({ icon: Icon, label, children, wide = false, accent = false 
   </div>
 );
 
-const ContactCard = ({ title, eyebrow, contact }) => (
-  <article className="student-detail-contact">
-    <div className="student-detail-contact__title">
-      <span><UserRound size={18} /></span>
-      <div><small>{eyebrow}</small><h3>{title}</h3></div>
+const ReadOnlyField = ({ label, value, wide = false }) => (
+  <div className={`student-detail-readonly-field${wide ? " is-wide" : ""}`}>
+    <small>{label}</small>
+    <strong>{text(value)}</strong>
+  </div>
+);
+
+const ContactCard = ({ contact, index }) => (
+  <article className="student-detail-person-row">
+    <span className="student-detail-person-row__number">{String(index + 1).padStart(2, "0")}</span>
+    <div className="student-detail-person-row__fields">
+      <ReadOnlyField label="Name" value={contact?.name} />
+      <ReadOnlyField label="Relation" value={contact?.relation} />
+      <ReadOnlyField label="Mobile Number" value={formatPhone(contact?.countryCode, contact?.phone)} />
     </div>
-    <dl>
-      <div><dt>Name</dt><dd>{text(contact?.name)}</dd></div>
-      <div><dt>Relation</dt><dd>{text(contact?.relation)}</dd></div>
-      <div><dt>Mobile</dt><dd>{formatPhone(contact?.countryCode, contact?.phone)}</dd></div>
-    </dl>
   </article>
 );
 
@@ -202,25 +206,31 @@ const StudentProfile = () => {
             <DetailItem icon={UserRound} label="Occupation">{text(student.occupation || student.education?.occupation)}</DetailItem>
           </div>
           <aside className="student-detail-basic-photo">
-            <img src={getStudentPhotoUrl(student)} alt={name} onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }} />
-            <span className={active ? "is-active" : "is-inactive"}>{active ? "Active Student" : text(student.status, "Inactive")}</span>
-            <small>Student Profile</small><h2>{name}</h2>
-            <code>{text(student.admissionNumber || student.studentCode, "No admission code")}</code>
+            <img src={getStudentPhotoUrl(student)} alt="" onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }} />
           </aside>
         </div>
       </section>
 
       <section className="student-detail-card">
         <BatchDetailSectionHeader icon={MapPin} eyebrow="Contact" title="Contact & Location" description="Primary contact and residential location." />
-        <div className="student-detail-items">
-          {phones.length
-            ? phones.map((item, index) => <DetailItem key={`${item.countryCode}-${item.phone}-${index}`} icon={Phone} label={index === 0 ? "Student Phone" : `Additional Phone ${index + 1}`}>{formatPhone(item.countryCode, item.phone)}</DetailItem>)
-            : <DetailItem icon={Phone} label="Student Phone">Not added</DetailItem>}
-          <DetailItem icon={Mail} label="Email">{text(student.email)}</DetailItem>
-          <DetailItem icon={MapPin} label="Country">{text(student.country)}</DetailItem>
-          <DetailItem icon={MapPin} label="State">{text(student.state)}</DetailItem>
-          <DetailItem icon={MapPin} label="District">{text(student.city)}</DetailItem>
-          <DetailItem icon={MapPin} label="Address" wide>{address || "Not added"}</DetailItem>
+        <div className="student-detail-contact-layout">
+          <div className="student-detail-contact-top-row">
+            <div className="student-detail-phone-field">
+              <div><small>Student Phone</small><span>{phones.length}/{Math.max(phones.length, 4)}</span></div>
+              <div className="student-detail-phone-values">
+                {phones.length
+                  ? phones.map((item, index) => <strong key={`${item.countryCode}-${item.phone}-${index}`}><Phone size={14} />{formatPhone(item.countryCode, item.phone)}</strong>)
+                  : <strong><Phone size={14} />Not added</strong>}
+              </div>
+            </div>
+            <ReadOnlyField label="Email" value={student.email} />
+          </div>
+          <div className="student-detail-location-row">
+            <ReadOnlyField label="Country" value={student.country} />
+            <ReadOnlyField label="State" value={student.state} />
+            <ReadOnlyField label="District" value={student.city} />
+          </div>
+          <ReadOnlyField label="Address" value={address} wide />
         </div>
       </section>
 
@@ -228,7 +238,7 @@ const StudentProfile = () => {
         <section className="student-detail-card">
           <BatchDetailSectionHeader icon={UserRound} eyebrow="Guardian" title="Parent Contact" description="Parent or guardian contact details." />
           <div className="student-detail-contact-grid student-detail-contact-grid--single">
-            {parents.map((contact, index) => <ContactCard key={`parent-${index}`} title={parents.length > 1 ? `Parent / Guardian ${index + 1}` : "Parent / Guardian"} eyebrow="Guardian" contact={contact} />)}
+            {parents.map((contact, index) => <ContactCard key={`parent-${index}`} contact={contact} index={index} />)}
           </div>
           {!parents.length ? <p className="student-detail-empty-note">No parent or guardian contact added.</p> : null}
         </section>
@@ -236,7 +246,7 @@ const StudentProfile = () => {
         <section className="student-detail-card">
           <BatchDetailSectionHeader icon={ShieldPlus} eyebrow="Safety" title="Emergency Contact" description="Contacts to use in an urgent situation." />
           <div className="student-detail-contact-grid student-detail-contact-grid--single">
-            {emergencyContacts.map((contact, index) => <ContactCard key={`emergency-${index}`} title={emergencyContacts.length > 1 ? `Emergency Contact ${index + 1}` : "Emergency Contact"} eyebrow="Safety" contact={contact} />)}
+            {emergencyContacts.map((contact, index) => <ContactCard key={`emergency-${index}`} contact={contact} index={index} />)}
           </div>
           {!emergencyContacts.length ? <p className="student-detail-empty-note">No emergency contact added.</p> : null}
         </section>
