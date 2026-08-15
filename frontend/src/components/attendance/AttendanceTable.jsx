@@ -371,10 +371,30 @@ const AttendanceTable = ({
     );
   }
 
+  const tableWidth = 828 + days.length * 42 + 316;
+
   return (
     <>
       <div className="monthly-register-table-wrap">
-        <table className="monthly-register-table">
+        <table
+          className="monthly-register-table"
+          style={{ width: `${tableWidth}px`, minWidth: `${tableWidth}px` }}
+        >
+          <colgroup>
+            <col style={{ width: 56 }} />
+            <col style={{ width: 190 }} />
+            <col style={{ width: 130 }} />
+            <col style={{ width: 112 }} />
+            <col style={{ width: 112 }} />
+            <col style={{ width: 144 }} />
+            <col style={{ width: 84 }} />
+            {days.map((day) => <col key={`column-${day.dateKey}`} style={{ width: 42 }} />)}
+            <col style={{ width: 54 }} />
+            <col style={{ width: 54 }} />
+            <col style={{ width: 54 }} />
+            <col style={{ width: 54 }} />
+            <col style={{ width: 100 }} />
+          </colgroup>
           <thead>
             <tr>
               <th className="sticky-col sticky-no" rowSpan="2">
@@ -495,18 +515,6 @@ const AttendanceTable = ({
                     {row.importedSerialNo || row.no || rowIndex + 1}
                   </td>
 
-                  <td className="sticky-col sticky-membership">
-                    {row.rowType === "student" && row.studentId ? (
-                      <MembershipBadge
-                        membership={row.membership}
-                        onClick={canManageMembership ? () => onOpenMembership?.(row) : undefined}
-                        disabled={!canManageMembership}
-                      />
-                    ) : (
-                      <span className="membership-unavailable">—</span>
-                    )}
-                  </td>
-
                   <td
                     className="sticky-col sticky-name monthly-register__name"
                     onContextMenu={(event) => openStudentMenu(event, row)}
@@ -570,6 +578,18 @@ const AttendanceTable = ({
                         row.name || row.importedName || "student"
                       }`}
                     />
+                  </td>
+
+                  <td className="sticky-col sticky-membership">
+                    {row.rowType === "student" && row.studentId ? (
+                      <MembershipBadge
+                        membership={row.membership}
+                        onClick={canManageMembership ? () => onOpenMembership?.(row) : undefined}
+                        disabled={!canManageMembership}
+                      />
+                    ) : (
+                      <span className="membership-unavailable">—</span>
+                    )}
                   </td>
 
                   <td
