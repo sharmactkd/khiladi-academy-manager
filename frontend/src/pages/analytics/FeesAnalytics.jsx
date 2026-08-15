@@ -5,10 +5,17 @@ import { getFeesAnalytics } from "../../api/analyticsApi";
 import LineChartCard from "../../components/analytics/LineChartCard";
 import PieChartCard from "../../components/analytics/PieChartCard";
 import BarChartCard from "../../components/analytics/BarChartCard";
+import { formatPaymentMode } from "../../utils/feePaymentModes.js";
 
 const normalizeStats = (items = []) =>
   items.map((item) => ({
     label: item._id || "Unknown",
+    value: item.count || item.total || 0,
+  }));
+
+const normalizePaymentModes = (items = []) =>
+  items.map((item) => ({
+    label: formatPaymentMode(item._id, "Unknown"),
     value: item.count || item.total || 0,
   }));
 
@@ -113,7 +120,7 @@ const FeesAnalytics = () => {
 
         <BarChartCard
           title="Payment Mode Distribution"
-          data={normalizeStats(data?.paymentModeDistribution)}
+          data={normalizePaymentModes(data?.paymentModeDistribution)}
         />
       </div>
     </div>

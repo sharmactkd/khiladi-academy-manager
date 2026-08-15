@@ -105,7 +105,9 @@ const feePaymentSchema = new mongoose.Schema(
 
     paymentMode: {
       type: String,
-      enum: ["cash", "upi", "bank", "card", "online", "other"],
+      // Legacy values remain readable/update-safe; new collection requests are
+      // restricted to cash, online and cash_online by feeValidator.js.
+      enum: ["cash", "online", "cash_online", "upi", "bank", "card", "other"],
       default: "cash",
       index: true,
     },

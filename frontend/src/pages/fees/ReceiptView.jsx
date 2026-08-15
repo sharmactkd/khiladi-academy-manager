@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { feePaymentApi } from "../../api/feeApi.js";
+import { formatPaymentMode } from "../../utils/feePaymentModes.js";
 
 const currency = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
@@ -104,7 +105,7 @@ const ReceiptView = () => {
               : "-"}
           </p>
           <p>
-            <strong>Payment Mode:</strong> {payment.paymentMode || "-"}
+            <strong>Payment Mode:</strong> {formatPaymentMode(payment.paymentMode)}
           </p>
           <p>
             <strong>Status:</strong> {payment.status || "-"}

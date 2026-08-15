@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { feePaymentApi } from "../../api/feeApi.js";
+import { formatPaymentMode } from "../../utils/feePaymentModes.js";
 
 const currency = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
@@ -225,7 +226,7 @@ const FeesDashboard = () => {
                           <small>{payment.admissionNumber || ""}</small>
                         </td>
                         <td>{currency(payment.amountPaid)}</td>
-                        <td>{payment.paymentMode || "-"}</td>
+                        <td>{formatPaymentMode(payment.paymentMode)}</td>
                         <td>
                           {payment.paymentDate
                             ? new Date(payment.paymentDate).toLocaleDateString()
@@ -360,7 +361,7 @@ const FeesDashboard = () => {
                             ? new Date(item.paidDate).toLocaleDateString()
                             : "-"}
                         </td>
-                        <td>{item.paymentMode || "-"}</td>
+                        <td>{formatPaymentMode(item.paymentMode)}</td>
                         <td onClick={(event) => event.stopPropagation()}>
                           {item.paymentId ? (
                             <Link to={`/fees/receipt/${item.paymentId}`}>

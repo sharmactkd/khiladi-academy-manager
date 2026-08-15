@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { feePaymentApi } from "../../api/feeApi.js";
+import { formatPaymentMode } from "../../utils/feePaymentModes.js";
 import { batchApi } from "../../api/batchApi.js";
 
 const currency = (value) =>
@@ -221,7 +222,7 @@ const AllStudentsFeeStatus = () => {
                         <>
                           {new Date(item.paidDate).toLocaleDateString()}
                           <br />
-                          <small>{item.paymentMode || "-"}</small>
+                          <small>{formatPaymentMode(item.paymentMode)}</small>
                         </>
                       ) : (
                         "-"

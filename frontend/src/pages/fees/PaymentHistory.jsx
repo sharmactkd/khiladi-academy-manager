@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { feePaymentApi } from "../../api/feeApi.js";
+import { formatPaymentMode, PAYMENT_MODE_OPTIONS } from "../../utils/feePaymentModes.js";
 
 const currency = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
@@ -98,11 +99,9 @@ const PaymentHistory = () => {
             }
           >
             <option value="">All Modes</option>
-            <option value="cash">Cash</option>
-            <option value="upi">UPI</option>
-            <option value="bank">Bank</option>
-            <option value="card">Card</option>
-            <option value="online">Online</option>
+            {PAYMENT_MODE_OPTIONS.map((mode) => (
+              <option key={mode.value} value={mode.value}>{mode.label}</option>
+            ))}
           </select>
 
           <select
@@ -180,7 +179,7 @@ const PaymentHistory = () => {
                         {currency(payment.pendingAmount)}
                       </td>
 
-                      <td>{payment.paymentMode || "-"}</td>
+                      <td>{formatPaymentMode(payment.paymentMode)}</td>
 
                       <td>
                         {payment.paymentDate

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { feePaymentApi } from "../../api/feeApi.js";
+import { formatPaymentMode } from "../../utils/feePaymentModes.js";
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
 
 const currency = (value) =>
@@ -168,7 +169,7 @@ const StudentFeeHistory = () => {
                     <td>{currency(payment.discount)}</td>
                     <td>{currency(payment.amountPaid)}</td>
                     <td>{currency(payment.pendingAmount)}</td>
-                    <td>{payment.paymentMode || "-"}</td>
+                    <td>{formatPaymentMode(payment.paymentMode)}</td>
                     <td>
                       {payment.paymentDate
                         ? new Date(payment.paymentDate).toLocaleDateString()

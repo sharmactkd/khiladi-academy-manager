@@ -130,7 +130,7 @@ export const createFeePaymentValidator = [
 
   body("paymentMode")
     .optional()
-    .isIn(["cash", "upi", "bank", "card", "online", "other"]),
+    .isIn(["cash", "online", "cash_online"]),
 
   body("notes").optional({ checkFalsy: true }).trim(),
 
@@ -175,7 +175,7 @@ export const updateFeePaymentValidator = [
 
   body("paymentMode")
     .optional()
-    .isIn(["cash", "upi", "bank", "card", "online", "other"]),
+    .isIn(["cash", "online", "cash_online"]),
 
   body("notes").optional({ checkFalsy: true }).trim(),
 
@@ -193,7 +193,7 @@ export const listFeePaymentsValidator = [
 
   query("paymentMode")
     .optional({ checkFalsy: true })
-    .isIn(["cash", "upi", "bank", "card", "online", "other"]),
+    .isIn(["cash", "online", "cash_online", "upi", "bank", "card", "other"]),
 
   query("month")
     .optional({ checkFalsy: true })
