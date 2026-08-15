@@ -5,6 +5,7 @@ import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import FeePayment from "../models/FeePayment.js";
 import AttendanceDayNote from "../models/AttendanceDayNote.js";
+import { getMembershipMap } from "./membershipService.js";
 
 const STATUS_MAP = {
   present: "P",
@@ -209,7 +210,7 @@ const getRecordDisplayIdentity = (record = {}, studentMap = new Map()) => {
   };
 };
 
-const buildRowFromRecord = ({ identity, attendance, index, fee }) => {
+const buildRowFromRecord = ({ identity, attendance, index, fee, membership }) => {
   const student = identity.student;
   const counts = calculateCounts(attendance);
 
@@ -250,6 +251,7 @@ const buildRowFromRecord = ({ identity, attendance, index, fee }) => {
     statusUpdatedAt:
       student?.statusUpdatedAt || student?.updatedAt || student?.createdAt || null,
     feeDueDate:
+      membership?.effectiveDueDate ||
       normalizedDueDate ||
       fee?.dueDate ||
       student?.joiningDate ||
@@ -261,7 +263,8 @@ const buildRowFromRecord = ({ identity, attendance, index, fee }) => {
       fee?.paymentDate ||
       null,
     feePaid: formatDisplayDate(identity.importedFeePaid) || fee?.amountPaid || fee?.amount || "",
-    feeStatus: identity.importedFeeStatus || fee?.status || "due",
+    feeStatus: membership?.feeStatus || identity.importedFeeStatus || fee?.status || "due",
+    membership,
     attendance,
     ...counts,
   };
@@ -320,6 +323,10 @@ const buildMonthlyRows = async ({
 
   const studentIds = students.map((student) => student._id);
   const feeMap = await getLatestFeeMap({
+    academyId: academyObjectId,
+    studentIds,
+  });
+  const membershipMap = await getMembershipMap({
     academyId: academyObjectId,
     studentIds,
   });
@@ -389,12 +396,16 @@ const buildMonthlyRows = async ({
       .map(([rowKey, identity], index) => {
         const attendance = attendanceByRow.get(rowKey) || buildBlankAttendance(days);
         const fee = identity.studentId ? feeMap.get(String(identity.studentId)) : null;
+        const membership = identity.studentId
+          ? membershipMap.get(String(identity.studentId)) || null
+          : null;
 
         return buildRowFromRecord({
           identity,
           attendance,
           index,
           fee,
+          membership,
         });
       })
       .sort((a, b) => {

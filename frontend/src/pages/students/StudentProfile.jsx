@@ -9,9 +9,11 @@ import {
 
 import { studentApi } from "../../api/studentApi.js";
 import PageState from "../../components/common/PageState.jsx";
+import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
 import BatchAcademyHeader from "../batches/components/BatchAcademyHeader.jsx";
 import BatchDetailSectionHeader from "../batches/components/BatchDetailSectionHeader.jsx";
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import useAuth from "../../hooks/useAuth.js";
 import "./StudentProfile.module.css";
 
 const text = (value, fallback = "Not added") => String(value ?? "").trim() || fallback;
@@ -89,9 +91,11 @@ const ContactCard = ({ contact, index }) => (
 
 const StudentProfile = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [membershipOpen, setMembershipOpen] = useState(false);
 
   const loadPage = useCallback(async () => {
     setLoading(true);
@@ -142,6 +146,16 @@ const StudentProfile = () => {
 
   return (
     <div className="page student-detail-page">
+      <MembershipAdjustmentDrawer
+        open={membershipOpen}
+        student={{
+          studentId: student._id,
+          name,
+          rowType: "student",
+        }}
+        onClose={() => setMembershipOpen(false)}
+      />
+
       <BatchAcademyHeader branch={student.branch || null} />
 
       <nav className="student-detail-breadcrumb" aria-label="Breadcrumb">
@@ -288,6 +302,7 @@ const StudentProfile = () => {
             <DetailItem icon={ReceiptIndianRupee} label="Discount">{Number(student.discountPercent || 0)}%</DetailItem>
           </div>
           <div className="student-detail-card-action">
+            {["academy_owner", "super_admin"].includes(user?.role) ? <button className="btn btn-outline" type="button" onClick={() => setMembershipOpen(true)}><CalendarDays size={15} /> Manage Membership</button> : null}
             <Link className="btn btn-outline" to={`/fees/student/${student._id}`}>Fee History <ExternalLink size={14} /></Link>
             <Link className="btn btn-primary" to={`/fees/collect?student=${student._id}`}><BadgeIndianRupee size={15} /> Collect Fee</Link>
           </div>

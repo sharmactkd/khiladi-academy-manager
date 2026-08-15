@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import {
-  CalendarCheck2, Copy, FileSpreadsheet, Printer, Save, TrendingUp,
+  CalendarCheck2, FileSpreadsheet, Printer, RefreshCcw, Save, TrendingUp,
   Upload, UserCheck, UsersRound, UserX,
 } from "lucide-react";
 
@@ -16,6 +16,7 @@ import { getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
 import AttendanceImportModal from "../../components/attendance/AttendanceImportModal.jsx";
+import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import "./Attendance.module.css";
@@ -137,6 +138,7 @@ const Attendance = () => {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [membershipStudent, setMembershipStudent] = useState(null);
 
   const allowedLimit = useMemo(() => getAllowedMonthLimit(), []);
 
@@ -188,24 +190,13 @@ const Attendance = () => {
       (sum, row) => sum + Number(row.presentCount || 0) + Number(row.absentCount || 0) + Number(row.leaveCount || 0) + Number(row.lateCount || 0),
       0
     );
-    const markedDays = days.filter((day) =>
-      formattedRows.some((row) => ["P", "A", "L", "LT"].includes(row.attendance?.[day.dateKey]))
-    ).length;
     return {
       present,
       absent,
       rate: totalMarked ? Math.round((totalPresent / totalMarked) * 100) : 0,
-      markedDays,
       totalCells: formattedRows.length * days.length,
     };
   }, [formattedRows, days, month, year]);
-
-  const selectedMonthLabel =
-    months.find((item) => Number(item.value) === Number(month))?.label || "";
-
-  const selectedMonthFullLabel =
-    months.find((item) => Number(item.value) === Number(month))?.fullLabel ||
-    selectedMonthLabel;
 
   const loadBatches = useCallback(async () => {
     try {
@@ -462,6 +453,24 @@ const Attendance = () => {
     setHasUnsavedChanges(true);
   };
 
+  const handleMembershipUpdated = (studentId, membership) => {
+    setRows((current) => current.map((row) =>
+      String(row.studentId) === String(studentId)
+        ? {
+            ...row,
+            membership,
+            feeDueDate: membership?.effectiveDueDate || row.feeDueDate,
+            feeStatus: membership?.feeStatus || row.feeStatus,
+          }
+        : row
+    ));
+    setMembershipStudent((current) =>
+      current && String(current.studentId) === String(studentId)
+        ? { ...current, membership }
+        : current
+    );
+  };
+
   const openAttendanceImport = () => {
     if (!batch) {
       toast.error("Attendance import karne se pehle batch select karein");
@@ -531,6 +540,13 @@ const Attendance = () => {
         selectedBatch={selectedBatchOption}
       />
 
+      <MembershipAdjustmentDrawer
+        open={Boolean(membershipStudent)}
+        student={membershipStudent}
+        onClose={() => setMembershipStudent(null)}
+        onUpdated={handleMembershipUpdated}
+      />
+
       <AcademyHeroHeader
         headingId="attendance-academy-name"
         academyName={academy?.academyName || "KHILADI Academy"}
@@ -572,17 +588,12 @@ const Attendance = () => {
         <div className="attendance-controls__top">
           <div className="attendance-batches"><small>Select Batch</small><div>{batches.map((item) => <button key={item._id} type="button" className={batch === item._id ? "is-active" : ""} onClick={() => setBatch(item._id)} disabled={loading}>{item.batchName}<span>{item.martialArt || "Martial Art"}</span></button>)}</div>{!batches.length ? <p>No active batches available.</p> : null}</div>
           <label className="attendance-year"><span>Year</span><select value={year} onChange={(event) => setYear(Number(event.target.value))}>{yearOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-          <button type="button" className="attendance-repeat" onClick={repeatAttendance} disabled={loading || !rows.length}><Copy size={16} /> Repeat Previous Day</button>
+          <button type="button" className="attendance-repeat" onClick={repeatAttendance} disabled={loading || !rows.length}><span><RefreshCcw size={16} /></span><span>Repeat Previous Day<small>Copy the latest marked attendance</small></span></button>
         </div>
         <div className="attendance-months" aria-label="Select month">{visibleMonths.map((item) => <button key={item.value} type="button" className={month === item.value ? "is-active" : ""} onClick={() => handleMonthClick(item.value)} disabled={loading}>{item.label}{item.value === now.getMonth() + 1 && year === now.getFullYear() ? <i /> : null}</button>)}</div>
       </section>
 
       <section className="attendance-register-card">
-        <header className="attendance-register-head">
-          <div className="attendance-register-head__identity"><strong>{selectedBatchOption?.batchName || "Select a batch"}</strong><span>{selectedMonthFullLabel} {year}</span><b><UsersRound size={14} /> {formattedRows.length} Students</b><b><CalendarCheck2 size={14} /> {attendanceStats.markedDays} Marked Days</b><b><TrendingUp size={14} /> {attendanceStats.rate}% Average</b></div>
-          <div className="attendance-legend"><span><i className="is-present">P</i> Present</span><span><i className="is-absent">A</i> Absent</span><span><i className="is-leave">L</i> Leave</span><span><i className="is-late">LT</i> Late</span><span><i className="is-empty">–</i> Not Marked</span></div>
-        </header>
-
         <div ref={printRef} className="monthly-register-print-area attendance-register-body">
           <AttendanceTable
             days={days}
@@ -592,6 +603,8 @@ const Attendance = () => {
             onSaveDayNote={saveDayNote}
             onRemoveDayNote={removeDayNote}
             onToggleStudentStatus={toggleStudentStatus}
+            onOpenMembership={setMembershipStudent}
+            canManageMembership={["academy_owner", "super_admin"].includes(user?.role)}
             statusUpdatingIds={statusUpdatingIds}
             loading={loading}
           />

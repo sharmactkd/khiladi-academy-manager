@@ -15,6 +15,7 @@ import batchRoutes from "./routes/batchRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import feePlanRoutes from "./routes/feePlanRoutes.js";
 import feePaymentRoutes from "./routes/feePaymentRoutes.js";
+import membershipRoutes from "./routes/membershipRoutes.js";
 
 import beltTestRoutes from "./routes/beltTestRoutes.js";
 import championshipRecordRoutes from "./routes/championshipRecordRoutes.js";
@@ -109,6 +110,7 @@ app.use("/api/fee-plans", feePlanRoutes);
 app.use("/api/fee-payments", feePaymentRoutes);
 app.use("/api/fees/plans", feePlanRoutes);
 app.use("/api/fees", feePaymentRoutes);
+app.use("/api/memberships", membershipRoutes);
 
 app.use("/api/belt-tests", beltTestRoutes);
 app.use("/api/championship-records", championshipRecordRoutes);

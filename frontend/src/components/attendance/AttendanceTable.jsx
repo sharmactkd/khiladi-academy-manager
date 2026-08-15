@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import AttendanceCell from "./AttendanceCell.jsx";
 import AttendanceSummary from "./AttendanceSummary.jsx";
+import MembershipBadge from "./MembershipBadge.jsx";
 import AttendanceDayNoteDialog, {
   DAY_NOTE_OPTIONS,
 } from "./AttendanceDayNoteDialog.jsx";
@@ -31,17 +32,9 @@ const displayValue = (value, fallback = "-") => {
   return text || fallback;
 };
 
-const getInitials = (value) =>
-  String(value || "Student")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("") || "ST";
-
 const pad = (value) => String(value).padStart(2, "0");
 
-const formatDateDDMMYY = (value) => {
+const formatDateDDMMYYYY = (value) => {
   if (!value) return "-";
 
   const raw = String(value).trim();
@@ -50,26 +43,26 @@ const formatDateDDMMYY = (value) => {
   const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
     const [, yyyy, mm, dd] = isoMatch;
-    return `${dd}-${mm}-${String(yyyy).slice(-2)}`;
+    return `${dd}-${mm}-${yyyy}`;
   }
 
   const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (slashMatch) {
     const [, mm, dd, yy] = slashMatch;
-    return `${pad(dd)}-${pad(mm)}-${String(yy).slice(-2)}`;
+    const yyyy = String(yy).length === 2 ? `20${yy}` : yy;
+    return `${pad(dd)}-${pad(mm)}-${yyyy}`;
   }
 
   const dashMatch = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
   if (dashMatch) {
     const [, dd, mm, yy] = dashMatch;
-    return `${pad(dd)}-${pad(mm)}-${String(yy).slice(-2)}`;
+    const yyyy = String(yy).length === 2 ? `20${yy}` : yy;
+    return `${pad(dd)}-${pad(mm)}-${yyyy}`;
   }
 
   const date = new Date(raw);
   if (!Number.isNaN(date.getTime())) {
-    return `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${String(
-      date.getFullYear()
-    ).slice(-2)}`;
+    return `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
   }
 
   return raw;
@@ -79,10 +72,14 @@ const formatEditableDueValue = (value) => {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "-") return raw;
 
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    return formatDateDDMMYYYY(raw);
+  }
+
   // Old imported registers may contain only a day number or text.
   if (/^\d{1,2}$/.test(raw) || /[A-Za-z]/.test(raw)) return raw;
 
-  return formatDateDDMMYY(raw);
+  return formatDateDDMMYYYY(raw);
 };
 
 const toDateInputValue = (value) => {
@@ -115,7 +112,7 @@ const formatSelectedDate = (isoDate) => {
   );
 
   if (!match) return "";
-  return `${match[3]}-${match[2]}-${match[1].slice(-2)}`;
+  return `${match[3]}-${match[2]}-${match[1]}`;
 };
 
 const DateMetaInput = ({
@@ -155,17 +152,6 @@ const DateMetaInput = ({
         aria-label={ariaLabel}
         autoComplete="off"
       />
-
-      <button
-        type="button"
-        className="monthly-register__calendar-button"
-        onClick={openPicker}
-        disabled={disabled}
-        aria-label={`Open calendar: ${ariaLabel}`}
-        title="Select date"
-      >
-        <CalendarDays size={15} aria-hidden="true" />
-      </button>
 
       <input
         ref={pickerRef}
@@ -229,9 +215,12 @@ const AttendanceTable = ({
   onSaveDayNote,
   onRemoveDayNote,
   onToggleStudentStatus,
+  onOpenMembership,
+  canManageMembership = false,
   statusUpdatingIds = [],
   loading = false,
 }) => {
+  const navigate = useNavigate();
   const safeRows = useMemo(
     () => (Array.isArray(rows) ? rows : []),
     [rows]
@@ -361,6 +350,11 @@ const AttendanceTable = ({
     }
   };
 
+  const openStudentProfile = (row) => {
+    if (!row.studentId) return;
+    navigate(`/students/${row.studentId}`);
+  };
+
   if (loading) {
     return (
       <div className="monthly-register__empty">
@@ -395,9 +389,10 @@ const AttendanceTable = ({
                 Contact
               </th>
 
-              <th rowSpan="2">Due Date</th>
-              <th rowSpan="2">Paid Date</th>
-              <th rowSpan="2">Fee Status</th>
+              <th className="sticky-col sticky-due-date" rowSpan="2">Due Date</th>
+              <th className="sticky-col sticky-paid-date" rowSpan="2">Paid Date</th>
+              <th className="sticky-col sticky-membership" rowSpan="2">Membership</th>
+              <th className="sticky-col sticky-fee-status" rowSpan="2">Fee Status</th>
 
               {days.map((day) => {
                 const note = dayNotes[day.dateKey];
@@ -500,22 +495,30 @@ const AttendanceTable = ({
                     {row.importedSerialNo || row.no || rowIndex + 1}
                   </td>
 
+                  <td className="sticky-col sticky-membership">
+                    {row.rowType === "student" && row.studentId ? (
+                      <MembershipBadge
+                        membership={row.membership}
+                        onClick={canManageMembership ? () => onOpenMembership?.(row) : undefined}
+                        disabled={!canManageMembership}
+                      />
+                    ) : (
+                      <span className="membership-unavailable">—</span>
+                    )}
+                  </td>
+
                   <td
                     className="sticky-col sticky-name monthly-register__name"
                     onContextMenu={(event) => openStudentMenu(event, row)}
+                    onDoubleClick={() => openStudentProfile(row)}
                     title={
                       row.studentId
-                        ? "Right click to change Active/Inactive status"
+                        ? "Double click to open profile · Right click to change status"
                         : undefined
                     }
                   >
                     <div className="attendance-student-cell">
-                      <span className="attendance-student-avatar" aria-hidden="true">{getInitials(row.name || row.importedName)}</span>
-                      <span className="attendance-student-copy">
-                        <strong>{row.name || row.importedName || "-"}</strong>
-                        <small>{row.admissionNumber || row.importedAdmissionNumber || (row.rowType === "raw-import" ? "Imported record" : "Student record")}</small>
-                      </span>
-                      {isInactive && <span className="monthly-register__inactive-badge">Inactive</span>}
+                      <strong>{row.name || row.importedName || "-"}</strong>
                     </div>
                   </td>
 
@@ -523,30 +526,45 @@ const AttendanceTable = ({
                     {row.contact || row.importedPhone || "-"}
                   </td>
 
-                  <td>
+                  <td className="sticky-col sticky-due-date">
+                    {row.rowType === "student" && row.studentId ? (
+                      <button
+                        type="button"
+                        className="membership-due-date"
+                        onClick={canManageMembership ? () => onOpenMembership?.(row) : undefined}
+                        disabled={!canManageMembership}
+                        title="Manage this date from Membership"
+                      >
+                        {displayValue(formatEditableDueValue(getDueDateValue(row)), "-")}
+                      </button>
+                    ) : (
+                      <DateMetaInput
+                        value={displayValue(
+                          formatEditableDueValue(getDueDateValue(row)),
+                          ""
+                        )}
+                        onChange={(value) =>
+                          updateRowField(rowIndex, "importedDueDate", value)
+                        }
+                        placeholder="DD-MM-YYYY"
+                        disabled={!onRowsChange}
+                        ariaLabel={`Due date for ${
+                          row.name || row.importedName || "student"
+                        }`}
+                      />
+                    )}
+                  </td>
+
+                  <td className="sticky-col sticky-paid-date">
                     <DateMetaInput
                       value={displayValue(
-                        formatEditableDueValue(getDueDateValue(row)),
+                        formatEditableDueValue(getPaidDateValue(row)),
                         ""
                       )}
                       onChange={(value) =>
-                        updateRowField(rowIndex, "importedDueDate", value)
-                      }
-                      placeholder="Due date"
-                      disabled={!onRowsChange}
-                      ariaLabel={`Due date for ${
-                        row.name || row.importedName || "student"
-                      }`}
-                    />
-                  </td>
-
-                  <td>
-                    <DateMetaInput
-                      value={displayValue(getPaidDateValue(row), "")}
-                      onChange={(value) =>
                         updateRowField(rowIndex, "importedPaidDate", value)
                       }
-                      placeholder="DD-MM-YY"
+                      placeholder="DD-MM-YYYY"
                       disabled={!onRowsChange}
                       ariaLabel={`Paid date for ${
                         row.name || row.importedName || "student"
@@ -555,13 +573,13 @@ const AttendanceTable = ({
                   </td>
 
                   <td
-                    className={
+                    className={`sticky-col sticky-fee-status ${
                       String(getFeeStatusValue(row))
                         .toLowerCase()
                         .includes("paid")
                         ? "fee-status fee-status--paid"
                         : "fee-status fee-status--due"
-                    }
+                    }`}
                   >
                     {getFeeStatusValue(row)}
                   </td>
