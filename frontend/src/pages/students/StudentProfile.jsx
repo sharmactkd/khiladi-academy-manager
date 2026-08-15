@@ -174,13 +174,20 @@ const StudentProfile = () => {
         { id: "batch", className: "is-green", icon: UsersRound, label: "Assigned Batch", value: batchName },
       ]} getCardProps={() => ({ iconSize: 21 })} />
 
-      <div className="student-detail-identity-grid">
-        <section className="student-detail-card">
-          <BatchDetailSectionHeader icon={IdCard} eyebrow="Identity" title="Basic Information" description="Student identity, admission and membership details." />
-          <div className="student-detail-items">
-            <DetailItem icon={MapPin} label="Branch">{branchName}</DetailItem>
-            <DetailItem icon={UsersRound} label="Batch">{batchName}</DetailItem>
-            <DetailItem icon={CheckCircle2} label="Status" accent>{active ? "Active Student" : text(student.status, "Inactive Student")}</DetailItem>
+      <section className="student-detail-card student-detail-basic-card">
+        <BatchDetailSectionHeader
+          icon={IdCard}
+          eyebrow="Identity"
+          title="Basic Information"
+          description="Student identity, admission and membership details."
+          action={<div className="student-detail-basic-assignments">
+            <div><small>Branch</small><strong>{branchName}</strong></div>
+            <div><small>Batch</small><strong>{batchName}</strong></div>
+            <div className={active ? "is-active" : "is-inactive"}><small>Status</small><strong><CheckCircle2 size={14} />{active ? "Active Student" : text(student.status, "Inactive Student")}</strong></div>
+          </div>}
+        />
+        <div className="student-detail-basic-layout">
+          <div className="student-detail-items student-detail-basic-fields">
             <DetailItem icon={UserRound} label="Full Name">{name}</DetailItem>
             <DetailItem icon={IdCard} label="Admission Number">{text(student.admissionNumber || student.studentCode)}</DetailItem>
             <DetailItem icon={ShieldCheck} label="Aadhaar Number">{text(student.aadhaarNumber)}</DetailItem>
@@ -194,20 +201,14 @@ const StudentProfile = () => {
             <DetailItem icon={GraduationCap} label="Company / Firm Name">{text(student.collegeName || student.education?.collegeName)}</DetailItem>
             <DetailItem icon={UserRound} label="Occupation">{text(student.occupation || student.education?.occupation)}</DetailItem>
           </div>
-        </section>
-
-        <section className="student-detail-photo-card">
-          <div className="student-detail-photo">
+          <aside className="student-detail-basic-photo">
             <img src={getStudentPhotoUrl(student)} alt={name} onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }} />
             <span className={active ? "is-active" : "is-inactive"}>{active ? "Active Student" : text(student.status, "Inactive")}</span>
-          </div>
-          <div className="student-detail-photo-card__body">
             <small>Student Profile</small><h2>{name}</h2>
             <code>{text(student.admissionNumber || student.studentCode, "No admission code")}</code>
-            <div><span><MapPin size={14} />{branchName}</span><span><UsersRound size={14} />{batchName}</span></div>
-          </div>
-        </section>
-      </div>
+          </aside>
+        </div>
+      </section>
 
       <section className="student-detail-card">
         <BatchDetailSectionHeader icon={MapPin} eyebrow="Contact" title="Contact & Location" description="Primary contact and residential location." />
