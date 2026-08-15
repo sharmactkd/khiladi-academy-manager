@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 
 import { studentApi } from "../../api/studentApi.js";
-import MetricGrid from "../../components/common/MetricGrid.jsx";
 import PageState from "../../components/common/PageState.jsx";
 import BatchAcademyHeader from "../batches/components/BatchAcademyHeader.jsx";
 import BatchDetailSectionHeader from "../batches/components/BatchDetailSectionHeader.jsx";
@@ -170,13 +169,14 @@ const StudentProfile = () => {
         </div>
       </header>
 
-      <MetricGrid className="student-detail-metrics" items={[
-        { id: "status", icon: CheckCircle2, label: "Student Status", value: active ? "Active" : text(student.status, "Inactive") },
-        { id: "age", className: "is-blue", icon: CalendarDays, label: "Current Age", value: age === null ? "—" : `${age} Years` },
-        { id: "category", className: "is-purple", icon: GraduationCap, label: "Age Category", value: text(student.ageCategory) },
-        { id: "belt", className: "is-orange", icon: Award, label: "Belt Rank", value: beltLabel(student) },
-        { id: "batch", className: "is-green", icon: UsersRound, label: "Assigned Batch", value: batchName },
-      ]} getCardProps={() => ({ iconSize: 21 })} />
+      <section className="student-detail-top-links" aria-label="Student quick links">
+        {[
+          [CalendarCheck2, "Attendance History", `/attendance/student/${student._id}`],
+          [WalletCards, "Fee History", `/fees/student/${student._id}`],
+          [Award, "Belt History", `/students/${student._id}/belt-history`],
+          [Award, "Championship History", `/students/${student._id}/championship-history`],
+        ].map(([Icon, label, href]) => <Link key={label} to={href}><Icon size={18} /><span>{label}</span><ExternalLink size={14} /></Link>)}
+      </section>
 
       <section className="student-detail-card student-detail-basic-card">
         <BatchDetailSectionHeader
@@ -297,10 +297,6 @@ const StudentProfile = () => {
           <BatchDetailSectionHeader icon={ExternalLink} eyebrow="Activity" title="Quick Links" description="Open student records and academy workflows." />
           <div className="student-detail-link-grid">
             {[
-              [CalendarCheck2, "Attendance History", `/attendance/student/${student._id}`],
-              [WalletCards, "Fee History", `/fees/student/${student._id}`],
-              [Award, "Belt History", `/students/${student._id}/belt-history`],
-              [Award, "Championship History", `/students/${student._id}/championship-history`],
               [Activity, "Tournament History", `/students/${student._id}/tournament-history`],
               [Clock3, "Progress Timeline", `/students/${student._id}/timeline`],
               [IdCard, "ID Cards", `/students/${student._id}/id-cards`],
