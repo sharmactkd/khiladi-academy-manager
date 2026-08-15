@@ -1,14 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { Copy, Upload } from "lucide-react";
+import {
+  CalendarCheck2, Copy, FileSpreadsheet, Printer, Save, TrendingUp,
+  Upload, UserCheck, UsersRound, UserX,
+} from "lucide-react";
 
+import { academyApi } from "../../api/academyApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { attendanceApi } from "../../api/attendanceApi.js";
 import { studentApi } from "../../api/studentApi.js";
+import { getBranches } from "../../api/branchApi.js";
+import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
 import AttendanceImportModal from "../../components/attendance/AttendanceImportModal.jsx";
+import useAuth from "../../hooks/useAuth.js";
+import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import "./Attendance.module.css";
 
 const now = new Date();
 
@@ -48,7 +58,7 @@ const formatRows = (rows = []) =>
   }));
 
 const sortRegisterRows = (list = []) => [...list].sort((a, b) => {
-  const rank = (row) => row.rowType === "imported" ? 2 : row.status === "inactive" ? 1 : 0;
+  const rank = (row) => row.rowType === "raw-import" || row.status === "imported" ? 2 : row.status === "inactive" ? 1 : 0;
   const difference = rank(a) - rank(b);
   if (difference) return difference;
   if (rank(a) === 1) return new Date(b.statusUpdatedAt || 0) - new Date(a.statusUpdatedAt || 0);
@@ -107,7 +117,10 @@ const getAllowedMonthLimit = () => {
 
 const Attendance = () => {
   const printRef = useRef(null);
+  const { user } = useAuth();
 
+  const [academy, setAcademy] = useState(null);
+  const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
   const [batch, setBatch] = useState("");
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -122,6 +135,8 @@ const Attendance = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
 
   const allowedLimit = useMemo(() => getAllowedMonthLimit(), []);
 
@@ -148,6 +163,42 @@ const Attendance = () => {
   }, [year, allowedLimit]);
 
   const formattedRows = useMemo(() => formatRows(rows), [rows]);
+
+  const selectedBatchOption = useMemo(
+    () => batches.find((item) => item._id === batch) || selectedBatch || null,
+    [batches, batch, selectedBatch]
+  );
+
+  const attendanceStats = useMemo(() => {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const selectedPeriodIsCurrent =
+      Number(year) === now.getFullYear() && Number(month) === now.getMonth() + 1;
+    const referenceDay = selectedPeriodIsCurrent
+      ? todayKey
+      : [...days].reverse().find((day) =>
+          formattedRows.some((row) => ["P", "A", "L", "LT"].includes(row.attendance?.[day.dateKey]))
+        )?.dateKey;
+    const values = referenceDay
+      ? formattedRows.map((row) => row.attendance?.[referenceDay] || "")
+      : [];
+    const present = values.filter((value) => value === "P").length;
+    const absent = values.filter((value) => value === "A").length;
+    const totalPresent = formattedRows.reduce((sum, row) => sum + Number(row.presentCount || 0), 0);
+    const totalMarked = formattedRows.reduce(
+      (sum, row) => sum + Number(row.presentCount || 0) + Number(row.absentCount || 0) + Number(row.leaveCount || 0) + Number(row.lateCount || 0),
+      0
+    );
+    const markedDays = days.filter((day) =>
+      formattedRows.some((row) => ["P", "A", "L", "LT"].includes(row.attendance?.[day.dateKey]))
+    ).length;
+    return {
+      present,
+      absent,
+      rate: totalMarked ? Math.round((totalPresent / totalMarked) * 100) : 0,
+      markedDays,
+      totalCells: formattedRows.length * days.length,
+    };
+  }, [formattedRows, days, month, year]);
 
   const selectedMonthLabel =
     months.find((item) => Number(item.value) === Number(month))?.label || "";
@@ -203,12 +254,13 @@ const Attendance = () => {
         setRows(Array.isArray(data.rows) ? data.rows : []);
         setSelectedBatch(data.batch || null);
         setDayNotes(data.dayNotes || {});
+        setHasUnsavedChanges(false);
       } catch (error) {
         if (error?.response?.status === 401) {
           toast.error("Session expired. Please login again.");
         } else {
           toast.error(
-            error?.response?.data?.message || "Monthly attendance load nahi hui"
+            error?.response?.data?.message || "Attendance load nahi hui"
           );
         }
 
@@ -245,14 +297,16 @@ const Attendance = () => {
       setRows(Array.isArray(data.rows) ? data.rows : []);
       setSelectedBatch(data.batch || null);
       setDayNotes(data.dayNotes || {});
+      setHasUnsavedChanges(false);
+      setLastSavedAt(new Date());
 
-      toast.success("Monthly attendance saved successfully");
+      toast.success("Attendance saved successfully");
     } catch (error) {
       if (error?.response?.status === 401) {
         toast.error("Session expired. Please login again.");
       } else {
         toast.error(
-          error?.response?.data?.message || "Monthly attendance save nahi hui"
+          error?.response?.data?.message || "Attendance save nahi hui"
         );
       }
     } finally {
@@ -316,6 +370,7 @@ const Attendance = () => {
     });
     if (!copied) return toast.error("Next date ke liye copy karne layak attendance nahi mili");
     setRows(next);
+    setHasUnsavedChanges(true);
     toast.success(`${source.dateKey} se ${target.dateKey} tak ${copied} attendance copied. Save dabayein.`);
   };
 
@@ -402,9 +457,45 @@ const Attendance = () => {
     setMonth(targetMonth);
   };
 
+  const handleRowsChange = (nextRows) => {
+    setRows(nextRows);
+    setHasUnsavedChanges(true);
+  };
+
+  const openAttendanceImport = () => {
+    if (!batch) {
+      toast.error("Attendance import karne se pehle batch select karein");
+      return;
+    }
+    setImportModalOpen(true);
+  };
+
   useEffect(() => {
     loadBatches();
   }, [loadBatches]);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.allSettled([
+      academyApi.getMyAcademy(),
+      getBranches({ status: "active" }),
+    ]).then(([academyResult, branchResult]) => {
+      if (!mounted) return;
+      if (academyResult.status === "fulfilled") {
+        setAcademy(
+          academyResult.value?.data?.data?.academy ||
+          academyResult.value?.data?.academy ||
+          null
+        );
+      }
+      if (branchResult.status === "fulfilled") {
+        const response = branchResult.value;
+        const list = response?.data?.data || response?.data || [];
+        setBranches(Array.isArray(list) ? list.filter((item) => item?.isActive !== false) : []);
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     if (!visibleMonths.some((item) => item.value === month)) {
@@ -422,151 +513,96 @@ const Attendance = () => {
     loadMonthlyRegister(batch, month, year);
   }, [batch, month, year, loadMonthlyRegister]);
 
+  const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0];
+  const academyAddress = [
+    mainBranch?.address || academy?.address,
+    mainBranch?.city || academy?.city,
+    mainBranch?.state || academy?.state,
+    mainBranch?.country || academy?.country,
+  ].filter(Boolean).join(", ");
+
   return (
-    <div className="page monthly-register-page">
+    <div className="page attendance-page monthly-register-page">
       <AttendanceImportModal
         open={importModalOpen}
         onClose={() => setImportModalOpen(false)}
         onImport={handleImportAttendance}
         fallbackBatch={batch}
+        selectedBatch={selectedBatchOption}
       />
 
-      <div className="page-header monthly-register-header">
-        <div>
-      <h1>Attendance</h1>
-<p className="muted">
-  Manage batch-wise daily and monthly attendance records.
-</p>
+      <AcademyHeroHeader
+        headingId="attendance-academy-name"
+        academyName={academy?.academyName || "KHILADI Academy"}
+        ownerName={academy?.ownerName || user?.name || "Academy Owner"}
+        logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""}
+        addressLabel={mainBranch?.branchName || "Main Branch"}
+        address={academyAddress || "Complete main branch address not available"}
+        summaryItems={[
+          { key: "branches", type: "branches", value: branches.length, label: `Active ${branches.length === 1 ? "Branch" : "Branches"}` },
+          { key: "batches", type: "batches", value: batches.length, label: `Active ${batches.length === 1 ? "Batch" : "Batches"}` },
+        ]}
+      />
+
+      <nav className="attendance-breadcrumb" aria-label="Breadcrumb">
+        <Link to="/dashboard">Dashboard</Link><span>/</span><strong>Attendance</strong>
+      </nav>
+
+      <header className="attendance-heading">
+        <div className="attendance-heading__title">
+          <span><CalendarCheck2 size={25} /></span>
+          <div><small>Academy Operations</small><h1>Attendance</h1><p>Manage daily attendance, monthly records and student participation.</p></div>
+        </div>
+        <div className="attendance-heading__actions">
+          <button type="button" className="attendance-action" onClick={openAttendanceImport} disabled={!batch}><Upload size={16} /> Import Attendance</button>
+          <button type="button" className="attendance-action" onClick={printRegister} disabled={!formattedRows.length}><Printer size={16} /> Print</button>
+          <button type="button" className="attendance-action" onClick={exportExcel} disabled={!formattedRows.length}><FileSpreadsheet size={16} /> Export Excel</button>
+          <button type="button" className="attendance-action attendance-action--primary" onClick={saveRegister} disabled={saving || loading || !rows.length}><Save size={16} /> {saving ? "Saving…" : "Save Attendance"}</button>
+        </div>
+      </header>
+
+      <section className="attendance-metrics" aria-label="Attendance overview">
+        <article className="attendance-metric attendance-metric--red"><span><UsersRound /></span><div><small>Total Students</small><strong>{formattedRows.length}</strong></div></article>
+        <article className="attendance-metric attendance-metric--green"><span><UserCheck /></span><div><small>Present {Number(month) === now.getMonth() + 1 && Number(year) === now.getFullYear() ? "Today" : "Latest Day"}</small><strong>{attendanceStats.present}</strong></div></article>
+        <article className="attendance-metric attendance-metric--amber"><span><UserX /></span><div><small>Absent {Number(month) === now.getMonth() + 1 && Number(year) === now.getFullYear() ? "Today" : "Latest Day"}</small><strong>{attendanceStats.absent}</strong></div></article>
+        <article className="attendance-metric attendance-metric--blue"><span><TrendingUp /></span><div><small>Attendance Rate</small><strong>{attendanceStats.rate}%</strong></div></article>
+      </section>
+
+      <section className="attendance-controls">
+        <div className="attendance-controls__top">
+          <div className="attendance-batches"><small>Select Batch</small><div>{batches.map((item) => <button key={item._id} type="button" className={batch === item._id ? "is-active" : ""} onClick={() => setBatch(item._id)} disabled={loading}>{item.batchName}<span>{item.martialArt || "Martial Art"}</span></button>)}</div>{!batches.length ? <p>No active batches available.</p> : null}</div>
+          <label className="attendance-year"><span>Year</span><select value={year} onChange={(event) => setYear(Number(event.target.value))}>{yearOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <button type="button" className="attendance-repeat" onClick={repeatAttendance} disabled={loading || !rows.length}><Copy size={16} /> Repeat Previous Day</button>
+        </div>
+        <div className="attendance-months" aria-label="Select month">{visibleMonths.map((item) => <button key={item.value} type="button" className={month === item.value ? "is-active" : ""} onClick={() => handleMonthClick(item.value)} disabled={loading}>{item.label}{item.value === now.getMonth() + 1 && year === now.getFullYear() ? <i /> : null}</button>)}</div>
+      </section>
+
+      <section className="attendance-register-card">
+        <header className="attendance-register-head">
+          <div className="attendance-register-head__identity"><strong>{selectedBatchOption?.batchName || "Select a batch"}</strong><span>{selectedMonthFullLabel} {year}</span><b><UsersRound size={14} /> {formattedRows.length} Students</b><b><CalendarCheck2 size={14} /> {attendanceStats.markedDays} Marked Days</b><b><TrendingUp size={14} /> {attendanceStats.rate}% Average</b></div>
+          <div className="attendance-legend"><span><i className="is-present">P</i> Present</span><span><i className="is-absent">A</i> Absent</span><span><i className="is-leave">L</i> Leave</span><span><i className="is-late">LT</i> Late</span><span><i className="is-empty">–</i> Not Marked</span></div>
+        </header>
+
+        <div ref={printRef} className="monthly-register-print-area attendance-register-body">
+          <AttendanceTable
+            days={days}
+            rows={formattedRows}
+            dayNotes={dayNotes}
+            onRowsChange={handleRowsChange}
+            onSaveDayNote={saveDayNote}
+            onRemoveDayNote={removeDayNote}
+            onToggleStudentStatus={toggleStudentStatus}
+            statusUpdatingIds={statusUpdatingIds}
+            loading={loading}
+          />
         </div>
 
-        <div className="monthly-register-actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setImportModalOpen(true)}
-          >
-            <Upload size={16} />
-            Import Attendance
-          </button>
-
-          <button type="button" className="btn btn-secondary" onClick={repeatAttendance} disabled={loading || !rows.length} title="Copy latest marked day to only the next eligible day">
-            <Copy size={16} /> Repeat Attendance
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={printRegister}
-          >
-            Print
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={exportExcel}
-          >
-            Excel Export
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={saveRegister}
-            disabled={saving || loading || !rows.length}
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
-        </div>
-      </div>
-
-      <div className="monthly-register-toolbar card">
-        <div className="batch-toggle-section">
-          <span className="batch-toggle-label">Batch</span>
-
-          <div className="batch-toggle-group">
-            {batches.map((item) => (
-              <button
-                key={item._id}
-                type="button"
-                className={`batch-toggle-btn ${
-                  batch === item._id ? "active" : ""
-                }`}
-                onClick={() => setBatch(item._id)}
-              >
-                {item.batchName} - {item.martialArt}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <label>
-          Year
-          <select
-            value={year}
-            onChange={(event) => setYear(Number(event.target.value))}
-          >
-            {yearOptions.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="card" style={{ marginBottom: 16 }}>
-        <strong>Month</strong>
-
-        <div className="batch-toggle-group" style={{ marginTop: 10 }}>
-          {visibleMonths.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              className={`batch-toggle-btn ${
-                month === item.value ? "active" : ""
-              }`}
-              onClick={() => handleMonthClick(item.value)}
-              disabled={loading}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {selectedBatch && (
-        <div className="monthly-register-title">
-          <strong>{selectedBatch.batchName}</strong>
-          <span>
-            {selectedMonthFullLabel} {year}
-          </span>
-          <span>
-            Records:{" "}
-            {formattedRows.filter(
-              (row) =>
-                row.presentCount ||
-                row.absentCount ||
-                row.leaveCount ||
-                row.lateCount
-            ).length || 0}
-          </span>
-        </div>
-      )}
-
-      <div ref={printRef} className="monthly-register-print-area">
-        <AttendanceTable
-          days={days}
-          rows={formattedRows}
-          dayNotes={dayNotes}
-          onRowsChange={setRows}
-          onSaveDayNote={saveDayNote}
-          onRemoveDayNote={removeDayNote}
-          onToggleStudentStatus={toggleStudentStatus}
-          statusUpdatingIds={statusUpdatingIds}
-          loading={loading}
-        />
-      </div>
+        <footer className="attendance-save-bar">
+          <span className={hasUnsavedChanges ? "is-pending" : "is-saved"}><i />{hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}</span>
+          <span>{lastSavedAt ? `Last saved ${lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Changes are saved when you press Save Attendance"}</span>
+          <div><span>{formattedRows.length} students · {attendanceStats.totalCells} attendance cells</span><button type="button" onClick={saveRegister} disabled={saving || loading || !rows.length}><Save size={15} /> {saving ? "Saving…" : "Save Now"}</button></div>
+        </footer>
+      </section>
     </div>
   );
 };

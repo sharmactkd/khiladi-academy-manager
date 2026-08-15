@@ -16,7 +16,10 @@ const AttendanceSummary = ({ row }) => {
         {row.lateCount || 0}
       </td>
       <td className="monthly-register__summary">
-        {row.attendancePercentage || 0}%
+        <div className="attendance-percentage">
+          <strong>{row.attendancePercentage || 0}%</strong>
+          <span aria-hidden="true"><i style={{ width: `${Math.max(0, Math.min(100, Number(row.attendancePercentage || 0)))}%` }} /></span>
+        </div>
       </td>
     </>
   );

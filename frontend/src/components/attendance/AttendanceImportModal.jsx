@@ -99,7 +99,7 @@ const ResultSummary = ({ studentSummary, attendanceResults }) => {
   );
 };
 
-const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch }) => {
+const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selectedBatch = null }) => {
   const [fileName, setFileName] = useState("");
   const [workbook, setWorkbook] = useState(null);
   const [classification, setClassification] = useState({ recordSheet: "", attendanceSheets: [], ignoredSheets: [] });
@@ -405,6 +405,11 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch }) => {
 
             <div className="card" style={sectionStyle}>
               <h3>2. Import Attendance</h3>
+              <div className={`attendance-import-destination ${fallbackBatch ? "is-ready" : "is-missing"}`}>
+                <strong>Import destination</strong>
+                <span>{selectedBatch?.batchName || "No batch selected"}</span>
+                <small>{fallbackBatch ? "Selected attendance will be imported into this batch." : "Close this dialog and select a batch before importing attendance."}</small>
+              </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 18, marginBottom: 12 }}>
                 <label><input type="radio" name="attendanceMode" value="complete" checked={attendanceMode === "complete"} onChange={() => setAttendanceMode("complete")} disabled={busy} /> Complete selected sheets</label>
                 <label><input type="radio" name="attendanceMode" value="months" checked={attendanceMode === "months"} onChange={() => setAttendanceMode("months")} disabled={busy} /> Select months manually</label>
@@ -459,6 +464,7 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch }) => {
         <ResultSummary studentSummary={studentSummary} attendanceResults={attendanceResults} />
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+          {workbook && attendanceSheets.length > 0 && !fallbackBatch ? <p className="attendance-import-error">Select a batch before starting attendance import.</p> : null}
           <button type="button" className="btn" onClick={close} disabled={busy}>Cancel</button>
           <button type="button" className="btn btn-primary" onClick={handleImport} disabled={busy || !canStart}>
             {busy ? "Processing..." : "Start Safe Import"}

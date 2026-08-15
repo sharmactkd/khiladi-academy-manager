@@ -31,6 +31,14 @@ const displayValue = (value, fallback = "-") => {
   return text || fallback;
 };
 
+const getInitials = (value) =>
+  String(value || "Student")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || "ST";
+
 const pad = (value) => String(value).padStart(2, "0");
 
 const formatDateDDMMYY = (value) => {
@@ -501,13 +509,14 @@ const AttendanceTable = ({
                         : undefined
                     }
                   >
-                    <span>{row.name || row.importedName || "-"}</span>
-
-                    {isInactive && (
-                      <span className="monthly-register__inactive-badge">
-                        Inactive
+                    <div className="attendance-student-cell">
+                      <span className="attendance-student-avatar" aria-hidden="true">{getInitials(row.name || row.importedName)}</span>
+                      <span className="attendance-student-copy">
+                        <strong>{row.name || row.importedName || "-"}</strong>
+                        <small>{row.admissionNumber || row.importedAdmissionNumber || (row.rowType === "raw-import" ? "Imported record" : "Student record")}</small>
                       </span>
-                    )}
+                      {isInactive && <span className="monthly-register__inactive-badge">Inactive</span>}
+                    </div>
                   </td>
 
                   <td className="sticky-col sticky-contact">
