@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  ChevronDown, ChevronLeft, ChevronRight, Columns3, Download, Edit3,
-  FileText, Filter, MoreVertical, Printer, Search, Trash2, Upload,
+  ChevronDown, Columns3, Download, Edit3,
+  FileText, Filter, Printer, Search, Trash2, Upload,
   UserCheck, UserPlus, UsersRound, UserX, X,
 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -69,8 +69,8 @@ const Students = () => {
   const [statusUpdatingIds, setStatusUpdatingIds] = useState([]);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const [pageNumber, setPageNumber] = useState(1);
-  const PAGE_SIZE = 8;
+  const [visibleCount, setVisibleCount] = useState(20);
+  const LOAD_STEP = 20;
 
   const [filters, setFilters] = useState({
     search: "",
@@ -97,11 +97,9 @@ const Students = () => {
     return selectedStudents.length > 0 ? selectedStudents : students;
   }, [selectedStudents, students]);
 
-  const totalPages = Math.max(1, Math.ceil(students.length / PAGE_SIZE));
   const visibleStudents = useMemo(() => {
-    const start = (pageNumber - 1) * PAGE_SIZE;
-    return students.slice(start, start + PAGE_SIZE);
-  }, [students, pageNumber]);
+    return students.slice(0, visibleCount);
+  }, [students, visibleCount]);
 
   const activeCount = useMemo(
     () => students.filter((student) => student.status === "active").length,
@@ -143,7 +141,7 @@ const Students = () => {
 
       setStudents(Array.isArray(list) ? list : []);
       setSelectedIds([]);
-      setPageNumber(1);
+      setVisibleCount(LOAD_STEP);
     } catch (error) {
       toast.error(error.response?.data?.message || "Students load nahi hue");
     } finally {
@@ -229,12 +227,9 @@ const Students = () => {
 
   const toggleSelectAll = () => {
     if (allVisibleSelected) {
-      const visibleIds = visibleStudents.map((student) => student._id);
-      setSelectedIds((current) => current.filter((id) => !visibleIds.includes(id)));
+      setSelectedIds([]);
     } else {
-      setSelectedIds((current) => [
-        ...new Set([...current, ...visibleStudents.map((student) => student._id)]),
-      ]);
+      setSelectedIds(students.map((student) => student._id));
     }
   };
 
@@ -243,6 +238,16 @@ const Students = () => {
       prev.includes(id)
         ? prev.filter((studentId) => studentId !== id)
         : [...prev, id]
+    );
+  };
+
+  const handleStudentsScroll = (event) => {
+    const { scrollTop, clientHeight, scrollHeight } = event.currentTarget;
+
+    if (scrollHeight - scrollTop - clientHeight > 180) return;
+
+    setVisibleCount((current) =>
+      Math.min(current + LOAD_STEP, students.length)
     );
   };
 
@@ -727,7 +732,7 @@ const Students = () => {
           <div><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} /> <span>{selectedIds.length ? `${selectedIds.length} selected` : `${students.length} records`}</span>{selectedIds.length > 0 ? <button type="button" onClick={handleBulkDelete} disabled={bulkDeleting}><Trash2 size={15} /> {bulkDeleting ? "Deleting…" : "Delete Selected"}</button> : null}</div>
           <div><span><Columns3 size={16} /> Complete student view</span></div>
         </div>
-        {loading ? <div className="students-state"><span /> Loading students…</div> : students.length === 0 ? <div className="students-state"><UsersRound size={31} /><strong>No students found</strong><p>Try changing your filters or add a new student.</p></div> : <div className="students-table-wrap"><table className="students-table">
+        {loading ? <div className="students-state"><span /> Loading students…</div> : students.length === 0 ? <div className="students-state"><UsersRound size={31} /><strong>No students found</strong><p>Try changing your filters or add a new student.</p></div> : <div className="students-table-wrap" onScroll={handleStudentsScroll}><table className="students-table">
           <thead><tr><th><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} /></th><th>Student</th><th>Code</th><th>Age / Category</th><th>Contact</th><th>School / Class</th><th>Batch</th><th>Martial Art</th><th>Belt</th><th>Blood</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>{visibleStudents.map((student) => {
             const fullName = getStudentFullName(student);
@@ -741,11 +746,11 @@ const Students = () => {
               <td><strong>{student.schoolName || student.education?.schoolName || "—"}</strong><small>{[student.className, student.section].filter(Boolean).join(" - ") || "Not added"}</small></td>
               <td><strong>{student.batch?.batchName || "—"}</strong></td><td><strong>{student.martialArt || "—"}</strong></td><td><strong>{displayBelt(student)}</strong></td><td><b className="students-blood">{student.bloodGroup || "—"}</b></td>
               <td onClick={(event) => event.stopPropagation()}>{["active", "inactive"].includes(student.status) ? <button type="button" className={`students-status is-${student.status}`} onClick={() => handleStatusToggle(student)} disabled={statusUpdatingIds.includes(student._id)}><i><span /></i>{statusUpdatingIds.includes(student._id) ? "Saving…" : student.status}</button> : <span className="students-left-status">{student.status || "—"}</span>}</td>
-              <td onClick={(event) => event.stopPropagation()}><div className="students-row-actions"><Link to={`/students/${student._id}/edit`} title="Edit student"><Edit3 size={16} /></Link><button type="button" title="Delete student" onClick={() => handleDelete(student)}><MoreVertical size={17} /></button></div></td>
+              <td onClick={(event) => event.stopPropagation()}><div className="students-row-actions"><Link to={`/students/${student._id}/edit`} title="Edit student" aria-label={`Edit ${fullName || "student"}`}><Edit3 size={16} /></Link><button type="button" className="students-row-actions__delete" title="Delete student" aria-label={`Delete ${fullName || "student"}`} onClick={() => handleDelete(student)}><Trash2 size={16} /></button></div></td>
             </tr>;
           })}</tbody>
         </table></div>}
-        {!loading && students.length > 0 ? <footer className="students-pagination"><span>Showing {(pageNumber - 1) * PAGE_SIZE + 1}–{Math.min(pageNumber * PAGE_SIZE, students.length)} of {students.length} students</span><div><button type="button" disabled={pageNumber === 1} onClick={() => setPageNumber((page) => page - 1)}><ChevronLeft size={16} /> Previous</button><b>{pageNumber}</b><span>of {totalPages}</span><button type="button" disabled={pageNumber === totalPages} onClick={() => setPageNumber((page) => page + 1)}>Next <ChevronRight size={16} /></button></div></footer> : null}
+        {!loading && students.length > 0 ? <footer className="students-list-footer"><span>Showing {visibleStudents.length} of {students.length} students</span>{visibleStudents.length < students.length ? <span>Scroll down to load more students</span> : <strong>All students loaded</strong>}</footer> : null}
       </section>
     </div>
   );
