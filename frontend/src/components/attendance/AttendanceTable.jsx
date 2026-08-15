@@ -213,7 +213,7 @@ const getDayStyle = (note) =>
       }
     : undefined;
 
-const MonthlyAttendanceTable = ({
+const AttendanceTable = ({
   days = [],
   rows = [],
   dayNotes = {},
@@ -679,4 +679,4 @@ const MonthlyAttendanceTable = ({
   );
 };
 
-export default MonthlyAttendanceTable;
+export default AttendanceTable;

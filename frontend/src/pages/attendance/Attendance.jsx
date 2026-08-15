@@ -7,7 +7,7 @@ import { Copy, Upload } from "lucide-react";
 import { batchApi } from "../../api/batchApi.js";
 import { attendanceApi } from "../../api/attendanceApi.js";
 import { studentApi } from "../../api/studentApi.js";
-import MonthlyAttendanceTable from "../../components/attendance/MonthlyAttendanceTable.jsx";
+import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
 import AttendanceImportModal from "../../components/attendance/AttendanceImportModal.jsx";
 
 const now = new Date();
@@ -105,7 +105,7 @@ const getAllowedMonthLimit = () => {
   };
 };
 
-const MonthlyAttendanceRegister = () => {
+const Attendance = () => {
   const printRef = useRef(null);
 
   const [batches, setBatches] = useState([]);
@@ -433,11 +433,10 @@ const MonthlyAttendanceRegister = () => {
 
       <div className="page-header monthly-register-header">
         <div>
-          <h1>Monthly Attendance Register</h1>
-          <p className="muted">
-            Current month default rahega. Month button par click karne se wahi
-            month load hoga.
-          </p>
+      <h1>Attendance</h1>
+<p className="muted">
+  Manage batch-wise daily and monthly attendance records.
+</p>
         </div>
 
         <div className="monthly-register-actions">
@@ -556,7 +555,7 @@ const MonthlyAttendanceRegister = () => {
       )}
 
       <div ref={printRef} className="monthly-register-print-area">
-        <MonthlyAttendanceTable
+        <AttendanceTable
           days={days}
           rows={formattedRows}
           dayNotes={dayNotes}
@@ -572,4 +571,4 @@ const MonthlyAttendanceRegister = () => {
   );
 };
 
-export default MonthlyAttendanceRegister;
+export default Attendance;
