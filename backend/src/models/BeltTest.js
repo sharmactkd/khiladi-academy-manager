@@ -117,6 +117,15 @@ beltTestSchema.index(
 );
 beltTestSchema.index({ academy: 1, isDeleted: 1 });
 
+beltTestSchema.pre("validate", function validateAssessmentScore() {
+  if (this.marks === null || this.marks === undefined) return;
+  if (this.outOf === null || this.outOf === undefined) return;
+
+  if (Number(this.marks) > Number(this.outOf)) {
+    this.invalidate("marks", "Marks obtained cannot exceed total marks");
+  }
+});
+
 const BeltTest = mongoose.model("BeltTest", beltTestSchema);
 
 export default BeltTest;
