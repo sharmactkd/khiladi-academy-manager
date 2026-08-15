@@ -14,6 +14,7 @@ import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { academyApi } from "../../api/academyApi.js";
+import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import StudentImportModal from "../../components/students/StudentImportModal.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
@@ -629,8 +630,13 @@ const Students = () => {
     beltRank: "", ageCategory: "", bloodGroup: "",
   });
 
-  const academyLocation = [academy?.city, academy?.state, academy?.country]
-    .filter(Boolean).join(", ") || "Academy operations";
+  const mainBranch = branches.find((branch) => branch?.isMainBranch) || branches[0];
+  const academyAddress = [
+    mainBranch?.address || academy?.address,
+    mainBranch?.city || academy?.city,
+    mainBranch?.state || academy?.state,
+    mainBranch?.country || academy?.country,
+  ].filter(Boolean).join(", ");
 
   return (
     <div className="page students-page">
@@ -642,17 +648,28 @@ const Students = () => {
         batches={batches}
       />
 
-      <section className="students-academy-bar" aria-label="Academy identity">
-        <div className="students-academy-bar__logo">
-          {academy?.logo ? <img src={getAcademyLogoUrl(academy)} alt="" /> : <UsersRound size={27} />}
-        </div>
-        <div>
-          <span>Academy</span>
-          <h2>{academy?.academyName || "KHILADI Academy"}</h2>
-          <p>{academyLocation}</p>
-        </div>
-        <b><i /> Active</b>
-      </section>
+      <AcademyHeroHeader
+        headingId="students-academy-name"
+        academyName={academy?.academyName || "KHILADI Academy"}
+        ownerName={academy?.ownerName || user?.name || "Academy Owner"}
+        logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""}
+        addressLabel={mainBranch?.branchName || "Main Branch"}
+        address={academyAddress || "Complete main branch address not available"}
+        summaryItems={[
+          {
+            key: "branches",
+            type: "branches",
+            value: branches.length,
+            label: `Active ${branches.length === 1 ? "Branch" : "Branches"}`,
+          },
+          {
+            key: "batches",
+            type: "batches",
+            value: batches.length,
+            label: `Active ${batches.length === 1 ? "Batch" : "Batches"}`,
+          },
+        ]}
+      />
 
       <header className="students-heading-card">
         <div className="students-heading-card__copy">
