@@ -112,6 +112,18 @@ const feePaymentSchema = new mongoose.Schema(
       index: true,
     },
 
+    cashAmount: {
+      type: Number,
+      default: 0,
+      min: [0, "Cash amount cannot be negative"],
+    },
+
+    onlineAmount: {
+      type: Number,
+      default: 0,
+      min: [0, "Online amount cannot be negative"],
+    },
+
     receiptNumber: {
       type: String,
       trim: true,
@@ -168,6 +180,25 @@ feePaymentSchema.pre("validate", function () {
   const amount = Number(this.amount || 0);
   const discount = Number(this.discount || 0);
   const amountPaid = Number(this.amountPaid || 0);
+
+  if (this.paymentMode === "cash_online") {
+    const cashAmount = Number(this.cashAmount || 0);
+    const onlineAmount = Number(this.onlineAmount || 0);
+
+    if (cashAmount <= 0 || onlineAmount <= 0) {
+      throw new Error("Cash and online amounts must both be greater than zero");
+    }
+
+    if (Math.abs(cashAmount + onlineAmount - amountPaid) > 0.01) {
+      throw new Error("Cash and online amounts must equal the total amount paid");
+    }
+  } else if (this.paymentMode === "cash") {
+    this.cashAmount = amountPaid;
+    this.onlineAmount = 0;
+  } else if (this.paymentMode === "online") {
+    this.cashAmount = 0;
+    this.onlineAmount = amountPaid;
+  }
 
   this.finalAmount = Math.max(amount - discount, 0);
   this.pendingAmount = Math.max(this.finalAmount - amountPaid, 0);

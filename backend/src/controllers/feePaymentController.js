@@ -70,6 +70,53 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     0
   );
 
+  const previousMonthDate = new Date(year, month - 2, 1);
+  const previousMonthPayments = payments.filter(
+    (payment) =>
+      Number(payment.feeMonth) === previousMonthDate.getMonth() + 1 &&
+      Number(payment.feeYear) === previousMonthDate.getFullYear()
+  );
+  const previousMonthCollection = previousMonthPayments.reduce(
+    (sum, payment) => sum + Number(payment.amountPaid || 0),
+    0
+  );
+
+  const monthlyTrend = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(year, month - 6 + index, 1);
+    const trendMonth = date.getMonth() + 1;
+    const trendYear = date.getFullYear();
+    const amount = payments
+      .filter(
+        (payment) =>
+          Number(payment.feeMonth) === trendMonth &&
+          Number(payment.feeYear) === trendYear
+      )
+      .reduce((sum, payment) => sum + Number(payment.amountPaid || 0), 0);
+
+    return {
+      month: trendMonth,
+      year: trendYear,
+      label: date.toLocaleString("en-US", { month: "short" }),
+      amount,
+    };
+  });
+
+  const paymentMix = thisMonthPayments.reduce(
+    (acc, payment) => {
+      const mode = ["cash", "online", "cash_online"].includes(payment.paymentMode)
+        ? payment.paymentMode
+        : "online";
+      acc[mode].amount += Number(payment.amountPaid || 0);
+      acc[mode].transactions += 1;
+      return acc;
+    },
+    {
+      cash: { amount: 0, transactions: 0 },
+      online: { amount: 0, transactions: 0 },
+      cash_online: { amount: 0, transactions: 0 },
+    }
+  );
+
   const students = await getActiveStudents(req.academyId);
   const statuses = await Promise.all(
     students.map((student) =>
@@ -107,18 +154,36 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     amountPaid: payment.amountPaid,
     paymentDate: payment.paymentDate,
     paymentMode: payment.paymentMode,
+    cashAmount: payment.cashAmount || 0,
+    onlineAmount: payment.onlineAmount || 0,
     receiptNumber: payment.receiptNumber,
     status: payment.status,
   }));
+
+  const collectionRate = students.length
+    ? Number(((summary.paid / students.length) * 100).toFixed(1))
+    : 0;
+  const collectionChangePercent = previousMonthCollection > 0
+    ? Number((((thisMonthCollection - previousMonthCollection) / previousMonthCollection) * 100).toFixed(1))
+    : thisMonthCollection > 0
+      ? 100
+      : 0;
 
   return successResponse(res, "Fees dashboard fetched successfully", {
     month,
     year,
     totalCollection,
     thisMonthCollection,
+    previousMonthCollection,
+    collectionChangePercent,
+    collectionRate,
+    activeStudents: students.length,
+    totalTransactions: thisMonthPayments.length,
     pendingAmount,
     overdueStudents: summary.overdue,
     summary,
+    monthlyTrend,
+    paymentMix,
     recentPayments,
   });
 });
@@ -261,7 +326,14 @@ export const getFeePaymentById = asyncHandler(async (req, res) => {
     _id: req.params.id,
     academy: req.academyId,
   })
-    .populate("student", "firstName lastName admissionNumber phone email address")
+    .populate({
+      path: "student",
+      select: "firstName lastName admissionNumber phone email address branch",
+      populate: {
+        path: "branch",
+        select: "branchName address city state country",
+      },
+    })
     .populate("batch", "batchName martialArt")
     .populate("feePlan", "name monthlyAmount amount dueDay")
     .populate("collectedBy", "name email");
@@ -289,6 +361,8 @@ export const updateFeePayment = asyncHandler(async (req, res) => {
     "amountPaid",
     "paymentDate",
     "paymentMode",
+    "cashAmount",
+    "onlineAmount",
     "notes",
     "note",
     "dueDate",

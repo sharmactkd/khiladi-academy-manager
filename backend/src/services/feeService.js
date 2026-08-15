@@ -350,6 +350,8 @@ export const collectStudentFee = async ({
     existing.paymentDate = payload.paymentDate || new Date();
     existing.paidDate = amountPaid >= finalAmount ? existing.paymentDate : null;
     existing.paymentMode = payload.paymentMode || existing.paymentMode || "cash";
+    existing.cashAmount = Number(payload.cashAmount || 0);
+    existing.onlineAmount = Number(payload.onlineAmount || 0);
     existing.dueDate = dueDate;
     existing.notes = payload.notes || payload.note || existing.notes || "";
     existing.note = payload.notes || payload.note || existing.note || "";
@@ -378,6 +380,8 @@ export const collectStudentFee = async ({
   paymentDate: payload.paymentDate || new Date(),
   paidDate: amountPaid >= finalAmount ? payload.paymentDate || new Date() : null,
   paymentMode: payload.paymentMode || "cash",
+  cashAmount: Number(payload.cashAmount || 0),
+  onlineAmount: Number(payload.onlineAmount || 0),
   receiptNumber,
   notes: payload.notes || payload.note || "",
   note: payload.notes || payload.note || "",

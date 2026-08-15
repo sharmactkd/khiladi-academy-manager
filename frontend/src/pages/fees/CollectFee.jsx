@@ -109,6 +109,8 @@ const CollectFee = () => {
       amountPaid: "",
       paymentDate: new Date().toISOString().slice(0, 10),
       paymentMode: "cash",
+      cashAmount: 0,
+      onlineAmount: 0,
       notes: "",
     },
   });
@@ -120,6 +122,8 @@ const CollectFee = () => {
   const discount = Math.max(Number(watch("discount") || 0), 0);
   const amountPaid = Math.max(Number(watch("amountPaid") || 0), 0);
   const paymentMode = watch("paymentMode") || "cash";
+  const cashAmount = Math.max(Number(watch("cashAmount") || 0), 0);
+  const onlineAmount = Math.max(Number(watch("onlineAmount") || 0), 0);
   const finalPayable = Math.max(amount - discount, 0);
   const pendingAmount = Math.max(finalPayable - amountPaid, 0);
   const paymentStatus = getPaymentStatus({ pendingAmount, amountPaid });
@@ -169,13 +173,38 @@ const CollectFee = () => {
     const monthlyFee = studentFee > 0 ? studentFee : batchFee;
     setStudentSearch(studentName(selectedStudent));
     setValue("amount", monthlyFee, { shouldValidate: true });
-    setValue("amountPaid", monthlyFee, { shouldValidate: true });
-  }, [selectedStudent, setValue]);
+    if (paymentMode === "cash_online") {
+      const cashShare = Math.floor(monthlyFee / 2);
+      setValue("cashAmount", cashShare, { shouldValidate: true });
+      setValue("onlineAmount", monthlyFee - cashShare, { shouldValidate: true });
+    } else {
+      setValue("amountPaid", monthlyFee, { shouldValidate: true });
+    }
+  }, [selectedStudent, paymentMode, setValue]);
+
+  useEffect(() => {
+    if (paymentMode !== "cash_online") return;
+    setValue("amountPaid", cashAmount + onlineAmount, { shouldValidate: true });
+  }, [cashAmount, onlineAmount, paymentMode, setValue]);
 
   const selectStudent = (student) => {
     setValue("student", student._id, { shouldDirty: true, shouldValidate: true });
     setStudentSearch(studentName(student));
     setStudentMenuOpen(false);
+  };
+
+  const selectPaymentMode = (mode) => {
+    setValue("paymentMode", mode, { shouldDirty: true, shouldValidate: true });
+
+    if (mode === "cash_online") {
+      const cashShare = Math.floor(amountPaid / 2);
+      setValue("cashAmount", cashShare, { shouldDirty: true, shouldValidate: true });
+      setValue("onlineAmount", amountPaid - cashShare, { shouldDirty: true, shouldValidate: true });
+      return;
+    }
+
+    setValue("cashAmount", 0, { shouldDirty: true });
+    setValue("onlineAmount", 0, { shouldDirty: true });
   };
 
   const resetForm = () => {
@@ -188,6 +217,8 @@ const CollectFee = () => {
       amountPaid: "",
       paymentDate: new Date().toISOString().slice(0, 10),
       paymentMode: "cash",
+      cashAmount: 0,
+      onlineAmount: 0,
       notes: "",
     });
     if (!studentIdFromUrl) setStudentSearch("");
@@ -201,6 +232,8 @@ const CollectFee = () => {
         amount: Number(values.amount || 0),
         discount: Number(values.discount || 0),
         amountPaid: Number(values.amountPaid || 0),
+        cashAmount: Number(values.cashAmount || 0),
+        onlineAmount: Number(values.onlineAmount || 0),
         feeMonth: Number(values.feeMonth),
         feeYear: Number(values.feeYear),
         paymentDate: values.paymentDate
@@ -311,7 +344,7 @@ const CollectFee = () => {
               <label><span>Monthly Fee *</span><div className={styles.moneyInput}><IndianRupee size={14} /><input type="number" step="0.01" min="0" {...register("amount", { required: "Amount required", min: { value: 0, message: "Amount cannot be negative" } })} /></div>{errors.amount ? <small className={styles.errorText}>{errors.amount.message}</small> : null}</label>
               <label><span>Discount / Scholarship</span><div className={styles.moneyInput}><IndianRupee size={14} /><input type="number" step="0.01" min="0" {...register("discount", { min: { value: 0, message: "Discount cannot be negative" } })} /></div>{errors.discount ? <small className={styles.errorText}>{errors.discount.message}</small> : null}</label>
               <label><span>Final Payable</span><div className={`${styles.readOnlyField} ${styles.emphasisField}`}>{currency(finalPayable)}</div></label>
-              <label><span>Amount Paid *</span><div className={styles.moneyInput}><IndianRupee size={14} /><input type="number" step="0.01" min="0" {...register("amountPaid", { required: "Amount paid required", min: { value: 0, message: "Paid amount cannot be negative" } })} /></div>{errors.amountPaid ? <small className={styles.errorText}>{errors.amountPaid.message}</small> : null}</label>
+              <label><span>Amount Paid *</span><div className={`${styles.moneyInput} ${paymentMode === "cash_online" ? styles.calculatedInput : ""}`}><IndianRupee size={14} /><input type="number" step="0.01" min="0" readOnly={paymentMode === "cash_online"} {...register("amountPaid", { required: "Amount paid required", min: { value: 0, message: "Paid amount cannot be negative" } })} /></div>{paymentMode === "cash_online" ? <small className={styles.helperText}>Automatically calculated from cash and online amounts.</small> : null}{errors.amountPaid ? <small className={styles.errorText}>{errors.amountPaid.message}</small> : null}</label>
               <label><span>Pending Amount</span><div className={`${styles.readOnlyField} ${pendingAmount > 0 ? styles.pendingField : styles.successField}`}>{currency(pendingAmount)}</div></label>
               <label><span>Payment Date *</span><div className={styles.dateInput}><CalendarDays size={15} /><input type="date" {...register("paymentDate", { required: "Payment date required" })} /></div>{errors.paymentDate ? <small className={styles.errorText}>{errors.paymentDate.message}</small> : null}</label>
             </div>
@@ -319,8 +352,21 @@ const CollectFee = () => {
             <fieldset className={styles.paymentModes}>
               <legend>Payment Mode *</legend>
               <input type="hidden" {...register("paymentMode", { required: "Payment mode required" })} />
-              <div>{PAYMENT_MODES.map(({ value, label, icon: Icon }) => <button key={value} type="button" className={paymentMode === value ? styles.activeMode : ""} onClick={() => setValue("paymentMode", value, { shouldDirty: true, shouldValidate: true })}><Icon size={17} />{label}</button>)}</div>
+              <div>{PAYMENT_MODES.map(({ value, label, icon: Icon }) => <button key={value} type="button" className={paymentMode === value ? styles.activeMode : ""} onClick={() => selectPaymentMode(value)}><Icon size={17} />{label}</button>)}</div>
             </fieldset>
+
+            {paymentMode === "cash_online" ? (
+              <div className={styles.splitPayment}>
+                <header><WalletCards size={17} /><div><strong>Split Payment</strong><small>Enter how much was received in cash and online.</small></div><span>{currency(cashAmount + onlineAmount)}</span></header>
+                <div>
+                  <label><span>Cash Amount *</span><div className={styles.moneyInput}><Banknote size={14} /><input type="number" step="0.01" min="0.01" {...register("cashAmount", { required: "Cash amount required", min: { value: 0.01, message: "Cash amount must be greater than zero" } })} /></div>{errors.cashAmount ? <small className={styles.errorText}>{errors.cashAmount.message}</small> : null}</label>
+                  <span className={styles.splitPlus}>+</span>
+                  <label><span>Online Amount *</span><div className={styles.moneyInput}><Globe2 size={14} /><input type="number" step="0.01" min="0.01" {...register("onlineAmount", { required: "Online amount required", min: { value: 0.01, message: "Online amount must be greater than zero" } })} /></div>{errors.onlineAmount ? <small className={styles.errorText}>{errors.onlineAmount.message}</small> : null}</label>
+                  <span className={styles.splitEquals}>=</span>
+                  <div className={styles.splitTotal}><small>Total Amount Paid</small><strong>{currency(cashAmount + onlineAmount)}</strong></div>
+                </div>
+              </div>
+            ) : null}
 
             <label className={styles.notes}><span>Notes</span><textarea rows="3" {...register("notes")} placeholder="Payment received from parent, reference ID or any remarks..." /></label>
           </section>
@@ -334,6 +380,7 @@ const CollectFee = () => {
             <div><dt>Discount / Scholarship</dt><dd className={discount > 0 ? styles.discountText : ""}>{discount > 0 ? `−${currency(discount)}` : currency(0)}</dd></div>
             <div className={styles.totalRow}><dt>Final Payable</dt><dd>{currency(finalPayable)}</dd></div>
             <div><dt>Amount Paid</dt><dd className={styles.paidText}>{currency(amountPaid)}</dd></div>
+            {paymentMode === "cash_online" ? <><div className={styles.splitBreakdown}><dt>Cash Portion</dt><dd>{currency(cashAmount)}</dd></div><div className={styles.splitBreakdown}><dt>Online Portion</dt><dd>{currency(onlineAmount)}</dd></div></> : null}
             <div><dt>Pending Amount</dt><dd className={pendingAmount > 0 ? styles.pendingText : styles.paidText}>{currency(pendingAmount)}</dd></div>
           </dl>
           <div className={`${styles.statusPanel} ${styles[`status${paymentStatus.key[0].toUpperCase()}${paymentStatus.key.slice(1)}`]}`}><CheckCircle2 size={22} /><strong>{paymentStatus.label}</strong></div>

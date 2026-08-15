@@ -132,6 +132,28 @@ export const createFeePaymentValidator = [
     .optional()
     .isIn(["cash", "online", "cash_online"]),
 
+  body("cashAmount").optional().isFloat({ min: 0 }),
+
+  body("onlineAmount").optional().isFloat({ min: 0 }),
+
+  body().custom((_, { req }) => {
+    if (req.body.paymentMode !== "cash_online") return true;
+
+    const cashAmount = Number(req.body.cashAmount || 0);
+    const onlineAmount = Number(req.body.onlineAmount || 0);
+    const amountPaid = Number(req.body.amountPaid || 0);
+
+    if (cashAmount <= 0 || onlineAmount <= 0) {
+      throw new Error("Cash and online amounts must both be greater than zero");
+    }
+
+    if (Math.abs(cashAmount + onlineAmount - amountPaid) > 0.01) {
+      throw new Error("Cash and online amounts must equal the total amount paid");
+    }
+
+    return true;
+  }),
+
   body("notes").optional({ checkFalsy: true }).trim(),
 
   body("note").optional({ checkFalsy: true }).trim(),
@@ -176,6 +198,10 @@ export const updateFeePaymentValidator = [
   body("paymentMode")
     .optional()
     .isIn(["cash", "online", "cash_online"]),
+
+  body("cashAmount").optional().isFloat({ min: 0 }),
+
+  body("onlineAmount").optional().isFloat({ min: 0 }),
 
   body("notes").optional({ checkFalsy: true }).trim(),
 
