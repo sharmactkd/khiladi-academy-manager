@@ -45,7 +45,7 @@ const initialForm = {
   marks: "",
   outOf: "",
   testDate: new Date().toISOString().slice(0, 10),
-  result: "pending",
+  result: "pass",
   examinerName: "",
   remarks: "",
   certificateNumber: "",
@@ -180,6 +180,7 @@ const AddBeltTest = () => {
     form.marks !== "" && form.outOf !== "" && Number(form.outOf) > 0
       ? Math.round((Number(form.marks) / Number(form.outOf)) * 100)
       : null;
+  const currentDanIndex = TAEKWONDO_DAN_RANKS.indexOf(form.currentDanRank);
   const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0];
 
   const update = (name, value) => {
@@ -213,6 +214,14 @@ const AddBeltTest = () => {
         ...prev,
         promotedToBelt: value,
         promotedToDanRank: value === "Black" ? prev.promotedToDanRank : "",
+      }));
+      return;
+    }
+    if (name === "currentDanRank") {
+      setForm((prev) => ({
+        ...prev,
+        currentDanRank: value,
+        promotedToDanRank: "",
       }));
       return;
     }
@@ -253,6 +262,15 @@ const AddBeltTest = () => {
     }
     if (!form.currentBelt || !form.promotedToBelt) {
       setError("Please select both current and promoted belt.");
+      return;
+    }
+    if (
+      form.currentBelt === "Black" &&
+      form.promotedToBelt === "Black" &&
+      (currentDanIndex < 0 ||
+        TAEKWONDO_DAN_RANKS.indexOf(form.promotedToDanRank) <= currentDanIndex)
+    ) {
+      setError("Promoted Dan rank current Dan rank se higher honi chahiye.");
       return;
     }
     if (
@@ -307,10 +325,12 @@ const AddBeltTest = () => {
         <div className={styles.beltTags}>
           {TAEKWONDO_BELTS.map((belt) => {
             const lockedBySelection = Boolean(value && value !== belt);
+            const beltOrder = TAEKWONDO_BELT_ORDER[belt];
             const belowCurrent = Boolean(
               isPromoted &&
               currentOrder !== undefined &&
-              TAEKWONDO_BELT_ORDER[belt] <= currentOrder,
+              (beltOrder < currentOrder ||
+                (beltOrder === currentOrder && belt !== "Black")),
             );
             const disabled = lockedBySelection || belowCurrent;
             return (
@@ -577,8 +597,16 @@ const AddBeltTest = () => {
                       required
                     >
                       <option value="">Select Dan</option>
-                      {TAEKWONDO_DAN_RANKS.map((dan) => (
-                        <option key={dan}>{dan}</option>
+                      {TAEKWONDO_DAN_RANKS.map((dan, index) => (
+                        <option
+                          key={dan}
+                          disabled={
+                            form.currentBelt === "Black" &&
+                            index <= currentDanIndex
+                          }
+                        >
+                          {dan}
+                        </option>
                       ))}
                     </select>
                   </label>
@@ -595,7 +623,8 @@ const AddBeltTest = () => {
                 <p>Enter the test date, score and final result.</p>
               </div>
             </header>
-            <div className={styles.assessmentGrid}>
+            <div className={styles.assessmentPanel}>
+              <div className={styles.assessmentGrid}>
               <label>
                 <span>Test Date *</span>
                 <div className={styles.iconInput}>
@@ -633,34 +662,36 @@ const AddBeltTest = () => {
                   placeholder="Out of"
                 />
               </label>
-              <div className={styles.scoreBox}>
-                <small>Score</small>
-                <strong>{score === null ? "—" : `${score}%`}</strong>
+                <div className={styles.scoreBox}>
+                  <small>Live Score</small>
+                  <strong>{score === null ? "—" : `${score}%`}</strong>
+                  <span>{score === null ? "Add marks" : "Calculated"}</span>
+                </div>
               </div>
+              <fieldset className={styles.resultField}>
+                <legend>Result *</legend>
+                <div>
+                  {[
+                    { value: "pending", label: "Pending", icon: ClipboardCheck },
+                    { value: "pass", label: "Pass", icon: BadgeCheck },
+                    { value: "fail", label: "Fail", icon: X },
+                  ].map(({ value, label, icon: Icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={
+                        form.result === value ? styles[`result${label}`] : ""
+                      }
+                      onClick={() => update("result", value)}
+                    >
+                      <span className={styles.resultIcon}><Icon size={16} /></span>
+                      <span>{label}</span>
+                      {form.result === value ? <Check size={14} /> : null}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             </div>
-            <fieldset className={styles.resultField}>
-              <legend>Result *</legend>
-              <div>
-                {[
-                  { value: "pending", label: "Pending", icon: ClipboardCheck },
-                  { value: "pass", label: "Pass", icon: BadgeCheck },
-                  { value: "fail", label: "Fail", icon: X },
-                ].map(({ value, label, icon: Icon }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={
-                      form.result === value ? styles[`result${label}`] : ""
-                    }
-                    onClick={() => update("result", value)}
-                  >
-                    <Icon size={16} />
-                    <span>{label}</span>
-                    {form.result === value ? <Check size={14} /> : null}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
           </section>
 
           <section className={styles.section}>

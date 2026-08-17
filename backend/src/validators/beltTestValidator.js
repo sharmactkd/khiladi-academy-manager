@@ -1,5 +1,20 @@
 import { body, param, query } from "express-validator";
 
+const DAN_RANKS = [
+  "1st Dan", "2nd Dan", "3rd Dan", "4th Dan", "5th Dan",
+  "6th Dan", "7th Dan", "8th Dan", "9th Dan", "10th Dan",
+];
+
+const validateDanPromotion = (payload) => {
+  if (payload.currentBelt !== "Black" || payload.promotedToBelt !== "Black") return true;
+  const currentIndex = DAN_RANKS.indexOf(payload.currentDanRank);
+  const promotedIndex = DAN_RANKS.indexOf(payload.promotedToDanRank);
+  if (currentIndex < 0 || promotedIndex <= currentIndex) {
+    throw new Error("Promoted Dan rank must be higher than current Dan rank");
+  }
+  return true;
+};
+
 export const beltTestIdValidator = [
   param("id").isMongoId().withMessage("Invalid belt test ID"),
 ];
@@ -55,6 +70,8 @@ export const createBeltTestValidator = [
     }
     return true;
   }),
+
+  body().custom((_, { req }) => validateDanPromotion(req.body)),
 
   body("testDate")
     .notEmpty()

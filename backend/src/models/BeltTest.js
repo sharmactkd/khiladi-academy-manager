@@ -126,6 +126,24 @@ beltTestSchema.pre("validate", function validateAssessmentScore() {
   }
 });
 
+beltTestSchema.pre("validate", function validateDanPromotion() {
+  if (this.currentBelt !== "Black" || this.promotedToBelt !== "Black") return;
+
+  const danRanks = [
+    "1st Dan", "2nd Dan", "3rd Dan", "4th Dan", "5th Dan",
+    "6th Dan", "7th Dan", "8th Dan", "9th Dan", "10th Dan",
+  ];
+  const currentIndex = danRanks.indexOf(this.currentDanRank);
+  const promotedIndex = danRanks.indexOf(this.promotedToDanRank);
+
+  if (currentIndex < 0 || promotedIndex <= currentIndex) {
+    this.invalidate(
+      "promotedToDanRank",
+      "Promoted Dan rank must be higher than current Dan rank",
+    );
+  }
+});
+
 const BeltTest = mongoose.model("BeltTest", beltTestSchema);
 
 export default BeltTest;

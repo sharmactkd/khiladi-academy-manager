@@ -170,7 +170,15 @@ export const getBeltTestById = asyncHandler(async (req, res) => {
     academy: req.academyId,
     isDeleted: false,
   })
-    .populate("student", "name studentCode phone beltRank photo status")
+    .populate({
+      path: "student",
+      select:
+        "name firstName lastName studentCode admissionNumber phone beltRank danRank photo profilePhoto status batch martialArt",
+      populate: {
+        path: "batch",
+        select: "batchName martialArt isActive",
+      },
+    })
     .populate("createdBy", "name email")
     .populate("updatedBy", "name email");
 

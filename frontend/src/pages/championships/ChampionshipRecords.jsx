@@ -1,336 +1,72 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-
-import { studentApi } from "../../api/studentApi.js";
+import { ArrowRight, Award, CalendarDays, ChevronLeft, ChevronRight, CircleDot, Crown, History, Medal, Pencil, Plus, RotateCcw, Search, SlidersHorizontal, Sparkles, Trophy, UserRound, Users } from "lucide-react";
+import { academyApi } from "../../api/academyApi.js";
 import { batchApi } from "../../api/batchApi.js";
+import { getBranches } from "../../api/branchApi.js";
 import { championshipRecordApi } from "../../api/championshipRecordApi.js";
+import { studentApi } from "../../api/studentApi.js";
+import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import useAuth from "../../hooks/useAuth.js";
+import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import styles from "./ChampionshipRecords.module.css";
 
-const normalizeList = (response, nestedKey) => {
-  const data = response?.data;
-
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.data)) return data.data;
-  if (Array.isArray(data?.data?.[nestedKey])) return data.data[nestedKey];
-  if (Array.isArray(data?.[nestedKey])) return data[nestedKey];
-
-  return [];
-};
-
-const getStudentName = (student) => {
-  const fullName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
-  return student?.name || fullName || "Unknown";
-};
-
-const getStudentCode = (student) =>
-  student?.studentCode || student?.admissionNumber || "-";
-
-const formatDate = (value) => {
-  if (!value) return "-";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
-  return date.toLocaleDateString("en-IN");
-};
-
-const getLatestRecord = (studentId, records) => {
-  return records
-    .filter((record) => {
-      const recordStudentId = record.student?._id || record.student;
-      return String(recordStudentId) === String(studentId);
-    })
-    .sort(
-      (a, b) =>
-        new Date(b.startDate || b.date || 0) -
-        new Date(a.startDate || a.date || 0)
-    )[0];
-};
+const PAGE_SIZE = 20;
+const RESULTS = ["Gold", "Silver", "Bronze", "Participation", "No Medal", "Disqualified"];
+const normalizeList = (response, key) => { const data = response?.data; if (Array.isArray(response)) return response; if (Array.isArray(data)) return data; if (Array.isArray(data?.data)) return data.data; if (Array.isArray(data?.data?.[key])) return data.data[key]; if (Array.isArray(data?.[key])) return data[key]; return []; };
+const payloadOf = (response) => response?.data?.data || response?.data || response || {};
+const entityId = (value) => String(value?._id || value || "");
+const studentName = (student) => student?.name || [student?.firstName, student?.lastName].filter(Boolean).join(" ").trim() || "Unknown Student";
+const studentCode = (student) => student?.studentCode || student?.admissionNumber || "No admission number";
+const joinAddress = (value) => [value?.address, value?.city, value?.state, value?.country].map((item) => String(item || "").trim()).filter(Boolean).join(", ");
+const formatDate = (value) => value ? new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Not recorded";
+const fetchAllRecords = async () => { const first = await championshipRecordApi.getAll({ page: 1, limit: 100 }); const data = payloadOf(first); const records = Array.isArray(data.championshipRecords) ? data.championshipRecords : []; const pages = Number(data.pagination?.pages || 1); if (pages <= 1) return records; const rest = await Promise.all(Array.from({ length: pages - 1 }, (_, index) => championshipRecordApi.getAll({ page: index + 2, limit: 100 }))); return rest.reduce((all, response) => all.concat(payloadOf(response).championshipRecords || []), records); };
 
 const ChampionshipRecords = () => {
   const navigate = useNavigate();
-
+  const { user } = useAuth();
   const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);
   const [records, setRecords] = useState([]);
-  const [selectedBatchId, setSelectedBatchId] = useState("");
-  const [filters, setFilters] = useState({
-    search: "",
-    status: "",
-  });
+  const [academy, setAcademy] = useState(null);
+  const [branches, setBranches] = useState([]);
+  const [batchId, setBatchId] = useState("");
+  const [status, setStatus] = useState("all");
+  const [filters, setFilters] = useState({ search: "", result: "", level: "" });
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-
-      const [studentsRes, batchesRes, recordsRes] = await Promise.all([
-        studentApi.getAll({}),
-        batchApi.getAll(),
-        championshipRecordApi.getAll({ limit: 100 }),
-      ]);
-
-      const studentsList = normalizeList(studentsRes, "students");
-      const batchesList = normalizeList(batchesRes, "batches");
-      const recordsList = normalizeList(recordsRes, "championshipRecords");
-
-      const activeBatches = batchesList.filter((batch) => batch.isActive);
-
-      setStudents(studentsList);
-      setBatches(activeBatches);
-      setRecords(recordsList);
-      setSelectedBatchId((prev) => prev);
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Championship data load nahi hua"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
+      const [studentResult, batchResult, recordResult, academyResult, branchResult] = await Promise.allSettled([studentApi.getAll({}), batchApi.getAll(), fetchAllRecords(), academyApi.getMyAcademy(), getBranches({ status: "active" })]);
+      if (studentResult.status === "rejected" || recordResult.status === "rejected") throw studentResult.reason || recordResult.reason;
+      setStudents(normalizeList(studentResult.value, "students")); setRecords(recordResult.value);
+      setBatches(batchResult.status === "fulfilled" ? normalizeList(batchResult.value, "batches").filter((item) => item?.isActive !== false) : []);
+      if (academyResult.status === "fulfilled") setAcademy(payloadOf(academyResult.value).academy || null);
+      if (branchResult.status === "fulfilled") { const list = branchResult.value?.data?.data || branchResult.value?.data || []; setBranches(Array.isArray(list) ? list : []); }
+    } catch (error) { toast.error(error?.response?.data?.message || "Championship records load nahi ho sake"); }
+    finally { setLoading(false); }
   }, []);
+  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { setPage(1); }, [batchId, status, filters.search, filters.result, filters.level]);
 
-  const selectedBatch = useMemo(() => {
-    if (!selectedBatchId) return null;
-    return batches.find((batch) => batch._id === selectedBatchId) || null;
-  }, [batches, selectedBatchId]);
+  const latestByStudent = useMemo(() => { const map = new Map(); records.forEach((record) => { const id = entityId(record.student); if (!id) return; const saved = map.get(id); if (!saved || new Date(record.startDate || record.date || 0) > new Date(saved.startDate || saved.date || 0)) map.set(id, record); }); return map; }, [records]);
+  const rows = useMemo(() => students.map((student) => ({ student, record: latestByStudent.get(entityId(student)) || null })), [students, latestByStudent]);
+  const stats = useMemo(() => ({ students: students.length, records: records.length, gold: records.filter((item) => item.result === "Gold").length, medals: records.filter((item) => ["Gold", "Silver", "Bronze"].includes(item.result)).length }), [students, records]);
+  const filtered = useMemo(() => { const query = filters.search.trim().toLowerCase(); return rows.filter(({ student, record }) => { const active = student.status === "active"; return (!batchId || entityId(student.batch) === batchId) && (status === "all" || (status === "active" ? active : !active)) && (!filters.result || (filters.result === "not-recorded" ? !record : record?.result === filters.result)) && (!filters.level || record?.level === filters.level) && (!query || [studentName(student), studentCode(student), student.phone, student.batch?.batchName, record?.championshipName, record?.eventType, record?.venue].some((value) => String(value || "").toLowerCase().includes(query))); }); }, [rows, batchId, status, filters]);
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)); const safePage = Math.min(page, pages); const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const selectedBatch = batches.find((item) => entityId(item) === batchId); const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0]; const filtersActive = Boolean(batchId || status !== "all" || filters.search || filters.result || filters.level);
+  const reset = () => { setBatchId(""); setStatus("all"); setFilters({ search: "", result: "", level: "" }); };
 
-  const selectedBatchStudents = useMemo(() => {
-    const search = filters.search.trim().toLowerCase();
-
-    return students.filter((student) => {
-      const studentBatchId = String(student.batch?._id || student.batch || "");
-      const name = getStudentName(student).toLowerCase();
-      const code = getStudentCode(student).toLowerCase();
-      const phone = String(student.phone || "").toLowerCase();
-
-      const matchesBatch = selectedBatchId
-        ? studentBatchId === String(selectedBatchId)
-        : true;
-
-      const matchesSearch =
-        !search ||
-        name.includes(search) ||
-        code.includes(search) ||
-        phone.includes(search);
-
-      const matchesStatus =
-        !filters.status || String(student.status || "") === filters.status;
-
-      return matchesBatch && matchesSearch && matchesStatus;
-    });
-  }, [students, selectedBatchId, filters]);
-
-  const activeStudents = useMemo(() => {
-    return selectedBatchStudents.filter((student) => student.status === "active");
-  }, [selectedBatchStudents]);
-
-  const nonActiveStudents = useMemo(() => {
-    return selectedBatchStudents.filter((student) => student.status !== "active");
-  }, [selectedBatchStudents]);
-
-  const renderStudentRow = (student) => {
-    const latestRecord = getLatestRecord(student._id, records);
-
-    return (
-      <tr
-        key={student._id}
-        onClick={() =>
-          navigate(`/students/${student._id}/championship-history`)
-        }
-        style={{ cursor: "pointer" }}
-      >
-        <td>
-          <strong>{getStudentName(student)}</strong>
-          <br />
-          <small>{getStudentCode(student)}</small>
-        </td>
-
-        <td>{student.phone || "-"}</td>
-        <td>{latestRecord?.championshipName || "-"}</td>
-        <td>{latestRecord?.championshipType || "-"}</td>
-        <td>{latestRecord?.level || "-"}</td>
-        <td>{latestRecord?.eventType || "-"}</td>
-        <td>{latestRecord?.totalBouts ?? "-"}</td>
-
-        <td>
-          {latestRecord?.result ? (
-            <span className={`badge badge-${String(latestRecord.result).toLowerCase()}`}>
-              {latestRecord.result}
-            </span>
-          ) : (
-            "-"
-          )}
-        </td>
-
-        <td>{formatDate(latestRecord?.startDate || latestRecord?.date)}</td>
-
-        <td>
-          <span className={`badge badge-${student.status}`}>
-            {student.status || "-"}
-          </span>
-        </td>
-
-        <td
-          className="table-actions"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <Link to={`/championship-records/new?student=${student._id}`}>
-            Add Record
-          </Link>
-          <Link to={`/students/${student._id}/championship-history`}>
-            History
-          </Link>
-        </td>
-      </tr>
-    );
-  };
-
-  const renderStudentTable = (list, emptyText) => {
-    if (!list.length) {
-      return <p>{emptyText}</p>;
-    }
-
-    return (
-      <div className="table-wrap">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Phone</th>
-              <th>Latest Championship</th>
-              <th>Type</th>
-              <th>Level</th>
-              <th>Event</th>
-              <th>Bouts</th>
-              <th>Result</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>{list.map(renderStudentRow)}</tbody>
-        </table>
-      </div>
-    );
-  };
-
-  return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Championship Records</h1>
-          <p>Batch wise active aur non-active students ke championship records.</p>
-        </div>
-
-        <Link className="btn btn-primary" to="/championship-records/new">
-          Add Record
-        </Link>
-      </div>
-
-      <div className="card">
-        <h3>Batches</h3>
-
-        {batches.length === 0 ? (
-          <p>No active batches found.</p>
-        ) : (
-          <div className="actions" style={{ flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className={!selectedBatchId ? "btn btn-primary" : "btn"}
-              onClick={() => setSelectedBatchId("")}
-            >
-              All Batches
-            </button>
-
-            {batches.map((batch) => (
-              <button
-                key={batch._id}
-                type="button"
-                className={
-                  selectedBatchId === batch._id ? "btn btn-primary" : "btn"
-                }
-                onClick={() => setSelectedBatchId(batch._id)}
-              >
-                {batch.batchName} - {batch.martialArt}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="card filters-grid">
-        <input
-          type="text"
-          placeholder="Search student, code, phone..."
-          value={filters.search}
-          onChange={(event) =>
-            setFilters((prev) => ({ ...prev, search: event.target.value }))
-          }
-        />
-
-        <select
-          value={filters.status}
-          onChange={(event) =>
-            setFilters((prev) => ({ ...prev, status: event.target.value }))
-          }
-        >
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="left">Left</option>
-        </select>
-
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() =>
-            setFilters({
-              search: "",
-              status: "",
-            })
-          }
-        >
-          Reset
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="card">Loading championship records...</div>
-      ) : (
-        <div className="card table-card">
-          <div className="page-header">
-            <div>
-              <h2>
-                {selectedBatchId
-                  ? `${selectedBatch?.batchName || "-"} - ${
-                      selectedBatch?.martialArt || "-"
-                    }`
-                  : "All Batches"}
-              </h2>
-              <p>
-                Active: {activeStudents.length} | Non-active:{" "}
-                {nonActiveStudents.length}
-              </p>
-            </div>
-          </div>
-
-          <h3>Active Students</h3>
-          {renderStudentTable(activeStudents, "No active students found.")}
-
-          <h3 style={{ marginTop: "24px" }}>Non Active Students</h3>
-          {renderStudentTable(
-            nonActiveStudents,
-            "No non-active students found."
-          )}
-        </div>
-      )}
-    </div>
-  );
+  return <div className={`page ${styles.page}`}>
+    <AcademyHeroHeader headingId="championship-records-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Championship performance desk" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy) || "Complete main branch address not available"} summaryItems={[{ key: "records", icon: Trophy, value: stats.records, label: "Championship Entries" }, { key: "medals", icon: Medal, value: stats.medals, label: "Medal Finishes" }, { key: "gold", icon: Crown, value: stats.gold, label: "Gold Medals" }]}/>
+    <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><strong>Championship Records</strong></nav>
+    <header className={styles.heading}><div><span><Trophy size={25}/></span><div><small>Competition archive</small><h1>Championship Records</h1><p>Track participation, performance, medals and complete competition history.</p></div></div><Link to="/championship-records/new"><Plus size={17}/>Add Championship Record</Link></header>
+    <section className={styles.summary}>{[{ label: "Academy Students", value: stats.students, note: "Across all batches", icon: Users, tone: "navy" }, { label: "Competition Records", value: stats.records, note: "Complete participation archive", icon: Trophy, tone: "blue" }, { label: "Total Medal Finishes", value: stats.medals, note: "Gold, silver and bronze", icon: Medal, tone: "purple" }, { label: "Gold Medal Finishes", value: stats.gold, note: "Highest podium result", icon: Crown, tone: "gold" }].map(({ label, value, note, icon: Icon, tone }) => <article key={label} className={styles[tone]}><span><Icon size={20}/></span><div><small>{label}</small><strong>{value}</strong><p>{note}</p></div></article>)}</section>
+    <section className={styles.controls}><header><div><SlidersHorizontal size={17}/><span><strong>Find championship records</strong><small>Filter students by batch, status and latest competition result.</small></span></div>{filtersActive ? <button type="button" onClick={reset}><RotateCcw size={14}/>Reset all</button> : null}</header><div className={styles.batches}><button type="button" className={!batchId ? styles.selected : ""} onClick={() => setBatchId("")}><Sparkles size={14}/><span>All Batches</span><small>Academy</small><b>{rows.length}</b></button>{batches.map((batch) => { const count = rows.filter(({ student }) => entityId(student.batch) === entityId(batch)).length; return <button key={batch._id} type="button" className={batchId === entityId(batch) ? styles.selected : ""} onClick={() => setBatchId(entityId(batch))}><span>{batch.batchName}</span><small>{batch.martialArt || "Martial Art"}</small><b>{count}</b></button>; })}</div><div className={styles.filters}><label className={styles.search}><span>Search records</span><div><Search size={16}/><input value={filters.search} onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))} placeholder="Student, championship, venue or event..."/></div></label><label><span>Latest result</span><select value={filters.result} onChange={(event) => setFilters((prev) => ({ ...prev, result: event.target.value }))}><option value="">All results</option>{RESULTS.map((item) => <option key={item}>{item}</option>)}<option value="not-recorded">Not recorded</option></select></label><label><span>Level</span><select value={filters.level} onChange={(event) => setFilters((prev) => ({ ...prev, level: event.target.value }))}><option value="">All levels</option>{["District", "Regional", "State", "National", "International"].map((item) => <option key={item}>{item}</option>)}</select></label><div className={styles.segmented}>{["all", "active", "inactive"].map((item) => <button key={item} type="button" className={status === item ? styles.active : ""} onClick={() => setStatus(item)}>{item}</button>)}</div></div></section>
+    <section className={styles.records}><header><div><small>{selectedBatch ? `${selectedBatch.batchName} · ${selectedBatch.martialArt || "Martial Art"}` : "All academy batches"}</small><h2>Student Championship Register</h2><p>{filtered.length} matching student{filtered.length === 1 ? "" : "s"}</p></div><span><Award size={16}/>{records.length} total records</span></header>{loading ? <div className={styles.loading}><span/><span/><span/><p>Loading championship records...</p></div> : visible.length ? <div className={styles.tableWrap}><table><thead><tr><th>No.</th><th>Student</th><th>Contact / Batch</th><th>Latest Championship</th><th>Division</th><th>Performance</th><th>Result</th><th>Date</th><th>Actions</th></tr></thead><tbody>{visible.map(({ student, record }, index) => <tr key={student._id} className={student.status !== "active" ? styles.inactiveRow : ""} onDoubleClick={() => navigate(`/students/${student._id}/championship-history`)}><td>{(safePage - 1) * PAGE_SIZE + index + 1}</td><td><div className={styles.student}><img src={getStudentPhotoUrl(student)} alt="" onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }}/><span><button type="button" onClick={() => navigate(`/students/${student._id}`)}>{studentName(student)}</button><small>{studentCode(student)}</small></span></div></td><td><div className={styles.stack}><strong>{student.phone || "Not added"}</strong><small>{student.batch?.batchName || "No batch assigned"}</small></div></td><td>{record ? <div className={styles.stack}><strong>{record.championshipName}</strong><small>{record.championshipType} · {record.level}</small></div> : <span className={styles.muted}>No championship recorded</span>}</td><td>{record ? <div className={styles.stack}><strong>{record.eventType}{record.poomsaeType ? ` · ${record.poomsaeType}` : ""}</strong><small>{record.ageCategory}{record.weightCategory ? ` · ${record.weightCategory}` : ""}</small></div> : "—"}</td><td>{record ? <div className={styles.performance}><span><b>{record.boutsWon || 0}</b> wins</span><ArrowRight size={12}/><span><b>{record.totalBouts || 0}</b> bouts</span></div> : "—"}</td><td>{record ? <span className={`${styles.result} ${styles[`result${String(record.result).replace(/\s/g, "")}`]}`}><CircleDot size={12}/>{record.result}</span> : <span className={styles.notRecorded}>Not recorded</span>}</td><td><div className={styles.date}><CalendarDays size={14}/>{formatDate(record?.startDate || record?.date)}</div></td><td><div className={styles.actions}><Link to={`/championship-records/new?student=${student._id}`} title="Add record"><Plus size={15}/></Link>{record ? <Link to={`/championship-records/${record._id}/edit`} title="Edit latest record"><Pencil size={14}/></Link> : null}<Link to={`/students/${student._id}/championship-history`} title="View history"><History size={15}/></Link></div></td></tr>)}</tbody></table></div> : <div className={styles.empty}><span><Trophy size={27}/></span><h3>No matching records</h3><p>Filters clear karein ya student ka first championship record add karein.</p><div><button type="button" onClick={reset}><RotateCcw size={15}/>Clear Filters</button><Link to="/championship-records/new"><Plus size={15}/>Add Record</Link></div></div>}{!loading && filtered.length ? <footer><p>Showing <strong>{(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)}</strong> of <strong>{filtered.length}</strong></p><div><button type="button" disabled={safePage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft size={15}/>Previous</button><span>Page <b>{safePage}</b> of {pages}</span><button type="button" disabled={safePage === pages} onClick={() => setPage((value) => Math.min(pages, value + 1))}>Next<ChevronRight size={15}/></button></div></footer> : null}</section>
+  </div>;
 };
-
 export default ChampionshipRecords;
