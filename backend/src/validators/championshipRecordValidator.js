@@ -2,6 +2,7 @@ import { body, param, query, validationResult } from "express-validator";
 
 import {
   AGE_CATEGORIES,
+  BOUT_OUTCOME_METHODS,
   CHAMPIONSHIP_LEVELS,
   CHAMPIONSHIP_TYPES,
   EVENT_TYPES,
@@ -88,6 +89,18 @@ const commonChampionshipRecordRules = [
     .isIn(RESULT_TYPES)
     .withMessage("Invalid result"),
 
+  body("disqualificationReason")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Disqualification reason cannot exceed 500 characters"),
+
+  body("bouts").optional().isArray({ max: 50 }).withMessage("Invalid bouts"),
+  body("bouts.*.outcomeMethod")
+    .optional()
+    .isIn(BOUT_OUTCOME_METHODS)
+    .withMessage("Invalid bout outcome"),
+
   body("startDate").notEmpty().withMessage("Start date is required"),
   body("endDate").notEmpty().withMessage("End date is required"),
 
@@ -136,6 +149,10 @@ const commonChampionshipRecordRules = [
       throw new Error("Poomsae type is required");
     }
 
+    if (value.result === "Disqualified" && !String(value.disqualificationReason || "").trim()) {
+      throw new Error("Disqualification reason is required");
+    }
+
     if (value.startDate && value.endDate) {
       const start = new Date(value.startDate);
       const end = new Date(value.endDate);
@@ -153,6 +170,16 @@ const commonChampionshipRecordRules = [
 
     if (boutsWon + boutsLost > totalBouts) {
       throw new Error("Won + lost bouts cannot be greater than total bouts");
+    }
+
+
+    if (Array.isArray(value.bouts)) {
+      if (value.bouts.length !== totalBouts) {
+        throw new Error("Please select an outcome for every bout");
+      }
+      if (value.bouts.some((bout) => !BOUT_OUTCOME_METHODS.includes(bout?.outcomeMethod))) {
+        throw new Error("Invalid bout outcome");
+      }
     }
 
     return true;

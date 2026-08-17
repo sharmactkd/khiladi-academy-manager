@@ -19,8 +19,10 @@ const allowedFields = [
   "weightCategory",
   "beltCategory",
   "result",
+  "disqualificationReason",
   "ranking",
   "totalBouts",
+  "bouts",
   "boutsWon",
   "boutsLost",
   "pointsScored",
@@ -136,6 +138,12 @@ const buildPayload = (body = {}) => {
 
   const startDate = parseDate(raw.startDate || raw.date);
   const endDate = parseDate(raw.endDate || raw.date || raw.startDate);
+  const bouts = Array.isArray(raw.bouts)
+    ? raw.bouts.map((bout, index) => ({
+        boutNumber: index + 1,
+        outcomeMethod: clean(bout?.outcomeMethod, 40),
+      }))
+    : [];
 
   return {
     student: raw.student,
@@ -166,15 +174,20 @@ const buildPayload = (body = {}) => {
     beltCategory: clean(raw.beltCategory, 80),
 
     result,
+    disqualificationReason:
+      result === "Disqualified" ? clean(raw.disqualificationReason, 500) : "",
     ranking: parseNullableNumber(raw.ranking),
 
-    totalBouts: parseNumber(raw.totalBouts, 0),
-    boutsWon: parseNumber(raw.boutsWon, 0),
-    boutsLost: parseNumber(raw.boutsLost, 0),
+    totalBouts: bouts.length || parseNumber(raw.totalBouts, 0),
+    bouts,
+    boutsWon: bouts.length || parseNumber(raw.boutsWon, 0),
+    boutsLost: bouts.length ? 0 : parseNumber(raw.boutsLost, 0),
     pointsScored: parseNumber(raw.pointsScored, 0),
     pointsConceded: parseNumber(raw.pointsConceded, 0),
 
-    byeReceived: parseBoolean(raw.byeReceived),
+    byeReceived:
+      bouts.some((bout) => bout.outcomeMethod === "Bye") ||
+      parseBoolean(raw.byeReceived),
     walkoverWin: parseBoolean(raw.walkoverWin),
     walkoverLoss: parseBoolean(raw.walkoverLoss),
 
@@ -245,6 +258,18 @@ const validatePayload = async ({ payload, academyId, requireStudent = true }) =>
 
   if (payload.eventType === "Poomsae" && !payload.poomsaeType) {
     return "Poomsae type is required";
+  }
+
+  if (payload.result === "Disqualified" && !payload.disqualificationReason) {
+    return "Disqualification reason is required";
+  }
+
+  if (
+    payload.bouts.length > 0 &&
+    (payload.bouts.length !== payload.totalBouts ||
+      payload.bouts.some((bout) => !bout.outcomeMethod))
+  ) {
+    return "Please select an outcome for every bout";
   }
 
   if (payload.boutsWon + payload.boutsLost > payload.totalBouts) {

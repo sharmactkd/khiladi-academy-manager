@@ -13,7 +13,7 @@ import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
 import styles from "./ChampionshipRecords.module.css";
 
 const PAGE_SIZE = 20;
-const RESULTS = ["Gold", "Silver", "Bronze", "Participation", "No Medal", "Disqualified"];
+const RESULTS = ["Gold", "Silver", "Bronze", "Participation", "Disqualified"];
 const normalizeList = (response, key) => { const data = response?.data; if (Array.isArray(response)) return response; if (Array.isArray(data)) return data; if (Array.isArray(data?.data)) return data.data; if (Array.isArray(data?.data?.[key])) return data.data[key]; if (Array.isArray(data?.[key])) return data[key]; return []; };
 const payloadOf = (response) => response?.data?.data || response?.data || response || {};
 const entityId = (value) => String(value?._id || value || "");

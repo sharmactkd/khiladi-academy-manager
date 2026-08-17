@@ -51,6 +51,13 @@ export const RESULT_TYPES = [
   "Disqualified",
 ];
 
+export const BOUT_OUTCOME_METHODS = [
+  "Won by Score",
+  "Bye",
+  "Point Gap",
+  "Knockout",
+];
+
 const championshipRecordSchema = new mongoose.Schema(
   {
     academy: {
@@ -159,6 +166,13 @@ const championshipRecordSchema = new mongoose.Schema(
       index: true,
     },
 
+    disqualificationReason: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [500, "Disqualification reason cannot exceed 500 characters"],
+    },
+
     ranking: {
       type: Number,
       default: null,
@@ -169,6 +183,21 @@ const championshipRecordSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: [0, "Total bouts cannot be negative"],
+    },
+
+    bouts: {
+      type: [
+        {
+          boutNumber: { type: Number, required: true, min: 1 },
+          outcomeMethod: {
+            type: String,
+            required: true,
+            enum: BOUT_OUTCOME_METHODS,
+          },
+          _id: false,
+        },
+      ],
+      default: [],
     },
 
     boutsWon: {
@@ -385,6 +414,21 @@ championshipRecordSchema.pre("validate", function () {
 
   if (this.eventType !== "Poomsae") {
     this.poomsaeType = "";
+  }
+
+  if (this.result !== "Disqualified") {
+    this.disqualificationReason = "";
+  }
+
+  if (Array.isArray(this.bouts) && this.bouts.length) {
+    this.bouts = this.bouts.map((bout, index) => ({
+      boutNumber: index + 1,
+      outcomeMethod: bout.outcomeMethod,
+    }));
+    this.totalBouts = this.bouts.length;
+    this.boutsWon = this.bouts.length;
+    this.boutsLost = 0;
+    this.byeReceived = this.bouts.some((bout) => bout.outcomeMethod === "Bye");
   }
 
   if (!this.startDate && this.date) {

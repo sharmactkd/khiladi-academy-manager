@@ -1,0 +1,12 @@
+.classificationRow { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(240px, .9fr) minmax(420px, 1.5fr); align-items: start; gap: 16px; }
+.classificationRow > label, .classificationRow > div { margin: 0; }
+.divisionRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; margin-top: 12px; }
+.divisionRow:first-of-type { margin-top: 0; }
+.disqualification { margin-top: 12px; padding: 12px; border: 1px solid #f1b1b5; border-radius: 10px; background: #fff6f6; }
+.boutCount { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; align-items: end; gap: 12px; margin-top: 14px; }
+.boutCount p { margin: 0 0 12px; color: #718196; font-size: 9px; }
+.boutGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; padding: 12px; border: 1px solid #dce4ed; border-radius: 10px; background: #f8fafc; }
+.emptyBouts { display: grid; place-items: center; min-height: 55px; margin-top: 12px; border: 1px dashed #d3dde8; border-radius: 9px; color: #7b899a; background: #fafbfd; font-size: 9px; }
+@media (max-width: 1120px) { .classificationRow { grid-template-columns: 1fr; } .boutGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .divisionRow { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .boutGrid, .boutCount { grid-template-columns: 1fr; } }
