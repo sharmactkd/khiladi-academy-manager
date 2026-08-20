@@ -18,6 +18,7 @@ const allowedFields = [
   "ageCategory",
   "weightCategory",
   "beltCategory",
+  "danCategory",
   "result",
   "disqualificationReason",
   "ranking",
@@ -172,6 +173,8 @@ const buildPayload = (body = {}) => {
     ageCategory: clean(raw.ageCategory, 50),
     weightCategory: clean(raw.weightCategory, 80),
     beltCategory: clean(raw.beltCategory, 80),
+    danCategory:
+      clean(raw.beltCategory, 80) === "Black" ? clean(raw.danCategory, 40) : "",
 
     result,
     disqualificationReason:
@@ -450,6 +453,11 @@ export const getStudentChampionshipRecords = asyncHandler(async (req, res) => {
   if (!student) {
     return errorResponse(res, "Student not found in your academy", 404);
   }
+
+  await student.populate([
+    { path: "branch", select: "branchName branchCode" },
+    { path: "batch", select: "batchName martialArt isActive" },
+  ]);
 
   const championshipRecords = await ChampionshipRecord.find({
     academy: req.academyId,

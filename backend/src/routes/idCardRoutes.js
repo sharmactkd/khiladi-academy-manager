@@ -5,6 +5,7 @@ import {
   getStudentIdCards,
   getIdCardById,
   updateIdCardStatus,
+  verifyIdCard,
 } from "../controllers/idCardController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
@@ -24,6 +25,8 @@ import {
 } from "../validators/idCardValidator.js";
 
 const router = express.Router();
+
+router.get("/verify/:verificationId", verifyIdCard);
 
 router.use(protect);
 router.use(allowAcademyManagement);

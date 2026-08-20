@@ -22,6 +22,14 @@ export const createIdCardTemplateValidator = [
 
   body("frontDesign").optional().isObject(),
   body("backDesign").optional().isObject(),
+  body("status").optional().isIn(["draft", "published", "archived"]),
+  body("orientation").optional().isIn(["horizontal", "vertical"]),
+  body("cardSize").optional().equals("cr80"),
+  body("fontFamily").optional().trim().isLength({ min: 1, max: 80 }),
+  body("photoShape").optional().isIn(["circle", "rounded", "square"]),
+  body("primaryColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+  body("secondaryColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+  body("accentColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
 
   body("logo")
     .optional({ checkFalsy: true })
@@ -67,6 +75,14 @@ export const updateIdCardTemplateValidator = [
 
   body("frontDesign").optional().isObject(),
   body("backDesign").optional().isObject(),
+  body("status").optional().isIn(["draft", "published", "archived"]),
+  body("orientation").optional().isIn(["horizontal", "vertical"]),
+  body("cardSize").optional().equals("cr80"),
+  body("fontFamily").optional().trim().isLength({ min: 1, max: 80 }),
+  body("photoShape").optional().isIn(["circle", "rounded", "square"]),
+  body("primaryColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+  body("secondaryColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+  body("accentColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
 
   body("logo").optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
 

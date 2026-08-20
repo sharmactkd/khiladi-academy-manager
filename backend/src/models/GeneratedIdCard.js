@@ -19,6 +19,12 @@ const generatedIdCardSchema = new mongoose.Schema(
       ref: "IdCardTemplate",
       required: [true, "ID card template is required"],
     },
+    templateVersion: { type: Number, default: 1 },
+    templateSnapshot: { type: mongoose.Schema.Types.Mixed, default: {} },
+    studentSnapshot: { type: mongoose.Schema.Types.Mixed, default: {} },
+    academySnapshot: { type: mongoose.Schema.Types.Mixed, default: {} },
+    verificationId: { type: String, trim: true, default: undefined },
+    verificationTokenHash: { type: String, select: false, default: "" },
     cardNumber: {
       type: String,
       required: [true, "Card number is required"],
@@ -62,6 +68,7 @@ generatedIdCardSchema.index({ academy: 1, template: 1 });
 generatedIdCardSchema.index({ academy: 1, student: 1 });
 generatedIdCardSchema.index({ academy: 1, cardNumber: 1 }, { unique: true });
 generatedIdCardSchema.index({ academy: 1, status: 1 });
+generatedIdCardSchema.index({ verificationId: 1 }, { unique: true, sparse: true });
 
 const GeneratedIdCard = mongoose.model(
   "GeneratedIdCard",

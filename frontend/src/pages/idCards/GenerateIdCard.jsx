@@ -1,172 +1,22 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { CalendarDays, CreditCard, Printer, Search, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { studentApi } from "../../api/studentApi.js";
 import { idCardApi, idCardTemplateApi } from "../../api/idCardApi.js";
 import IdCardPreview from "../../components/idCards/IdCardPreview.jsx";
+import { SAMPLE_ID_CARD } from "./idCardTemplate.config.js";
+import styles from "./IdCardWorkflow.module.css";
 
-const normalizeList = (response, key) => {
-  const data = response?.data;
-
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.data)) return data.data;
-  if (Array.isArray(data?.data?.[key])) return data.data[key];
-  if (Array.isArray(data?.[key])) return data[key];
-
-  return [];
-};
-
-const getStudentName = (student) => {
-  const fullName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
-  return student.name || fullName || "Student";
-};
-
-const getStudentCode = (student) => {
-  return student.studentCode || student.admissionNumber || "-";
-};
-
+const listOf = (response, key) => response?.data?.data?.[key] || response?.data?.[key] || [];
+const nameOf = (student) => student?.name || [student?.firstName, student?.lastName].filter(Boolean).join(" ") || "Student";
 const GenerateIdCard = () => {
-  const navigate = useNavigate();
-
-  const [students, setStudents] = useState([]);
-  const [templates, setTemplates] = useState([]);
-  const [generatedCard, setGeneratedCard] = useState(null);
-  const [form, setForm] = useState({
-    student: "",
-    template: "",
-    validTill: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-
-        const [studentResponse, templateResponse] = await Promise.all([
-          studentApi.getAll({ status: "active" }),
-          idCardTemplateApi.getAll(),
-        ]);
-
-        setStudents(normalizeList(studentResponse, "students"));
-        setTemplates(normalizeList(templateResponse, "templates"));
-      } catch (error) {
-        alert(error.response?.data?.message || "ID card data load nahi hua");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleGenerate = async (event) => {
-    event.preventDefault();
-
-    try {
-      setSaving(true);
-
-      const response = await idCardApi.generate(form);
-      setGeneratedCard(response.data?.data?.idCard || null);
-
-      alert("ID card generated successfully");
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to generate ID card");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Generate ID Card</h1>
-          <p>Select student and template to generate printable ID card.</p>
-        </div>
-      </div>
-
-      <form className="card form-grid" onSubmit={handleGenerate}>
-        <label>
-          Student
-          <select
-            name="student"
-            value={form.student}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          >
-            <option value="">
-              {loading ? "Loading students..." : "Select Student"}
-            </option>
-
-            {students.map((student) => (
-              <option key={student._id} value={student._id}>
-                {getStudentName(student)} ({getStudentCode(student)})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Template
-          <select
-            name="template"
-            value={form.template}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          >
-            <option value="">
-              {loading ? "Loading templates..." : "Select Template"}
-            </option>
-
-            {templates.map((template) => (
-              <option key={template._id} value={template._id}>
-                {template.templateName || template.name || "Template"}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Valid Till
-          <input
-            type="date"
-            name="validTill"
-            value={form.validTill}
-            onChange={handleChange}
-          />
-        </label>
-
-        <div className="form-actions">
-          <button className="btn btn-primary" type="submit" disabled={saving}>
-            {saving ? "Generating..." : "Generate ID Card"}
-          </button>
-        </div>
-      </form>
-
-      {generatedCard && (
-        <div className="card preview-card">
-          <IdCardPreview idCard={generatedCard} />
-
-          <div className="form-actions">
-            <button
-              className="btn btn-primary"
-              onClick={() => navigate(`/id-cards/${generatedCard._id}/print`)}
-            >
-              Print ID Card
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const navigate = useNavigate(); const [students, setStudents] = useState([]); const [templates, setTemplates] = useState([]); const [query, setQuery] = useState(""); const [form, setForm] = useState({ student: "", template: "", validTill: "" }); const [generated, setGenerated] = useState(null); const [saving, setSaving] = useState(false); const [loading, setLoading] = useState(true);
+  useEffect(() => { Promise.all([studentApi.getAll({ status: "active", limit: 1000 }), idCardTemplateApi.getAll()]).then(([studentResponse, templateResponse]) => { const templateList = listOf(templateResponse, "templates"); setStudents(listOf(studentResponse, "students")); setTemplates(templateList); setForm((prev) => ({ ...prev, template: templateList.find((item) => item.isDefault)?._id || templateList[0]?._id || "" })); }).catch((error) => toast.error(error?.response?.data?.message || "ID card data load nahi hua")).finally(() => setLoading(false)); }, []);
+  const selectedStudent = students.find((item) => item._id === form.student); const selectedTemplate = templates.find((item) => item._id === form.template);
+  const results = useMemo(() => { const search = query.trim().toLowerCase(); return students.filter((item) => !search || [nameOf(item), item.admissionNumber, item.studentCode, item.phone].some((value) => String(value || "").toLowerCase().includes(search))).slice(0, 8); }, [students, query]);
+  const preview = generated || { ...SAMPLE_ID_CARD, student: selectedStudent || SAMPLE_ID_CARD.student, template: selectedTemplate || {}, validTill: form.validTill || SAMPLE_ID_CARD.validTill };
+  const submit = async (event) => { event.preventDefault(); try { setSaving(true); const response = await idCardApi.generate(form); const card = response.data?.data?.idCard; setGenerated(card); toast.success("Secure ID card generated"); } catch (error) { toast.error(error?.response?.data?.message || "Generate failed"); } finally { setSaving(false); } };
+  return <div className={`page ${styles.page}`}><nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><Link to="/id-card-templates">ID Card Studio</Link><span>/</span><strong>Generate</strong></nav><header className={styles.heading}><span><CreditCard/></span><div><small>SECURE IDENTITY ISSUANCE</small><h1>Generate Student ID Card</h1><p>Select a student and published design, then issue a verifiable CR80 card.</p></div></header><div className={styles.workflow}><form onSubmit={submit} className={styles.form}><section><header><span>01</span><div><h2>Student Identity</h2><p>Search by name, admission number or phone.</p></div></header><label>Search Student *<div className={styles.search}><Search/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search student..."/></div></label><div className={styles.results}>{results.map((student) => <button key={student._id} type="button" className={form.student === student._id ? styles.selected : ""} onClick={() => setForm((prev) => ({ ...prev, student: student._id }))}><UserRound/><span><strong>{nameOf(student)}</strong><small>{student.admissionNumber || student.studentCode || "No admission number"}</small></span>{form.student === student._id ? <ShieldCheck/> : null}</button>)}</div></section><section><header><span>02</span><div><h2>Card Configuration</h2><p>Choose a versioned design and validity period.</p></div></header><label>Template *<select value={form.template} onChange={(event) => setForm((prev) => ({ ...prev, template: event.target.value }))} required disabled={loading}><option value="">Select template</option>{templates.map((template) => <option key={template._id} value={template._id}>{template.templateName} · v{template.version || 1}{template.isDefault ? " · Default" : ""}</option>)}</select></label><label>Valid Till<div className={styles.date}><CalendarDays/><input type="date" value={form.validTill} onChange={(event) => setForm((prev) => ({ ...prev, validTill: event.target.value }))}/></div></label></section><button className={styles.primary} type="submit" disabled={saving || !form.student || !form.template}><Sparkles/>{saving ? "Issuing secure card..." : "Generate Secure ID Card"}</button></form><aside className={styles.preview}><header><div><strong>Live Card Preview</strong><small>Front and back · CR80</small></div>{generated ? <span>ISSUED</span> : <span>PREVIEW</span>}</header><IdCardPreview idCard={preview} template={selectedTemplate} side="front"/><IdCardPreview idCard={preview} template={selectedTemplate} side="back"/>{generated ? <button type="button" onClick={() => navigate(`/id-cards/${generated._id}/print`)}><Printer/>Open Print Studio</button> : null}</aside></div></div>;
 };
-
 export default GenerateIdCard;

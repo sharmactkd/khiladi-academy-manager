@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Country, State, City } from "country-state-city";
 import ReactCountryFlag from "react-country-flag";
 import { Plus, Trash2 } from "lucide-react";
@@ -30,6 +30,7 @@ const PhoneLocationFields = ({
   
   onChange,
   phoneLabel = "Phone",
+  showPhone = true,
   showLocation = true,
 }) => {
   const countries = useMemo(() => Country.getAllCountries(), []);
@@ -75,6 +76,18 @@ const PhoneLocationFields = ({
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [codeSearch, setCodeSearch] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
+
+  useEffect(() => {
+    const nextCountry =
+      countries.find((item) => item.name === country) ||
+      countries.find((item) => item.isoCode === DEFAULT_COUNTRY_ISO);
+    const nextCountryIso = nextCountry?.isoCode || DEFAULT_COUNTRY_ISO;
+    const nextState = State.getStatesOfCountry(nextCountryIso).find(
+      (item) => item.name === state,
+    );
+    setSelectedCountryIso(nextCountryIso);
+    setSelectedStateIso(nextState?.isoCode || "");
+  }, [countries, country, state]);
 
   const states = useMemo(
     () => State.getStatesOfCountry(selectedCountryIso),
@@ -233,7 +246,7 @@ const PhoneLocationFields = ({
 
   return (
     <>
-      <div className="form-group form-group-full phone-location-phone-group">
+      {showPhone ? <div className="form-group form-group-full phone-location-phone-group">
         <div className="phone-location-phone-heading">
           <label>{phoneLabel}</label>
           <span>{normalizedPhones.length}/{maxPhones}</span>
@@ -443,9 +456,9 @@ const PhoneLocationFields = ({
             </div>
           );
         })}
-      </div>
+      </div> : null}
 
-      {afterPhone}
+      {showPhone ? afterPhone : null}
 
       {showLocation && (
         <>

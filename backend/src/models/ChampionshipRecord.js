@@ -159,6 +159,13 @@ const championshipRecordSchema = new mongoose.Schema(
       default: "",
     },
 
+    danCategory: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [40, "Dan category cannot exceed 40 characters"],
+    },
+
     result: {
       type: String,
       enum: RESULT_TYPES,
@@ -414,6 +421,10 @@ championshipRecordSchema.pre("validate", function () {
 
   if (this.eventType !== "Poomsae") {
     this.poomsaeType = "";
+  }
+
+  if (this.beltCategory !== "Black") {
+    this.danCategory = "";
   }
 
   if (this.result !== "Disqualified") {

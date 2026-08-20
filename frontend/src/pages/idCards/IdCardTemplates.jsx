@@ -1,224 +1,61 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import { BadgeCheck, Building2, CreditCard, Eye, Layers3, Save, ShieldCheck, Sparkles } from "lucide-react";
+import { academyApi } from "../../api/academyApi.js";
+import { getBranches } from "../../api/branchApi.js";
 import { idCardTemplateApi } from "../../api/idCardApi.js";
+import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import DocumentStudioSection from "../../components/documentStudio/DocumentStudioSection.jsx";
+import FieldPalette from "../../components/documentStudio/FieldPalette.jsx";
+import StudioStepRail from "../../components/documentStudio/StudioStepRail.jsx";
+import TemplateLibrary from "../../components/documentStudio/TemplateLibrary.jsx";
+import IdCardPreview from "../../components/idCards/IdCardPreview.jsx";
+import useAuth from "../../hooks/useAuth.js";
+import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import { createTemplateForm, ID_CARD_FIELDS, normalizeTemplate, SAMPLE_ID_CARD } from "./idCardTemplate.config.js";
+import styles from "./IdCardTemplates.module.css";
 
-const initialForm = {
-  templateName: "",
-  logo: "",
-  backgroundColor: "#ffffff",
-  textColor: "#111827",
-  fields: "name,studentCode,beltRank,phone",
-  isDefault: false,
-};
+const steps = [{ id: "identity", label: "Identity", description: "Name and lifecycle" }, { id: "layout", label: "Layout", description: "CR80 and orientation" }, { id: "fields", label: "Fields", description: "Visible card data" }, { id: "branding", label: "Branding", description: "Colour and typography" }, { id: "security", label: "Security", description: "QR and safe area" }, { id: "print", label: "Print", description: "Bleed-ready preview" }];
+const payloadOf = (form) => ({ ...form, fields: form.frontDesign.fields });
+const joinAddress = (source) => [source?.address, source?.city, source?.state, source?.country].filter(Boolean).join(", ");
 
 const IdCardTemplates = () => {
-  const [templates, setTemplates] = useState([]);
-  const [form, setForm] = useState(initialForm);
-  const [editingId, setEditingId] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const loadTemplates = async () => {
-    try {
-      setLoading(true);
-      const response = await idCardTemplateApi.getAll();
-      setTemplates(response.data?.data?.templates || []);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load templates");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
-  const handleChange = (event) => {
-    const { name, value, type, checked } = event.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const resetForm = () => {
-    setForm(initialForm);
-    setEditingId("");
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    const payload = {
-      ...form,
-      fields: form.fields
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      frontDesign: {},
-      backDesign: {},
-    };
-
-    try {
-      if (editingId) {
-        await idCardTemplateApi.update(editingId, payload);
-        alert("Template updated successfully");
-      } else {
-        await idCardTemplateApi.create(payload);
-        alert("Template created successfully");
-      }
-
-      resetForm();
-      await loadTemplates();
-    } catch (err) {
-      alert(err.response?.data?.message || "Save failed");
-    }
-  };
-
-  const handleEdit = (template) => {
-    setEditingId(template._id);
-    setForm({
-      templateName: template.templateName || "",
-      logo: template.logo || "",
-      backgroundColor: template.backgroundColor || "#ffffff",
-      textColor: template.textColor || "#111827",
-      fields: (template.fields || []).join(","),
-      isDefault: Boolean(template.isDefault),
-    });
-  };
-
-  const handleDelete = async (id) => {
-    const confirmed = window.confirm("Delete this ID card template?");
-    if (!confirmed) return;
-
-    try {
-      await idCardTemplateApi.remove(id);
-      await loadTemplates();
-      alert("Template deleted successfully");
-    } catch (err) {
-      alert(err.response?.data?.message || "Delete failed");
-    }
-  };
-
-  if (loading) return <div className="card">Loading ID card templates...</div>;
-
-  return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>ID Card Templates</h1>
-          <p>Create simple reusable ID card templates.</p>
-        </div>
+  const { user } = useAuth();
+  const [templates, setTemplates] = useState([]); const [academy, setAcademy] = useState(null); const [branches, setBranches] = useState([]);
+  const [form, setForm] = useState(createTemplateForm); const [editingId, setEditingId] = useState(""); const [activeStep, setActiveStep] = useState("identity"); const [side, setSide] = useState("front"); const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false);
+  const load = useCallback(async () => { try { setLoading(true); const [templateResult, academyResult, branchResult] = await Promise.allSettled([idCardTemplateApi.getAll(), academyApi.getMyAcademy(), getBranches({ status: "active" })]); if (templateResult.status === "rejected") throw templateResult.reason; setTemplates(templateResult.value?.data?.data?.templates || []); if (academyResult.status === "fulfilled") setAcademy(academyResult.value?.data?.data?.academy || academyResult.value?.data?.academy || null); if (branchResult.status === "fulfilled") { const data = branchResult.value?.data || branchResult.value || []; setBranches(Array.isArray(data) ? data : []); } } catch (error) { toast.error(error?.response?.data?.message || "Templates load nahi ho sake"); } finally { setLoading(false); } }, []);
+  useEffect(() => { load(); }, [load]);
+  const mainBranch = branches.find((item) => item.isMainBranch) || branches[0];
+  const previewCard = useMemo(() => ({ ...SAMPLE_ID_CARD, academy: academy || SAMPLE_ID_CARD.academy }), [academy]);
+  const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const updateDesign = (key, value) => setForm((prev) => ({ ...prev, [side === "front" ? "frontDesign" : "backDesign"]: { ...prev[side === "front" ? "frontDesign" : "backDesign"], [key]: value } }));
+  const reset = () => { setForm(createTemplateForm()); setEditingId(""); setActiveStep("identity"); setSide("front"); };
+  const save = async (event) => { event.preventDefault(); try { setSaving(true); if (editingId) await idCardTemplateApi.update(editingId, payloadOf(form)); else await idCardTemplateApi.create(payloadOf(form)); toast.success(editingId ? "Template updated" : "Template created"); reset(); await load(); } catch (error) { toast.error(error?.response?.data?.message || "Template save nahi hua"); } finally { setSaving(false); } };
+  const edit = (template) => { setForm(normalizeTemplate(template)); setEditingId(template._id); setActiveStep("identity"); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const duplicate = async (template) => { try { const copy = normalizeTemplate(template); delete copy._id; delete copy.createdAt; delete copy.updatedAt; await idCardTemplateApi.create({ ...payloadOf(copy), templateName: `${copy.templateName} Copy`, isDefault: false, status: "draft" }); toast.success("Template duplicated"); await load(); } catch (error) { toast.error(error?.response?.data?.message || "Duplicate failed"); } };
+  const archive = async (template) => { if (!window.confirm(`Archive ${template.templateName}? Existing issued cards remain unchanged.`)) return; try { await idCardTemplateApi.remove(template._id); toast.success("Template archived"); await load(); } catch (error) { toast.error(error?.response?.data?.message || "Archive failed"); } };
+  const setDefault = async (template) => { try { await idCardTemplateApi.update(template._id, { isDefault: true, status: "published" }); toast.success("Default template updated"); await load(); } catch (error) { toast.error(error?.response?.data?.message || "Default update failed"); } };
+  const design = side === "front" ? form.frontDesign : form.backDesign;
+  return <div className={`page ${styles.page}`}>
+    <AcademyHeroHeader headingId="id-template-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Identity & document studio" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy)} summaryItems={[{ key: "templates", icon: Layers3, value: templates.length, label: "Templates" }, { key: "published", icon: BadgeCheck, value: templates.filter((item) => item.status === "published" || item.isDefault).length, label: "Published" }, { key: "format", icon: CreditCard, value: "CR80", label: "Print standard" }]}/>
+    <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><strong>ID Card Template Studio</strong></nav>
+    <header className={styles.heading}><div><span><CreditCard/></span><div><small>DOCUMENT DESIGNER</small><h1>ID Card Template Studio</h1><p>Build secure, print-ready student identities with a live front and back preview.</p></div></div><Link to="/id-cards/generate"><Sparkles size={17}/>Generate ID Card</Link></header>
+    <form onSubmit={save} className={styles.studio}>
+      <aside><StudioStepRail steps={steps} activeStep={activeStep} onChange={setActiveStep}/><div className={styles.versionNote}><ShieldCheck size={17}/><span><strong>Version safe</strong><small>Issued cards keep an immutable snapshot.</small></span></div></aside>
+      <div className={styles.controls}>
+        {activeStep === "identity" ? <DocumentStudioSection number="1" title="Template Identity" description="Give this reusable design a clear lifecycle."><div className={styles.formGrid}><label>Template Name *<input value={form.templateName} onChange={(e) => update("templateName", e.target.value)} required/></label><label>Status<select value={form.status} onChange={(e) => update("status", e.target.value)}><option value="draft">Draft</option><option value="published">Published</option></select></label><label className={styles.check}><input type="checkbox" checked={form.isDefault} onChange={(e) => update("isDefault", e.target.checked)}/>Use as default template</label></div></DocumentStudioSection> : null}
+        {activeStep === "layout" ? <DocumentStudioSection number="2" title="Card Layout" description="Industry-standard CR80 sizing with adaptable orientation."><div className={styles.formGrid}><label>Card Size<select value={form.cardSize} disabled><option>cr80</option></select></label><label>Orientation<select value={form.orientation} onChange={(e) => update("orientation", e.target.value)}><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label><label>Side Label<input value={design.label} onChange={(e) => updateDesign("label", e.target.value)}/></label></div></DocumentStudioSection> : null}
+        {activeStep === "fields" ? <DocumentStudioSection number="3" title="Visible Fields" description="Choose and reorder the information shown on the selected side."><FieldPalette registry={ID_CARD_FIELDS} selected={design.fields} onChange={(fields) => updateDesign("fields", fields)}/></DocumentStudioSection> : null}
+        {activeStep === "branding" ? <DocumentStudioSection number="4" title="Brand System" description="Apply academy colours, typography and photo style."><div className={styles.formGrid}><label>Logo URL<input value={form.logo} onChange={(e) => update("logo", e.target.value)} placeholder="Uses academy logo when empty"/></label><label>Font<select value={form.fontFamily} onChange={(e) => update("fontFamily", e.target.value)}><option>Inter</option><option>Poppins</option><option>Montserrat</option><option>Roboto</option></select></label><label>Photo Shape<select value={form.photoShape} onChange={(e) => update("photoShape", e.target.value)}><option value="circle">Circle</option><option value="rounded">Rounded</option><option value="square">Square</option></select></label>{[["primaryColor","Primary"],["secondaryColor","Secondary"],["accentColor","Accent"],["backgroundColor","Background"],["textColor","Text"]].map(([key,label]) => <label key={key}>{label} Colour<div className={styles.colorInput}><input type="color" value={form[key]} onChange={(e) => update(key,e.target.value)}/><code>{form[key]}</code></div></label>)}</div></DocumentStudioSection> : null}
+        {activeStep === "security" ? <DocumentStudioSection number="5" title="Security & Verification" description="Every issued card receives a signed, revocable QR verification link."><div className={styles.securityBox}><ShieldCheck/><div><strong>Tamper-resistant verification enabled</strong><p>Only a token hash is stored. The public result exposes minimum safe card data.</p></div></div><label className={styles.check}><input type="checkbox" checked={design.showSafeArea} onChange={(e) => updateDesign("showSafeArea", e.target.checked)}/>Show print-safe area</label></DocumentStudioSection> : null}
+        {activeStep === "print" ? <DocumentStudioSection number="6" title="Print Production" description="Review safe area and bleed before publishing."><div className={styles.printOptions}><label className={styles.check}><input type="checkbox" checked={design.showBleed} onChange={(e) => updateDesign("showBleed", e.target.checked)}/>Show bleed guide</label><div><strong>CR80 output</strong><span>85.60 × 53.98 mm · 300 DPI recommended</span></div></div></DocumentStudioSection> : null}
+        <div className={styles.saveBar}><button type="button" onClick={reset}>Reset</button><button type="submit" disabled={saving}><Save size={16}/>{saving ? "Saving..." : editingId ? "Save New Version" : "Save Template"}</button></div>
       </div>
-
-      {error && <div className="alert alert-error">{error}</div>}
-
-      <form className="card form-grid" onSubmit={handleSubmit}>
-        <h2 className="full-width">
-          {editingId ? "Edit Template" : "Create Template"}
-        </h2>
-
-        <label>
-          Template Name
-          <input
-            name="templateName"
-            value={form.templateName}
-            onChange={handleChange}
-            required
-          />
-        </label>
-
-        <label>
-          Logo URL
-          <input name="logo" value={form.logo} onChange={handleChange} />
-        </label>
-
-        <label>
-          Background Color
-          <input
-            type="color"
-            name="backgroundColor"
-            value={form.backgroundColor}
-            onChange={handleChange}
-          />
-        </label>
-
-        <label>
-          Text Color
-          <input
-            type="color"
-            name="textColor"
-            value={form.textColor}
-            onChange={handleChange}
-          />
-        </label>
-
-        <label className="full-width">
-          Fields
-          <input name="fields" value={form.fields} onChange={handleChange} />
-        </label>
-
-        <label className="checkbox-row full-width">
-          <input
-            type="checkbox"
-            name="isDefault"
-            checked={form.isDefault}
-            onChange={handleChange}
-          />
-          Set as default template
-        </label>
-
-        <div className="form-actions full-width">
-          <button className="btn btn-primary" type="submit">
-            {editingId ? "Update Template" : "Create Template"}
-          </button>
-
-          {editingId && (
-            <button className="btn btn-secondary" type="button" onClick={resetForm}>
-              Cancel Edit
-            </button>
-          )}
-        </div>
-      </form>
-
-      <div className="card table-card">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Default</th>
-              <th>Fields</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {templates.length === 0 ? (
-              <tr>
-                <td colSpan="4">No templates found.</td>
-              </tr>
-            ) : (
-              templates.map((template) => (
-                <tr key={template._id}>
-                  <td>{template.templateName}</td>
-                  <td>{template.isDefault ? "Yes" : "No"}</td>
-                  <td>{(template.fields || []).join(", ")}</td>
-                  <td className="table-actions">
-                    <button type="button" onClick={() => handleEdit(template)}>
-                      Edit
-                    </button>
-                    <button type="button" onClick={() => handleDelete(template._id)}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+      <section className={styles.previewPane}><header><div><Eye size={16}/><span><strong>Live Preview</strong><small>CR80 · {form.orientation}</small></span></div><div className={styles.sideTabs}><button type="button" className={side === "front" ? styles.activeTab : ""} onClick={() => setSide("front")}>Front</button><button type="button" className={side === "back" ? styles.activeTab : ""} onClick={() => setSide("back")}>Back</button></div></header><div className={styles.previewStage}><IdCardPreview idCard={previewCard} template={form} academy={academy} side={side}/></div><div className={styles.previewMeta}><Building2 size={15}/><span>Live data is sample-only. Generated cards use a frozen student and academy snapshot.</span></div></section>
+    </form>
+    <TemplateLibrary templates={templates} renderPreview={(template) => <IdCardPreview idCard={previewCard} template={template} academy={academy} compact/>} onEdit={edit} onDuplicate={duplicate} onArchive={archive} onSetDefault={setDefault}/>
+    {loading ? <div className={styles.loading}>Loading template library…</div> : null}
+  </div>;
 };
-
 export default IdCardTemplates;

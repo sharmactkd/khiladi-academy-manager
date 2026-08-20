@@ -55,6 +55,7 @@ import IdCardTemplates from "../pages/idCards/IdCardTemplates.jsx";
 import GenerateIdCard from "../pages/idCards/GenerateIdCard.jsx";
 import PrintIdCard from "../pages/idCards/PrintIdCard.jsx";
 import StudentIdCards from "../pages/idCards/StudentIdCards.jsx";
+import VerifyIdCard from "../pages/idCards/VerifyIdCard.jsx";
 
 import CertificateTemplates from "../pages/certificates/CertificateTemplates.jsx";
 import GenerateCertificate from "../pages/certificates/GenerateCertificate.jsx";
@@ -171,6 +172,7 @@ const AppRoutes = () => {
         path="/reset-password"
         element={<ResetPassword />}
       />
+      <Route path="/verify/id-card/:verificationId" element={<VerifyIdCard />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>

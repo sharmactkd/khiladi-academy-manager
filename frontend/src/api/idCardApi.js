@@ -13,4 +13,5 @@ export const idCardApi = {
   getByStudent: (studentId) => api.get(`/id-cards/student/${studentId}`),
   getById: (id) => api.get(`/id-cards/${id}`),
   updateStatus: (id, status) => api.patch(`/id-cards/${id}/status`, { status }),
+  verify: (verificationId, token) => api.get(`/id-cards/verify/${verificationId}`, { params: { token } }),
 };

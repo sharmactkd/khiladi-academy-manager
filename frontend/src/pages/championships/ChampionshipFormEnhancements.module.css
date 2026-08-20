@@ -1,12 +1,27 @@
 .classificationRow { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(240px, .9fr) minmax(420px, 1.5fr); align-items: start; gap: 16px; }
 .classificationRow > label, .classificationRow > div { margin: 0; }
 .divisionRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; margin-top: 12px; }
+.divisionRowPoomsae { grid-template-columns: .72fr 1.15fr .88fr; }
 .divisionRow:first-of-type { margin-top: 0; }
+.ageWeightRow { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(220px, .55fr); align-items: start; gap: 16px; margin-top: 16px; }
+.beltDanRow { display: grid; grid-template-columns: minmax(0, 1fr) 190px; align-items: end; gap: 16px; margin-top: 16px; }
+.danCategory { align-self: end; }
+.championshipTags :global(button) { min-height: 36px; padding: 7px 13px; border: 1px solid #f0a9ad; border-radius: 9px; color: #a90005; background: #fff; font-size: 11px; font-weight: 800; }
+.championshipTags :global(button:hover) { border-color: #cf0006; background: #fff7f7; }
+.championshipTags :global(button[aria-pressed="true"]) { border-color: #cf0006; color: #fff; background: #cf0006; box-shadow: 0 7px 16px rgba(207, 0, 6, .18); }
+.resultTopRow { display: grid; grid-template-columns: minmax(0, 1fr) 190px; align-items: end; gap: 16px; }
+.resultTopRow > div:first-child { margin: 0; }
+.resultBoutCount { display: grid; gap: 5px; }
+.resultBoutCount small { color: #718196; font-size: 8px; text-align: right; }
 .disqualification { margin-top: 12px; padding: 12px; border: 1px solid #f1b1b5; border-radius: 10px; background: #fff6f6; }
 .boutCount { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; align-items: end; gap: 12px; margin-top: 14px; }
 .boutCount p { margin: 0 0 12px; color: #718196; font-size: 9px; }
 .boutGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; padding: 12px; border: 1px solid #dce4ed; border-radius: 10px; background: #f8fafc; }
+.boutMethod { min-width: 0; padding: 11px; border: 1px solid #e0e7ef; border-radius: 9px; background: #fff; }
+.locationFields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; margin-top: 12px; }
+.locationFields :global(.form-group) { min-width: 0; margin: 0; }
+.locationFields :global(.form-group > label) { display: block; margin-bottom: 6px; color: #53667e; font-size: 10px; font-weight: 850; }
 .emptyBouts { display: grid; place-items: center; min-height: 55px; margin-top: 12px; border: 1px dashed #d3dde8; border-radius: 9px; color: #7b899a; background: #fafbfd; font-size: 9px; }
 @media (max-width: 1120px) { .classificationRow { grid-template-columns: 1fr; } .boutGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) { .divisionRow { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .divisionRow, .divisionRowPoomsae, .ageWeightRow, .beltDanRow, .resultTopRow, .locationFields { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .boutGrid, .boutCount { grid-template-columns: 1fr; } }

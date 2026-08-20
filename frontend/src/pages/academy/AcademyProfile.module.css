@@ -398,7 +398,7 @@
   overflow: hidden;
   position: relative;
   border: 1px solid #e2e8f0;
-  border-radius: 50%;
+  border-radius: 10%;
   background: #ffffff;
   box-shadow: 0 0 0 4px #ffffff, 0 0 0 6px rgba(207, 0, 6, 0.16),
     0 10px 24px rgba(8, 22, 47, 0.1);
@@ -428,7 +428,7 @@
   justify-content: center;
   gap: 4px;
   padding: 13px;
-  border-radius: 50%;
+  border-radius: 10%;
   background: rgba(8, 22, 47, 0.84);
   color: #ffffff;
   text-align: center;

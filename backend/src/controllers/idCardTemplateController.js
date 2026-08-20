@@ -4,11 +4,19 @@ import { successResponse, errorResponse } from "../utils/apiResponse.js";
 
 const allowedFields = [
   "templateName",
+  "status",
+  "orientation",
+  "cardSize",
   "frontDesign",
   "backDesign",
   "logo",
   "backgroundColor",
   "textColor",
+  "primaryColor",
+  "secondaryColor",
+  "accentColor",
+  "fontFamily",
+  "photoShape",
   "fields",
   "isDefault",
 ];
@@ -46,6 +54,7 @@ export const createIdCardTemplate = asyncHandler(async (req, res) => {
   const payload = buildPayload(req.body);
 
   if (payload.isDefault === true) {
+    payload.status = "published";
     await unsetOtherDefaults({
       academyId: req.academyId,
     });
@@ -104,6 +113,7 @@ export const updateIdCardTemplate = asyncHandler(async (req, res) => {
   const payload = buildPayload(req.body);
 
   if (payload.isDefault === true) {
+    payload.status = "published";
     await unsetOtherDefaults({
       academyId: req.academyId,
       templateId: template._id,
@@ -111,6 +121,7 @@ export const updateIdCardTemplate = asyncHandler(async (req, res) => {
   }
 
   Object.assign(template, payload, {
+    version: Number(template.version || 1) + 1,
     updatedBy: req.user._id,
   });
 
@@ -132,11 +143,27 @@ export const deleteIdCardTemplate = asyncHandler(async (req, res) => {
     return errorResponse(res, "ID card template not found", 404);
   }
 
+  template.status = "archived";
   template.isDeleted = true;
   template.deletedAt = new Date();
   template.updatedBy = req.user._id;
 
   await template.save();
+
+  if (template.isDefault) {
+    const replacement = await IdCardTemplate.findOne({
+      academy: req.academyId,
+      _id: { $ne: template._id },
+      isDeleted: false,
+    }).sort({ status: -1, updatedAt: -1 });
+
+    if (replacement) {
+      replacement.isDefault = true;
+      replacement.status = "published";
+      replacement.updatedBy = req.user._id;
+      await replacement.save();
+    }
+  }
 
   return successResponse(res, "ID card template deleted successfully", {
     template,

@@ -15,6 +15,27 @@ const idCardTemplateSchema = new mongoose.Schema(
       minlength: [2, "Template name must be at least 2 characters"],
       maxlength: [100, "Template name cannot exceed 100 characters"],
     },
+    version: {
+      type: Number,
+      min: 1,
+      default: 1,
+    },
+    status: {
+      type: String,
+      enum: ["draft", "published", "archived"],
+      default: "draft",
+      index: true,
+    },
+    orientation: {
+      type: String,
+      enum: ["horizontal", "vertical"],
+      default: "horizontal",
+    },
+    cardSize: {
+      type: String,
+      enum: ["cr80"],
+      default: "cr80",
+    },
     frontDesign: {
       type: mongoose.Schema.Types.Mixed,
       default: {},
@@ -37,6 +58,31 @@ const idCardTemplateSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "#111827",
+    },
+    primaryColor: {
+      type: String,
+      trim: true,
+      default: "#10223e",
+    },
+    secondaryColor: {
+      type: String,
+      trim: true,
+      default: "#e50914",
+    },
+    accentColor: {
+      type: String,
+      trim: true,
+      default: "#d4af37",
+    },
+    fontFamily: {
+      type: String,
+      trim: true,
+      default: "Inter",
+    },
+    photoShape: {
+      type: String,
+      enum: ["circle", "rounded", "square"],
+      default: "circle",
     },
     fields: {
       type: [String],

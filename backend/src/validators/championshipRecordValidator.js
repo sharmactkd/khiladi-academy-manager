@@ -89,6 +89,12 @@ const commonChampionshipRecordRules = [
     .isIn(RESULT_TYPES)
     .withMessage("Invalid result"),
 
+  body("danCategory")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 40 })
+    .withMessage("Dan category cannot exceed 40 characters"),
+
   body("disqualificationReason")
     .optional({ checkFalsy: true })
     .trim()

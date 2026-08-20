@@ -1,256 +1,56 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-
+import { Award, ChevronRight, CircleDot, ExternalLink, FileBadge2, Filter, GraduationCap, History, MapPin, Medal, Pencil, Plus, RotateCcw, Search, ShieldAlert, Sparkles, Trophy, UserRound, Video } from "lucide-react";
+import { academyApi } from "../../api/academyApi.js";
+import { getBranches } from "../../api/branchApi.js";
 import { championshipRecordApi } from "../../api/championshipRecordApi.js";
+import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import useAuth from "../../hooks/useAuth.js";
+import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import styles from "./StudentChampionshipHistory.module.css";
 
-const getStudentName = (student) => {
-  if (!student) return "Student";
-
-  const fullName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
-  return student.name || fullName || "Student";
-};
-
-const formatDate = (value) => {
-  if (!value) return "-";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
-  return date.toLocaleDateString("en-IN");
-};
-
-const displayValue = (value) => {
-  const text = String(value ?? "").trim();
-  return text || "-";
-};
-
-const calculateSummary = (records = []) => {
-  return records.reduce(
-    (acc, record) => {
-      acc.total += 1;
-      acc.totalBouts += Number(record.totalBouts || 0);
-      acc.boutsWon += Number(record.boutsWon || 0);
-      acc.boutsLost += Number(record.boutsLost || 0);
-
-      if (record.result === "Gold") acc.gold += 1;
-      if (record.result === "Silver") acc.silver += 1;
-      if (record.result === "Bronze") acc.bronze += 1;
-      if (record.result === "Participation") acc.participation += 1;
-      if (record.level === "National") acc.national += 1;
-      if (record.level === "International") acc.international += 1;
-
-      return acc;
-    },
-    {
-      total: 0,
-      gold: 0,
-      silver: 0,
-      bronze: 0,
-      participation: 0,
-      national: 0,
-      international: 0,
-      totalBouts: 0,
-      boutsWon: 0,
-      boutsLost: 0,
-    }
-  );
-};
+const payloadOf = (response) => response?.data?.data || response?.data || response || {};
+const studentName = (student) => student?.name || [student?.firstName, student?.lastName].filter(Boolean).join(" ").trim() || "Student";
+const studentCode = (student) => student?.studentCode || student?.admissionNumber || "No admission number";
+const joinAddress = (value) => [value?.address, value?.city, value?.state, value?.country].map((item) => String(item || "").trim()).filter(Boolean).join(", ");
+const display = (value, fallback = "Not added") => String(value ?? "").trim() || fallback;
+const formatDate = (value) => { if (!value) return "Not recorded"; const date = new Date(value); return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }); };
+const formatLocation = (record) => [record?.venue, record?.district, record?.state, record?.country].filter(Boolean).join(", ") || "Not added";
+const yearOf = (record) => { const date = new Date(record?.startDate || record?.date); return Number.isNaN(date.getTime()) ? "" : String(date.getFullYear()); };
+const localSummary = (records) => records.reduce((summary, record) => { summary.total += 1; summary.totalBouts += Number(record.totalBouts || 0); summary.boutsWon += Number(record.boutsWon || 0); summary.boutsLost += Number(record.boutsLost || 0); if (record.result === "Gold") summary.gold += 1; if (record.result === "Silver") summary.silver += 1; if (record.result === "Bronze") summary.bronze += 1; if (["National", "International"].includes(record.level)) summary.elite += 1; return summary; }, { total: 0, gold: 0, silver: 0, bronze: 0, elite: 0, totalBouts: 0, boutsWon: 0, boutsLost: 0 });
 
 const StudentChampionshipHistory = () => {
-  const { studentId } = useParams();
+  const { studentId } = useParams(); const { user } = useAuth();
+  const [student, setStudent] = useState(null); const [records, setRecords] = useState([]); const [apiSummary, setApiSummary] = useState(null); const [academy, setAcademy] = useState(null); const [branches, setBranches] = useState([]);
+  const [filters, setFilters] = useState({ search: "", year: "", result: "", level: "" }); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
 
-  const [student, setStudent] = useState(null);
-  const [records, setRecords] = useState([]);
-  const [apiSummary, setApiSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  useEffect(() => { (async () => { try { setLoading(true); setError(""); const [historyResult, academyResult, branchResult] = await Promise.allSettled([championshipRecordApi.getByStudent(studentId), academyApi.getMyAcademy(), getBranches({ status: "active" })]); if (historyResult.status === "rejected") throw historyResult.reason; const data = payloadOf(historyResult.value); setStudent(data.student || null); setRecords(Array.isArray(data.championshipRecords) ? data.championshipRecords : []); setApiSummary(data.summary || null); if (academyResult.status === "fulfilled") setAcademy(payloadOf(academyResult.value).academy || null); if (branchResult.status === "fulfilled") { const list = branchResult.value?.data?.data || branchResult.value?.data || []; setBranches(Array.isArray(list) ? list : []); } } catch (err) { setError(err.response?.data?.message || "Failed to load championship history"); } finally { setLoading(false); } })(); }, [studentId]);
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        setLoading(true);
+  const calculated = useMemo(() => localSummary(records), [records]);
+  const summary = useMemo(() => ({ ...calculated, ...(apiSummary || {}), elite: calculated.elite, winPercentage: Number(apiSummary?.winPercentage ?? (calculated.totalBouts ? Math.round((calculated.boutsWon / calculated.totalBouts) * 100) : 0)) }), [calculated, apiSummary]);
+  const years = useMemo(() => [...new Set(records.map(yearOf).filter(Boolean))].sort((a, b) => Number(b) - Number(a)), [records]);
+  const filtered = useMemo(() => { const query = filters.search.trim().toLowerCase(); return records.filter((record) => (!filters.year || yearOf(record) === filters.year) && (!filters.result || record.result === filters.result) && (!filters.level || record.level === filters.level) && (!query || [record.championshipName, record.eventType, record.poomsaeType, record.venue, record.district, record.state, record.country, record.organizer, record.association].some((value) => String(value || "").toLowerCase().includes(query)))); }, [records, filters]);
+  const filtersActive = Object.values(filters).some(Boolean); const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0];
+  const reset = () => setFilters({ search: "", year: "", result: "", level: "" });
 
-        const response = await championshipRecordApi.getByStudent(studentId);
-
-        setStudent(response.data?.data?.student || null);
-        setRecords(response.data?.data?.championshipRecords || []);
-        setApiSummary(response.data?.data?.summary || null);
-      } catch (err) {
-        setError(
-          err.response?.data?.message || "Failed to load championship history"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadHistory();
-  }, [studentId]);
-
-  const summary = useMemo(() => {
-    const localSummary = calculateSummary(records);
-    return apiSummary || {
-      ...localSummary,
-      winPercentage:
-        localSummary.totalBouts > 0
-          ? Math.round((localSummary.boutsWon / localSummary.totalBouts) * 100)
-          : 0,
-    };
-  }, [records, apiSummary]);
-
-  if (loading) {
-    return <div className="card">Loading championship history...</div>;
-  }
-
-  return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Championship History</h1>
-          <p>{getStudentName(student)} tournament and medal record.</p>
-        </div>
-
-        <div className="actions">
-          <Link
-            className="btn btn-primary"
-            to={`/championship-records/new?student=${studentId}`}
-          >
-            Add Record
-          </Link>
-
-          <Link className="btn btn-secondary" to={`/students/${studentId}`}>
-            Back to Student
-          </Link>
-        </div>
-      </div>
-
-      {error && <div className="alert alert-error">{error}</div>}
-
-      <div className="grid grid-4">
-        <div className="card stat-card">
-          <span>Total Championships</span>
-          <strong>{summary.total || 0}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span>Gold</span>
-          <strong>{summary.gold || 0}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span>Silver</span>
-          <strong>{summary.silver || 0}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span>Bronze</span>
-          <strong>{summary.bronze || 0}</strong>
-        </div>
-      </div>
-
-      <div className="grid grid-4">
-        <div className="card stat-card">
-          <span>Total Bouts</span>
-          <strong>{summary.totalBouts || 0}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span>Bouts Won</span>
-          <strong>{summary.boutsWon || 0}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span>Bouts Lost</span>
-          <strong>{summary.boutsLost || 0}</strong>
-        </div>
-
-        <div className="card stat-card">
-          <span>Win %</span>
-          <strong>{summary.winPercentage || 0}%</strong>
-        </div>
-      </div>
-
-      <div className="card table-card">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Start Date</th>
-              <th>End Date</th>
-              <th>Championship</th>
-              <th>Type</th>
-              <th>Official Category</th>
-              <th>Level</th>
-              <th>Grading</th>
-              <th>Event</th>
-              <th>Poomsae</th>
-              <th>Age</th>
-              <th>Weight</th>
-              <th>Bouts</th>
-              <th>Result</th>
-              <th>Venue</th>
-              <th>Location</th>
-              <th>Certificate</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {records.length === 0 ? (
-              <tr>
-                <td colSpan="17">No championship history found.</td>
-              </tr>
-            ) : (
-              records.map((record) => (
-                <tr key={record._id}>
-                  <td>{formatDate(record.startDate || record.date)}</td>
-                  <td>{formatDate(record.endDate || record.date)}</td>
-                  <td>{displayValue(record.championshipName)}</td>
-                  <td>{displayValue(record.championshipType)}</td>
-                  <td>{displayValue(record.officialCategory)}</td>
-                  <td>{displayValue(record.level)}</td>
-                  <td>{displayValue(record.grading)}</td>
-                  <td>{displayValue(record.eventType)}</td>
-                  <td>{displayValue(record.poomsaeType)}</td>
-                  <td>{displayValue(record.ageCategory)}</td>
-                  <td>{displayValue(record.weightCategory)}</td>
-                  <td>{record.totalBouts ?? 0}</td>
-                  <td>
-                    <span className={`badge badge-${String(record.result).toLowerCase()}`}>
-                      {displayValue(record.result)}
-                    </span>
-                  </td>
-                  <td>{displayValue(record.venue)}</td>
-                  <td>
-                    {[record.district, record.state, record.country]
-                      .filter(Boolean)
-                      .join(", ") || "-"}
-                  </td>
-                  <td>
-                    {record.certificateUrl ? (
-                      <a
-                        href={record.certificateUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open
-                      </a>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td>
-                    <Link to={`/championship-records/${record._id}/edit`}>
-                      Edit
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+  return <div className={`page ${styles.page}`}>
+    <AcademyHeroHeader headingId="championship-history-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Championship performance desk" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy) || "Main branch address not available"} summaryItems={[{ key: "entries", icon: Trophy, value: summary.total || 0, label: "Championship Entries" }, { key: "medals", icon: Medal, value: Number(summary.gold || 0) + Number(summary.silver || 0) + Number(summary.bronze || 0), label: "Medal Finishes" }, { key: "win", icon: Award, value: `${summary.winPercentage || 0}%`, label: "Bout Win Rate" }]}/>
+    <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><Link to="/championship-records">Championships</Link><span>/</span><strong>Student History</strong></nav>
+    <header className={styles.heading}><div><span><History size={25}/></span><div><small>Athlete competition archive</small><h1>Championship History</h1><p>Complete participation, medal, bout and evidence timeline.</p></div></div><div className={styles.headingActions}><Link to={`/students/${studentId}`}><UserRound size={15}/>Student Profile</Link><Link className={styles.primary} to={`/championship-records/new?student=${studentId}`}><Plus size={16}/>Add Record</Link></div></header>
+    {error ? <div className={styles.error}><ShieldAlert size={17}/><span>{error}</span></div> : null}
+    <section className={styles.studentHero}><img src={getStudentPhotoUrl(student || {})} alt={studentName(student)} onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }}/><div className={styles.identity}><small>Student championship profile</small><h2>{studentName(student)}</h2><span>{studentCode(student)}</span><div className={styles.studentMeta}><span><GraduationCap size={12}/>{student?.batch?.batchName || "Batch not assigned"}</span><span><Award size={12}/>{[student?.beltRank, student?.danRank].filter(Boolean).join(" · ") || "Rank not added"}</span><span><CircleDot size={11}/>{student?.status === "inactive" ? "Inactive Student" : "Active Student"}</span></div></div><Link to={`/students/${studentId}`}>View complete profile<ChevronRight size={14}/></Link></section>
+    <section className={styles.stats}>{[
+      { label: "Championship Entries", value: summary.total || 0, icon: Trophy, tone: "" },
+      { label: "Gold Medals", value: summary.gold || 0, icon: Medal, tone: "gold" },
+      { label: "Silver Medals", value: summary.silver || 0, icon: Medal, tone: "silver" },
+      { label: "Bronze Medals", value: summary.bronze || 0, icon: Medal, tone: "bronze" },
+      { label: "Bout Win Rate", value: `${summary.winPercentage || 0}%`, icon: Award, tone: "blue" },
+    ].map(({ label, value, icon: Icon, tone }) => <article className={`${styles.stat} ${tone ? styles[tone] : ""}`} key={label}><span><Icon size={19}/></span><div><small>{label}</small><strong>{value}</strong></div></article>)}</section>
+    <section className={styles.controls}><header><div><Filter size={17}/><span><strong>Find championship entries</strong><small>Search and narrow this student's complete competition archive.</small></span></div>{filtersActive ? <button type="button" onClick={reset}><RotateCcw size={13}/>Reset filters</button> : null}</header><div className={styles.filters}><label className={styles.search}><span>Search history</span><div><Search size={15}/><input value={filters.search} onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))} placeholder="Championship, event, venue or organizer..."/></div></label><label><span>Year</span><select value={filters.year} onChange={(event) => setFilters((prev) => ({ ...prev, year: event.target.value }))}><option value="">All years</option>{years.map((year) => <option key={year}>{year}</option>)}</select></label><label><span>Result</span><select value={filters.result} onChange={(event) => setFilters((prev) => ({ ...prev, result: event.target.value }))}><option value="">All results</option>{["Gold", "Silver", "Bronze", "Participation", "Disqualified"].map((result) => <option key={result}>{result}</option>)}</select></label><label><span>Level</span><select value={filters.level} onChange={(event) => setFilters((prev) => ({ ...prev, level: event.target.value }))}><option value="">All levels</option>{["District", "Regional", "State", "National", "International"].map((level) => <option key={level}>{level}</option>)}</select></label></div></section>
+    <section className={styles.register}><header><div><small>Complete athlete timeline</small><h2>Championship Performance Register</h2><p>{filtered.length} of {records.length} record{records.length === 1 ? "" : "s"} visible</p></div><span><Sparkles size={14}/>{summary.totalBouts || 0} total bouts · {summary.boutsWon || 0} wins</span></header>
+      {loading ? <div className={styles.loading}><span/><span/><span/><p>Loading championship history...</p></div> : filtered.length ? <div className={styles.tableWrap}><table><thead><tr><th>Date</th><th>Championship</th><th>Classification</th><th>Division</th><th>Performance</th><th>Result</th><th>Venue & Location</th><th>Evidence</th><th>Action</th></tr></thead><tbody>{filtered.map((record) => <tr key={record._id}><td><div className={styles.stack}><strong>{formatDate(record.startDate || record.date)}</strong><small>{record.endDate && record.endDate !== record.startDate ? `to ${formatDate(record.endDate)}` : "Single-day / same date"}</small></div></td><td><div className={styles.championship}><strong>{display(record.championshipName)}</strong><small>{display(record.organizer, "Organizer not added")}</small></div></td><td><div className={styles.stack}><strong>{display(record.championshipType)} · {display(record.level)}</strong><small>{[record.sport, record.officialCategory, record.grading].filter(Boolean).join(" · ") || "Classification not added"}</small></div></td><td><div className={styles.stack}><strong>{display(record.eventType)}{record.poomsaeType ? ` · ${record.poomsaeType}` : ""}</strong><small>{[record.gender, record.ageCategory, record.weightCategory, record.beltCategory, record.danCategory].filter(Boolean).join(" · ") || "Division not added"}</small></div></td><td><div className={styles.bouts}><strong>{record.boutsWon || 0} wins / {record.totalBouts || 0} bouts</strong>{Array.isArray(record.bouts) && record.bouts.length ? <div className={styles.methods}>{record.bouts.map((bout, index) => <span key={`${record._id}-${index}`}>B{index + 1}: {bout.outcomeMethod}</span>)}</div> : <small className={styles.muted}>Bout methods not recorded</small>}</div></td><td><span className={`${styles.result} ${styles[`result${String(record.result || "").replace(/\s/g, "")}`] || ""}`}><CircleDot size={10}/>{display(record.result)}</span>{record.result === "Disqualified" && record.disqualificationReason ? <div className={styles.stack}><small>{record.disqualificationReason}</small></div> : null}</td><td><div className={styles.stack}><strong><MapPin size={11}/> {display(record.venue)}</strong><small>{formatLocation(record)}</small></div></td><td><div className={styles.evidence}>{record.certificateUrl ? <a href={record.certificateUrl} target="_blank" rel="noreferrer" title="Certificate"><FileBadge2 size={14}/></a> : null}{record.medalPhotoUrl ? <a href={record.medalPhotoUrl} target="_blank" rel="noreferrer" title="Medal photo"><Medal size={14}/></a> : null}{record.matchVideoUrl ? <a href={record.matchVideoUrl} target="_blank" rel="noreferrer" title="Match video"><Video size={14}/></a> : null}{record.newsUrl ? <a href={record.newsUrl} target="_blank" rel="noreferrer" title="News coverage"><ExternalLink size={14}/></a> : null}{![record.certificateUrl, record.medalPhotoUrl, record.matchVideoUrl, record.newsUrl].some(Boolean) ? <span className={styles.muted}>None</span> : null}</div></td><td><div className={styles.actions}><Link to={`/championship-records/${record._id}/edit`} title="Edit record"><Pencil size={14}/></Link></div></td></tr>)}</tbody></table></div> : <div className={styles.empty}><span><Trophy size={26}/></span><h3>{records.length ? "No matching entries" : "No championship history yet"}</h3><p>{records.length ? "Filters clear karke dobara check karein." : "Student ka first championship participation record add karein."}</p>{records.length ? <button type="button" onClick={reset}><RotateCcw size={14}/>Clear Filters</button> : <Link to={`/championship-records/new?student=${studentId}`}><Plus size={14}/>Add First Record</Link>}</div>}
+    </section>
+  </div>;
 };
 
 export default StudentChampionshipHistory;
