@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { CERTIFICATE_TYPES } from "./CertificateTemplate.js";
 
 const generatedCertificateSchema = new mongoose.Schema(
   {
@@ -21,10 +22,19 @@ const generatedCertificateSchema = new mongoose.Schema(
     },
     certificateType: {
       type: String,
-      enum: ["belt", "participation", "achievement", "custom"],
+      enum: CERTIFICATE_TYPES,
       required: [true, "Certificate type is required"],
       index: true,
     },
+    templateVersion: { type: Number, default: 1 },
+    templateSnapshot: { type: mongoose.Schema.Types.Mixed, default: {} },
+    studentSnapshot: { type: mongoose.Schema.Types.Mixed, default: {} },
+    academySnapshot: { type: mongoose.Schema.Types.Mixed, default: {} },
+    sourceSnapshot: { type: mongoose.Schema.Types.Mixed, default: {} },
+    contentSnapshot: { type: mongoose.Schema.Types.Mixed, default: {} },
+    verificationId: { type: String, trim: true, default: undefined },
+    verificationTokenHash: { type: String, select: false, default: "" },
+    qrCodeData: { type: String, trim: true, default: "" },
     certificateNumber: {
       type: String,
       required: [true, "Certificate number is required"],
@@ -72,6 +82,7 @@ generatedCertificateSchema.index(
 generatedCertificateSchema.index({ academy: 1, student: 1 });
 generatedCertificateSchema.index({ academy: 1, certificateType: 1 });
 generatedCertificateSchema.index({ academy: 1, status: 1 });
+generatedCertificateSchema.index({ verificationId: 1 }, { unique: true, sparse: true });
 
 const GeneratedCertificate = mongoose.model(
   "GeneratedCertificate",

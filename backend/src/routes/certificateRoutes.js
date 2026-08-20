@@ -5,6 +5,7 @@ import {
   getStudentCertificates,
   getCertificateById,
   updateCertificateStatus,
+  verifyCertificate,
 } from "../controllers/certificateController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
@@ -24,6 +25,8 @@ import {
 } from "../validators/certificateValidator.js";
 
 const router = express.Router();
+
+router.get("/verify/:verificationId", verifyCertificate);
 
 router.use(protect);
 router.use(allowAcademyManagement);

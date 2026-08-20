@@ -1,5 +1,10 @@
 import { body, param } from "express-validator";
 
+const certificateTypes = [
+  "belt", "participation", "achievement", "championship", "appreciation",
+  "course_completion", "instructor_certification", "custom",
+];
+
 export const certificateTemplateIdValidator = [
   param("id").isMongoId().withMessage("Invalid certificate template ID"),
 ];
@@ -22,7 +27,7 @@ export const createCertificateTemplateValidator = [
 
   body("certificateType")
     .optional()
-    .isIn(["belt", "participation", "achievement", "custom"])
+    .isIn(certificateTypes)
     .withMessage("Invalid certificate type"),
 
   body("backgroundImage")
@@ -32,6 +37,9 @@ export const createCertificateTemplateValidator = [
     .withMessage("Background image URL cannot exceed 500 characters"),
 
   body("layoutJson").optional().isObject(),
+  body("status").optional().isIn(["draft", "published", "archived"]),
+  body("pageSize").optional().equals("a4"),
+  body("orientation").optional().isIn(["landscape", "portrait"]),
 
   body("fields")
     .optional()
@@ -59,7 +67,7 @@ export const updateCertificateTemplateValidator = [
 
   body("certificateType")
     .optional()
-    .isIn(["belt", "participation", "achievement", "custom"]),
+    .isIn(certificateTypes),
 
   body("backgroundImage")
     .optional({ checkFalsy: true })
@@ -67,6 +75,9 @@ export const updateCertificateTemplateValidator = [
     .isLength({ max: 500 }),
 
   body("layoutJson").optional().isObject(),
+  body("status").optional().isIn(["draft", "published", "archived"]),
+  body("pageSize").optional().equals("a4"),
+  body("orientation").optional().isIn(["landscape", "portrait"]),
 
   body("fields").optional().isArray(),
   body("fields.*").optional().trim().isLength({ min: 1, max: 80 }),
@@ -75,6 +86,13 @@ export const updateCertificateTemplateValidator = [
 ];
 
 export const generateCertificateValidator = [
+  body().custom((payload) => {
+    if (payload.relatedBeltTest && payload.relatedChampionshipRecord) {
+      throw new Error("Only one related achievement record can be linked");
+    }
+    return true;
+  }),
+
   body("student").isMongoId().withMessage("Valid student is required"),
 
   body("template").isMongoId().withMessage("Valid template is required"),
@@ -82,7 +100,7 @@ export const generateCertificateValidator = [
   body("certificateType")
     .notEmpty()
     .withMessage("Certificate type is required")
-    .isIn(["belt", "participation", "achievement", "custom"])
+    .isIn(certificateTypes)
     .withMessage("Invalid certificate type"),
 
   body("certificateNumber")
@@ -105,6 +123,15 @@ export const generateCertificateValidator = [
     .optional({ nullable: true, checkFalsy: true })
     .isMongoId()
     .withMessage("Invalid championship record ID"),
+
+  body("content").optional().isObject().withMessage("Certificate content must be an object"),
+  body("content.title").optional().trim().isLength({ max: 160 }),
+  body("content.statement").optional().trim().isLength({ max: 1200 }),
+  body("content.achievement").optional().trim().isLength({ max: 300 }),
+  body("content.signatoryOneName").optional().trim().isLength({ max: 120 }),
+  body("content.signatoryOneRole").optional().trim().isLength({ max: 120 }),
+  body("content.signatoryTwoName").optional().trim().isLength({ max: 120 }),
+  body("content.signatoryTwoRole").optional().trim().isLength({ max: 120 }),
 ];
 
 export const updateCertificateStatusValidator = [

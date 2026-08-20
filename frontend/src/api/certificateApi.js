@@ -14,4 +14,6 @@ export const certificateApi = {
   getById: (id) => api.get(`/certificates/${id}`),
   updateStatus: (id, status) =>
     api.patch(`/certificates/${id}/status`, { status }),
+  verify: (verificationId, token) =>
+    api.get(`/certificates/verify/${verificationId}`, { params: { token } }),
 };

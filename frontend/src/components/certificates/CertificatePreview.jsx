@@ -1,53 +1,94 @@
-const CertificatePreview = ({ certificate }) => {
-  if (!certificate) {
-    return <div className="card">No certificate selected.</div>;
-  }
+import { useEffect, useMemo, useState } from "react";
+import QRCode from "qrcode";
+import { Award, BadgeCheck, ShieldCheck } from "lucide-react";
+import { getFileUrl } from "../../utils/fileUrl.js";
+import { certificateTitleFor, normalizeCertificateTemplate } from "../../pages/certificates/certificateTemplate.config.js";
+import styles from "./CertificatePreview.module.css";
 
-  const student = certificate.student || {};
-  const template = certificate.template || {};
+const formatDate = (value) => value
+  ? new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+  : "Not added";
 
-  return (
-    <div
-      className="certificate-preview"
-      style={{
-        backgroundImage: template.backgroundImage
-          ? `url(${template.backgroundImage})`
-          : "none",
-      }}
-    >
-      <div className="certificate-inner">
-        <p className="certificate-small">Certificate of</p>
-        <h1>{certificate.certificateType}</h1>
+const studentNameOf = (student) => student?.name || [student?.firstName, student?.lastName].filter(Boolean).join(" ") || "Student Name";
+const hasData = (value) => value && typeof value === "object" && Object.keys(value).length > 0;
 
-        <p className="certificate-small">This is proudly presented to</p>
-        <h2>{student.name}</h2>
+const getAchievement = ({ certificate, source, student }) => {
+  if (certificate?.contentSnapshot?.achievement) return certificate.contentSnapshot.achievement;
+  if (source?.kind === "belt_test") return [source.promotedToBelt, source.promotedToDanRank].filter(Boolean).join(" · ") || student?.beltRank || "Belt Promotion";
+  if (source?.kind === "championship") return [source.result, source.championshipName].filter(Boolean).join(" · ") || "Championship Achievement";
+  return certificate?.contentSnapshot?.subtitle || "Outstanding Achievement";
+};
 
-        <p>For successful completion / achievement recorded by the academy.</p>
-
-        <div className="certificate-meta">
-          <span>Certificate No: {certificate.certificateNumber}</span>
-          <span>
-            Issue Date:{" "}
-            {certificate.issueDate
-              ? new Date(certificate.issueDate).toLocaleDateString()
-              : "-"}
-          </span>
-        </div>
-
-        <div className="certificate-sign-row">
-          <div>
-            <strong>Authorized Signature</strong>
-            <span>Academy</span>
-          </div>
-
-          <div>
-            <strong>{template.templateName || "Certificate Template"}</strong>
-            <span>Status: {certificate.status}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+const CertificatePreview = ({ certificate = {}, template: templateProp, academy: academyProp, compact = false }) => {
+  const [qrUrl, setQrUrl] = useState("");
+  const template = normalizeCertificateTemplate(hasData(certificate.templateSnapshot) ? certificate.templateSnapshot : templateProp || certificate.template || {});
+  const layout = template.layoutJson;
+  const fields = layout.fields || template.fields || [];
+  const student = hasData(certificate.studentSnapshot) ? certificate.studentSnapshot : certificate.student || {};
+  const academy = hasData(certificate.academySnapshot) ? certificate.academySnapshot : academyProp || certificate.academy || template.academy || {};
+  const source = certificate.sourceSnapshot?.kind
+    ? certificate.sourceSnapshot
+    : certificate.relatedBeltTest
+      ? { kind: "belt_test", ...certificate.relatedBeltTest }
+      : certificate.relatedChampionshipRecord
+        ? { kind: "championship", ...certificate.relatedChampionshipRecord }
+        : { kind: "manual" };
+  const issueContent = Object.fromEntries(
+    Object.entries(certificate.contentSnapshot || {}).filter(([, value]) => value !== "" && value !== null && value !== undefined)
   );
+  const content = { ...layout.content, ...issueContent };
+  const brand = layout.brand;
+  const title = content.title || certificateTitleFor(certificate.certificateType || template.certificateType);
+  const academyLogo = getFileUrl(academy.logo, "");
+  const sealUrl = getFileUrl(brand.sealUrl, "");
+  const background = getFileUrl(template.backgroundImage, "");
+
+  useEffect(() => {
+    let active = true;
+    if (!fields.includes("qrVerification") || layout.security?.showQr === false) { setQrUrl(""); return undefined; }
+    QRCode.toDataURL(certificate.qrCodeData || "https://khiladi.app/verify/certificate/demo", { margin: 0, width: 220 })
+      .then((value) => active && setQrUrl(value)).catch(() => active && setQrUrl(""));
+    return () => { active = false; };
+  }, [certificate.qrCodeData, fields, layout.security?.showQr]);
+
+  const variables = useMemo(() => ({
+    "--cert-primary": brand.primaryColor,
+    "--cert-secondary": brand.secondaryColor,
+    "--cert-accent": brand.accentColor,
+    "--cert-background": brand.backgroundColor,
+    "--cert-heading-font": brand.headingFont,
+    "--cert-body-font": brand.bodyFont,
+    backgroundImage: background ? `url(${background})` : undefined,
+  }), [brand, background]);
+
+  const className = [styles.certificate, styles[template.orientation], styles[brand.borderStyle], compact ? styles.compact : "", layout.print?.showSafeArea ? styles.safeArea : "", layout.print?.showBleed ? styles.bleed : ""].filter(Boolean).join(" ");
+  const achievement = getAchievement({ certificate, source, student });
+
+  return <article className={className} style={variables} aria-label="Certificate preview">
+    <div className={styles.cornerOne}/><div className={styles.cornerTwo}/><div className={styles.innerBorder}/>
+    {layout.security?.showWatermark ? <ShieldCheck className={styles.watermark} aria-hidden="true"/> : null}
+    <header>
+      {fields.includes("academyLogo") ? <span className={styles.logo}>{academyLogo ? <img src={academyLogo} alt="Academy logo"/> : <Award/>}</span> : null}
+      {fields.includes("academyName") ? <div><strong>{academy.academyName || academy.name || "KHILADI ACADEMY"}</strong><small>DISCIPLINE · FOCUS · EXCELLENCE</small></div> : null}
+    </header>
+    <main>
+      <div className={styles.titleRow}><span/><div>{fields.includes("certificateTitle") ? <h1>{title}</h1> : null}<b>★ ★ ★</b></div><span/></div>
+      <p className={styles.eyebrow}>{content.eyebrow}</p>
+      {fields.includes("studentName") ? <h2>{studentNameOf(student)}</h2> : null}
+      <p className={styles.statement}>{content.statement}</p>
+      {fields.includes("achievement") || fields.includes("beltAndDan") || fields.includes("eventName") ? <div className={styles.achievement}><span/>{achievement}<span/></div> : null}
+    </main>
+    <section className={styles.bottomRow}>
+      <div className={styles.meta}>
+        {fields.includes("certificateNumber") ? <p><span>CERTIFICATE NO.</span><strong>{certificate.certificateNumber || "Pending"}</strong></p> : null}
+        {fields.includes("issueDate") ? <p><span>ISSUE DATE</span><strong>{formatDate(certificate.issueDate)}</strong></p> : null}
+      </div>
+      {fields.includes("signatures") ? <div className={styles.signatures}>{layout.signatures.map((signature, index) => <div key={`${signature.role}-${index}`}>{signature.imageUrl ? <img src={getFileUrl(signature.imageUrl)} alt="Signature"/> : <em>{signature.name}</em>}<span/><strong>{signature.role}</strong></div>)}</div> : null}
+      {fields.includes("academySeal") ? <div className={styles.seal}>{sealUrl ? <img src={sealUrl} alt="Academy seal"/> : <><BadgeCheck/><span>VERIFIED<br/>ACADEMY</span></>}</div> : null}
+      {qrUrl ? <div className={styles.qr}><img src={qrUrl} alt="Certificate verification QR"/><span>SCAN TO VERIFY</span></div> : null}
+    </section>
+    {certificate.status === "cancelled" ? <div className={styles.revoked}>CANCELLED</div> : null}
+  </article>;
 };
 
 export default CertificatePreview;

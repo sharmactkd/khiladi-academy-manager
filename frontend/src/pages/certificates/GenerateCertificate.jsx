@@ -1,208 +1,52 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { Award, CalendarDays, FileBadge2, Printer, Search, ShieldCheck, Sparkles, Trophy, UserRound } from "lucide-react";
+import { academyApi } from "../../api/academyApi.js";
+import { beltTestApi } from "../../api/beltTestApi.js";
+import { championshipRecordApi } from "../../api/championshipRecordApi.js";
+import { certificateApi, certificateTemplateApi } from "../../api/certificateApi.js";
 import { studentApi } from "../../api/studentApi.js";
-import {
-  certificateApi,
-  certificateTemplateApi,
-} from "../../api/certificateApi.js";
-
 import CertificatePreview from "../../components/certificates/CertificatePreview.jsx";
+import { certificateTitleFor, SAMPLE_CERTIFICATE } from "./certificateTemplate.config.js";
+import styles from "./CertificateWorkflow.module.css";
 
-const normalizeList = (response, nestedKey) => {
-  const data = response?.data;
-
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.data)) return data.data;
-  if (Array.isArray(data?.data?.[nestedKey])) return data.data[nestedKey];
-  if (Array.isArray(data?.[nestedKey])) return data[nestedKey];
-
-  return [];
-};
-
-const getStudentName = (student) => {
-  const fullName = `${student?.firstName || ""} ${
-    student?.lastName || ""
-  }`.trim();
-
-  return student?.name || fullName || "Student";
-};
-
-const getStudentCode = (student) =>
-  student?.studentCode || student?.admissionNumber || "-";
+const normalizeList = (response, keys = []) => { const data = response?.data; const candidates = [response, data, data?.data, ...keys.flatMap((key) => [data?.data?.[key], data?.[key], response?.[key]])]; return candidates.find(Array.isArray) || []; };
+const studentName = (student) => student?.name || [student?.firstName, student?.lastName].filter(Boolean).join(" ") || "Student";
+const studentCode = (student) => student?.admissionNumber || student?.studentCode || "No admission number";
+const recordDate = (record) => record?.testDate || record?.startDate || record?.createdAt;
+const formatRecordDate = (value) => value ? new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Date not added";
 
 const GenerateCertificate = () => {
   const navigate = useNavigate();
+  const [students, setStudents] = useState([]); const [templates, setTemplates] = useState([]); const [academy, setAcademy] = useState(null); const [beltTests, setBeltTests] = useState([]); const [championships, setChampionships] = useState([]);
+  const [query, setQuery] = useState(""); const [generated, setGenerated] = useState(null); const [loading, setLoading] = useState(true); const [recordsLoading, setRecordsLoading] = useState(false); const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ student: "", template: "", certificateType: "custom", issueDate: new Date().toISOString().slice(0, 10), relatedBeltTest: "", relatedChampionshipRecord: "", content: { title: "", statement: "", achievement: "", signatoryOneName: "", signatoryOneRole: "", signatoryTwoName: "", signatoryTwoRole: "" } });
 
-  const [students, setStudents] = useState([]);
-  const [templates, setTemplates] = useState([]);
-  const [generatedCertificate, setGeneratedCertificate] = useState(null);
+  useEffect(() => { Promise.allSettled([studentApi.getAll({ limit: 1000, status: "active" }), certificateTemplateApi.getAll(), academyApi.getMyAcademy()]).then(([studentResult, templateResult, academyResult]) => { if (studentResult.status === "rejected" || templateResult.status === "rejected") throw studentResult.reason || templateResult.reason; const templateList = normalizeList(templateResult.value, ["templates"]); setStudents(normalizeList(studentResult.value, ["students"])); setTemplates(templateList); setAcademy(academyResult.status === "fulfilled" ? academyResult.value?.data?.data?.academy || null : null); const selected = templateList.find((item) => item.isDefault) || templateList[0]; if (selected) setForm((prev) => ({ ...prev, template: selected._id, certificateType: selected.certificateType, content: { ...prev.content, title: selected.layoutJson?.content?.title || certificateTitleFor(selected.certificateType) } })); }).catch((error) => toast.error(error?.response?.data?.message || "Certificate data load nahi hua")).finally(() => setLoading(false)); }, []);
 
-  const [form, setForm] = useState({
-    student: "",
-    template: "",
-    certificateType: "custom",
-    issueDate: new Date().toISOString().slice(0, 10),
-  });
+  useEffect(() => { if (!form.student) { setBeltTests([]); setChampionships([]); return; } let active = true; setRecordsLoading(true); Promise.allSettled([beltTestApi.getByStudent(form.student), championshipRecordApi.getByStudent(form.student)]).then(([beltResult, championshipResult]) => { if (!active) return; setBeltTests(beltResult.status === "fulfilled" ? normalizeList(beltResult.value, ["beltTests", "records"]) : []); setChampionships(championshipResult.status === "fulfilled" ? normalizeList(championshipResult.value, ["championshipRecords", "records"]) : []); }).finally(() => active && setRecordsLoading(false)); return () => { active = false; }; }, [form.student]);
 
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const selectedStudent = students.find((item) => item._id === form.student); const selectedTemplate = templates.find((item) => item._id === form.template);
+  const filteredStudents = useMemo(() => { const search = query.trim().toLowerCase(); return students.filter((item) => !search || [studentName(item), studentCode(item), item.phone, item.batch?.batchName].some((value) => String(value || "").toLowerCase().includes(search))).slice(0, 8); }, [students, query]);
+  const sourceRecord = form.relatedBeltTest ? beltTests.find((item) => item._id === form.relatedBeltTest) : form.relatedChampionshipRecord ? championships.find((item) => item._id === form.relatedChampionshipRecord) : null;
+  const sourceSnapshot = form.relatedBeltTest && sourceRecord ? { kind: "belt_test", ...sourceRecord } : form.relatedChampionshipRecord && sourceRecord ? { kind: "championship", ...sourceRecord } : { kind: "manual" };
+  const preview = generated || { ...SAMPLE_CERTIFICATE, student: selectedStudent || SAMPLE_CERTIFICATE.student, academy: academy || SAMPLE_CERTIFICATE.academy, template: selectedTemplate || {}, certificateType: form.certificateType, issueDate: form.issueDate, contentSnapshot: form.content, sourceSnapshot };
+  const chooseTemplate = (templateId) => { const template = templates.find((item) => item._id === templateId); setForm((prev) => ({ ...prev, template: templateId, certificateType: template?.certificateType || "custom", relatedBeltTest: "", relatedChampionshipRecord: "", content: { ...prev.content, title: template?.layoutJson?.content?.title || certificateTitleFor(template?.certificateType) } })); };
+  const updateContent = (key, value) => setForm((prev) => ({ ...prev, content: { ...prev.content, [key]: value } }));
+  const submit = async (event) => { event.preventDefault(); try { setSaving(true); const payload = { ...form, relatedBeltTest: form.relatedBeltTest || null, relatedChampionshipRecord: form.relatedChampionshipRecord || null }; const response = await certificateApi.generate(payload); const certificate = response.data?.data?.certificate || null; setGenerated(certificate); toast.success("Secure certificate issued"); } catch (error) { toast.error(error?.response?.data?.message || "Certificate generate nahi hua"); } finally { setSaving(false); } };
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-
-        const [studentResponse, templateResponse] = await Promise.all([
-          studentApi.getAll({ limit: 100, status: "active" }),
-          certificateTemplateApi.getAll(),
-        ]);
-
-        setStudents(normalizeList(studentResponse, "students"));
-        setTemplates(normalizeList(templateResponse, "templates"));
-      } catch (err) {
-        alert(err.response?.data?.message || "Data load nahi hua");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleGenerate = async (event) => {
-    event.preventDefault();
-
-    try {
-      setSaving(true);
-
-      const response = await certificateApi.generate(form);
-
-      setGeneratedCertificate(response.data?.data?.certificate || null);
-      alert("Certificate generated successfully");
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to generate certificate");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="page">
-        <div className="card">
-          <p>Loading students and templates...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Generate Certificate</h1>
-          <p>Select student and template to generate printable certificate.</p>
-        </div>
-      </div>
-
-      <form className="card form-grid" onSubmit={handleGenerate}>
-        <label>
-          Student
-          <select
-            name="student"
-            value={form.student}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select Student</option>
-
-            {students.map((student) => (
-              <option key={student._id} value={student._id}>
-                {getStudentName(student)} ({getStudentCode(student)})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Template
-          <select
-            name="template"
-            value={form.template}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select Template</option>
-
-            {templates.map((template) => (
-              <option key={template._id} value={template._id}>
-                {template.templateName} ({template.certificateType})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Certificate Type
-          <select
-            name="certificateType"
-            value={form.certificateType}
-            onChange={handleChange}
-          >
-            <option value="belt">Belt</option>
-            <option value="participation">Participation</option>
-            <option value="achievement">Achievement</option>
-            <option value="custom">Custom</option>
-          </select>
-        </label>
-
-        <label>
-          Issue Date
-          <input
-            type="date"
-            name="issueDate"
-            value={form.issueDate}
-            onChange={handleChange}
-          />
-        </label>
-
-        <div className="form-actions">
-          <button className="btn btn-primary" type="submit" disabled={saving}>
-            {saving ? "Generating..." : "Generate Certificate"}
-          </button>
-        </div>
-      </form>
-
-      {generatedCertificate && (
-        <div className="card preview-card">
-          <CertificatePreview certificate={generatedCertificate} />
-
-          <div className="form-actions">
-            <button
-              className="btn btn-primary"
-              type="button"
-              onClick={() =>
-                navigate(`/certificates/${generatedCertificate._id}/print`)
-              }
-            >
-              Print Certificate
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <div className={`page ${styles.page}`}>
+    <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><Link to="/certificate-templates">Certificate Studio</Link><span>/</span><strong>Generate</strong></nav>
+    <header className={styles.heading}><span><FileBadge2/></span><div><small>SECURE CERTIFICATE ISSUANCE</small><h1>Generate Certificate</h1><p>Select a student, connect an achievement record and issue a verifiable certificate.</p></div></header>
+    <div className={styles.workflow}><form className={styles.form} onSubmit={submit}>
+      <section><header><span>01</span><div><h2>Student Identity</h2><p>Search active academy students.</p></div></header><label>Search Student *<div className={styles.search}><Search/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, code, phone or batch..."/></div></label><div className={styles.studentResults}>{filteredStudents.map((student) => <button type="button" key={student._id} className={form.student === student._id ? styles.selected : ""} onClick={() => setForm((prev) => ({ ...prev, student: student._id, relatedBeltTest: "", relatedChampionshipRecord: "" }))}><UserRound/><span><strong>{studentName(student)}</strong><small>{studentCode(student)}</small></span>{form.student === student._id ? <ShieldCheck/> : null}</button>)}</div></section>
+      <section><header><span>02</span><div><h2>Template & Issue</h2><p>Choose the versioned design and issue date.</p></div></header><div className={styles.twoCol}><label>Template *<select value={form.template} onChange={(event) => chooseTemplate(event.target.value)} required disabled={loading}><option value="">Select template</option>{templates.map((template) => <option key={template._id} value={template._id}>{template.templateName} · v{template.version || 1}{template.isDefault ? " · Default" : ""}</option>)}</select></label><label>Issue Date<div className={styles.date}><CalendarDays/><input type="date" value={form.issueDate} onChange={(event) => setForm((prev) => ({ ...prev, issueDate: event.target.value }))}/></div></label></div></section>
+      <section><header><span>03</span><div><h2>Achievement Source</h2><p>Verified record data is frozen into the issued certificate.</p></div></header>{form.certificateType === "belt" ? <label>Related Belt Test<select value={form.relatedBeltTest} onChange={(event) => setForm((prev) => ({ ...prev, relatedBeltTest: event.target.value, relatedChampionshipRecord: "" }))} disabled={!form.student || recordsLoading}><option value="">Manual / no linked record</option>{beltTests.map((record) => <option key={record._id} value={record._id}>{record.promotedToBelt}{record.promotedToDanRank ? ` · ${record.promotedToDanRank}` : ""} · {formatRecordDate(recordDate(record))}</option>)}</select></label> : form.certificateType === "championship" ? <label>Related Championship<select value={form.relatedChampionshipRecord} onChange={(event) => setForm((prev) => ({ ...prev, relatedChampionshipRecord: event.target.value, relatedBeltTest: "" }))} disabled={!form.student || recordsLoading}><option value="">Manual / no linked record</option>{championships.map((record) => <option key={record._id} value={record._id}>{record.championshipName} · {record.result} · {formatRecordDate(recordDate(record))}</option>)}</select></label> : <div className={styles.sourceNote}><Trophy/><span><strong>Manual certificate content</strong><small>This certificate type does not require a Belt Test or Championship source.</small></span></div>}</section>
+      <section><header><span>04</span><div><h2>Certificate Content</h2><p>Optional values override the template wording for this issue only.</p></div></header><label>Certificate Title<input value={form.content.title} onChange={(event) => updateContent("title", event.target.value)}/></label><label>Achievement / Highlight<input value={form.content.achievement} onChange={(event) => updateContent("achievement", event.target.value)} placeholder="Auto-filled from linked record when empty"/></label><label>Custom Statement<textarea rows="3" value={form.content.statement} onChange={(event) => updateContent("statement", event.target.value)} placeholder="Leave empty to use template statement"/></label></section>
+      <button className={styles.primary} type="submit" disabled={saving || !form.student || !form.template}><Sparkles/>{saving ? "Issuing secure certificate..." : "Generate Secure Certificate"}</button>
+    </form><aside className={styles.preview}><header><div><Award/><span><strong>Live Certificate Preview</strong><small>A4 · {selectedTemplate?.orientation || "landscape"}</small></span></div>{generated ? <b>ISSUED</b> : <b>PREVIEW</b>}</header><div><CertificatePreview certificate={preview} template={selectedTemplate} academy={academy}/></div>{generated ? <button type="button" onClick={() => navigate(`/certificates/${generated._id}/print`)}><Printer/>Open Print Studio</button> : null}</aside></div>
+  </div>;
 };
 
 export default GenerateCertificate;

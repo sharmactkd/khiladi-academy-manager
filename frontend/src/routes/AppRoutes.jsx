@@ -61,6 +61,7 @@ import CertificateTemplates from "../pages/certificates/CertificateTemplates.jsx
 import GenerateCertificate from "../pages/certificates/GenerateCertificate.jsx";
 import PrintCertificate from "../pages/certificates/PrintCertificate.jsx";
 import StudentCertificates from "../pages/certificates/StudentCertificates.jsx";
+import VerifyCertificate from "../pages/certificates/VerifyCertificate.jsx";
 
 import ParentLinks from "../pages/parentLinks/ParentLinks.jsx";
 import CreateParentLink from "../pages/parentLinks/CreateParentLink.jsx";
@@ -173,6 +174,7 @@ const AppRoutes = () => {
         element={<ResetPassword />}
       />
       <Route path="/verify/id-card/:verificationId" element={<VerifyIdCard />} />
+      <Route path="/verify/certificate/:verificationId" element={<VerifyCertificate />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>

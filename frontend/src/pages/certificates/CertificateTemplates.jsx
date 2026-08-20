@@ -1,210 +1,76 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import { Award, BadgeCheck, Eye, FileBadge2, Layers3, Save, ShieldCheck, Sparkles } from "lucide-react";
+import { academyApi } from "../../api/academyApi.js";
+import { getBranches } from "../../api/branchApi.js";
 import { certificateTemplateApi } from "../../api/certificateApi.js";
+import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import DocumentStudioSection from "../../components/documentStudio/DocumentStudioSection.jsx";
+import FieldPalette from "../../components/documentStudio/FieldPalette.jsx";
+import StudioStepRail from "../../components/documentStudio/StudioStepRail.jsx";
+import TemplateLibrary from "../../components/documentStudio/TemplateLibrary.jsx";
+import CertificatePreview from "../../components/certificates/CertificatePreview.jsx";
+import useAuth from "../../hooks/useAuth.js";
+import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import { CERTIFICATE_FIELDS, CERTIFICATE_TYPES, certificateTitleFor, createCertificateTemplate, normalizeCertificateTemplate, SAMPLE_CERTIFICATE } from "./certificateTemplate.config.js";
+import styles from "./CertificateTemplates.module.css";
 
-const initialForm = {
-  templateName: "",
-  certificateType: "custom",
-  backgroundImage: "",
-  fields: "studentName,academyName,issueDate",
-  isDefault: false,
-};
+const steps = [
+  { id: "identity", label: "Identity", description: "Name and lifecycle" },
+  { id: "format", label: "Format", description: "A4 and orientation" },
+  { id: "content", label: "Content", description: "Fields and wording" },
+  { id: "branding", label: "Branding", description: "Visual system" },
+  { id: "signatures", label: "Signatures", description: "Authorization" },
+  { id: "security", label: "Security", description: "Verification QR" },
+  { id: "print", label: "Print", description: "Safe production" },
+];
+const joinAddress = (source) => [source?.address, source?.city, source?.state, source?.country].filter(Boolean).join(", ");
+const payloadOf = (form) => ({ ...form, fields: form.layoutJson.fields });
 
 const CertificateTemplates = () => {
-  const [templates, setTemplates] = useState([]);
-  const [form, setForm] = useState(initialForm);
-  const [editingId, setEditingId] = useState("");
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [templates, setTemplates] = useState([]); const [academy, setAcademy] = useState(null); const [branches, setBranches] = useState([]);
+  const [form, setForm] = useState(createCertificateTemplate); const [editingId, setEditingId] = useState(""); const [activeStep, setActiveStep] = useState("identity"); const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false);
 
-  const loadTemplates = async () => {
-    const response = await certificateTemplateApi.getAll();
-    setTemplates(response.data?.data?.templates || []);
-    setLoading(false);
-  };
+  const load = useCallback(async () => { try { setLoading(true); const [templateResult, academyResult, branchResult] = await Promise.allSettled([certificateTemplateApi.getAll(), academyApi.getMyAcademy(), getBranches({ status: "active" })]); if (templateResult.status === "rejected") throw templateResult.reason; setTemplates(templateResult.value?.data?.data?.templates || []); if (academyResult.status === "fulfilled") setAcademy(academyResult.value?.data?.data?.academy || academyResult.value?.data?.academy || null); if (branchResult.status === "fulfilled") { const list = branchResult.value?.data || branchResult.value || []; setBranches(Array.isArray(list) ? list : []); } } catch (error) { toast.error(error?.response?.data?.message || "Certificate templates load nahi ho sake"); } finally { setLoading(false); } }, []);
+  useEffect(() => { load(); }, [load]);
+  const mainBranch = branches.find((item) => item.isMainBranch) || branches[0];
+  const preview = useMemo(() => ({ ...SAMPLE_CERTIFICATE, academy: academy || SAMPLE_CERTIFICATE.academy, certificateType: form.certificateType }), [academy, form.certificateType]);
+  const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const updateLayout = (section, key, value) => setForm((prev) => ({ ...prev, layoutJson: { ...prev.layoutJson, [section]: { ...prev.layoutJson[section], [key]: value } } }));
+  const setFields = (fields) => setForm((prev) => ({ ...prev, fields, layoutJson: { ...prev.layoutJson, fields } }));
+  const setType = (certificateType) => setForm((prev) => ({ ...prev, certificateType, layoutJson: { ...prev.layoutJson, content: { ...prev.layoutJson.content, title: certificateTitleFor(certificateType) } } }));
+  const updateSignature = (index, key, value) => setForm((prev) => ({ ...prev, layoutJson: { ...prev.layoutJson, signatures: prev.layoutJson.signatures.map((signature, signatureIndex) => signatureIndex === index ? { ...signature, [key]: value } : signature) } }));
+  const reset = () => { setForm(createCertificateTemplate()); setEditingId(""); setActiveStep("identity"); };
+  const save = async (event) => { event.preventDefault(); try { setSaving(true); if (editingId) await certificateTemplateApi.update(editingId, payloadOf(form)); else await certificateTemplateApi.create(payloadOf(form)); toast.success(editingId ? "New template version saved" : "Certificate template created"); reset(); await load(); } catch (error) { toast.error(error?.response?.data?.message || "Template save nahi hua"); } finally { setSaving(false); } };
+  const edit = (template) => { setForm(normalizeCertificateTemplate(template)); setEditingId(template._id); setActiveStep("identity"); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const duplicate = async (template) => { try { const copy = normalizeCertificateTemplate(template); ["_id", "createdAt", "updatedAt", "__v"].forEach((key) => delete copy[key]); await certificateTemplateApi.create({ ...payloadOf(copy), templateName: `${copy.templateName} Copy`, isDefault: false, status: "draft" }); toast.success("Template duplicated"); await load(); } catch (error) { toast.error(error?.response?.data?.message || "Duplicate failed"); } };
+  const archive = async (template) => { if (!window.confirm(`Archive ${template.templateName}? Issued certificates will remain unchanged.`)) return; try { await certificateTemplateApi.remove(template._id); toast.success("Template archived"); await load(); } catch (error) { toast.error(error?.response?.data?.message || "Archive failed"); } };
+  const setDefault = async (template) => { try { await certificateTemplateApi.update(template._id, { isDefault: true, status: "published" }); toast.success("Default template updated"); await load(); } catch (error) { toast.error(error?.response?.data?.message || "Default update failed"); } };
+  const brand = form.layoutJson.brand; const content = form.layoutJson.content; const print = form.layoutJson.print; const security = form.layoutJson.security;
 
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
-  const handleChange = (event) => {
-    const { name, value, type, checked } = event.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const resetForm = () => {
-    setForm(initialForm);
-    setEditingId("");
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    const payload = {
-      ...form,
-      layoutJson: {},
-      fields: form.fields
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-    };
-
-    try {
-      if (editingId) {
-        await certificateTemplateApi.update(editingId, payload);
-        alert("Certificate template updated successfully");
-      } else {
-        await certificateTemplateApi.create(payload);
-        alert("Certificate template created successfully");
-      }
-
-      resetForm();
-      await loadTemplates();
-    } catch (err) {
-      alert(err.response?.data?.message || "Save failed");
-    }
-  };
-
-  const handleEdit = (template) => {
-    setEditingId(template._id);
-    setForm({
-      templateName: template.templateName || "",
-      certificateType: template.certificateType || "custom",
-      backgroundImage: template.backgroundImage || "",
-      fields: (template.fields || []).join(","),
-      isDefault: Boolean(template.isDefault),
-    });
-  };
-
-  const handleDelete = async (id) => {
-    const confirmed = window.confirm("Delete this certificate template?");
-    if (!confirmed) return;
-
-    try {
-      await certificateTemplateApi.remove(id);
-      await loadTemplates();
-      alert("Certificate template deleted successfully");
-    } catch (err) {
-      alert(err.response?.data?.message || "Delete failed");
-    }
-  };
-
-  if (loading) return <div className="card">Loading certificate templates...</div>;
-
-  return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Certificate Templates</h1>
-          <p>Create reusable certificate templates.</p>
-        </div>
+  return <div className={`page ${styles.page}`}>
+    <AcademyHeroHeader headingId="certificate-studio-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Certificate & document studio" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy)} summaryItems={[{ key: "templates", icon: Layers3, value: templates.length, label: "Templates" }, { key: "published", icon: BadgeCheck, value: templates.filter((item) => item.status === "published" || item.isDefault).length, label: "Published" }, { key: "format", icon: FileBadge2, value: "A4", label: form.orientation }]}/>
+    <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><strong>Certificate Template Studio</strong></nav>
+    <header className={styles.heading}><div><span><Award/></span><div><small>DOCUMENT DESIGNER</small><h1>Certificate Template Studio</h1><p>Create secure, print-ready and verifiable academy certificates.</p></div></div><Link to="/certificates/generate"><Sparkles/>Generate Certificate</Link></header>
+    <form className={styles.studio} onSubmit={save}>
+      <aside><StudioStepRail steps={steps} activeStep={activeStep} onChange={setActiveStep}/><div className={styles.versionNote}><ShieldCheck/><span><strong>Version safe</strong><small>Issued certificates retain immutable snapshots.</small></span></div></aside>
+      <div className={styles.controls}>
+        {activeStep === "identity" ? <DocumentStudioSection number="1" title="Template Identity" description="Name, type and publishing lifecycle."><div className={styles.formGrid}><label>Template Name *<input value={form.templateName} onChange={(event) => update("templateName", event.target.value)} required/></label><label>Status<select value={form.status} onChange={(event) => update("status", event.target.value)}><option value="draft">Draft</option><option value="published">Published</option></select></label><div className={styles.full}><span className={styles.label}>Certificate Type</span><div className={styles.typeTags}>{CERTIFICATE_TYPES.map((type) => <button type="button" key={type.value} className={form.certificateType === type.value ? styles.selectedTag : ""} onClick={() => setType(type.value)}>{type.label}</button>)}</div></div><label className={`${styles.check} ${styles.full}`}><input type="checkbox" checked={form.isDefault} onChange={(event) => update("isDefault", event.target.checked)}/>Use as default for this certificate type</label></div></DocumentStudioSection> : null}
+        {activeStep === "format" ? <DocumentStudioSection number="2" title="Certificate Format" description="Controlled A4 proportions for dependable export."><div className={styles.formGrid}><label>Page Size<select value={form.pageSize} disabled><option value="a4">A4</option></select></label><label>Orientation<select value={form.orientation} onChange={(event) => update("orientation", event.target.value)}><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></label><label className={styles.full}>Background Image URL<input value={form.backgroundImage} onChange={(event) => update("backgroundImage", event.target.value)} placeholder="Optional print-quality background"/></label></div></DocumentStudioSection> : null}
+        {activeStep === "content" ? <DocumentStudioSection number="3" title="Certificate Content" description="Choose visible fields and professional wording."><FieldPalette registry={CERTIFICATE_FIELDS} selected={form.layoutJson.fields} onChange={setFields}/><div className={styles.formGrid}><label className={styles.full}>Certificate Title<input value={content.title} onChange={(event) => updateLayout("content", "title", event.target.value)}/></label><label className={styles.full}>Presentation Line<input value={content.eyebrow} onChange={(event) => updateLayout("content", "eyebrow", event.target.value)}/></label><label className={styles.full}>Achievement Statement<textarea rows="4" value={content.statement} onChange={(event) => updateLayout("content", "statement", event.target.value)}/></label></div></DocumentStudioSection> : null}
+        {activeStep === "branding" ? <DocumentStudioSection number="4" title="Brand System" description="Academy colours, border and typography."><div className={styles.formGrid}>{[["primaryColor","Primary"],["secondaryColor","Secondary"],["accentColor","Accent"],["backgroundColor","Paper"]].map(([key, label]) => <label key={key}>{label} Colour<div className={styles.colorInput}><input type="color" value={brand[key]} onChange={(event) => updateLayout("brand", key, event.target.value)}/><code>{brand[key]}</code></div></label>)}<label>Heading Font<select value={brand.headingFont} onChange={(event) => updateLayout("brand", "headingFont", event.target.value)}><option>Georgia</option><option>Times New Roman</option><option>Playfair Display</option><option>Montserrat</option></select></label><label>Body Font<select value={brand.bodyFont} onChange={(event) => updateLayout("brand", "bodyFont", event.target.value)}><option>Inter</option><option>Poppins</option><option>Roboto</option><option>Montserrat</option></select></label><label>Border Style<select value={brand.borderStyle} onChange={(event) => updateLayout("brand", "borderStyle", event.target.value)}><option value="heritage">Heritage</option><option value="modern">Modern</option><option value="minimal">Minimal</option></select></label><label>Academy Seal URL<input value={brand.sealUrl} onChange={(event) => updateLayout("brand", "sealUrl", event.target.value)} placeholder="Optional seal image"/></label></div></DocumentStudioSection> : null}
+        {activeStep === "signatures" ? <DocumentStudioSection number="5" title="Signatures & Authorization" description="Configure two official signature positions."><div className={styles.signatureGrid}>{form.layoutJson.signatures.map((signature, index) => <article key={index}><span>{String(index + 1).padStart(2, "0")}</span><label>Display Name<input value={signature.name} onChange={(event) => updateSignature(index, "name", event.target.value)}/></label><label>Designation<input value={signature.role} onChange={(event) => updateSignature(index, "role", event.target.value)}/></label><label>Signature Image URL<input value={signature.imageUrl} onChange={(event) => updateSignature(index, "imageUrl", event.target.value)}/></label></article>)}</div></DocumentStudioSection> : null}
+        {activeStep === "security" ? <DocumentStudioSection number="6" title="Security & Verification" description="Signed QR verification and tamper-resistant issuance."><div className={styles.securityBox}><ShieldCheck/><div><strong>Secure verification automatically enabled</strong><p>Each issue gets a unique token; only its SHA-256 hash is stored.</p></div></div><label className={styles.check}><input type="checkbox" checked={security.showQr} onChange={(event) => updateLayout("security", "showQr", event.target.checked)}/>Show QR verification</label><label className={styles.check}><input type="checkbox" checked={security.showWatermark} onChange={(event) => updateLayout("security", "showWatermark", event.target.checked)}/>Show academy watermark</label></DocumentStudioSection> : null}
+        {activeStep === "print" ? <DocumentStudioSection number="7" title="Print Production" description="Review safe area and bleed before publishing."><div className={styles.printOptions}><label className={styles.check}><input type="checkbox" checked={print.showSafeArea} onChange={(event) => updateLayout("print", "showSafeArea", event.target.checked)}/>Show safe-area guide</label><label className={styles.check}><input type="checkbox" checked={print.showBleed} onChange={(event) => updateLayout("print", "showBleed", event.target.checked)}/>Show bleed guide</label><div><strong>A4 {form.orientation}</strong><span>300 DPI recommended · fonts and backgrounds print after preload</span></div></div></DocumentStudioSection> : null}
+        <div className={styles.saveBar}><button type="button" onClick={reset}>Reset</button><button type="submit" disabled={saving}><Save/>{saving ? "Saving..." : editingId ? "Save New Version" : "Save Template"}</button></div>
       </div>
-
-      <form className="card form-grid" onSubmit={handleSubmit}>
-        <h2 className="full-width">
-          {editingId ? "Edit Template" : "Create Template"}
-        </h2>
-
-        <label>
-          Template Name
-          <input
-            name="templateName"
-            value={form.templateName}
-            onChange={handleChange}
-            required
-          />
-        </label>
-
-        <label>
-          Certificate Type
-          <select
-            name="certificateType"
-            value={form.certificateType}
-            onChange={handleChange}
-          >
-            <option value="belt">Belt</option>
-            <option value="participation">Participation</option>
-            <option value="achievement">Achievement</option>
-            <option value="custom">Custom</option>
-          </select>
-        </label>
-
-        <label className="full-width">
-          Background Image URL
-          <input
-            name="backgroundImage"
-            value={form.backgroundImage}
-            onChange={handleChange}
-          />
-        </label>
-
-        <label className="full-width">
-          Fields
-          <input name="fields" value={form.fields} onChange={handleChange} />
-        </label>
-
-        <label className="checkbox-row full-width">
-          <input
-            type="checkbox"
-            name="isDefault"
-            checked={form.isDefault}
-            onChange={handleChange}
-          />
-          Set as default for this certificate type
-        </label>
-
-        <div className="form-actions full-width">
-          <button className="btn btn-primary" type="submit">
-            {editingId ? "Update Template" : "Create Template"}
-          </button>
-
-          {editingId && (
-            <button className="btn btn-secondary" type="button" onClick={resetForm}>
-              Cancel Edit
-            </button>
-          )}
-        </div>
-      </form>
-
-      <div className="card table-card">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Default</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {templates.length === 0 ? (
-              <tr>
-                <td colSpan="4">No templates found.</td>
-              </tr>
-            ) : (
-              templates.map((template) => (
-                <tr key={template._id}>
-                  <td>{template.templateName}</td>
-                  <td>{template.certificateType}</td>
-                  <td>{template.isDefault ? "Yes" : "No"}</td>
-                  <td className="table-actions">
-                    <button type="button" onClick={() => handleEdit(template)}>
-                      Edit
-                    </button>
-                    <button type="button" onClick={() => handleDelete(template._id)}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+      <section className={styles.previewPane}><header><div><Eye/><span><strong>Live Preview</strong><small>A4 · {form.orientation}</small></span></div><span>{form.status}</span></header><div className={styles.previewStage}><CertificatePreview certificate={preview} template={form} academy={academy}/></div><footer><ShieldCheck/>Sample data only. Issued documents use immutable student, academy and source snapshots.</footer></section>
+    </form>
+    <TemplateLibrary templates={templates} renderPreview={(template) => <CertificatePreview certificate={{ ...preview, certificateType: template.certificateType }} template={template} academy={academy} compact/>} onEdit={edit} onDuplicate={duplicate} onArchive={archive} onSetDefault={setDefault}/>
+    {loading ? <div className={styles.loading}>Loading certificate library…</div> : null}
+  </div>;
 };
 
 export default CertificateTemplates;

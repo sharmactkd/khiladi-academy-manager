@@ -5,6 +5,9 @@ import { successResponse, errorResponse } from "../utils/apiResponse.js";
 const allowedFields = [
   "templateName",
   "certificateType",
+  "status",
+  "pageSize",
+  "orientation",
   "backgroundImage",
   "layoutJson",
   "fields",
@@ -47,6 +50,7 @@ export const createCertificateTemplate = asyncHandler(async (req, res) => {
   const certificateType = payload.certificateType || "custom";
 
   if (payload.isDefault === true) {
+    payload.status = "published";
     await unsetOtherDefaults({
       academyId: req.academyId,
       certificateType,
@@ -117,6 +121,7 @@ export const updateCertificateTemplate = asyncHandler(async (req, res) => {
   const certificateType = payload.certificateType || template.certificateType;
 
   if (payload.isDefault === true) {
+    payload.status = "published";
     await unsetOtherDefaults({
       academyId: req.academyId,
       certificateType,
@@ -125,6 +130,7 @@ export const updateCertificateTemplate = asyncHandler(async (req, res) => {
   }
 
   Object.assign(template, payload, {
+    version: Number(template.version || 1) + 1,
     updatedBy: req.user._id,
   });
 
@@ -146,11 +152,30 @@ export const deleteCertificateTemplate = asyncHandler(async (req, res) => {
     return errorResponse(res, "Certificate template not found", 404);
   }
 
+  const wasDefault = template.isDefault;
+  template.status = "archived";
+  template.isDefault = false;
   template.isDeleted = true;
   template.deletedAt = new Date();
   template.updatedBy = req.user._id;
 
   await template.save();
+
+  if (wasDefault) {
+    const replacement = await CertificateTemplate.findOne({
+      academy: req.academyId,
+      certificateType: template.certificateType,
+      _id: { $ne: template._id },
+      isDeleted: false,
+    }).sort({ status: -1, updatedAt: -1 });
+
+    if (replacement) {
+      replacement.isDefault = true;
+      replacement.status = "published";
+      replacement.updatedBy = req.user._id;
+      await replacement.save();
+    }
+  }
 
   return successResponse(res, "Certificate template deleted successfully", {
     template,

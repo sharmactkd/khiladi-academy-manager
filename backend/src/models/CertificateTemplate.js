@@ -1,5 +1,16 @@
 import mongoose from "mongoose";
 
+export const CERTIFICATE_TYPES = [
+  "belt",
+  "participation",
+  "achievement",
+  "championship",
+  "appreciation",
+  "course_completion",
+  "instructor_certification",
+  "custom",
+];
+
 const certificateTemplateSchema = new mongoose.Schema(
   {
     academy: {
@@ -17,9 +28,26 @@ const certificateTemplateSchema = new mongoose.Schema(
     },
     certificateType: {
       type: String,
-      enum: ["belt", "participation", "achievement", "custom"],
+      enum: CERTIFICATE_TYPES,
       default: "custom",
       index: true,
+    },
+    version: { type: Number, min: 1, default: 1 },
+    status: {
+      type: String,
+      enum: ["draft", "published", "archived"],
+      default: "draft",
+      index: true,
+    },
+    pageSize: {
+      type: String,
+      enum: ["a4"],
+      default: "a4",
+    },
+    orientation: {
+      type: String,
+      enum: ["landscape", "portrait"],
+      default: "landscape",
     },
     backgroundImage: {
       type: String,
