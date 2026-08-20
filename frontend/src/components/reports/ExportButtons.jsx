@@ -1,4 +1,5 @@
 import React from "react";
+import { Braces, FileDown, FileSpreadsheet, Printer } from "lucide-react";
 
 import {
   exportReportToExcel,
@@ -6,22 +7,24 @@ import {
   printElement,
   downloadJson,
 } from "../../utils/exportUtils";
+import styles from "../../pages/reports/ReportStudio.module.css";
 
 const ExportButtons = ({
   report,
   printElementId = "report-preview",
   disabled = false,
+  columns: selectedColumns,
 }) => {
   const rows = report?.rows || [];
-  const columns = report?.columns || [];
+  const columns = selectedColumns?.length ? selectedColumns : report?.columns || [];
   const title = report?.title || "Report";
   const fileName = report?.reportType || "report";
 
   return (
-    <div className="export-buttons">
+    <div className={styles.exportButtons}>
       <button
         type="button"
-        className="btn btn-secondary"
+        className={styles.excelAction}
         disabled={disabled || !rows.length}
         onClick={() =>
           exportReportToExcel({
@@ -32,12 +35,12 @@ const ExportButtons = ({
           })
         }
       >
-        Export Excel
+        <FileSpreadsheet size={15}/>Excel
       </button>
 
       <button
         type="button"
-        className="btn btn-secondary"
+        className={styles.pdfAction}
         disabled={disabled || !rows.length}
         onClick={() =>
           exportReportToPdf({
@@ -45,28 +48,30 @@ const ExportButtons = ({
             columns,
             fileName,
             title,
+            academyName: report?.academy?.name,
+            generatedAt: report?.generatedAt,
           })
         }
       >
-        Export PDF
+        <FileDown size={15}/>PDF
       </button>
 
       <button
         type="button"
-        className="btn btn-secondary"
+        className={styles.printAction}
         disabled={disabled || !report}
         onClick={() => printElement(printElementId)}
       >
-        Print
+        <Printer size={15}/>Print
       </button>
 
       <button
         type="button"
-        className="btn btn-secondary"
+        className={styles.jsonAction}
         disabled={disabled || !report}
         onClick={() => downloadJson({ data: report, fileName })}
       >
-        JSON
+        <Braces size={15}/>JSON
       </button>
     </div>
   );

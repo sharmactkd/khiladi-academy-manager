@@ -6,6 +6,7 @@ import {
   getSkillById,
   updateSkill,
   deleteSkill,
+  seedDefaultSkills,
 } from "../controllers/skillController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
@@ -36,6 +37,8 @@ router
   .route("/")
   .post(createSkillValidator, validateRequest, createSkill)
   .get(listSkillsValidator, validateRequest, getSkills);
+
+router.post("/seed-defaults", seedDefaultSkills);
 
 router
   .route("/:id")

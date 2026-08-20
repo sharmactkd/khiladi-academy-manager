@@ -12,6 +12,7 @@ import {
   generateIdCardsReport,
   generateBranchesReport,
 } from "../services/reportService.js";
+import ReportLog from "../models/ReportLog.js";
 
 const runReport = async ({
   req,
@@ -139,4 +140,20 @@ export const branchesReport = asyncHandler(async (req, res) => {
     generator: generateBranchesReport,
     successMessage: "Branches report generated successfully",
   });
+});
+
+export const reportHistory = asyncHandler(async (req, res) => {
+  const filter = { academy: req.academyId };
+
+  if (req.user?.role === "assistant_coach") {
+    filter.reportType = { $ne: "fees" };
+  }
+
+  const logs = await ReportLog.find(filter)
+    .populate("generatedBy", "name email")
+    .sort({ generatedAt: -1 })
+    .limit(20)
+    .lean();
+
+  return successResponse(res, "Report history fetched successfully", logs);
 });

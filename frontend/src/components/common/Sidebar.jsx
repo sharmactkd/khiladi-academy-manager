@@ -2,13 +2,11 @@ import {
   BadgeIndianRupee,
   BarChart3,
   Bell,
-  BookOpenCheck,
   Building2,
   CalendarCheck2,
   ChartNoAxesCombined,
   ChevronRight,
   CircleDollarSign,
-  ClipboardCheck,
   CreditCard,
   FileBadge,
   FileChartColumn,
@@ -349,24 +347,8 @@ const Sidebar = ({
             <SidebarSection title="Skills">
               <SidebarLink
                 to="/skills"
-                label="Skills"
+                label="Skills & Assessments"
                 icon={Sparkles}
-                onNavigate={handleNavigate}
-              />
-
-              {canManageOwnerOnly && (
-                <SidebarLink
-                  to="/skills/new"
-                  label="Add Skill"
-                  icon={BookOpenCheck}
-                  onNavigate={handleNavigate}
-                />
-              )}
-
-              <SidebarLink
-                to="/skill-assessments"
-                label="Skill Assessments"
-                icon={ClipboardCheck}
                 onNavigate={handleNavigate}
               />
             </SidebarSection>

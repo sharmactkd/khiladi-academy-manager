@@ -2,6 +2,7 @@ import { body, param, query } from "express-validator";
 import mongoose from "mongoose";
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
+const SKILL_CATEGORIES = ["technique", "kicks", "blocks", "stances", "hand_techniques", "self_defence", "poomsae", "sparring", "fitness", "flexibility", "strength", "stamina", "speed", "agility", "balance", "coordination", "discipline", "other"];
 
 export const skillIdValidator = [
   param("id").custom((value) => {
@@ -15,15 +16,7 @@ export const listSkillsValidator = [
 
   query("category")
     .optional({ checkFalsy: true })
-    .isIn([
-      "technique",
-      "poomsae",
-      "sparring",
-      "fitness",
-      "discipline",
-      "flexibility",
-      "other",
-    ])
+    .isIn(SKILL_CATEGORIES)
     .withMessage("Invalid skill category"),
 
   query("level")
@@ -35,6 +28,9 @@ export const listSkillsValidator = [
     .optional({ checkFalsy: true })
     .isIn(["active", "inactive", "all"])
     .withMessage("Invalid status"),
+  query("search").optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
+  query("page").optional().isInt({ min: 1 }),
+  query("limit").optional().isInt({ min: 1, max: 200 }),
 ];
 
 export const createSkillValidator = [
@@ -54,15 +50,7 @@ export const createSkillValidator = [
   body("category")
     .notEmpty()
     .withMessage("Category is required")
-    .isIn([
-      "technique",
-      "poomsae",
-      "sparring",
-      "fitness",
-      "discipline",
-      "flexibility",
-      "other",
-    ])
+    .isIn(SKILL_CATEGORIES)
     .withMessage("Invalid skill category"),
 
   body("level")
@@ -71,6 +59,16 @@ export const createSkillValidator = [
     .withMessage("Invalid skill level"),
 
   body("isActive").optional().isBoolean(),
+  body("skillCode").optional({ checkFalsy: true }).trim().isLength({ max: 30 }),
+  body("description").optional({ checkFalsy: true }).trim().isLength({ max: 600 }),
+  body("targetBelts").optional().isArray({ max: 20 }),
+  body("targetDans").optional().isArray({ max: 15 }),
+  body("tags").optional().isArray({ max: 20 }),
+  body("isRequired").optional().isBoolean(),
+  body("maxScore").optional().isFloat({ min: 1, max: 100 }),
+  body("assessmentIntervalDays").optional().isInt({ min: 1, max: 730 }),
+  body("displayOrder").optional().isInt({ min: 0 }),
+  body("rubric").optional().isArray({ max: 12 }),
 ];
 
 export const updateSkillValidator = [
@@ -90,15 +88,7 @@ export const updateSkillValidator = [
 
   body("category")
     .optional()
-    .isIn([
-      "technique",
-      "poomsae",
-      "sparring",
-      "fitness",
-      "discipline",
-      "flexibility",
-      "other",
-    ])
+    .isIn(SKILL_CATEGORIES)
     .withMessage("Invalid skill category"),
 
   body("level")
@@ -107,4 +97,14 @@ export const updateSkillValidator = [
     .withMessage("Invalid skill level"),
 
   body("isActive").optional().isBoolean(),
+  body("skillCode").optional({ checkFalsy: true }).trim().isLength({ max: 30 }),
+  body("description").optional({ checkFalsy: true }).trim().isLength({ max: 600 }),
+  body("targetBelts").optional().isArray({ max: 20 }),
+  body("targetDans").optional().isArray({ max: 15 }),
+  body("tags").optional().isArray({ max: 20 }),
+  body("isRequired").optional().isBoolean(),
+  body("maxScore").optional().isFloat({ min: 1, max: 100 }),
+  body("assessmentIntervalDays").optional().isInt({ min: 1, max: 730 }),
+  body("displayOrder").optional().isInt({ min: 0 }),
+  body("rubric").optional().isArray({ max: 12 }),
 ];

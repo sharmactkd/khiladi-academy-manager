@@ -109,10 +109,8 @@ import PerformanceAnalytics from "../pages/analytics/PerformanceAnalytics.jsx";
 import Reports from "../pages/reports/Reports.jsx";
 import ReportPreview from "../pages/reports/ReportPreview.jsx";
 
-import Skills from "../pages/skills/Skills.jsx";
-import AddSkill from "../pages/skills/AddSkill.jsx";
-import SkillAssessments from "../pages/skills/SkillAssessments.jsx";
-import StudentSkillProfile from "../pages/skills/StudentSkillProfile.jsx";
+import SkillsStudio from "../pages/skills/SkillsStudio.jsx";
+import LegacyStudentSkillRedirect from "../pages/skills/LegacyStudentSkillRedirect.jsx";
 
 import SmartTimeline from "../pages/smartTimeline/SmartTimeline.jsx";
 
@@ -356,11 +354,11 @@ const AppRoutes = () => {
 
             {/* SKILLS */}
 
-            <Route path="/skills" element={<Skills />} />
+            <Route path="/skills" element={<SkillsStudio />} />
 
             <Route
               path="/skill-assessments"
-              element={<SkillAssessments />}
+              element={<Navigate to="/skills?tab=assess" replace />}
             />
 
             {/* STUDENTS */}
@@ -387,7 +385,7 @@ const AppRoutes = () => {
 
             <Route
               path="/students/:studentId/skills"
-              element={<StudentSkillProfile />}
+              element={<LegacyStudentSkillRedirect />}
             />
 
             <Route
@@ -675,7 +673,7 @@ const AppRoutes = () => {
 
             <Route
               path="/skills/new"
-              element={<AddSkill />}
+              element={<Navigate to="/skills?tab=library&action=new" replace />}
             />
 
             <Route

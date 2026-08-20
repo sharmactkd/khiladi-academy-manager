@@ -40,6 +40,11 @@ export const getBranchesReport = async (params = {}) => {
   return res.data;
 };
 
+export const getReportHistory = async () => {
+  const res = await api.get("/reports/history");
+  return res.data;
+};
+
 export const getReportByType = async (reportType, params = {}) => {
   const reportMap = {
     students: getStudentsReport,

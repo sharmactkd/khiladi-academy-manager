@@ -77,6 +77,8 @@ export const exportReportToPdf = ({
   columns = [],
   fileName = "report",
   title = "Report",
+  academyName = "KHILADI Academy",
+  generatedAt = new Date(),
 }) => {
   const doc = new jsPDF({
     orientation: "landscape",
@@ -84,8 +86,17 @@ export const exportReportToPdf = ({
     format: "a4",
   });
 
-  doc.setFontSize(16);
-  doc.text(title, 40, 40);
+  doc.setTextColor(229, 9, 20);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text(String(academyName || "KHILADI Academy").toUpperCase(), 40, 28);
+  doc.setTextColor(17, 29, 53);
+  doc.setFontSize(17);
+  doc.text(title, 40, 48);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100, 116, 139);
+  doc.setFontSize(8);
+  doc.text(`Generated: ${new Date(generatedAt || Date.now()).toLocaleString("en-IN")}  |  ${rows.length} records`, 40, 62);
 
   const tableColumns = columns.length
     ? columns.map((column) => column.label || column.key)
@@ -102,13 +113,24 @@ export const exportReportToPdf = ({
   autoTable(doc, {
     head: [tableColumns],
     body: tableRows,
-    startY: 60,
+    startY: 74,
     styles: {
       fontSize: 8,
       cellPadding: 4,
     },
     headStyles: {
       fontStyle: "bold",
+      fillColor: [17, 29, 53],
+      textColor: [255, 255, 255],
+    },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    didDrawPage: (data) => {
+      doc.setDrawColor(229, 9, 20);
+      doc.setLineWidth(2);
+      doc.line(40, 18, doc.internal.pageSize.getWidth() - 40, 18);
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(7);
+      doc.text(`Page ${data.pageNumber}`, doc.internal.pageSize.getWidth() - 66, doc.internal.pageSize.getHeight() - 20);
     },
   });
 
@@ -130,15 +152,22 @@ export const printElement = (elementId) => {
     return;
   }
 
+  const documentStyles = [...document.querySelectorAll('style, link[rel="stylesheet"]')]
+    .map((node) => node.outerHTML)
+    .join("");
+
   printWindow.document.write(`
     <html>
       <head>
         <title>Print Report</title>
+        ${documentStyles}
         <style>
+          @page { size: A4 landscape; margin: 10mm; }
           body {
-            font-family: Arial, sans-serif;
-            padding: 24px;
+            margin: 0;
+            padding: 0;
             color: #111827;
+            background: #ffffff;
           }
 
           table {
@@ -146,23 +175,7 @@ export const printElement = (elementId) => {
             border-collapse: collapse;
           }
 
-          th,
-          td {
-            border: 1px solid #e5e7eb;
-            padding: 8px;
-            font-size: 12px;
-            text-align: left;
-          }
-
-          th {
-            background: #f3f4f6;
-          }
-
-          h1,
-          h2,
-          h3 {
-            margin-bottom: 12px;
-          }
+          button, details, .no-print { display: none !important; }
         </style>
       </head>
       <body>
@@ -171,10 +184,14 @@ export const printElement = (elementId) => {
     </html>
   `);
 
+  printWindow.onload = () => {
+    window.setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
   printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
-  printWindow.close();
 };
 
 export const downloadJson = ({ data, fileName = "report" }) => {

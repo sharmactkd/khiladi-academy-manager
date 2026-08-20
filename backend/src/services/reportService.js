@@ -166,42 +166,75 @@ export const generateStudentsReport = async ({ academyId, query, user }) => {
 };
 
 export const generateAttendanceReport = async ({ academyId, query, user }) => {
-  const filters = buildReportFilters({
-    academyId,
-    query,
-    user,
-    dateField: "date",
-  });
+  const filters = {
+    academy: objectId(academyId),
+  };
+
+  if (query.fromDate || query.toDate) {
+    filters.date = {};
+    if (query.fromDate) filters.date.$gte = startOfDay(query.fromDate);
+    if (query.toDate) filters.date.$lte = endOfDay(query.toDate);
+  }
+
+  if (query.batch) {
+    filters.batch = objectId(query.batch);
+  } else if (query.branch || user?.role === "assistant_coach") {
+    const batchFilter = { academy: objectId(academyId) };
+
+    if (query.branch) {
+      batchFilter.branch = objectId(query.branch);
+    } else {
+      batchFilter.branch = {
+        $in: assistantBranchIds(user)
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+          .map((id) => objectId(id)),
+      };
+    }
+
+    const batchIds = await Batch.find(batchFilter).distinct("_id");
+    filters.batch = { $in: batchIds };
+  }
 
   const records = await Attendance.find(filters)
-    .populate("student", "firstName lastName admissionNumber")
-    .populate("batch", "batchName")
-    .populate("branch", "branchName branchCode")
+    .populate("records.student", "firstName lastName admissionNumber")
+    .populate({
+      path: "batch",
+      select: "batchName branch",
+      populate: { path: "branch", select: "branchName branchCode" },
+    })
     .lean()
     .sort({ date: -1 });
 
-  const rows = records.map((record) => ({
-    date: record.date || "",
-    admissionNumber: record.student?.admissionNumber || "",
-    student: `${record.student?.firstName || ""} ${
-      record.student?.lastName || ""
-    }`.trim(),
-    batch: record.batch?.batchName || "",
-    branch: record.branch?.branchName || "",
-    status: record.status || "",
-    remarks: record.remarks || "",
-  }));
+  const rows = records.flatMap((attendance) =>
+    (attendance.records || []).map((record) => ({
+      date: attendance.date || "",
+      admissionNumber:
+        record.student?.admissionNumber || record.importedAdmissionNumber || "",
+      student:
+        `${record.student?.firstName || ""} ${record.student?.lastName || ""}`.trim() ||
+        record.importedName ||
+        "Imported student",
+      batch: attendance.batch?.batchName || "",
+      branch: attendance.batch?.branch?.branchName || "",
+      status: record.status || "",
+      remarks: record.note || record.importedExtraNote || "",
+    }))
+  );
+
+  const status = String(query.status || "").trim().toLowerCase();
+  const filteredRows = status ? rows.filter((row) => row.status === status) : rows;
 
   return normalizeReportResponse({
     reportType: "attendance",
     title: "Attendance Report",
     filters: query,
-    rows,
+    rows: filteredRows,
     summary: {
-      totalRecords: rows.length,
-      present: rows.filter((row) => row.status === "present").length,
-      absent: rows.filter((row) => row.status === "absent").length,
-      late: rows.filter((row) => row.status === "late").length,
+      totalRecords: filteredRows.length,
+      present: filteredRows.filter((row) => row.status === "present").length,
+      absent: filteredRows.filter((row) => row.status === "absent").length,
+      leave: filteredRows.filter((row) => row.status === "leave").length,
+      late: filteredRows.filter((row) => row.status === "late").length,
     },
     columns: [
       createColumn("date", "Date"),
@@ -286,6 +319,11 @@ export const generateBeltTestsReport = async ({ academyId, query, user }) => {
     user,
     dateField: "testDate",
   });
+
+  if (filters.status) {
+    filters.result = filters.status;
+    delete filters.status;
+  }
 
   const records = await BeltTest.find(filters)
     .populate("student", "firstName lastName admissionNumber")

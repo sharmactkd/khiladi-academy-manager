@@ -50,6 +50,10 @@ export const listSkillAssessmentsValidator = [
     .optional({ checkFalsy: true })
     .isISO8601()
     .withMessage("toDate must be valid date"),
+  query("category").optional({ checkFalsy: true }).trim().isLength({ max: 50 }),
+  query("status").optional({ checkFalsy: true }).isIn(["draft", "published"]),
+  query("page").optional().isInt({ min: 1 }),
+  query("limit").optional().isInt({ min: 1, max: 200 }),
 ];
 
 export const createSkillAssessmentValidator = [
@@ -86,6 +90,12 @@ export const createSkillAssessmentValidator = [
     .withMessage("Assessment date must be valid"),
 
   body("remarks").optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
+  body("status").optional().isIn(["draft", "published"]),
+  body("rubricScores").optional().isArray({ max: 12 }),
+  body("strengths").optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
+  body("improvementAreas").optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
+  body("trainingRecommendation").optional({ checkFalsy: true }).trim().isLength({ max: 800 }),
+  body("nextReviewDate").optional({ checkFalsy: true }).isISO8601(),
 ];
 
 export const updateSkillAssessmentValidator = [
@@ -107,4 +117,10 @@ export const updateSkillAssessmentValidator = [
     .withMessage("Assessment date must be valid"),
 
   body("remarks").optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
+  body("status").optional().isIn(["draft", "published"]),
+  body("rubricScores").optional().isArray({ max: 12 }),
+  body("strengths").optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
+  body("improvementAreas").optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
+  body("trainingRecommendation").optional({ checkFalsy: true }).trim().isLength({ max: 800 }),
+  body("nextReviewDate").optional({ checkFalsy: true }).isISO8601(),
 ];

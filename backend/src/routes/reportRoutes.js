@@ -9,6 +9,7 @@ import {
   certificatesReport,
   idCardsReport,
   branchesReport,
+  reportHistory,
 } from "../controllers/reportController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
@@ -28,6 +29,8 @@ router.use(allowAcademyManagement);
 router.use(resolveUserAcademy);
 router.use(requireResolvedAcademy);
 router.use(requireFeature("analytics"));
+
+router.get("/history", reportHistory);
 
 router.get("/students", reportFilterValidator, validateRequest, studentsReport);
 

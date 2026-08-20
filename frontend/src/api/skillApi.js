@@ -25,6 +25,11 @@ export const deleteSkill = async (id) => {
   return res.data;
 };
 
+export const seedDefaultSkills = async () => {
+  const res = await api.post("/skills/seed-defaults");
+  return res.data;
+};
+
 export const getSkillAssessments = async (params = {}) => {
   const res = await api.get("/skill-assessments", { params });
   return res.data;

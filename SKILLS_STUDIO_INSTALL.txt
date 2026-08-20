@@ -1,0 +1,36 @@
+KHILADI SKILLS & ASSESSMENT STUDIO
+
+Run these commands from the repository root in VS Code PowerShell.
+
+1. Create new folders (safe when folders already exist):
+
+$folders = @(
+  "backend/src/data",
+  "frontend/src/components/skills",
+  "frontend/src/pages/skills/hooks"
+)
+$folders | ForEach-Object { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
+
+2. Extract this ZIP into the repository root:
+
+Expand-Archive `
+  -Path ".\khiladi-skills-assessment-studio-complete-code.zip" `
+  -DestinationPath "." `
+  -Force
+
+3. Remove legacy pages/components after extraction:
+
+git rm --ignore-unmatch `
+  frontend/src/pages/skills/Skills.jsx `
+  frontend/src/pages/skills/AddSkill.jsx `
+  frontend/src/pages/skills/SkillAssessments.jsx `
+  frontend/src/pages/skills/StudentSkillProfile.jsx `
+  frontend/src/components/skills/SkillScoreCard.jsx
+
+4. Install/check and build:
+
+npm --prefix frontend install
+npm --prefix frontend run build
+git status --short
+
+The ZIP preserves backend/ and frontend/ paths. Do not extract it inside either subfolder.
