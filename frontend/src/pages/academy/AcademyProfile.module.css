@@ -1,6 +1,3 @@
-/* academy styles extracted from global.css. Selectors remain globally compatible during staged CSS Modules migration. */
-
-
 :global(.academy-profile) {
   --profile-red: #cf0006;
   --profile-red-dark: #a90005;
@@ -9,6 +6,8 @@
   --profile-border: #dfe5ec;
   --profile-surface: #ffffff;
   --profile-soft: #f7f9fc;
+  /* Change this value whenever the hero header logo needs resizing. */
+  --academy-hero-logo-size: 140px;
   width: 100%;
   color: var(--profile-navy);
 }
@@ -93,8 +92,8 @@
 }
 
 :global(.academy-profile-hero__logo-ring) {
-  width: 116px;
-  height: 116px;
+  width: var(--academy-hero-logo-size);
+  height: var(--academy-hero-logo-size);
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -383,16 +382,26 @@
 }
 
 :global(.academy-profile-logo-card__body) {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
+  align-items: stretch;
+  justify-content: stretch;
   padding: 14px 16px 20px;
 }
 
+:global(.academy-profile-logo-card) {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
 :global(.academy-profile-logo-preview) {
-  width: 220px;
-  height: 220px;
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  flex: 1 1 auto;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -408,8 +417,10 @@
 :global(.academy-profile-logo-preview img) {
   width: 100%;
   height: 100%;
+  display: block;
   object-fit: contain;
-  padding: 7px;
+  object-position: center;
+  padding: 10px;
 }
 
 :global(.academy-profile-logo-preview > svg) {
@@ -655,6 +666,60 @@
   border-style: dashed;
 }
 
+:global(.academy-profile-custom-chip) {
+  position: relative;
+  display: inline-flex;
+  min-height: 34px;
+  border: 1px dashed rgba(207, 0, 6, 0.42);
+  border-radius: 9px;
+  background: #ffffff;
+  color: #b00005;
+}
+
+:global(.academy-profile-custom-chip.is-selected) {
+  border-color: var(--profile-red);
+  background: var(--profile-red);
+  color: #ffffff;
+  box-shadow: 0 7px 16px rgba(207, 0, 6, 0.18);
+}
+
+:global(.academy-profile-custom-chip__select) {
+  min-height: 34px;
+  padding: 7px 15px !important;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+:global(.academy-profile-custom-chip__remove) {
+  position: absolute;
+  z-index: 2;
+  top: -7px;
+  right: -7px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0 !important;
+  border: 1px solid #ffffff;
+  border-radius: 50%;
+  background: var(--profile-navy);
+  color: #ffffff;
+  line-height: 0;
+  opacity: 0;
+  transform: scale(0.75);
+  pointer-events: none;
+}
+
+:global(.academy-profile-custom-chip:hover .academy-profile-custom-chip__remove),
+:global(.academy-profile-custom-chip:focus-within .academy-profile-custom-chip__remove) {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
 :global(.academy-profile-text-card) {
   overflow: hidden;
   padding-bottom: 15px;
@@ -746,6 +811,14 @@
   background: #fff5f5;
   color: var(--profile-red);
   cursor: pointer;
+  padding: 0 !important;
+  line-height: 0;
+  align-self: center;
+}
+
+:global(.academy-profile-affiliation-row__remove svg) {
+  display: block;
+  margin: 0;
 }
 
 :global(.academy-profile-affiliation-row__remove:hover) {

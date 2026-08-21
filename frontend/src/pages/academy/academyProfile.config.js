@@ -6,7 +6,8 @@ export const MARTIAL_ART_OPTIONS = [
   "Self Defence", "Fitness", "Yoga",
 ];
 
-export const CREDENTIAL_TYPES = ["affiliation", "recognition", "registration"];
+export const CREDENTIAL_TYPES = ["affiliation", "recognition", "registration", "other"];
+export const DEFAULT_CREDENTIAL_TYPES = ["affiliation", "recognition", "registration"];
 
 export const PROFILE_SECTIONS = [
   { id: "identity", label: "Identity", icon: Building2 },

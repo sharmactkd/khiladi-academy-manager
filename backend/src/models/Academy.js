@@ -59,7 +59,7 @@ const affiliationSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["affiliation", "recognition", "registration"],
+      enum: ["affiliation", "recognition", "registration", "other"],
       default: "affiliation",
     },
     organizationName: {

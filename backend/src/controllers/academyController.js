@@ -65,7 +65,7 @@ const normalizeAffiliations = (value) => {
 
   return parsed
     .map((item) => ({
-      type: ["affiliation", "recognition", "registration"].includes(item?.type)
+      type: ["affiliation", "recognition", "registration", "other"].includes(item?.type)
         ? item.type
         : "affiliation",
       organizationName: String(item?.organizationName || "").trim(),

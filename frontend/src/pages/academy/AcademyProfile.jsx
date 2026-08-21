@@ -2,19 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import {
   Award,
-  Building2,
-  Check,
-  Dumbbell,
   Globe2,
-  Image as ImageIcon,
   Info,
-  MapPin,
-  Plus,
-  Trash2,
-  Upload,
 } from "lucide-react";
 
-import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import SocialLinksField from "../../components/common/SocialLinksField.jsx";
 import { academyApi } from "../../api/academyApi.js";
@@ -23,31 +14,18 @@ import AcademyProfileActions from "./components/AcademyProfileActions.jsx";
 import AcademyProfileCardHeader from "./components/AcademyProfileCardHeader.jsx";
 import AcademyProfileNav from "./components/AcademyProfileNav.jsx";
 import AcademyProfileState from "./components/AcademyProfileState.jsx";
+import AcademyCredentialsField from "./components/AcademyCredentialsField.jsx";
+import AcademyContactFields from "./components/AcademyContactFields.jsx";
+import AcademyIdentityFields from "./components/AcademyIdentityFields.jsx";
+import AcademyLogoField from "./components/AcademyLogoField.jsx";
+import AcademyMartialArtsField from "./components/AcademyMartialArtsField.jsx";
 import {
   CREDENTIAL_TYPES,
+  DEFAULT_CREDENTIAL_TYPES,
   MARTIAL_ART_OPTIONS,
   PROFILE_SECTIONS,
 } from "./academyProfile.config.js";
 import "./AcademyProfile.module.css";
-
-const InstagramIcon = ({ size = 18, ...props }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <rect width="18" height="18" x="3" y="3" rx="5" ry="5" />
-    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37Z" />
-    <path d="M17.5 6.5h.01" />
-  </svg>
-);
 
 const createEmptyCredential = (type = "affiliation") => ({
   type,
@@ -55,7 +33,7 @@ const createEmptyCredential = (type = "affiliation") => ({
   registrationNumber: "",
 });
 
-const DEFAULT_CREDENTIALS = CREDENTIAL_TYPES.map(createEmptyCredential);
+const DEFAULT_CREDENTIALS = DEFAULT_CREDENTIAL_TYPES.map(createEmptyCredential);
 
 const normalizeCredentials = (value) => {
   const current = Array.isArray(value) ? value : [];
@@ -65,7 +43,7 @@ const normalizeCredentials = (value) => {
     registrationNumber: item?.registrationNumber || "",
   }));
 
-  CREDENTIAL_TYPES.forEach((type) => {
+  DEFAULT_CREDENTIAL_TYPES.forEach((type) => {
     if (!normalized.some((item) => item.type === type)) {
       normalized.push(createEmptyCredential(type));
     }
@@ -359,6 +337,19 @@ const AcademyProfile = () => {
     addCustomMartialArt();
   };
 
+  const removeCustomMartialArt = (item) => {
+    const normalizedItem = item.toLowerCase();
+    setCustomMartialArts((previous) =>
+      previous.filter((sport) => sport.toLowerCase() !== normalizedItem)
+    );
+    setAcademy((previous) => ({
+      ...previous,
+      martialArts: normalizeMartialArts(previous.martialArts).filter(
+        (sport) => sport.toLowerCase() !== normalizedItem
+      ),
+    }));
+  };
+
   const updateAffiliation = (index, field, value) => {
     setAcademy((previous) => ({
       ...previous,
@@ -505,180 +496,23 @@ const AcademyProfile = () => {
         <AcademyProfileNav sections={PROFILE_SECTIONS} />
 
         <div className="academy-profile-grid academy-profile-grid--top" id="identity">
-          <section className="academy-profile-card academy-profile-logo-card">
-            <AcademyProfileCardHeader eyebrow="Identity" icon={ImageIcon} title="Academy Logo" />
+          <AcademyLogoField logoPreview={logoPreview} onChange={handleLogoChange} />
+          <AcademyIdentityFields academy={academy} currentYear={currentYear} onChange={updateField} />
 
-            <div className="academy-profile-logo-card__body">
-              <label
-                className="academy-profile-logo-preview"
-                title="Upload or change academy logo"
-              >
-                {logoPreview ? (
-                  <img src={logoPreview} alt="Academy Logo" />
-                ) : (
-                  <ImageIcon aria-hidden="true" />
-                )}
-
-                <span className="academy-profile-logo-upload">
-                  <Upload size={20} aria-hidden="true" />
-                  <strong>Upload / Change Logo</strong>
-                  <small>JPG, PNG or WEBP · Maximum 2 MB</small>
-                </span>
-
-                <input
-                  className="academy-profile-logo-input"
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={handleLogoChange}
-                />
-              </label>
-            </div>
-          </section>
-
-          <section className="academy-profile-card academy-profile-basic-card">
-            <AcademyProfileCardHeader eyebrow="Identity" icon={Building2} title="Basic Information" />
-
-            <div className="academy-profile-fields academy-profile-fields--stacked">
-              <label>
-                Owner / Director Name
-                <input
-                  value={academy.ownerName || ""}
-                  onChange={(event) => updateField("ownerName", event.target.value)}
-                  placeholder="Owner / Director Name"
-                />
-              </label>
-
-              <label>
-                Academy Name
-                <input
-                  value={academy.academyName || ""}
-                  onChange={(event) => updateField("academyName", event.target.value)}
-                  placeholder="Academy Name"
-                />
-              </label>
-
-              <label>
-                Since Year
-                <select
-                  value={academy.since || ""}
-                  onChange={(event) => updateField("since", event.target.value)}
-                >
-                  <option value="">Select Year</option>
-                  {Array.from({ length: currentYear - 1949 }, (_, index) => {
-                    const year = currentYear - index;
-                    return (
-                      <option key={year} value={year}>
-                        {year} ({currentYear - year} Years)
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
-            </div>
-          </section>
-
-          <section className="academy-profile-card academy-profile-contact-card" id="contact">
-            <AcademyProfileCardHeader eyebrow="Contact" icon={MapPin} title="Phone & Location" />
-
-            <div className="academy-profile-location-fields">
-              <PhoneLocationFields
-                countryCode={academy.countryCode || "+91"}
-                phone={academy.phone || ""}
-                phoneNumbers={normalizePhoneNumbers(academy.phoneNumbers, academy)}
-                maxPhones={4}
-                country={academy.country || "India"}
-                state={academy.state || ""}
-                city={academy.city || ""}
-                phoneLabel="Phone"
-                onChange={updateField}
-              />
-
-              <label className="academy-profile-contact-email">
-                Email
-                <input
-                  type="email"
-                  value={academy.email || ""}
-                  onChange={(event) => updateField("email", event.target.value)}
-                  placeholder="academy@example.com"
-                />
-              </label>
-
-              <label className="academy-profile-contact-address">
-                Address
-                <textarea
-                  value={academy.address || ""}
-                  onChange={(event) => updateField("address", event.target.value)}
-                  placeholder="Enter complete academy address"
-                  rows={3}
-                />
-              </label>
-            </div>
-          </section>
+          <AcademyContactFields academy={academy} normalizePhoneNumbers={normalizePhoneNumbers} onChange={updateField} />
         </div>
 
-        <section className="academy-profile-card academy-profile-martial" id="martial-arts">
-          <AcademyProfileCardHeader eyebrow="Training" icon={Dumbbell} title="Sports / Martial Arts" />
-
-          <div className="academy-profile-martial__chips">
-            {MARTIAL_ART_OPTIONS.map((item) => {
-              const active = selectedMartialArts.includes(item);
-              return (
-                <button
-                  type="button"
-                  key={item}
-                  className={active ? "is-selected" : ""}
-                  aria-pressed={active}
-                  onClick={() => toggleMartialArt(item)}
-                >
-                  {active ? <Check size={14} aria-hidden="true" /> : null}
-                  {item}
-                </button>
-              );
-            })}
-
-            {customMartialArts.map((item) => {
-              const active = selectedMartialArts.some(
-                (selectedItem) =>
-                  selectedItem.toLowerCase() === item.toLowerCase()
-              );
-
-              return (
-                <button
-                  type="button"
-                  key={`custom-${item}`}
-                  className={`${active ? "is-selected" : ""} is-custom`.trim()}
-                  aria-pressed={active}
-                  onClick={() => toggleMartialArt(item)}
-                >
-                  {active ? <Check size={14} aria-hidden="true" /> : null}
-                  {item}
-                </button>
-              );
-            })}
-
-            <div className="academy-profile-custom-art">
-              <Plus size={15} aria-hidden="true" />
-              <input
-                aria-label="Add custom sport or martial art"
-                placeholder="Add custom sport / martial art"
-                value={customSport}
-                onChange={(event) => setCustomSport(event.target.value)}
-                onKeyDown={handleCustomSportKeyDown}
-              />
-
-              {customSport.trim() ? (
-                <button
-                  type="button"
-                  className="academy-profile-custom-art__add"
-                  onClick={addCustomMartialArt}
-                >
-                  <Plus size={13} aria-hidden="true" />
-                  Add Sport
-                </button>
-              ) : null}
-            </div>
-          </div>
-        </section>
+        <AcademyMartialArtsField
+          customSport={customSport}
+          customSports={customMartialArts}
+          options={MARTIAL_ART_OPTIONS}
+          selectedSports={selectedMartialArts}
+          onAdd={addCustomMartialArt}
+          onCustomSportChange={setCustomSport}
+          onCustomSportKeyDown={handleCustomSportKeyDown}
+          onRemoveCustom={removeCustomMartialArt}
+          onToggle={toggleMartialArt}
+        />
 
         <div className="academy-profile-grid academy-profile-grid--editorial academy-profile-grid--editorial-single" id="about">
           <section className="academy-profile-card academy-profile-text-card">
@@ -694,79 +528,12 @@ const AcademyProfile = () => {
         </div>
 
         <div className="academy-profile-grid academy-profile-grid--bottom">
-          <section className="academy-profile-card academy-profile-affiliations" id="affiliations">
-            <AcademyProfileCardHeader eyebrow="Credentials" icon={Award} title="Affiliation / Recognition / Registration" />
-
-            <div className="academy-profile-affiliations__head" aria-hidden="true">
-              <span>Type</span>
-              <span>Organization Name</span>
-              <span>Number</span>
-              <span>Action</span>
-            </div>
-
-            <div className="academy-profile-affiliations__rows">
-              {(academy.affiliations || DEFAULT_CREDENTIALS).map(
-                (item, index) => (
-                  <div className="academy-profile-affiliation-row" key={index}>
-                    <label>
-                      <span>Type</span>
-                      <select
-                        value={item.type || "affiliation"}
-                        onChange={(event) =>
-                          updateAffiliation(index, "type", event.target.value)
-                        }
-                      >
-                        <option value="affiliation">Affiliation</option>
-                        <option value="recognition">Recognition</option>
-                        <option value="registration">Registration</option>
-                      </select>
-                    </label>
-
-                    <label>
-                      <span>Organization Name</span>
-                      <input
-                        value={item.organizationName || ""}
-                        onChange={(event) =>
-                          updateAffiliation(index, "organizationName", event.target.value)
-                        }
-                        placeholder="Association / Federation / Trust"
-                      />
-                    </label>
-
-                    <label>
-                      <span>Number</span>
-                      <input
-                        value={item.registrationNumber || ""}
-                        onChange={(event) =>
-                          updateAffiliation(index, "registrationNumber", event.target.value)
-                        }
-                        placeholder="Certificate / Registration No."
-                      />
-                    </label>
-
-                    <button
-                      type="button"
-                      className="academy-profile-affiliation-row__remove"
-                      onClick={() => removeAffiliation(index)}
-                      aria-label={`Remove affiliation ${index + 1}`}
-                      title="Remove"
-                    >
-                      <Trash2 size={17} aria-hidden="true" />
-                    </button>
-                  </div>
-                )
-              )}
-            </div>
-
-            <button
-              type="button"
-              className="academy-profile-add-row"
-              onClick={addAffiliation}
-            >
-              <Plus size={16} aria-hidden="true" />
-              Add More
-            </button>
-          </section>
+          <AcademyCredentialsField
+            items={academy.affiliations || DEFAULT_CREDENTIALS}
+            onAdd={addAffiliation}
+            onChange={updateAffiliation}
+            onRemove={removeAffiliation}
+          />
 
           <section className="academy-profile-card academy-profile-social" id="social">
             <AcademyProfileCardHeader eyebrow="Online Presence" icon={Globe2} title="Website & Social Links" />

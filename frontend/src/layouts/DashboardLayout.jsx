@@ -3,10 +3,12 @@ import { Outlet, useLocation } from "react-router-dom";
 
 import Navbar from "../components/common/Navbar.jsx";
 import Sidebar from "../components/common/Sidebar.jsx";
+import LegacyRouteHero, { isLegacyThemedRoute } from "../components/common/LegacyRouteHero.jsx";
 
 const DashboardLayout = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const legacyTheme = isLegacyThemedRoute(location.pathname);
 
   const openSidebar = () => {
     setSidebarOpen(true);
@@ -64,7 +66,10 @@ const DashboardLayout = () => {
         <Navbar onMenuClick={openSidebar} />
 
         <section className="dashboard-content">
-          <Outlet />
+          <div data-legacy-theme={legacyTheme ? "true" : "false"}>
+            {legacyTheme ? <LegacyRouteHero /> : null}
+            <Outlet />
+          </div>
         </section>
       </main>
     </div>

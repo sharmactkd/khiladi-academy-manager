@@ -4,9 +4,7 @@ import {
   Bell,
   Building2,
   CalendarCheck2,
-  ChartNoAxesCombined,
   ChevronRight,
-  CircleDollarSign,
   CreditCard,
   FileBadge,
   FileChartColumn,
@@ -299,38 +297,8 @@ const Sidebar = ({
             <SidebarSection title="Analytics">
               <SidebarLink
                 to="/analytics"
-                label="Dashboard Analytics"
+                label="Analytics Studio"
                 icon={BarChart3}
-                onNavigate={handleNavigate}
-              />
-
-              <SidebarLink
-                to="/analytics/students"
-                label="Student Analytics"
-                icon={ChartNoAxesCombined}
-                onNavigate={handleNavigate}
-              />
-
-              <SidebarLink
-                to="/analytics/attendance"
-                label="Attendance Analytics"
-                icon={CalendarCheck2}
-                onNavigate={handleNavigate}
-              />
-
-              {canManageFees && (
-                <SidebarLink
-                  to="/analytics/fees"
-                  label="Fees Analytics"
-                  icon={CircleDollarSign}
-                  onNavigate={handleNavigate}
-                />
-              )}
-
-              <SidebarLink
-                to="/analytics/performance"
-                label="Performance Analytics"
-                icon={ChartNoAxesCombined}
                 onNavigate={handleNavigate}
               />
 
