@@ -6,8 +6,11 @@
 :global(.branches-heading h2) { margin:3px 0 2px; font-size:27px; letter-spacing:-.035em; }
 :global(.branches-heading p) { margin:0; color:var(--br-muted); font-size:12px; }
 :global(.branches-heading .btn) { gap:7px; white-space:nowrap; }
-:global(.branches-hero-refresh) { display:inline-flex; align-items:center; gap:7px; padding:8px 12px; border:1px solid #f2b9bc; border-radius:9px; color:var(--br-red); background:#fff; font-weight:800; cursor:pointer; }
-:global(.branches-hero-refresh:disabled) { opacity:.65; cursor:wait; }
+:global(.branches-page .branches-add-button),
+:global(.branches-page .branches-add-button:link),
+:global(.branches-page .branches-add-button:visited) { border:1px solid var(--br-red) !important; color:#fff !important; background:var(--br-red) !important; box-shadow:0 7px 16px rgba(207,0,6,.18) !important; }
+:global(.branches-page .branches-add-button:hover),
+:global(.branches-page .branches-add-button:focus-visible) { border-color:#a90005 !important; color:#fff !important; background:#a90005 !important; }
 :global(.branches-stats) { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
 :global(.branches-stat) { display:flex; align-items:center; gap:12px; min-height:88px; padding:14px 16px; border:1px solid var(--br-line); border-radius:14px; background:#fff; box-shadow:0 5px 18px rgba(8,22,47,.045); }
 :global(.branches-stat > span) { width:43px; height:43px; flex:0 0 43px; display:grid; place-items:center; border-radius:50%; color:var(--br-red); background:#feecee; }

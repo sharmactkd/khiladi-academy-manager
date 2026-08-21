@@ -22,7 +22,6 @@ const useOwnerDashboard = () => {
   const [attendanceAnalytics, setAttendanceAnalytics] = useState(null);
   const [feesAnalytics, setFeesAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   const canManageRecords = [
@@ -42,9 +41,8 @@ const useOwnerDashboard = () => {
   );
 
   const loadDashboard = useCallback(
-    async ({ quiet = false } = {}) => {
-      if (quiet) setRefreshing(true);
-      else setLoading(true);
+    async () => {
+      setLoading(true);
       setError("");
 
       try {
@@ -125,7 +123,6 @@ const useOwnerDashboard = () => {
         );
       } finally {
         setLoading(false);
-        setRefreshing(false);
       }
     },
     [canManageBilling, canManageFees, canManageRecords, user?.role]
@@ -145,7 +142,6 @@ const useOwnerDashboard = () => {
     attendanceAnalytics,
     feesAnalytics,
     loading,
-    refreshing,
     error,
     canManageRecords,
     canManageFees,

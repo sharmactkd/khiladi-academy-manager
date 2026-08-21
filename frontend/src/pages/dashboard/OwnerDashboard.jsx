@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Award, BadgeIndianRupee, CalendarCheck2, CircleDollarSign, GraduationCap, IndianRupee, RefreshCw, Sparkles, UserCheck, UserRoundX, Users } from "lucide-react";
+import { Award, BadgeIndianRupee, CalendarCheck2, CircleDollarSign, GraduationCap, IndianRupee, Sparkles, UserCheck, UserRoundX, Users } from "lucide-react";
 
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
@@ -121,12 +121,6 @@ const OwnerDashboard = () => {
           { type: "branches", value: activeBranchCount, label: `Active ${activeBranchCount === 1 ? "Branch" : "Branches"}` },
           { type: "batches", value: activeBatchCount, label: `Active ${activeBatchCount === 1 ? "Batch" : "Batches"}` },
         ]}
-        action={
-          <button type="button" className="owner-dashboard__refresh" onClick={() => data.loadDashboard({ quiet: true })} disabled={data.refreshing} aria-label="Refresh dashboard" title="Refresh dashboard">
-            <RefreshCw size={17} className={data.refreshing ? "is-spinning" : ""} />
-            {data.refreshing ? "Refreshing" : "Refresh"}
-          </button>
-        }
       />
 
       <DashboardErrorBanner error={data.error} onRetry={() => data.loadDashboard()} />

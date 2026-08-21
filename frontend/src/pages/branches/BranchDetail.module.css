@@ -1,7 +1,6 @@
 /* branchDetail styles extracted from global.css. Selectors remain globally compatible during staged CSS Modules migration. */
 
 :global(.branch-detail-page){display:grid;gap:14px}
-:global(.branch-detail-hero-refresh){display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:8px 12px;border:1px solid #f2b9bc;border-radius:9px;background:#fff;color:var(--branch-red);font-weight:800}
 :global(.branch-detail-breadcrumb){display:flex;align-items:center;gap:8px;padding:1px 3px;color:var(--branch-muted);font-size:11px;font-weight:700}
 :global(.branch-detail-breadcrumb a){color:var(--branch-red)}
 :global(.branch-detail-breadcrumb strong){overflow:hidden;color:#334155;text-overflow:ellipsis;white-space:nowrap}

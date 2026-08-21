@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
 
 import { academyApi } from "../../../api/academyApi.js";
 import { batchApi } from "../../../api/batchApi.js";
@@ -14,20 +13,14 @@ const BatchAcademyHeader = ({ branch = null }) => {
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const loadHeader = useCallback(async ({ quiet = false } = {}) => {
-    if (quiet) setRefreshing(true);
-    try {
-      const [academyResult, branchesResult, batchesResult] = await Promise.allSettled([
-        academyApi.getMyAcademy(), getBranches({ status: "all" }), batchApi.getAll(),
-      ]);
-      if (academyResult.status === "fulfilled") setAcademy(academyResult.value?.data?.data?.academy || academyResult.value?.data?.academy || null);
-      setBranches(branchesResult.status === "fulfilled" ? unwrapList(branchesResult.value) : []);
-      setBatches(batchesResult.status === "fulfilled" ? unwrapList(batchesResult.value) : []);
-    } finally {
-      setRefreshing(false);
-    }
+  const loadHeader = useCallback(async () => {
+    const [academyResult, branchesResult, batchesResult] = await Promise.allSettled([
+      academyApi.getMyAcademy(), getBranches({ status: "all" }), batchApi.getAll(),
+    ]);
+    if (academyResult.status === "fulfilled") setAcademy(academyResult.value?.data?.data?.academy || academyResult.value?.data?.academy || null);
+    setBranches(branchesResult.status === "fulfilled" ? unwrapList(branchesResult.value) : []);
+    setBatches(batchesResult.status === "fulfilled" ? unwrapList(batchesResult.value) : []);
   }, []);
 
   useEffect(() => { loadHeader(); }, [loadHeader]);
@@ -54,12 +47,6 @@ const BatchAcademyHeader = ({ branch = null }) => {
         { key: "branches", type: "branches", value: activeBranches.length, label: "Active Branches" },
         { key: "batches", type: "batches", value: activeBatchCount, label: "Active Batches" },
       ]}
-      action={
-        <button type="button" className="add-branch-hero-refresh" onClick={() => loadHeader({ quiet: true })} disabled={refreshing}>
-          <RefreshCw size={16} className={refreshing ? "is-spinning" : ""} />
-          {refreshing ? "Refreshing" : "Refresh"}
-        </button>
-      }
     />
   );
 };

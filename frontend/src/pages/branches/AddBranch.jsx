@@ -7,7 +7,6 @@ import {
   Languages,
   MapPin,
   Plus,
-  RefreshCw,
   Save,
   Settings2,
   ShieldCheck,
@@ -38,40 +37,34 @@ const AddBranch = () => {
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
-  const [headerRefreshing, setHeaderRefreshing] = useState(false);
   const [savingMode, setSavingMode] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const loadHeaderData = useCallback(async ({ quiet = false } = {}) => {
-    if (quiet) setHeaderRefreshing(true);
-    try {
-      const [academyResult, branchesResult, batchesResult] =
-        await Promise.allSettled([
-          academyApi.getMyAcademy(),
-          getBranches({ status: "all" }),
-          batchApi.getAll(),
-        ]);
-      if (academyResult.status === "fulfilled") {
-        setAcademy(
-          academyResult.value?.data?.data?.academy ||
-            academyResult.value?.data?.academy ||
-            null,
-        );
-      }
-      setBranches(
-        branchesResult.status === "fulfilled"
-          ? unwrapList(branchesResult.value)
-          : [],
+  const loadHeaderData = useCallback(async () => {
+    const [academyResult, branchesResult, batchesResult] =
+      await Promise.allSettled([
+        academyApi.getMyAcademy(),
+        getBranches({ status: "all" }),
+        batchApi.getAll(),
+      ]);
+    if (academyResult.status === "fulfilled") {
+      setAcademy(
+        academyResult.value?.data?.data?.academy ||
+          academyResult.value?.data?.academy ||
+          null,
       );
-      setBatches(
-        batchesResult.status === "fulfilled"
-          ? unwrapList(batchesResult.value)
-          : [],
-      );
-    } finally {
-      setHeaderRefreshing(false);
     }
+    setBranches(
+      branchesResult.status === "fulfilled"
+        ? unwrapList(branchesResult.value)
+        : [],
+    );
+    setBatches(
+      batchesResult.status === "fulfilled"
+        ? unwrapList(batchesResult.value)
+        : [],
+    );
   }, []);
 
   useEffect(() => {
@@ -198,7 +191,7 @@ const AddBranch = () => {
           `${payload.branchName} created successfully. You can add another branch.`,
         );
         window.scrollTo({ top: 0, behavior: "smooth" });
-        await loadHeaderData({ quiet: true });
+        await loadHeaderData();
       } else {
         navigate("/branches", {
           state: { message: `${payload.branchName} created successfully.` },
@@ -240,20 +233,6 @@ const AddBranch = () => {
             label: `Active ${activeBatchCount === 1 ? "Batch" : "Batches"}`,
           },
         ]}
-        action={
-          <button
-            type="button"
-            className="add-branch-hero-refresh"
-            onClick={() => loadHeaderData({ quiet: true })}
-            disabled={headerRefreshing}
-          >
-            <RefreshCw
-              size={16}
-              className={headerRefreshing ? "is-spinning" : ""}
-            />
-            {headerRefreshing ? "Refreshing" : "Refresh"}
-          </button>
-        }
       />
 
       <nav className="add-branch-breadcrumb" aria-label="Breadcrumb">

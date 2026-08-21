@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Award, Building2, CalendarCheck2, CalendarDays, CheckCircle2,
-  Crown, Edit3, IndianRupee, Languages, Mail, MapPin, Phone, RefreshCw,
+  Crown, Edit3, IndianRupee, Languages, Mail, MapPin, Phone,
   ShieldCheck, UserRound, Users, UsersRound, Warehouse, XCircle,
 } from "lucide-react";
 
@@ -77,11 +77,10 @@ const BranchDetail = () => {
   const [branch, setBranch] = useState(null);
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const loadPage = useCallback(async ({ quiet = false } = {}) => {
-    quiet ? setRefreshing(true) : setLoading(true);
+  const loadPage = useCallback(async () => {
+    setLoading(true);
     setError("");
     try {
       const [branchResult, academyResult] = await Promise.allSettled([
@@ -99,7 +98,6 @@ const BranchDetail = () => {
       setError(requestError?.response?.data?.message || "Failed to load branch.");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [id]);
 
@@ -151,7 +149,6 @@ const BranchDetail = () => {
           { key: "status", type: "profile", value: branch.isActive !== false ? "Active" : "Inactive", label: "Branch Status" },
           { key: "since", type: "since", value: branch.branchSince || "—", label: "Established" },
         ]}
-        action={<button type="button" className="branch-detail-hero-refresh" onClick={() => loadPage({ quiet: true })} disabled={refreshing}><RefreshCw size={16} className={refreshing ? "is-spinning" : ""} />{refreshing ? "Refreshing" : "Refresh"}</button>}
       />
 
       <nav className="branch-detail-breadcrumb" aria-label="Breadcrumb"><Link to="/branches">Branches</Link><span>/</span><strong>{branch.branchName}</strong></nav>

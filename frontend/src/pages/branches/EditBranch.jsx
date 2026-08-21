@@ -151,15 +151,13 @@ const EditBranch = () => {
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
-  const [headerRefreshing, setHeaderRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingMode, setSavingMode] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const loadPage = useCallback(async ({ quiet = false } = {}) => {
-    if (quiet) setHeaderRefreshing(true);
-    else setLoading(true);
+  const loadPage = useCallback(async () => {
+    setLoading(true);
     setError("");
     try {
       const [branchResult, academyResult, branchesResult, batchesResult] = await Promise.allSettled([
@@ -177,7 +175,6 @@ const EditBranch = () => {
     } catch (requestError) {
       setError(requestError?.response?.data?.message || "Failed to load branch.");
     } finally {
-      setHeaderRefreshing(false);
       setLoading(false);
     }
   }, [id]);
@@ -305,7 +302,6 @@ const EditBranch = () => {
           { key: "branches", type: "branches", value: activeBranches.length, label: `Active ${activeBranches.length === 1 ? "Branch" : "Branches"}` },
           { key: "batches", type: "batches", value: activeBatchCount, label: `Active ${activeBatchCount === 1 ? "Batch" : "Batches"}` },
         ]}
-        action={<button type="button" className="add-branch-hero-refresh" onClick={() => loadPage({ quiet: true })} disabled={headerRefreshing}><RefreshCw size={16} className={headerRefreshing ? "is-spinning" : ""} />{headerRefreshing ? "Refreshing" : "Refresh"}</button>}
       />
 
       <nav className="add-branch-breadcrumb" aria-label="Breadcrumb"><Link to="/branches">Branches</Link><span>/</span><Link to={"/branches/" + id}>{form.branchName}</Link><span>/</span><strong>Edit</strong></nav>

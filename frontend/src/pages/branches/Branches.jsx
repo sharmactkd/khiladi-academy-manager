@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Crown,
   Plus,
-  RefreshCw,
   Search,
   XCircle,
 } from "lucide-react";
@@ -34,12 +33,11 @@ const Branches = () => {
   const [appliedFilters, setAppliedFilters] = useState({ search: "", status: "active" });
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [deactivatingId, setDeactivatingId] = useState("");
   const [error, setError] = useState("");
 
   const loadPage = useCallback(async ({ quiet = false, nextFilters = appliedFilters } = {}) => {
-    quiet ? setRefreshing(true) : setLoading(true);
+    if (!quiet) setLoading(true);
     setError("");
 
     try {
@@ -68,7 +66,6 @@ const Branches = () => {
       setError(requestError?.response?.data?.message || "Failed to load branches. Please try again.");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [appliedFilters]);
 
@@ -137,17 +134,11 @@ const Branches = () => {
           { key: "branches", type: "branches", value: activeBranches.length, label: `Active ${activeBranches.length === 1 ? "Branch" : "Branches"}` },
           { key: "batches", type: "batches", value: activeBatchCount, label: `Active ${activeBatchCount === 1 ? "Batch" : "Batches"}` },
         ]}
-        action={
-          <button className="branches-hero-refresh" type="button" onClick={() => loadPage({ quiet: true })} disabled={refreshing}>
-            <RefreshCw size={16} className={refreshing ? "is-spinning" : ""} />
-            {refreshing ? "Refreshing" : "Refresh"}
-          </button>
-        }
       />
 
       <header className="branches-heading">
         <div><span>Academy network</span><h2>Branches</h2><p>Manage every academy location, coach and operational status from one workspace.</p></div>
-        <Link to="/branches/new" className="btn btn-primary"><Plus size={17} /> Add Branch</Link>
+        <Link to="/branches/new" className="btn btn-primary branches-add-button"><Plus size={17} /> Add Branch</Link>
       </header>
 
       <MetricGrid className="branches-stats" items={[
@@ -175,7 +166,7 @@ const Branches = () => {
       <section className="branches-results" aria-busy={loading}>
         {loading ? <div className="branches-state"><span className="branches-spinner" /><strong>Loading branches…</strong></div> : visibleBranches.length ? (
           <div className="branches-card-list">{visibleBranches.map((branch) => <BranchCard key={branch._id} branch={branch} busy={deactivatingId===branch._id} onOpen={(item)=>navigate(`/branches/${item._id}`)} onDeactivate={handleDeactivate}/>)}</div>
-        ) : <div className="branches-state"><Building2 size={34} /><strong>No branches found</strong><p>Try another filter or add your first branch.</p><Link to="/branches/new" className="btn btn-primary"><Plus size={16} /> Add Branch</Link></div>}
+        ) : <div className="branches-state"><Building2 size={34} /><strong>No branches found</strong><p>Try another filter or add your first branch.</p><Link to="/branches/new" className="btn btn-primary branches-add-button"><Plus size={16} /> Add Branch</Link></div>}
 
         {!loading && branches.length > PAGE_SIZE ? <footer className="branches-pagination"><span>Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, branches.length)} of {branches.length}</span><div><button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)}>Previous</button>{Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => <button type="button" key={page} className={currentPage === page ? "is-active" : ""} onClick={() => setCurrentPage(page)}>{page}</button>)}<button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => page + 1)}>Next</button></div></footer> : null}
       </section>
