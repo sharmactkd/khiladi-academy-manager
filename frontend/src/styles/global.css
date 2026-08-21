@@ -2766,8 +2766,8 @@ Mobile par close button visible hoga.
 .operations-selection-section__body { display:grid; gap:12px; padding:15px 16px 17px; }
 .operations-field-label { display:block; color:#334155; font-size:12px; font-weight:800; }
 .operations-tag-grid { display:flex; flex-wrap:wrap; gap:8px; }
-.operations-tag-grid button,
-.operations-belt-tags button {
+.operations-tag-grid > button,
+.operations-belt-tags > button {
   min-height:36px;
   display:inline-flex;
   align-items:center;
@@ -2781,10 +2781,10 @@ Mobile par close button visible hoga.
   font-size:11px;
   font-weight:800;
 }
-.operations-tag-grid button:hover,
-.operations-belt-tags button:hover { border-color:#cf0006; background:#fff7f7; }
-.operations-tag-grid button.is-selected,
-.operations-belt-tags button.is-selected { border-color:#cf0006; color:#fff; background:#cf0006; box-shadow:0 7px 16px rgba(207,0,6,.18); }
+.operations-tag-grid > button:hover,
+.operations-belt-tags > button:hover { border-color:#cf0006; background:#fff7f7; }
+.operations-tag-grid > button.is-selected,
+.operations-belt-tags > button.is-selected { border-color:#cf0006; color:#fff; background:#cf0006; box-shadow:0 7px 16px rgba(207,0,6,.18); }
 .operations-custom-tag {
   width:min(520px,100%);
   min-width:270px;

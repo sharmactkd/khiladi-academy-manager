@@ -6,6 +6,7 @@ import { academyApi } from "../../api/academyApi.js";
 import { beltTestApi } from "../../api/beltTestApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
 import { TAEKWONDO_BELTS, TAEKWONDO_BELT_ORDER, TAEKWONDO_DAN_RANKS } from "../../components/taekwondoBelts/taekwondoBelts.js";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
@@ -13,8 +14,6 @@ import baseStyles from "./AddBeltTest.module.css";
 import styles from "./EditBeltTest.module.css";
 
 const EMPTY_FORM = { currentBelt: "", currentDanRank: "", promotedToBelt: "", promotedToDanRank: "", marks: "", outOf: "", testDate: "", result: "pending", examinerName: "", remarks: "", certificateNumber: "", certificateUrl: "" };
-const BELT_COLORS = { White: "#f8fafc", Yellow: "#f4cd28", Green: "#23904b", "Green One": "#23904b", Blue: "#2674ce", "Blue One": "#2674ce", Red: "#df2731", "Red One": "#df2731", Black: "#111827" };
-const beltStyle = (belt) => ({ "--belt-color": BELT_COLORS[belt] || "#94a3b8", "--belt-text": ["White", "Yellow"].includes(belt) ? "#16243a" : "#ffffff" });
 const getPayload = (response) => response?.data?.data || response?.data || response || {};
 const normalizeAcademy = (response) => getPayload(response)?.academy || null;
 const normalizeBranches = (response) => { const list = response?.data?.data || response?.data || []; return Array.isArray(list) ? list.filter((item) => item?.isActive !== false) : []; };
@@ -95,7 +94,7 @@ const EditBeltTest = () => {
   const renderBeltSelector = (name, value, label) => {
     const isPromoted = name === "promotedToBelt";
     const currentOrder = TAEKWONDO_BELT_ORDER[form.currentBelt];
-    return <fieldset className={baseStyles.beltField}><div className={baseStyles.beltFieldHeader}><legend>{label} *</legend>{value ? <button type="button" onClick={() => update(name, "")}><X size={12}/>Clear</button> : null}</div><div className={baseStyles.beltTags}>{TAEKWONDO_BELTS.map((belt) => { const beltOrder = TAEKWONDO_BELT_ORDER[belt]; const locked = Boolean(value && value !== belt); const belowCurrent = Boolean(isPromoted && currentOrder !== undefined && (beltOrder < currentOrder || (beltOrder === currentOrder && belt !== "Black"))); const disabled = locked || belowCurrent; return <button key={belt} type="button" className={`${value === belt ? baseStyles.selectedBelt : ""} ${disabled ? baseStyles.disabledBelt : ""}`} style={beltStyle(belt)} disabled={disabled} title={belowCurrent ? "Promoted belt must be above current belt" : locked ? "Clear selected rank to choose another" : belt} onClick={() => update(name, value === belt ? "" : belt)}><i/><span>{belt}</span>{value === belt ? <Check size={13}/> : null}</button>; })}</div><p>{value ? "Selected tag ya Clear par click karke rank change karein." : isPromoted && form.currentBelt ? "Current rank se upar ki belt choose karein." : "Belt rank choose karein."}</p></fieldset>;
+    return <fieldset className={baseStyles.beltField}><div className={baseStyles.beltFieldHeader}><legend>{label} *</legend>{value ? <button type="button" onClick={() => update(name, "")}><X size={12}/>Clear</button> : null}</div><IconOptionGrid className={baseStyles.beltTags} compact kind="belt" options={TAEKWONDO_BELTS.map((belt) => { const beltOrder = TAEKWONDO_BELT_ORDER[belt]; const locked = Boolean(value && value !== belt); const belowCurrent = Boolean(isPromoted && currentOrder !== undefined && (beltOrder < currentOrder || (beltOrder === currentOrder && belt !== "Black"))); return { value: belt, label: belt, disabled: locked || belowCurrent }; })} selected={value ? [value] : []} onToggle={(belt) => update(name, value === belt ? "" : belt)} /><p>{value ? "Selected tag ya Clear par click karke rank change karein." : isPromoted && form.currentBelt ? "Current rank se upar ki belt choose karein." : "Belt rank choose karein."}</p></fieldset>;
   };
 
   if (loading) return <div className={`page ${styles.loadingPage}`}><div className={styles.loadingCard}><span><Medal size={24}/></span><strong>Loading belt test record</strong><p>Assessment and student details prepare ho rahe hain...</p></div></div>;

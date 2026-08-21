@@ -9,7 +9,11 @@ const AcademyProfileActions = ({ onCancel, saving }) => (
     <button type="reset" className="btn btn-secondary" disabled={saving} onClick={onCancel}>
       Cancel
     </button>
-    <button type="submit" className="btn btn-primary" disabled={saving}>
+    <button
+      type="submit"
+      className="btn btn-primary academy-profile-actions__save"
+      disabled={saving}
+    >
       {saving ? (
         <LoaderCircle className="academy-profile-state__spinner" size={18} aria-hidden="true" />
       ) : (

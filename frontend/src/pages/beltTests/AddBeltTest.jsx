@@ -27,6 +27,7 @@ import { beltTestApi } from "../../api/beltTestApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { studentApi } from "../../api/studentApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
 import {
   TAEKWONDO_BELTS,
   TAEKWONDO_BELT_ORDER,
@@ -50,17 +51,6 @@ const initialForm = {
   remarks: "",
   certificateNumber: "",
   certificateUrl: "",
-};
-const BELT_COLORS = {
-  White: "#f8fafc",
-  Yellow: "#f4cd28",
-  Green: "#23904b",
-  "Green One": "#23904b",
-  Blue: "#2674ce",
-  "Blue One": "#2674ce",
-  Red: "#df2731",
-  "Red One": "#df2731",
-  Black: "#111827",
 };
 const normalizeList = (response, nestedKey) => {
   const data = response?.data;
@@ -90,11 +80,6 @@ const joinAddress = (source) =>
     .map((item) => String(item || "").trim())
     .filter(Boolean)
     .join(", ");
-const beltStyle = (belt) => ({
-  "--belt-color": BELT_COLORS[belt] || "#94a3b8",
-  "--belt-text": ["White", "Yellow"].includes(belt) ? "#16243a" : "#ffffff",
-});
-
 const AddBeltTest = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -322,41 +307,22 @@ const AddBeltTest = () => {
             </button>
           ) : null}
         </div>
-        <div className={styles.beltTags}>
-          {TAEKWONDO_BELTS.map((belt) => {
+        <IconOptionGrid
+          className={styles.beltTags}
+          compact
+          kind="belt"
+          options={TAEKWONDO_BELTS.map((belt) => {
             const lockedBySelection = Boolean(value && value !== belt);
             const beltOrder = TAEKWONDO_BELT_ORDER[belt];
             const belowCurrent = Boolean(
-              isPromoted &&
-              currentOrder !== undefined &&
-              (beltOrder < currentOrder ||
-                (beltOrder === currentOrder && belt !== "Black")),
+              isPromoted && currentOrder !== undefined &&
+              (beltOrder < currentOrder || (beltOrder === currentOrder && belt !== "Black")),
             );
-            const disabled = lockedBySelection || belowCurrent;
-            return (
-              <button
-                key={belt}
-                type="button"
-                className={`${value === belt ? styles.selectedBelt : ""} ${disabled ? styles.disabledBelt : ""}`}
-                style={beltStyle(belt)}
-                disabled={disabled}
-                aria-pressed={value === belt}
-                title={
-                  belowCurrent
-                    ? "Promoted belt must be above the current belt"
-                    : lockedBySelection
-                      ? "Clear the selected belt to choose another rank"
-                      : belt
-                }
-                onClick={() => update(name, value === belt ? "" : belt)}
-              >
-                <i />
-                <span>{belt}</span>
-                {value === belt ? <Check size={13} /> : null}
-              </button>
-            );
+            return { value: belt, label: belt, disabled: lockedBySelection || belowCurrent };
           })}
-        </div>
+          selected={value ? [value] : []}
+          onToggle={(belt) => update(name, value === belt ? "" : belt)}
+        />
         <p>
           {value
             ? "Selected tag par dobara click karke ya Clear se rank badal sakte hain."

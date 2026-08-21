@@ -23,6 +23,7 @@ import { batchApi } from "../../api/batchApi.js";
 import { createBranch, getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
+import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import BranchFormSectionHeader from "./components/BranchFormSectionHeader.jsx";
@@ -119,6 +120,14 @@ const AddBranch = () => {
     if (event.key !== "Enter") return;
     event.preventDefault();
     addCustomValue(sourceField, targetField);
+  };
+
+  const removeCustomValue = (value, targetField, catalogField) => {
+    setForm((previous) => ({
+      ...previous,
+      [targetField]: (previous[targetField] || []).filter((item) => item !== value),
+      [catalogField]: (previous[catalogField] || []).filter((item) => item !== value),
+    }));
   };
 
   const addAdditionalCoach = () =>
@@ -617,23 +626,14 @@ const AddBranch = () => {
               description="Select everything available at this location."
             />
             <div className="add-branch-chip-grid">
-              {[
-                ...new Set([...FACILITY_OPTIONS, ...form.customFacilities]),
-              ].map((facility) => (
-                <button
-                  type="button"
-                  key={facility}
-                  className={
-                    form.facilities.includes(facility) ? "is-selected" : ""
-                  }
-                  onClick={() => toggleArrayValue("facilities", facility)}
-                >
-                  {form.facilities.includes(facility) ? (
-                    <Check size={13} />
-                  ) : null}
-                  {facility}
-                </button>
-              ))}
+              <IconOptionGrid
+                kind="facility"
+                options={[...new Set([...FACILITY_OPTIONS, ...form.customFacilities])]}
+                selected={form.facilities}
+                customOptions={form.customFacilities}
+                onToggle={(facility) => toggleArrayValue("facilities", facility)}
+                onRemoveCustom={(facility) => removeCustomValue(facility, "facilities", "customFacilities")}
+              />
             </div>
             <div className="add-branch-custom-row">
               <input
@@ -664,27 +664,14 @@ const AddBranch = () => {
               description="Languages supported by the branch team."
             />
             <div className="add-branch-chip-grid">
-              {[...new Set([...LANGUAGE_OPTIONS, ...form.customLanguages])].map(
-                (language) => (
-                  <button
-                    type="button"
-                    key={language}
-                    className={
-                      form.languagesSpoken.includes(language)
-                        ? "is-selected"
-                        : ""
-                    }
-                    onClick={() =>
-                      toggleArrayValue("languagesSpoken", language)
-                    }
-                  >
-                    {form.languagesSpoken.includes(language) ? (
-                      <Check size={13} />
-                    ) : null}
-                    {language}
-                  </button>
-                ),
-              )}
+              <IconOptionGrid
+                kind="language"
+                options={[...new Set([...LANGUAGE_OPTIONS, ...form.customLanguages])]}
+                selected={form.languagesSpoken}
+                customOptions={form.customLanguages}
+                onToggle={(language) => toggleArrayValue("languagesSpoken", language)}
+                onRemoveCustom={(language) => removeCustomValue(language, "languagesSpoken", "customLanguages")}
+              />
             </div>
             <div className="add-branch-custom-row">
               <input

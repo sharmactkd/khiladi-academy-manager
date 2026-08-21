@@ -428,7 +428,7 @@
 }
 
 :global(.student-training-components .batch-profile-sports) {
-  width: max-content;
+  width: 100%;
   max-width: 100%;
   min-width: 0;
   grid-area: auto !important;
@@ -449,7 +449,7 @@
   .batch-profile-sports
   .operations-tag-grid
 ) {
-  width: max-content !important;
+  width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
   justify-content: flex-start !important;
@@ -526,27 +526,21 @@
 }
 
 :global(.student-training-components .student-belt-field .operations-belt-tags) {
-  width: max-content !important;
-  max-width: none !important;
-  display: flex !important;
-  flex-wrap: nowrap !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)) !important;
   justify-content: flex-start !important;
   gap: 8px !important;
 }
 
-:global(.student-training-components .student-belt-field .operations-belt-tags > button) {
-  width: 106px !important;
-  min-width: 106px !important;
-  flex: 0 0 106px;
-}
-
 @media (max-width: 1280px) {
   :global(.student-training-components .student-training-grid) {
-    grid-template-columns: max-content minmax(0, 1fr) 192px !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 192px !important;
   }
 
   :global(.student-training-components .student-training-grid:not(.has-dan-rank)) {
-    grid-template-columns: max-content minmax(0, 1fr) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   :global(.student-training-components .student-belt-field .operations-belt-tags) {
@@ -556,11 +550,6 @@
     grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)) !important;
   }
 
-  :global(.student-training-components .student-belt-field .operations-belt-tags > button) {
-    width: 100% !important;
-    min-width: 88px !important;
-    flex-basis: auto;
-  }
 }
 
 :global(.student-medical-content) {

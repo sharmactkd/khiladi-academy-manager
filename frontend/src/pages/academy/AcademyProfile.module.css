@@ -406,11 +406,7 @@
   place-items: center;
   overflow: hidden;
   position: relative;
-  border: 1px solid #e2e8f0;
-  border-radius: 10%;
-  background: #ffffff;
-  box-shadow: 0 0 0 4px #ffffff, 0 0 0 6px rgba(207, 0, 6, 0.16),
-    0 10px 24px rgba(8, 22, 47, 0.1);
+  
   cursor: pointer;
 }
 
@@ -919,6 +915,31 @@
 :global(.academy-profile-actions .btn-primary) {
   min-width: 196px;
   box-shadow: 0 9px 20px rgba(207, 0, 6, 0.2);
+}
+
+/* Dedicated submit style prevents later global .btn/button rules from
+   changing the Update Academy button back to a white background. */
+:global(.academy-profile .academy-profile-actions .academy-profile-actions__save) {
+  min-width: 196px;
+  border: 1px solid var(--profile-red, #cf0006) !important;
+  background-color: var(--profile-red, #cf0006) !important;
+  color: #ffffff !important;
+  box-shadow: 0 9px 20px rgba(207, 0, 6, 0.22);
+}
+
+:global(.academy-profile .academy-profile-actions .academy-profile-actions__save:hover:not(:disabled)),
+:global(.academy-profile .academy-profile-actions .academy-profile-actions__save:focus-visible:not(:disabled)) {
+  border-color: var(--profile-red-dark, #a90005) !important;
+  background-color: var(--profile-red-dark, #a90005) !important;
+  color: #ffffff !important;
+  box-shadow: 0 11px 24px rgba(169, 0, 5, 0.28);
+}
+
+:global(.academy-profile .academy-profile-actions .academy-profile-actions__save:disabled) {
+  border-color: #ef777b !important;
+  background-color: #ef777b !important;
+  color: #ffffff !important;
+  cursor: not-allowed;
 }
 
 :global(.academy-profile-state) {
