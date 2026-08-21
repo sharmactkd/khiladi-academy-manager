@@ -8,8 +8,7 @@ import ResetPassword from "../pages/auth/ResetPassword.jsx";
 import OwnerDashboard from "../pages/dashboard/OwnerDashboard.jsx";
 import CreateAcademy from "../pages/onboarding/CreateAcademy.jsx";
 
-import Users from "../pages/admin/Users.jsx";
-import AdminGrants from "../pages/admin/AdminGrants.jsx";
+import AdminControlCenter from "../pages/admin/AdminControlCenter.jsx";
 
 import Unauthorized from "../pages/errors/Unauthorized.jsx";
 import NotFound from "../pages/errors/NotFound.jsx";
@@ -63,7 +62,6 @@ import PrintCertificate from "../pages/certificates/PrintCertificate.jsx";
 import StudentCertificates from "../pages/certificates/StudentCertificates.jsx";
 import VerifyCertificate from "../pages/certificates/VerifyCertificate.jsx";
 
-import ParentLinks from "../pages/parentLinks/ParentLinks.jsx";
 import CreateParentLink from "../pages/parentLinks/CreateParentLink.jsx";
 import StudentParentLinks from "../pages/parentLinks/StudentParentLinks.jsx";
 
@@ -74,25 +72,18 @@ import ParentStudentFees from "../pages/parentPortal/ParentStudentFees.jsx";
 import ParentStudentProgress from "../pages/parentPortal/ParentStudentProgress.jsx";
 import ParentStudentDocuments from "../pages/parentPortal/ParentStudentDocuments.jsx";
 
-import Announcements from "../pages/announcements/Announcements.jsx";
 import CreateAnnouncement from "../pages/announcements/CreateAnnouncement.jsx";
 import AnnouncementDetail from "../pages/announcements/AnnouncementDetail.jsx";
 import MyAnnouncements from "../pages/announcements/MyAnnouncements.jsx";
 
 import Notifications from "../pages/notifications/Notifications.jsx";
 
-import CommunicationLogs from "../pages/communication/CommunicationLogs.jsx";
+import CommunicationHub from "../pages/communication/CommunicationHub.jsx";
 
-import FeeReminder from "../pages/reminders/FeeReminder.jsx";
-import AttendanceReminder from "../pages/reminders/AttendanceReminder.jsx";
-
-import Plans from "../pages/plans/Plans.jsx";
-
-import BillingDashboard from "../pages/billing/BillingDashboard.jsx";
+import SubscriptionBillingHub from "../pages/billing/SubscriptionBillingHub.jsx";
 import Checkout from "../pages/billing/Checkout.jsx";
 import PaymentSuccess from "../pages/billing/PaymentSuccess.jsx";
 import PaymentFailed from "../pages/billing/PaymentFailed.jsx";
-import Invoices from "../pages/billing/Invoices.jsx";
 import InvoiceDetail from "../pages/billing/InvoiceDetail.jsx";
 
 import Branches from "../pages/branches/Branches.jsx";
@@ -100,11 +91,7 @@ import AddBranch from "../pages/branches/AddBranch.jsx";
 import EditBranch from "../pages/branches/EditBranch.jsx";
 import BranchDetail from "../pages/branches/BranchDetail.jsx";
 
-import AnalyticsDashboard from "../pages/analytics/AnalyticsDashboard.jsx";
-import StudentAnalytics from "../pages/analytics/StudentAnalytics.jsx";
-import AttendanceAnalytics from "../pages/analytics/AttendanceAnalytics.jsx";
-import FeesAnalytics from "../pages/analytics/FeesAnalytics.jsx";
-import PerformanceAnalytics from "../pages/analytics/PerformanceAnalytics.jsx";
+import AnalyticsStudio from "../pages/analytics/AnalyticsStudio.jsx";
 
 import Reports from "../pages/reports/Reports.jsx";
 import ReportPreview from "../pages/reports/ReportPreview.jsx";
@@ -189,11 +176,11 @@ const AppRoutes = () => {
               <RoleRoute allowedRoles={billingRoles} />
             }
           >
-            <Route path="/plans" element={<Plans />} />
+            <Route path="/plans" element={<Navigate to="/billing?tab=plans" replace />} />
 
             <Route
               path="/billing"
-              element={<BillingDashboard />}
+              element={<SubscriptionBillingHub />}
             />
 
             <Route
@@ -213,7 +200,12 @@ const AppRoutes = () => {
 
             <Route
               path="/billing/invoices"
-              element={<Invoices />}
+              element={<Navigate to="/billing?tab=invoices" replace />}
+            />
+
+            <Route
+              path="/billing/payments"
+              element={<Navigate to="/billing?tab=payments" replace />}
             />
 
             <Route
@@ -317,27 +309,27 @@ const AppRoutes = () => {
 
             <Route
               path="/analytics"
-              element={<AnalyticsDashboard />}
+              element={<AnalyticsStudio />}
             />
 
             <Route
               path="/analytics/students"
-              element={<StudentAnalytics />}
+              element={<Navigate to="/analytics?tab=students" replace />}
             />
 
             <Route
               path="/analytics/attendance"
-              element={<AttendanceAnalytics />}
+              element={<Navigate to="/analytics?tab=attendance" replace />}
             />
 
             <Route
               path="/analytics/fees"
-              element={<FeesAnalytics />}
+              element={<Navigate to="/analytics?tab=fees" replace />}
             />
 
             <Route
               path="/analytics/performance"
-              element={<PerformanceAnalytics />}
+              element={<Navigate to="/analytics?tab=performance" replace />}
             />
 
             {/* REPORTS */}
@@ -496,7 +488,7 @@ const AppRoutes = () => {
 
               <Route
                 path="/reminders/fee"
-                element={<FeeReminder />}
+                element={<Navigate to="/communication?tab=reminders&type=fee" replace />}
               />
             </Route>
 
@@ -599,7 +591,7 @@ const AppRoutes = () => {
 
             <Route
               path="/parent-links"
-              element={<ParentLinks />}
+              element={<Navigate to="/communication?tab=parent-access" replace />}
             />
 
             <Route
@@ -616,7 +608,7 @@ const AppRoutes = () => {
 
             <Route
               path="/announcements"
-              element={<Announcements />}
+              element={<Navigate to="/communication?tab=announcements" replace />}
             />
 
             <Route
@@ -627,13 +619,18 @@ const AppRoutes = () => {
             {/* COMMUNICATION */}
 
             <Route
+              path="/communication"
+              element={<CommunicationHub />}
+            />
+
+            <Route
               path="/communication-logs"
-              element={<CommunicationLogs />}
+              element={<Navigate to="/communication?tab=logs" replace />}
             />
 
             <Route
               path="/reminders/attendance"
-              element={<AttendanceReminder />}
+              element={<Navigate to="/communication?tab=reminders&type=attendance" replace />}
             />
 
             {/* TOURNAMENT */}
@@ -692,14 +689,21 @@ const AppRoutes = () => {
             }
           >
             <Route
+              path="/admin"
+              element={<AdminControlCenter />}
+            />
+            <Route
               path="/admin/users"
-              element={<Users />}
+              element={<Navigate to="/admin?tab=users" replace />}
             />
 
             <Route
               path="/admin/grants"
-              element={<AdminGrants />}
+              element={<Navigate to="/admin?tab=grants" replace />}
             />
+            <Route path="/admin/academies" element={<Navigate to="/admin?tab=academies" replace />} />
+            <Route path="/admin/subscriptions" element={<Navigate to="/admin?tab=subscriptions" replace />} />
+            <Route path="/admin/plans" element={<Navigate to="/admin?tab=plans" replace />} />
           </Route>
         </Route>
       </Route>

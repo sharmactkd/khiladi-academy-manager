@@ -118,7 +118,7 @@ const CreateAnnouncement = () => {
 
       await announcementApi.create(payload);
       alert("Announcement created successfully");
-      navigate("/announcements");
+      navigate("/communication?tab=announcements");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create announcement");
     } finally {

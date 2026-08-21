@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { BadgeCheck, ChevronRight, CreditCard, LockKeyhole, ShieldCheck, Sparkles, Tag } from "lucide-react";
 import { planApi } from "../../api/planApi.js";
 import { billingApi } from "../../api/billingApi.js";
 import { couponApi } from "../../api/couponApi.js";
+import { money, pretty } from "./subscriptionBilling.utils.js";
+import styles from "./BillingFlow.module.css";
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -132,7 +135,7 @@ const Checkout = () => {
         },
         prefill: {},
         theme: {
-          color: "#1d4ed8",
+          color: "#e50914",
         },
         modal: {
           ondismiss: () => {
@@ -163,67 +166,36 @@ const Checkout = () => {
   };
 
   if (loading) {
-    return <div className="card">Loading checkout...</div>;
+    return <div className={styles.loading}>Loading secure checkout...</div>;
   }
 
   if (!plan) {
-    return <div className="card">Plan not found.</div>;
+    return <div className={styles.loading}>Plan not found.</div>;
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Checkout</h1>
-          <p>Subscribe to {plan.name} plan.</p>
-        </div>
-      </div>
-
-      {error && <div className="alert alert-error">{error}</div>}
-
-      <div className="grid two">
-        <div className="card">
-          <h2>{plan.name}</h2>
-          <p>{plan.description}</p>
-
-          <div className="plan-price">
-            {plan.price === 0 ? <strong>Free</strong> : <strong>₹{plan.price}</strong>}
-            <span> / {plan.billingCycle}</span>
-          </div>
-
-          <ul className="plan-features">
-            {(plan.features || []).map((feature) => (
-              <li key={feature}>{feature}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="card">
-          <h2>Apply Coupon</h2>
-
-          <div className="coupon-row">
+    <div className={`page ${styles.page}`}>
+      <nav className={styles.breadcrumb}><Link to="/billing?tab=plans">Subscription & Billing</Link><ChevronRight size={13}/><strong>Secure Checkout</strong></nav>
+      <header className={styles.heading}><span><CreditCard size={25}/></span><div><small>Protected payment</small><h1>Secure Checkout</h1><p>Review your plan and activate it through Razorpay's verified payment flow.</p></div></header>
+      {error && <div className={styles.error}>{error}</div>}
+      <div className={styles.checkoutGrid}>
+        <section className={styles.card}><header><span><Sparkles size={20}/></span><div><small>Selected plan</small><h2>{plan.name}</h2><p>{plan.description}</p></div></header><div className={styles.price}>{plan.price === 0 ? "Free" : money(plan.price, plan.currency)}<small>/{pretty(plan.billingCycle)}</small></div><ul>{(plan.features || []).map((feature) => <li key={feature}><BadgeCheck size={15}/>{feature}</li>)}</ul></section>
+        <section className={styles.card}><header><span><Tag size={20}/></span><div><small>Order summary</small><h2>Coupon & Payment</h2><p>Apply an eligible offer before creating your secure order.</p></div></header><div className={styles.coupon}>
             <input
               value={couponCode}
               onChange={(event) => setCouponCode(event.target.value)}
               placeholder="WELCOME50"
             />
             <button
-              className="btn btn-secondary"
               type="button"
               onClick={handleValidateCoupon}
             >
               Validate
             </button>
-          </div>
-
-          {couponMessage && <p className="muted">{couponMessage}</p>}
-
-          <hr />
-
-          <button className="btn btn-primary" type="button" onClick={handlePayment} disabled={paying}>
+          </div>{couponMessage && <p className={styles.couponMessage}>{couponMessage}</p>}<div className={styles.secureNote}><LockKeyhole size={17}/><p><strong>Secure payment</strong><span>Your payment is processed by Razorpay. KHILADI does not store card or UPI credentials.</span></p></div><div className={styles.total}><span>Plan total</span><strong>{money(plan.price, plan.currency)}</strong></div><button className={styles.payButton} type="button" onClick={handlePayment} disabled={paying}>
+            <ShieldCheck size={17}/>
             {paying ? "Processing..." : plan.price === 0 ? "Activate Free Plan" : "Pay with Razorpay"}
-          </button>
-        </div>
+          </button><small className={styles.terms}>By continuing, you agree to the subscription and billing terms.</small></section>
       </div>
     </div>
   );

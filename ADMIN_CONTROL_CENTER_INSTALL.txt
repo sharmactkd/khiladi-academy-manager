@@ -1,0 +1,19 @@
+KHILADI SUPER ADMIN CONTROL CENTER
+
+Run from repository root in VS Code PowerShell.
+
+Expand-Archive `
+  -Path ".\khiladi-admin-control-center-complete-code.zip" `
+  -DestinationPath "." `
+  -Force
+
+git rm --ignore-unmatch `
+  frontend/src/pages/admin/Users.jsx `
+  frontend/src/pages/admin/AdminGrants.jsx
+
+Remove-Item -Recurse -Force frontend\node_modules\.vite -ErrorAction SilentlyContinue
+npm run build --prefix frontend
+git status --short
+
+The new backend /api/admin/overview, /api/admin/academies and
+/api/admin/subscriptions endpoints are protected by super_admin middleware.

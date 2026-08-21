@@ -1,0 +1,29 @@
+KHILADI COMMUNICATION HUB - INSTALLATION
+
+Run from the repository root in VS Code PowerShell.
+
+1. Extract the ZIP into the repository root:
+
+Expand-Archive `
+  -Path ".\khiladi-communication-hub-complete-code.zip" `
+  -DestinationPath "." `
+  -Force
+
+2. Remove legacy list/reminder pages now replaced by Communication Hub:
+
+git rm --ignore-unmatch `
+  frontend/src/pages/announcements/Announcements.jsx `
+  frontend/src/pages/parentLinks/ParentLinks.jsx `
+  frontend/src/pages/communication/CommunicationLogs.jsx `
+  frontend/src/pages/reminders/AttendanceReminder.jsx `
+  frontend/src/pages/reminders/FeeReminder.jsx
+
+3. Verify:
+
+Remove-Item -Recurse -Force frontend\node_modules\.vite -ErrorAction SilentlyContinue
+npm run build --prefix frontend
+git status --short
+
+The existing CreateAnnouncement, AnnouncementDetail, CreateParentLink,
+StudentParentLinks, MyAnnouncements and parent-facing Notifications pages remain
+because they are still valid supporting or parent-portal routes.

@@ -69,7 +69,7 @@ const CreateParentLink = () => {
       setError("");
       await parentLinkApi.create(form);
       alert("Parent/student link created successfully");
-      navigate("/parent-links");
+      navigate("/communication?tab=parent-access");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create parent link");
     } finally {

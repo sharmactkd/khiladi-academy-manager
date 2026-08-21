@@ -14,12 +14,10 @@ import {
   GraduationCap,
   IdCard,
   LayoutDashboard,
-  Link2,
   LogOut,
   Medal,
   Megaphone,
   MessageSquareText,
-  ReceiptIndianRupee,
   Settings,
   ShieldCheck,
   Sparkles,
@@ -355,46 +353,9 @@ const Sidebar = ({
 
             <SidebarSection title="Communication">
               <SidebarLink
-                to="/parent-links"
-                label="Parent Links"
-                icon={Link2}
-                onNavigate={handleNavigate}
-              />
-
-              <SidebarLink
-                to="/announcements"
-                label="Announcements"
-                icon={Megaphone}
-                onNavigate={handleNavigate}
-              />
-
-              <SidebarLink
-                to="/communication-logs"
-                label="Communication Logs"
+                to="/communication"
+                label="Communication Hub"
                 icon={MessageSquareText}
-                onNavigate={handleNavigate}
-              />
-
-              <SidebarLink
-                to="/reminders/attendance"
-                label="Attendance Reminder"
-                icon={Bell}
-                onNavigate={handleNavigate}
-              />
-
-              {canManageFees && (
-                <SidebarLink
-                  to="/reminders/fee"
-                  label="Fee Reminder"
-                  icon={ReceiptIndianRupee}
-                  onNavigate={handleNavigate}
-                />
-              )}
-
-              <SidebarLink
-                to="/notifications"
-                label="Notifications"
-                icon={Bell}
                 onNavigate={handleNavigate}
               />
             </SidebarSection>
@@ -402,50 +363,22 @@ const Sidebar = ({
         )}
 
         {canManageBilling && (
-          <SidebarSection title="SaaS Billing">
-            <SidebarLink
-              to="/plans"
-              label="Plans"
-              icon={WalletCards}
-              onNavigate={handleNavigate}
-            />
-
+          <SidebarSection title="Subscription">
             <SidebarLink
               to="/billing"
-              label="Billing"
+              label="Subscription & Billing"
               icon={CreditCard}
-              onNavigate={handleNavigate}
-            />
-
-            <SidebarLink
-              to="/billing/invoices"
-              label="Invoices"
-              icon={FileText}
-              onNavigate={handleNavigate}
-            />
-
-            <SidebarLink
-              to="/billing/payments"
-              label="Payments"
-              icon={CircleDollarSign}
               onNavigate={handleNavigate}
             />
           </SidebarSection>
         )}
 
         {role === "super_admin" && (
-          <SidebarSection title="Admin">
+          <SidebarSection title="Platform Admin">
             <SidebarLink
-              to="/admin/users"
-              label="Admin Users"
+              to="/admin"
+              label="Admin Control Center"
               icon={UserRoundCog}
-              onNavigate={handleNavigate}
-            />
-
-            <SidebarLink
-              to="/admin/grants"
-              label="Admin Grants"
-              icon={ShieldCheck}
               onNavigate={handleNavigate}
             />
           </SidebarSection>
