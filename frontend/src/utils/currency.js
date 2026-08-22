@@ -89,3 +89,19 @@ export const branchFor = (branches = [], branchReference = "") => {
 
   return branches.find((branch) => branch?.isMainBranch) || branches[0] || {};
 };
+
+export const paymentCurrencySource = (payment = {}, fallback = {}) => {
+  const candidates = [payment?.branch, payment?.student?.branch, fallback, payment];
+  return candidates.find(
+    (candidate) => candidate?.currencyCode || candidate?.currencySymbol || candidate?.currency
+  ) || {};
+};
+
+export const scopeCurrencySource = (branches = [], branchId = "") => {
+  if (branchId) return branchFor(branches, branchId);
+  const active = branches.filter((branch) => branch?.isActive !== false);
+  const codes = new Set(active.map((branch) => branch?.currencyCode).filter(Boolean));
+  return codes.size <= 1
+    ? active.find((branch) => branch?.isMainBranch) || active[0] || {}
+    : null;
+};

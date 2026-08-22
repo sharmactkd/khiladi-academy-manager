@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatMoney } from "./currency.js";
 
 const safeFileName = (value = "report") => {
   return String(value)
@@ -11,7 +12,7 @@ const safeFileName = (value = "report") => {
     .replace(/(^-|-$)+/g, "");
 };
 
-const formatCellValue = (value) => {
+const formatCellValue = (value, key = "", row = {}) => {
   if (value === null || value === undefined) return "";
 
   if (value instanceof Date) {
@@ -24,6 +25,10 @@ const formatCellValue = (value) => {
     if (!Number.isNaN(parsed.getTime())) {
       return parsed.toLocaleDateString();
     }
+  }
+
+  if (/amount|paid|pending/i.test(key) && !Number.isNaN(Number(value))) {
+    return formatMoney(value, row);
   }
 
   return value;
@@ -40,7 +45,7 @@ export const normalizeReportRows = (rows = [], columns = []) => {
     const normalized = {};
 
     columns.forEach((column) => {
-      normalized[column.label || column.key] = formatCellValue(row[column.key]);
+      normalized[column.label || column.key] = formatCellValue(row[column.key], column.key, row);
     });
 
     return normalized;
@@ -104,10 +109,10 @@ export const exportReportToPdf = ({
 
   const tableRows = rows.map((row) => {
     if (columns.length) {
-      return columns.map((column) => formatCellValue(row[column.key]));
+      return columns.map((column) => formatCellValue(row[column.key], column.key, row));
     }
 
-    return Object.keys(row).map((key) => formatCellValue(row[key]));
+    return Object.keys(row).map((key) => formatCellValue(row[key], key, row));
   });
 
   autoTable(doc, {

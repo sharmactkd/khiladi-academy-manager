@@ -5,6 +5,7 @@ export const normalizeReportResponse = ({
   rows = [],
   summary = {},
   columns = [],
+  currency = null,
 }) => {
   return {
     reportType,
@@ -13,6 +14,7 @@ export const normalizeReportResponse = ({
     generatedAt: new Date(),
     summary,
     columns,
+    currency,
     rows,
     totalRows: rows.length,
   };

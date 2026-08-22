@@ -166,9 +166,18 @@ export const getPortalStudentFees = asyncHandler(async (req, res) => {
     academy: link.academy,
     student: req.params.studentId,
   })
+    .populate({
+      path: "student",
+      select: "branch",
+      populate: {
+        path: "branch",
+        select: "branchName currencyCode currencySymbol currencyCountryCode",
+      },
+    })
+    .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .sort({ month: -1, createdAt: -1 })
     .select(
-      "amount discount finalAmount month dueDate paidDate status paymentMode receiptNumber"
+      "amount discount finalAmount amountPaid pendingAmount month dueDate paidDate status paymentMode receiptNumber student branch currencyCode currencySymbol currencyCountryCode"
     );
 
   return successResponse(res, "Student fee data fetched successfully", {

@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { feePaymentApi } from "../../api/feeApi.js";
 import { formatPaymentMode } from "../../utils/feePaymentModes.js";
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
-import { formatMoney } from "../../utils/currency.js";
+import { formatMoney, paymentCurrencySource } from "../../utils/currency.js";
 
 const currency = (value, source) => formatMoney(value, source);
 
@@ -166,10 +166,10 @@ const StudentFeeHistory = () => {
                     <td>
                       {payment.feeMonth}/{payment.feeYear}
                     </td>
-                    <td>{currency(payment.amount, payment)}</td>
-                    <td>{currency(payment.discount, payment)}</td>
-                    <td>{currency(payment.amountPaid, payment)}</td>
-                    <td>{currency(payment.pendingAmount, payment)}</td>
+                    <td>{currency(payment.amount, paymentCurrencySource(payment, studentCurrency))}</td>
+                    <td>{currency(payment.discount, paymentCurrencySource(payment, studentCurrency))}</td>
+                    <td>{currency(payment.amountPaid, paymentCurrencySource(payment, studentCurrency))}</td>
+                    <td>{currency(payment.pendingAmount, paymentCurrencySource(payment, studentCurrency))}</td>
                     <td>{formatPaymentMode(payment.paymentMode)}</td>
                     <td>
                       {payment.paymentDate

@@ -4,6 +4,7 @@ import { Award, CalendarCheck2, CircleDollarSign, GraduationCap, Sparkles, UserC
 
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import { paymentCurrencySource, scopeCurrencySource } from "../../utils/currency.js";
 import AcademyLogoModal from "./components/AcademyLogoModal.jsx";
 import AttendanceOverview from "./components/AttendanceOverview.jsx";
 import DashboardAlertsPanel from "./components/DashboardAlertsPanel.jsx";
@@ -32,6 +33,10 @@ const OwnerDashboard = () => {
   );
   const mainBranch = useMemo(
     () => activeBranches.find((branch) => branch?.isMainBranch) || activeBranches[0] || null,
+    [activeBranches]
+  );
+  const academyCurrencySource = useMemo(
+    () => scopeCurrencySource(activeBranches) || { currencyCode: "MIX", currencySymbol: "MIX " },
     [activeBranches]
   );
   const mainBranchAddress = useMemo(
@@ -80,29 +85,29 @@ const OwnerDashboard = () => {
       id: `payment-${payment._id}`,
       type: "payment",
       title: `Fee received from ${getPersonName(payment.student)}`,
-      meta: formatMoney(payment.amountPaid || payment.amount),
+      meta: formatMoney(payment.amountPaid || payment.amount, paymentCurrencySource(payment, academyCurrencySource)),
       time: payment.createdAt || payment.paymentDate,
     }));
     return [...admissions, ...payments].sort((left, right) => new Date(right.time || 0) - new Date(left.time || 0)).slice(0, 6);
-  }, [data.dashboard?.recentAdmissions, data.dashboard?.recentPayments]);
+  }, [academyCurrencySource, data.dashboard?.recentAdmissions, data.dashboard?.recentPayments]);
 
   const alerts = useMemo(() => {
     const incompleteProfiles = (data.dashboard?.recentAdmissions || []).filter((student) => student.profileStatus === "incomplete").length;
     return [
       incompleteProfiles ? { icon: UserRoundX, title: "Profile incomplete", text: `${incompleteProfiles} recent profile(s) need details`, count: incompleteProfiles, tone: "orange", to: "/students" } : null,
-      Number(data.dashboard?.pendingFees) > 0 ? { icon: CircleDollarSign, title: "Fee outstanding", text: `${formatMoney(data.dashboard.pendingFees)} currently pending`, count: null, tone: "red", to: "/fees" } : null,
+      Number(data.dashboard?.pendingFees) > 0 ? { icon: CircleDollarSign, title: "Fee outstanding", text: `${formatMoney(data.dashboard.pendingFees, academyCurrencySource)} currently pending`, count: null, tone: "red", to: "/fees" } : null,
       Number(data.dashboard?.inactiveStudents) > 0 ? { icon: UserRoundX, title: "Inactive students", text: `${data.dashboard.inactiveStudents} student(s) are inactive`, count: data.dashboard.inactiveStudents, tone: "slate", to: "/students" } : null,
       Number(data.dashboard?.upcomingBeltTests) > 0 ? { icon: Award, title: "Belt tests scheduled", text: `${data.dashboard.upcomingBeltTests} upcoming test(s)`, count: data.dashboard.upcomingBeltTests, tone: "purple", to: "/belt-tests" } : null,
     ].filter(Boolean);
-  }, [data.dashboard]);
+  }, [academyCurrencySource, data.dashboard]);
 
   const stats = [
     { icon: Users, title: "Total students", value: data.dashboard?.totalStudents || 0 },
     { icon: UserCheck, title: "Active students", value: data.dashboard?.activeStudents || 0, tone: "green" },
     { icon: UserRoundX, title: "Inactive students", value: data.dashboard?.inactiveStudents || 0, tone: "orange" },
     { icon: CalendarCheck2, title: "Today attendance", value: `${data.dashboard?.todayAttendancePercentage || 0}%`, subtitle: `${data.dashboard?.todayAttendanceCount || 0} marked`, tone: "blue" },
-    { icon: CircleDollarSign, title: "Fees collected", value: formatMoney(data.dashboard?.monthlyFeesCollected), tone: "green" },
-    { icon: CircleDollarSign, title: "Outstanding", value: formatMoney(data.dashboard?.pendingFees), tone: "red" },
+    { icon: CircleDollarSign, title: "Fees collected", value: formatMoney(data.dashboard?.monthlyFeesCollected, academyCurrencySource), tone: "green" },
+    { icon: CircleDollarSign, title: "Outstanding", value: formatMoney(data.dashboard?.pendingFees, academyCurrencySource), tone: "red" },
   ];
   const medalsTotal = Object.values(data.dashboard?.medalCount || {}).reduce((sum, count) => sum + Number(count || 0), 0);
 
@@ -138,7 +143,7 @@ const OwnerDashboard = () => {
           <DashboardStats items={stats} />
           <section className="owner-insights">
             <AttendanceOverview data={attendanceChartData} dashboard={data.dashboard} lastAttendanceMarked={lastAttendanceMarked} />
-            <FeeCollectionOverview canManageFees={data.canManageFees} data={feeChartData} rate={feeCollectionRate} total={feeTotal} />
+            <FeeCollectionOverview canManageFees={data.canManageFees} currencySource={academyCurrencySource} data={feeChartData} rate={feeCollectionRate} total={feeTotal} />
           </section>
           <section className="owner-bottom-grid">
             <QuickActionsPanel actions={getQuickActions(data.canManageFees)} />

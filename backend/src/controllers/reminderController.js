@@ -98,7 +98,15 @@ export const sendFeeReminder = asyncHandler(async (req, res) => {
   }
 
   const payments = await FeePayment.find(filter)
-    .populate("student", "firstName lastName admissionNumber")
+    .populate({
+      path: "student",
+      select: "firstName lastName admissionNumber branch",
+      populate: {
+        path: "branch",
+        select: "branchName currencyCode currencySymbol currencyCountryCode",
+      },
+    })
+    .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .sort({ dueDate: 1, createdAt: -1 });
 
   const studentIds = [...new Set(payments.map((payment) => String(payment.student._id)))];
@@ -120,7 +128,7 @@ export const sendFeeReminder = asyncHandler(async (req, res) => {
     for (const link of relatedLinks) {
       const message =
         req.body.message ||
-        `Fee reminder for ${[payment.student.firstName, payment.student.lastName].filter(Boolean).join(" ") || "Student"}. Month: ${payment.month || `${payment.feeMonth}/${payment.feeYear}`}, Amount: ${formatCurrencyAmount(payment.finalAmount, payment)}, Status: ${payment.status}.`;
+        `Fee reminder for ${[payment.student.firstName, payment.student.lastName].filter(Boolean).join(" ") || "Student"}. Month: ${payment.month || `${payment.feeMonth}/${payment.feeYear}`}, Amount: ${formatCurrencyAmount(payment.finalAmount, payment.branch || payment.student?.branch || payment)}, Status: ${payment.status}.`;
 
       const resultLogs = await sendToGuardian({
         academy: req.academyId,

@@ -53,7 +53,14 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     academy: req.academyId,
     status: { $ne: "cancelled" },
   })
-    .populate("student", "firstName lastName admissionNumber phone")
+    .populate({
+      path: "student",
+      select: "firstName lastName admissionNumber phone branch",
+      populate: {
+        path: "branch",
+        select: "branchName currencyCode currencySymbol currencyCountryCode",
+      },
+    })
     .populate("batch", "batchName")
     .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .sort({ paymentDate: -1 });
@@ -161,8 +168,8 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     onlineAmount: payment.onlineAmount || 0,
     receiptNumber: payment.receiptNumber,
     status: payment.status,
-    currencyCode: payment.currencyCode || payment.branch?.currencyCode || "INR",
-    currencySymbol: payment.currencySymbol || payment.branch?.currencySymbol || getCurrencySymbol(payment.currencyCode || payment.branch?.currencyCode || "INR"),
+    currencyCode: payment.branch?.currencyCode || payment.student?.branch?.currencyCode || payment.currencyCode || "INR",
+    currencySymbol: payment.branch?.currencySymbol || payment.student?.branch?.currencySymbol || payment.currencySymbol || getCurrencySymbol(payment.branch?.currencyCode || payment.student?.branch?.currencyCode || payment.currencyCode || "INR"),
   }));
 
   const collectionRate = students.length
@@ -285,7 +292,14 @@ export const getFeePayments = asyncHandler(async (req, res) => {
   if (req.query.year) query.feeYear = Number(req.query.year);
 
   const payments = await FeePayment.find(query)
-    .populate("student", "firstName lastName admissionNumber phone email")
+    .populate({
+      path: "student",
+      select: "firstName lastName admissionNumber phone email branch",
+      populate: {
+        path: "branch",
+        select: "branchName currencyCode currencySymbol currencyCountryCode",
+      },
+    })
     .populate("batch", "batchName martialArt")
     .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .populate("feePlan", "name monthlyAmount amount dueDay")
@@ -312,6 +326,7 @@ export const getStudentFeePayments = asyncHandler(async (req, res) => {
     status: { $ne: "cancelled" },
   })
     .populate("batch", "batchName martialArt")
+    .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .populate("feePlan", "name monthlyAmount amount dueDay")
     .sort({ feeYear: -1, feeMonth: -1, paymentDate: -1 });
 

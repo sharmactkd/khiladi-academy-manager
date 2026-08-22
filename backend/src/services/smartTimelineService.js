@@ -79,7 +79,7 @@ const getFeeInsight = async ({ academyId, student }) => {
     academy: academyId,
     student: student._id,
     status: { $in: ["pending", "partial"] },
-  }).lean();
+  }).populate("branch", "currencyCode currencySymbol currencyCountryCode").lean();
 
   const pendingAmount = pendingFees.reduce((sum, fee) => {
     return sum + Number(fee.pendingAmount || fee.amount || 0);
@@ -89,7 +89,7 @@ const getFeeInsight = async ({ academyId, student }) => {
     return createInsight({
       type: "pending_fee_warning",
       title: "Pending fee warning",
-      message: `Pending fee amount is ${formatCurrencyAmount(pendingAmount, pendingFees[0])}.`,
+      message: `Pending fee amount is ${formatCurrencyAmount(pendingAmount, pendingFees[0]?.branch || student?.branch || pendingFees[0])}.`,
       severity: "warning",
       meta: { pendingAmount },
     });

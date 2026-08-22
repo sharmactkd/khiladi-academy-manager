@@ -10,6 +10,7 @@ import GeneratedCertificate from "../models/GeneratedCertificate.js";
 import GeneratedIdCard from "../models/GeneratedIdCard.js";
 import Branch from "../models/Branch.js";
 import ReportLog from "../models/ReportLog.js";
+import { getCurrencySymbol } from "../utils/currency.js";
 
 import {
   normalizeReportResponse,
@@ -264,7 +265,7 @@ export const generateFeesReport = async ({ academyId, query, user }) => {
 
   const payments = await FeePayment.find(filters)
     .populate("student", "firstName lastName admissionNumber")
-    .populate("branch", "branchName branchCode")
+    .populate("branch", "branchName branchCode currencyCode currencySymbol currencyCountryCode")
     .lean()
     .sort({ paymentDate: -1, createdAt: -1 });
 
@@ -275,6 +276,9 @@ export const generateFeesReport = async ({ academyId, query, user }) => {
       payment.student?.lastName || ""
     }`.trim(),
     branch: payment.branch?.branchName || "",
+    currencyCode: payment.branch?.currencyCode || payment.currencyCode || "INR",
+    currencySymbol: payment.branch?.currencySymbol || payment.currencySymbol || getCurrencySymbol(payment.branch?.currencyCode || payment.currencyCode || "INR"),
+    currencyCountryCode: payment.branch?.currencyCountryCode || "IN",
     amount: payment.amount || 0,
     amountPaid: payment.amountPaid || payment.paidAmount || 0,
     pendingAmount: payment.pendingAmount || 0,
@@ -283,19 +287,29 @@ export const generateFeesReport = async ({ academyId, query, user }) => {
     receiptNumber: payment.receiptNumber || "",
   }));
 
+  const reportCurrencies = [...new Map(
+    rows.map((row) => [row.currencyCode, {
+      currencyCode: row.currencyCode,
+      currencySymbol: row.currencySymbol,
+      currencyCountryCode: row.currencyCountryCode,
+    }])
+  ).values()];
+  const singleCurrencyReport = reportCurrencies.length <= 1;
+
   return normalizeReportResponse({
     reportType: "fees",
     title: "Fees Report",
     filters: query,
     rows,
-    summary: {
+    currency: reportCurrencies.length === 1 ? reportCurrencies[0] : null,
+    summary: singleCurrencyReport ? {
       totalRecords: rows.length,
       totalAmount: rows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
       totalPaid: rows.reduce((sum, row) => sum + Number(row.amountPaid || 0), 0),
-      totalPending: rows.reduce(
-        (sum, row) => sum + Number(row.pendingAmount || 0),
-        0
-      ),
+      totalPending: rows.reduce((sum, row) => sum + Number(row.pendingAmount || 0), 0),
+    } : {
+      totalRecords: rows.length,
+      currencies: reportCurrencies.map((item) => item.currencyCode).join(", "),
     },
     columns: [
       createColumn("paymentDate", "Payment Date"),

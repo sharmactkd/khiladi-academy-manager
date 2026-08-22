@@ -281,6 +281,7 @@ export const buildStudentFeeStatus = async ({
       phone: student.phone,
       email: student.email,
       batch: student.batch || null,
+      branch: student.branch || null,
       status: student.status,
     },
     feePlan: feeConfig.feePlan || null,

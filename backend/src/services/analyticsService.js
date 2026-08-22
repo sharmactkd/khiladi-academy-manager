@@ -288,7 +288,15 @@ export const getDashboardAnalytics = async ({ academyId, query = {}, user }) => 
       .lean(),
 
     FeePayment.find(branchBase)
-      .populate("student", "firstName lastName admissionNumber")
+      .populate({
+        path: "student",
+        select: "firstName lastName admissionNumber branch",
+        populate: {
+          path: "branch",
+          select: "branchName currencyCode currencySymbol currencyCountryCode",
+        },
+      })
+      .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
       .sort({ createdAt: -1 })
       .limit(5)
       .lean(),
