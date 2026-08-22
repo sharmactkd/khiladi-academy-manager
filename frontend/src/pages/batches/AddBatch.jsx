@@ -10,6 +10,8 @@ import {
   Save,
   Trash2,
   UsersRound,
+  MessageCircleMore,
+  Video,
 } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
@@ -26,6 +28,7 @@ import {
 } from "../../components/common/AcademyOperationsFields.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import { formatBatchLabel } from "./batch.utils.js";
 import "./BatchForm.module.css";
 
 const DAYS = [
@@ -258,7 +261,7 @@ const CoachCard = ({ title, prefix, register, values, setValue }) => (
   </div>
 );
 
-const AddBatch = () => {
+const AddBatch = ({ mode = "create", batchId = "" }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [academy, setAcademy] = useState(null);
@@ -272,6 +275,7 @@ const AddBatch = () => {
   const {
     register,
     handleSubmit,
+    reset,
     setValue,
     watch,
     formState: { errors },
@@ -328,6 +332,7 @@ const AddBatch = () => {
   });
 
   const values = watch();
+  const isEdit = mode === "edit" && Boolean(batchId);
   const sports = useMemo(() => {
     const academySports = normalizeList(academy?.martialArts);
     return [...new Set([...DEFAULT_SPORTS, ...academySports])];
@@ -386,7 +391,7 @@ const AddBatch = () => {
             branchResult.value,
           ].find(Array.isArray) || [];
         setBranches(list);
-        if (list.length === 1)
+        if (list.length === 1 && !isEdit)
           setValue("branch", list[0]._id, { shouldValidate: true });
       }
       if (batchResult.status === "fulfilled")
@@ -400,7 +405,44 @@ const AddBatch = () => {
           ).filter((item) => item?.isActive !== false).length,
         );
     });
-  }, [setValue]);
+  }, [isEdit, setValue]);
+
+  useEffect(() => {
+    if (!isEdit) return;
+    batchApi.getById(batchId).then((response) => {
+      const batch = response?.data?.data || response?.data;
+      if (!batch) return;
+      const schedules = Array.isArray(batch.schedule) ? batch.schedule : [];
+      const batchTypes = normalizeList(batch.batchTypes).length ? normalizeList(batch.batchTypes) : normalizeList(batch.batchType);
+      const skillLevels = normalizeList(batch.skillLevels).length ? normalizeList(batch.skillLevels) : normalizeList(batch.skillLevel);
+      const modes = normalizeList(batch.modes).length ? normalizeList(batch.modes) : normalizeList(batch.mode);
+      const slots = normalizeList(batch.sessionSlots).length ? normalizeList(batch.sessionSlots) : normalizeList(batch.sessionSlot);
+      reset({
+        ...batch,
+        branch: batch.branch?._id || batch.branch || "",
+        martialArts: normalizeList(batch.martialArts).length ? normalizeList(batch.martialArts) : normalizeList(batch.martialArt),
+        batchTypes: batchTypes.map(formatBatchLabel),
+        customBatchTypes: normalizeList(batch.customBatchTypes).map(formatBatchLabel),
+        skillLevels: skillLevels.map(formatBatchLabel),
+        modes: modes.map(formatBatchLabel),
+        sessionSlots: slots.map(formatBatchLabel),
+        days: schedules.map((item) => item.day).filter(Boolean),
+        startTime: schedules[0]?.startTime || "",
+        endTime: schedules[0]?.endTime || "",
+        maxStudents: batch.maxStudents || batch.capacity || "",
+        noCapacityLimit: !Number(batch.maxStudents || batch.capacity || 0),
+        noMinAgeLimit: batch.minAge === null || batch.minAge === undefined,
+        noMaxAgeLimit: batch.maxAge === null || batch.maxAge === undefined,
+        noMinBeltLimit: !batch.minBelt,
+        noMaxBeltLimit: !batch.maxBelt,
+        batchLanguages: normalizeList(batch.batchLanguages).length ? normalizeList(batch.batchLanguages) : normalizeList(batch.batchLanguage),
+        customBatchLanguages: normalizeList(batch.customBatchLanguages),
+        noRegistrationFee: !Number(batch.registrationFee || 0),
+        noLateFee: !Number(batch.lateFee || 0),
+      });
+      setAdditionalCoaches(Array.isArray(batch.additionalCoaches) ? batch.additionalCoaches : []);
+    }).catch((error) => toast.error(error.response?.data?.message || "Batch load nahi hua"));
+  }, [batchId, isEdit, reset]);
 
   const addCoach = () =>
     setAdditionalCoaches((items) => [
@@ -457,11 +499,17 @@ const AddBatch = () => {
           endTime: data.endTime,
         })),
       };
-      await batchApi.create(payload);
-      toast.success("Batch create ho gaya");
-      navigate("/batches");
+      if (isEdit) {
+        await batchApi.update(batchId, payload);
+        toast.success("Batch update ho gaya");
+        navigate(`/batches/${batchId}`);
+      } else {
+        await batchApi.create(payload);
+        toast.success("Batch create ho gaya");
+        navigate("/batches");
+      }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Batch create nahi hua");
+      toast.error(error.response?.data?.message || (isEdit ? "Batch update nahi hua" : "Batch create nahi hua"));
     } finally {
       setSaving(false);
     }
@@ -504,7 +552,7 @@ const AddBatch = () => {
       <nav className="add-branch-breadcrumb">
         <Link to="/batches">Batches</Link>
         <span>/</span>
-        <strong>Add New Batch</strong>
+        <strong>{isEdit ? "Edit Batch" : "Add New Batch"}</strong>
       </nav>
       <div className="add-branch-heading">
         <div className="add-branch-heading__title">
@@ -512,8 +560,8 @@ const AddBatch = () => {
             <Dumbbell size={25} />
           </span>
           <div>
-            <h1>Add New Batch</h1>
-            <p>Create a complete, professional training batch profile.</p>
+            <h1>{isEdit ? "Edit Batch" : "Add New Batch"}</h1>
+            <p>{isEdit ? "Update the complete batch profile and operating setup." : "Create a complete, professional training batch profile."}</p>
           </div>
         </div>
         <Link className="btn btn-outline" to="/batches">
@@ -925,15 +973,15 @@ const AddBatch = () => {
             <small>Online</small> Links &amp; Communication
           </h3>
           <div className="grid grid-2">
-            <label>
-              WhatsApp Group Link
+            <label className="batch-link-field">
+              <span><MessageCircleMore size={16} aria-hidden="true" /> WhatsApp Group Link</span>
               <input
                 {...register("whatsappGroupLink")}
                 placeholder="https://chat.whatsapp.com/..."
               />
             </label>
-            <label>
-              Google Meet Link
+            <label className="batch-link-field">
+              <span><Video size={16} aria-hidden="true" /> Google Meet Link</span>
               <input
                 {...register("googleMeetLink")}
                 placeholder="https://meet.google.com/..."
@@ -945,7 +993,7 @@ const AddBatch = () => {
           <div>
             <CalendarDays size={17} />
             <span>
-              <strong>Ready to create this batch?</strong>
+              <strong>{isEdit ? "Ready to update this batch?" : "Ready to create this batch?"}</strong>
               <small>Review schedule and required fields before saving.</small>
             </span>
           </div>
@@ -957,7 +1005,7 @@ const AddBatch = () => {
             Cancel
           </button>
           <button className="btn btn-primary" disabled={saving}>
-            <Save size={16} /> {saving ? "Saving..." : "Create Batch"}
+            <Save size={16} /> {saving ? "Saving..." : isEdit ? "Update Batch" : "Create Batch"}
           </button>
         </div>
       </form>

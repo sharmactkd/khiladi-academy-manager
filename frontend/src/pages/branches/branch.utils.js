@@ -36,6 +36,8 @@ export const normalizeList = (value) => {
   }
 };
 
+const normalizeFacility = (value) => value === "Mat Area" ? "Mat Arena" : value;
+
 export const normalizePhones = (branch) => {
   const stored = Array.isArray(branch?.phoneNumbers) ? branch.phoneNumbers : [];
   const phones = stored.slice(0, 4).map((item, index) => ({
@@ -52,8 +54,8 @@ export const normalizeBranchForm = (branch) => ({
   additionalCoaches: Array.isArray(branch?.additionalCoaches)
     ? branch.additionalCoaches.map((coach) => ({ name: coach?.name || "", countryCode: coach?.countryCode || "+91", phone: coach?.phone || "", achievements: coach?.achievements || "" }))
     : [],
-  facilities: normalizeList(branch?.facilities),
-  customFacilities: [...new Set([...normalizeList(branch?.customFacilities), ...normalizeList(branch?.facilities).filter((item) => !FACILITY_OPTIONS.includes(item))])],
+  facilities: normalizeList(branch?.facilities).map(normalizeFacility),
+  customFacilities: [...new Set([...normalizeList(branch?.customFacilities).map(normalizeFacility), ...normalizeList(branch?.facilities).map(normalizeFacility).filter((item) => !FACILITY_OPTIONS.includes(item))])],
   languagesSpoken: normalizeList(branch?.languagesSpoken),
   customLanguages: [...new Set([...normalizeList(branch?.customLanguages), ...normalizeList(branch?.languagesSpoken).filter((item) => !LANGUAGE_OPTIONS.includes(item))])],
   branchSince: branch?.branchSince || "",

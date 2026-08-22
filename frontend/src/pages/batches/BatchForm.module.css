@@ -14,6 +14,8 @@
 :global(.batch-custom-tag button),
 :global(.batch-limit-field > button) { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid #f2a7aa; border-radius: 9px; color: #b50005; background: #fff; font-weight: 800; }
 :global(.batch-custom-tag button) { white-space: nowrap; }
+:global(.batch-link-field > span) { display:flex;align-items:center;gap:7px;color:#334155;font-weight:800; }
+:global(.batch-link-field > span svg) { color:#cf0006; }
 :global(.batch-limit-field) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
 :global(.batch-limit-field > button) { padding: 8px 12px; }
 :global(.batch-limit-field > button.is-selected) { border-color: #cf0006; color: #fff; background: #cf0006; }

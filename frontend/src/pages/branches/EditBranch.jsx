@@ -30,7 +30,7 @@ import BranchFormSectionHeader from "./components/BranchFormSectionHeader.jsx";
 import "./BranchForm.module.css";
 
 const FACILITY_OPTIONS = [
-  "Mat Area", "Changing Room", "Washroom", "Drinking Water", "Parking",
+  "Mat Arena", "Changing Room", "Washroom", "Drinking Water", "Parking",
   "CCTV", "First Aid", "PSS / Sensor System", "Gym Equipment", "Waiting Area",
 ];
 
@@ -51,6 +51,7 @@ const normalizeList = (value) => {
     return value.split(",").map((item) => item.trim()).filter(Boolean);
   }
 };
+const normalizeFacility = (value) => value === "Mat Area" ? "Mat Arena" : value;
 
 const normalizePhones = (branch) => {
   const stored = Array.isArray(branch?.phoneNumbers) ? branch.phoneNumbers : [];
@@ -110,11 +111,11 @@ const normalizeBranch = (branch) => ({
         achievements: coach?.achievements || "",
       }))
     : [],
-  facilities: normalizeList(branch?.facilities),
+  facilities: normalizeList(branch?.facilities).map(normalizeFacility),
   customFacilities: [
     ...new Set([
-      ...normalizeList(branch?.customFacilities),
-      ...normalizeList(branch?.facilities).filter((item) => !FACILITY_OPTIONS.includes(item)),
+      ...normalizeList(branch?.customFacilities).map(normalizeFacility),
+      ...normalizeList(branch?.facilities).map(normalizeFacility).filter((item) => !FACILITY_OPTIONS.includes(item)),
     ]),
   ],
   languagesSpoken: normalizeList(branch?.languagesSpoken),
@@ -354,14 +355,12 @@ const EditBranch = () => {
         <div className="add-branch-secondary-grid">
           <section className="add-branch-card add-branch-selection-card">
             <BranchFormSectionHeader icon={Warehouse} eyebrow="Infrastructure" title="Facilities" description="Select everything available at this location." />
-            <div className="add-branch-chip-grid"><IconOptionGrid kind="facility" options={[...new Set([...FACILITY_OPTIONS, ...form.customFacilities])]} selected={form.facilities} customOptions={form.customFacilities} onToggle={(facility) => toggleArrayValue("facilities", facility)} onRemoveCustom={(facility) => removeCustomValue(facility, "facilities", "customFacilities")} /></div>
-            <div className="add-branch-custom-row"><input value={form.customFacility} onChange={(event) => updateField("customFacility", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customFacility", "facilities")} placeholder="Add custom facility" /><button type="button" onClick={() => addCustomValue("customFacility", "facilities")} disabled={!form.customFacility.trim()}><Plus size={14} /> Add</button></div>
+            <div className="add-branch-chip-grid"><IconOptionGrid kind="facility" options={[...new Set([...FACILITY_OPTIONS, ...form.customFacilities])]} selected={form.facilities} customOptions={form.customFacilities} onToggle={(facility) => toggleArrayValue("facilities", facility)} onRemoveCustom={(facility) => removeCustomValue(facility, "facilities", "customFacilities")} trailingContent={<div className="add-branch-custom-row"><input value={form.customFacility} onChange={(event) => updateField("customFacility", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customFacility", "facilities")} placeholder="Add custom facility" /><button type="button" onClick={() => addCustomValue("customFacility", "facilities")} disabled={!form.customFacility.trim()}><Plus size={14} /> Add</button></div>} /></div>
           </section>
 
           <section className="add-branch-card add-branch-selection-card">
             <BranchFormSectionHeader icon={Languages} eyebrow="Communication" title="Languages Spoken" description="Languages supported by the branch team." />
-            <div className="add-branch-chip-grid"><IconOptionGrid kind="language" options={[...new Set([...LANGUAGE_OPTIONS, ...form.customLanguages])]} selected={form.languagesSpoken} customOptions={form.customLanguages} onToggle={(language) => toggleArrayValue("languagesSpoken", language)} onRemoveCustom={(language) => removeCustomValue(language, "languagesSpoken", "customLanguages")} /></div>
-            <div className="add-branch-custom-row"><input value={form.customLanguage} onChange={(event) => updateField("customLanguage", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customLanguage", "languagesSpoken")} placeholder="Add custom language" /><button type="button" onClick={() => addCustomValue("customLanguage", "languagesSpoken")} disabled={!form.customLanguage.trim()}><Plus size={14} /> Add</button></div>
+            <div className="add-branch-chip-grid"><IconOptionGrid kind="language" options={[...new Set([...LANGUAGE_OPTIONS, ...form.customLanguages])]} selected={form.languagesSpoken} customOptions={form.customLanguages} onToggle={(language) => toggleArrayValue("languagesSpoken", language)} onRemoveCustom={(language) => removeCustomValue(language, "languagesSpoken", "customLanguages")} trailingContent={<div className="add-branch-custom-row"><input value={form.customLanguage} onChange={(event) => updateField("customLanguage", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customLanguage", "languagesSpoken")} placeholder="Add custom language" /><button type="button" onClick={() => addCustomValue("customLanguage", "languagesSpoken")} disabled={!form.customLanguage.trim()}><Plus size={14} /> Add</button></div>} /></div>
           </section>
         </div>
 

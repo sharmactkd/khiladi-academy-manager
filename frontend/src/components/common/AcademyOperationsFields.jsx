@@ -119,8 +119,8 @@ const TagSelector = ({
       customOptions={customOptions}
       onToggle={onToggle}
       onRemoveCustom={onRemoveCustom}
+      trailingContent={trailingContent}
     />
-    {trailingContent}
   </div>
 );
 

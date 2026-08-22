@@ -17,6 +17,7 @@ const IconOptionGrid = ({
   onToggle,
   options = [],
   selected = [],
+  trailingContent = null,
 }) => {
   const selectedValues = Array.isArray(selected) ? selected : [selected].filter(Boolean);
   const customSet = new Set(customOptions.map((item) => String(item).toLowerCase()));
@@ -53,6 +54,7 @@ const IconOptionGrid = ({
           </div>
         );
       })}
+      {trailingContent ? <div className={styles.trailing}>{trailingContent}</div> : null}
     </div>
   );
 };

@@ -156,6 +156,7 @@
 :global(.add-branch-chip-grid > button) { min-height:32px; display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border:1px solid #efb4b7; border-radius:8px; color:#b00005; background:#fff; font-size:9px; font-weight:800; cursor:pointer; }
 :global(.add-branch-chip-grid > button.is-selected) { border-color:var(--ab-red); color:#fff; background:var(--ab-red); box-shadow:0 5px 12px rgba(207,0,6,.15); }
 :global(.add-branch-custom-row) { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; padding:9px 16px 0; }
+:global(.add-branch-chip-grid .add-branch-custom-row) { min-height:86px; align-content:center; padding:8px; border:1px dashed #aeb9c7; border-radius:11px; background:#f8fafc; }
 :global(.add-branch-custom-row button) { display:inline-flex; align-items:center; gap:5px; padding:8px 12px; border:1px solid #efb4b7; border-radius:9px; color:var(--ab-red); background:#fff; font-size:10px; font-weight:800; cursor:pointer; }
 :global(.add-branch-custom-row button:disabled) { opacity:.45; cursor:not-allowed; }
 :global(.add-branch-actions) { position:sticky; z-index:20; bottom:8px; display:flex; align-items:center; justify-content:flex-end; gap:9px; padding:11px 14px; border:1px solid var(--ab-line); border-radius:13px; background:rgba(255,255,255,.97); box-shadow:0 -8px 28px rgba(8,22,47,.08); backdrop-filter:blur(10px); }

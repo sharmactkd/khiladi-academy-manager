@@ -7,6 +7,7 @@ import {
   CircleParking,
   Droplets,
   Dumbbell,
+  Grid3X3,
   Infinity,
   Radar,
   Warehouse,
@@ -16,7 +17,8 @@ import MartialArtIcon from "./MartialArtIcon.jsx";
 const normalize = (value) => String(value || "").trim().toLowerCase();
 
 const FACILITY_ICONS = {
-  "mat area": Warehouse,
+  "mat area": Grid3X3,
+  "mat arena": Grid3X3,
   "changing room": Warehouse,
   washroom: Bath,
   "drinking water": Droplets,

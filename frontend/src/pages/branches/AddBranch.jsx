@@ -612,26 +612,8 @@ const AddBranch = () => {
                 customOptions={form.customFacilities}
                 onToggle={(facility) => toggleArrayValue("facilities", facility)}
                 onRemoveCustom={(facility) => removeCustomValue(facility, "facilities", "customFacilities")}
+                trailingContent={<div className="add-branch-custom-row"><input value={form.customFacility} onChange={(event) => updateField("customFacility", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customFacility", "facilities")} placeholder="Add custom facility" /><button type="button" onClick={() => addCustomValue("customFacility", "facilities")} disabled={!form.customFacility.trim()}><Plus size={14} /> Add</button></div>}
               />
-            </div>
-            <div className="add-branch-custom-row">
-              <input
-                value={form.customFacility}
-                onChange={(event) =>
-                  updateField("customFacility", event.target.value)
-                }
-                onKeyDown={(event) =>
-                  handleCustomKeyDown(event, "customFacility", "facilities")
-                }
-                placeholder="Add custom facility"
-              />
-              <button
-                type="button"
-                onClick={() => addCustomValue("customFacility", "facilities")}
-                disabled={!form.customFacility.trim()}
-              >
-                <Plus size={14} /> Add
-              </button>
             </div>
           </section>
 
@@ -650,32 +632,8 @@ const AddBranch = () => {
                 customOptions={form.customLanguages}
                 onToggle={(language) => toggleArrayValue("languagesSpoken", language)}
                 onRemoveCustom={(language) => removeCustomValue(language, "languagesSpoken", "customLanguages")}
+                trailingContent={<div className="add-branch-custom-row"><input value={form.customLanguage} onChange={(event) => updateField("customLanguage", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customLanguage", "languagesSpoken")} placeholder="Add custom language" /><button type="button" onClick={() => addCustomValue("customLanguage", "languagesSpoken")} disabled={!form.customLanguage.trim()}><Plus size={14} /> Add</button></div>}
               />
-            </div>
-            <div className="add-branch-custom-row">
-              <input
-                value={form.customLanguage}
-                onChange={(event) =>
-                  updateField("customLanguage", event.target.value)
-                }
-                onKeyDown={(event) =>
-                  handleCustomKeyDown(
-                    event,
-                    "customLanguage",
-                    "languagesSpoken",
-                  )
-                }
-                placeholder="Add custom language"
-              />
-              <button
-                type="button"
-                onClick={() =>
-                  addCustomValue("customLanguage", "languagesSpoken")
-                }
-                disabled={!form.customLanguage.trim()}
-              >
-                <Plus size={14} /> Add
-              </button>
             </div>
           </section>
         </div>

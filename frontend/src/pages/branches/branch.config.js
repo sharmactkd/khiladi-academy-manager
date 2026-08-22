@@ -1,7 +1,7 @@
 export const PAGE_SIZE = 7;
 
 export const FACILITY_OPTIONS = [
-  "Mat Area", "Changing Room", "Washroom", "Drinking Water", "Parking",
+  "Mat Arena", "Changing Room", "Washroom", "Drinking Water", "Parking",
   "CCTV", "First Aid", "PSS / Sensor System", "Gym Equipment", "Waiting Area",
 ];
 

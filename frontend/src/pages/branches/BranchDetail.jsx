@@ -105,7 +105,7 @@ const BranchDetail = () => {
 
   const phones = useMemo(() => normalizePhones(branch), [branch]);
   const facilities = useMemo(
-    () => normalizeList(branch?.facilities, branch?.customFacilities),
+    () => normalizeList(branch?.facilities, branch?.customFacilities).map((item) => item === "Mat Area" ? "Mat Arena" : item),
     [branch?.facilities, branch?.customFacilities]
   );
   const languages = useMemo(
