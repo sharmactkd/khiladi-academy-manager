@@ -8,14 +8,14 @@ import {
   Building2,
   CalendarDays,
   CheckCircle2,
+  CircleDollarSign,
   FileText,
   Globe2,
   GraduationCap,
   History,
-  IndianRupee,
   LockKeyhole,
   MapPin,
-  ReceiptIndianRupee,
+  ReceiptText,
   RotateCcw,
   Search,
   ShieldCheck,
@@ -31,7 +31,7 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { PAYMENT_MODE_OPTIONS } from "../../utils/feePaymentModes.js";
 import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
-import { branchFor, formatMoney } from "../../utils/currency.js";
+import { branchFor, currencyMeta, formatMoney } from "../../utils/currency.js";
 import styles from "./CollectFee.module.css";
 
 const PAYMENT_MODE_ICONS = {
@@ -257,6 +257,7 @@ const CollectFee = () => {
 
   const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0];
   const feeBranch = branchFor(branches, selectedStudent?.branch?._id || selectedStudent?.branch || selectedStudent?.batch?.branch);
+  const feeCurrency = currencyMeta(feeBranch);
   const currency = (value) => formatMoney(value, feeBranch);
   const academyAddress = joinAddress(mainBranch) || joinAddress(academy);
   const selectedMonthLabel = MONTH_OPTIONS.find((month) => month.value === feeMonth)?.label || "Month";
@@ -282,7 +283,7 @@ const CollectFee = () => {
       </nav>
 
       <header className={styles.heading}>
-        <div><span><IndianRupee size={25} /></span><div><small>Fee collection</small><h1>Collect Fee</h1><p>Record a student payment and generate a receipt.</p></div></div>
+        <div><span><CircleDollarSign size={25} /></span><div><small>Fee collection</small><h1>Collect Fee</h1><p>Record a student payment and generate a receipt.</p></div></div>
         <Link to="/fees/payments"><History size={16} />Payment History</Link>
       </header>
 
@@ -343,10 +344,10 @@ const CollectFee = () => {
           <section className={styles.formSection}>
             <header><span>02</span><div><h2>Payment Details</h2><p>Enter the amount received and payment information.</p></div></header>
             <div className={styles.paymentGrid}>
-              <label><span>Monthly Fee *</span><div className={styles.moneyInput}><IndianRupee size={14} /><input type="number" step="0.01" min="0" {...register("amount", { required: "Amount required", min: { value: 0, message: "Amount cannot be negative" } })} /></div>{errors.amount ? <small className={styles.errorText}>{errors.amount.message}</small> : null}</label>
-              <label><span>Discount / Scholarship</span><div className={styles.moneyInput}><IndianRupee size={14} /><input type="number" step="0.01" min="0" {...register("discount", { min: { value: 0, message: "Discount cannot be negative" } })} /></div>{errors.discount ? <small className={styles.errorText}>{errors.discount.message}</small> : null}</label>
+              <label><span>Monthly Fee *</span><div className={styles.moneyInput}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0" {...register("amount", { required: "Amount required", min: { value: 0, message: "Amount cannot be negative" } })} /></div>{errors.amount ? <small className={styles.errorText}>{errors.amount.message}</small> : null}</label>
+              <label><span>Discount / Scholarship</span><div className={styles.moneyInput}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0" {...register("discount", { min: { value: 0, message: "Discount cannot be negative" } })} /></div>{errors.discount ? <small className={styles.errorText}>{errors.discount.message}</small> : null}</label>
               <label><span>Final Payable</span><div className={`${styles.readOnlyField} ${styles.emphasisField}`}>{currency(finalPayable)}</div></label>
-              <label><span>Amount Paid *</span><div className={`${styles.moneyInput} ${paymentMode === "cash_online" ? styles.calculatedInput : ""}`}><IndianRupee size={14} /><input type="number" step="0.01" min="0" readOnly={paymentMode === "cash_online"} {...register("amountPaid", { required: "Amount paid required", min: { value: 0, message: "Paid amount cannot be negative" } })} /></div>{paymentMode === "cash_online" ? <small className={styles.helperText}>Automatically calculated from cash and online amounts.</small> : null}{errors.amountPaid ? <small className={styles.errorText}>{errors.amountPaid.message}</small> : null}</label>
+              <label><span>Amount Paid *</span><div className={`${styles.moneyInput} ${paymentMode === "cash_online" ? styles.calculatedInput : ""}`}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0" readOnly={paymentMode === "cash_online"} {...register("amountPaid", { required: "Amount paid required", min: { value: 0, message: "Paid amount cannot be negative" } })} /></div>{paymentMode === "cash_online" ? <small className={styles.helperText}>Automatically calculated from cash and online amounts.</small> : null}{errors.amountPaid ? <small className={styles.errorText}>{errors.amountPaid.message}</small> : null}</label>
               <label><span>Pending Amount</span><div className={`${styles.readOnlyField} ${pendingAmount > 0 ? styles.pendingField : styles.successField}`}>{currency(pendingAmount)}</div></label>
               <label><span>Payment Date *</span><div className={styles.dateInput}><CalendarDays size={15} /><input type="date" {...register("paymentDate", { required: "Payment date required" })} /></div>{errors.paymentDate ? <small className={styles.errorText}>{errors.paymentDate.message}</small> : null}</label>
             </div>
@@ -375,7 +376,7 @@ const CollectFee = () => {
         </main>
 
         <aside className={styles.summaryCard}>
-          <header><span><ReceiptIndianRupee size={20} /></span><div><small>Review & confirm</small><h2>Payment Summary</h2></div></header>
+          <header><span><ReceiptText size={20} /></span><div><small>Review & confirm</small><h2>Payment Summary</h2></div></header>
           {selectedStudent ? <div className={styles.summaryStudent}><img src={getStudentPhotoUrl(selectedStudent)} alt="" /><div><strong>{studentName(selectedStudent)}</strong><span>{selectedStudent.admissionNumber || "No admission number"}</span><small>{selectedStudent.branch?.branchName || "No branch"} · {selectedStudent.batch?.batchName || "No batch"}</small></div></div> : <div className={styles.summaryPlaceholder}><UserRound size={24} /><span>Select a student to prepare the receipt.</span></div>}
           <dl className={styles.breakdown}>
             <div><dt>Monthly Fee</dt><dd>{currency(amount)}</dd></div>
@@ -387,7 +388,7 @@ const CollectFee = () => {
           </dl>
           <div className={`${styles.statusPanel} ${styles[`status${paymentStatus.key[0].toUpperCase()}${paymentStatus.key.slice(1)}`]}`}><CheckCircle2 size={22} /><strong>{paymentStatus.label}</strong></div>
           <div className={styles.summaryMeta}><p><CalendarDays size={15} /><span>Fee Period</span><strong>{selectedMonthLabel} {feeYear}</strong></p><p><FileText size={15} /><span>Receipt</span><strong>Generated automatically</strong></p><p><Banknote size={15} /><span>Mode</span><strong>{PAYMENT_MODES.find((mode) => mode.value === paymentMode)?.label}</strong></p></div>
-          <button className={styles.submitButton} type="submit" disabled={saving || loadingStudents}><ReceiptIndianRupee size={17} />{saving ? "Collecting Fee..." : "Collect Fee & Generate Receipt"}<ArrowRight size={16} /></button>
+          <button className={styles.submitButton} type="submit" disabled={saving || loadingStudents}><ReceiptText size={17} />{saving ? "Collecting Fee..." : "Collect Fee & Generate Receipt"}<ArrowRight size={16} /></button>
           <button className={styles.resetButton} type="button" onClick={resetForm} disabled={saving}><RotateCcw size={15} />Reset Form</button>
           <footer><ShieldCheck size={15} /><span><strong>Secure academy record</strong>Payment and receipt details are stored safely.</span><LockKeyhole size={13} /></footer>
         </aside>

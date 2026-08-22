@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Award, BadgeIndianRupee, CalendarCheck2, CircleDollarSign, GraduationCap, IndianRupee, Sparkles, UserCheck, UserRoundX, Users } from "lucide-react";
+import { Award, CalendarCheck2, CircleDollarSign, GraduationCap, Sparkles, UserCheck, UserRoundX, Users } from "lucide-react";
 
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
@@ -90,7 +90,7 @@ const OwnerDashboard = () => {
     const incompleteProfiles = (data.dashboard?.recentAdmissions || []).filter((student) => student.profileStatus === "incomplete").length;
     return [
       incompleteProfiles ? { icon: UserRoundX, title: "Profile incomplete", text: `${incompleteProfiles} recent profile(s) need details`, count: incompleteProfiles, tone: "orange", to: "/students" } : null,
-      Number(data.dashboard?.pendingFees) > 0 ? { icon: IndianRupee, title: "Fee outstanding", text: `${formatMoney(data.dashboard.pendingFees)} currently pending`, count: null, tone: "red", to: "/fees" } : null,
+      Number(data.dashboard?.pendingFees) > 0 ? { icon: CircleDollarSign, title: "Fee outstanding", text: `${formatMoney(data.dashboard.pendingFees)} currently pending`, count: null, tone: "red", to: "/fees" } : null,
       Number(data.dashboard?.inactiveStudents) > 0 ? { icon: UserRoundX, title: "Inactive students", text: `${data.dashboard.inactiveStudents} student(s) are inactive`, count: data.dashboard.inactiveStudents, tone: "slate", to: "/students" } : null,
       Number(data.dashboard?.upcomingBeltTests) > 0 ? { icon: Award, title: "Belt tests scheduled", text: `${data.dashboard.upcomingBeltTests} upcoming test(s)`, count: data.dashboard.upcomingBeltTests, tone: "purple", to: "/belt-tests" } : null,
     ].filter(Boolean);
@@ -101,7 +101,7 @@ const OwnerDashboard = () => {
     { icon: UserCheck, title: "Active students", value: data.dashboard?.activeStudents || 0, tone: "green" },
     { icon: UserRoundX, title: "Inactive students", value: data.dashboard?.inactiveStudents || 0, tone: "orange" },
     { icon: CalendarCheck2, title: "Today attendance", value: `${data.dashboard?.todayAttendancePercentage || 0}%`, subtitle: `${data.dashboard?.todayAttendanceCount || 0} marked`, tone: "blue" },
-    { icon: BadgeIndianRupee, title: "Fees collected", value: formatMoney(data.dashboard?.monthlyFeesCollected), tone: "green" },
+    { icon: CircleDollarSign, title: "Fees collected", value: formatMoney(data.dashboard?.monthlyFeesCollected), tone: "green" },
     { icon: CircleDollarSign, title: "Outstanding", value: formatMoney(data.dashboard?.pendingFees), tone: "red" },
   ];
   const medalsTotal = Object.values(data.dashboard?.medalCount || {}).reduce((sum, count) => sum + Number(count || 0), 0);

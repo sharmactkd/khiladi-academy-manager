@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowLeft, ArrowRight, Banknote, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Download, FileText, FilterX, GraduationCap, IndianRupee, Plus, ReceiptIndianRupee, RefreshCw, Search, Smartphone, WalletCards } from "lucide-react";
+import { ArrowLeft, ArrowRight, Banknote, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleDollarSign, Download, FileText, FilterX, GraduationCap, Plus, ReceiptText, ReceiptText as ReceiptIndianRupee, RefreshCw, Search, Smartphone, WalletCards } from "lucide-react";
 import { academyApi } from "../../api/academyApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { feePaymentApi } from "../../api/feeApi.js";
@@ -69,12 +69,12 @@ const PaymentHistory = () => {
 
   return (
     <div className={`page ${styles.page}`}>
-      <AcademyHeroHeader headingId="payment-history-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Payment records" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy) || "Complete main branch address not available"} summaryItems={[{ key: "branches", type: "branches", value: branches.length, label: `Active ${branches.length === 1 ? "Branch" : "Branches"}` }, { key: "records", icon: ReceiptIndianRupee, value: payments.length, label: "Payment Records" }]} />
+      <AcademyHeroHeader headingId="payment-history-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Payment records" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy) || "Complete main branch address not available"} summaryItems={[{ key: "branches", type: "branches", value: branches.length, label: `Active ${branches.length === 1 ? "Branch" : "Branches"}` }, { key: "records", icon: ReceiptText, value: payments.length, label: "Payment Records" }]} />
       <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><Link to="/fees">Fees</Link><span>/</span><strong>Payment History</strong></nav>
-      <header className={styles.heading}><div><span><ReceiptIndianRupee size={25} /></span><div><small>Financial ledger</small><h1>Payment History</h1><p>Search, review and export every recorded fee transaction.</p></div></div><div className={styles.headerActions}><Link to="/fees"><ArrowLeft size={16}/>Fee Dashboard</Link><button type="button" onClick={exportPayments} disabled={!filteredPayments.length}><Download size={16}/>Export CSV</button><Link className={styles.primaryAction} to="/fees/collect"><Plus size={16}/>Collect Fee</Link></div></header>
+      <header className={styles.heading}><div><span><ReceiptText size={25} /></span><div><small>Financial ledger</small><h1>Payment History</h1><p>Search, review and export every recorded fee transaction.</p></div></div><div className={styles.headerActions}><Link to="/fees"><ArrowLeft size={16}/>Fee Dashboard</Link><button type="button" onClick={exportPayments} disabled={!filteredPayments.length}><Download size={16}/>Export CSV</button><Link className={styles.primaryAction} to="/fees/collect"><Plus size={16}/>Collect Fee</Link></div></header>
 
       <section className={styles.summaryGrid}>
-        <article><span className={styles.greenIcon}><IndianRupee size={20}/></span><div><small>Filtered Collection</small><strong>{currency(summary.collected)}</strong><p>Across {filteredPayments.length} transactions</p></div></article>
+        <article><span className={styles.greenIcon}><CircleDollarSign size={20}/></span><div><small>Filtered Collection</small><strong>{currency(summary.collected)}</strong><p>Across {filteredPayments.length} transactions</p></div></article>
         <article><span className={styles.redIcon}><FileText size={20}/></span><div><small>Outstanding Balance</small><strong>{currency(summary.balance)}</strong><p>In current result set</p></div></article>
         <article><span className={styles.blueIcon}><CheckCircle2 size={20}/></span><div><small>Paid Transactions</small><strong>{summary.paid}</strong><p>Completed fee records</p></div></article>
         <article><span className={styles.purpleIcon}><WalletCards size={20}/></span><div><small>Split Payments</small><strong>{summary.split}</strong><p>Cash + Online records</p></div></article>

@@ -5,6 +5,7 @@ import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import FeePlan from "../models/FeePlan.js";
 import FeePayment from "../models/FeePayment.js";
+import { getCurrencySymbol } from "../utils/currency.js";
 
 export const getMonthYearNow = () => {
   const now = new Date();
@@ -332,7 +333,7 @@ export const collectStudentFee = async ({
   const receiptNumber = await generateReceiptNumber(academyId);
   const branch = student.branch && typeof student.branch === "object" ? student.branch : null;
   const currencyCode = branch?.currencyCode || "INR";
-  const currencySymbol = branch?.currencySymbol || "₹";
+  const currencySymbol = branch?.currencySymbol || getCurrencySymbol(currencyCode);
 
   const existing = await FeePayment.findOne({
     academy: academyId,

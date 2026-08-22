@@ -9,6 +9,7 @@ import FeePayment from "../models/FeePayment.js";
 
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
+import { getCurrencySymbol } from "../utils/currency.js";
 
 const OWNER_ROLES = ["academy_owner", "super_admin"];
 
@@ -97,7 +98,7 @@ const normalizeBranchPayload = (body = {}) => {
     state: body.state || "",
     country: body.country || "India",
     currencyCode: String(body.currencyCode || "INR").trim().toUpperCase(),
-    currencySymbol: String(body.currencySymbol || "₹").trim(),
+    currencySymbol: String(body.currencySymbol || getCurrencySymbol(body.currencyCode || "INR")).trim(),
     currencyCountryCode: String(body.currencyCountryCode || "IN").trim().toUpperCase(),
 
     headCoachName: body.headCoachName || "",

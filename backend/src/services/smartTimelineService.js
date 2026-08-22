@@ -5,6 +5,7 @@ import BeltTest from "../models/BeltTest.js";
 import ChampionshipRecord from "../models/ChampionshipRecord.js";
 import GeneratedCertificate from "../models/GeneratedCertificate.js";
 import StudentTimeline from "../models/StudentTimeline.js";
+import { formatCurrencyAmount } from "../utils/currency.js";
 
 import { buildBranchAccessFilter } from "./branchAccessService.js";
 
@@ -88,7 +89,7 @@ const getFeeInsight = async ({ academyId, student }) => {
     return createInsight({
       type: "pending_fee_warning",
       title: "Pending fee warning",
-      message: `Pending fee amount is ₹${pendingAmount}.`,
+      message: `Pending fee amount is ${formatCurrencyAmount(pendingAmount, pendingFees[0])}.`,
       severity: "warning",
       meta: { pendingAmount },
     });

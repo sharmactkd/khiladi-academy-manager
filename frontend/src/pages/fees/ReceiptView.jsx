@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowLeft, BadgeIndianRupee, Banknote, Building2, CheckCircle2, Download, GraduationCap, IndianRupee, Mail, MapPin, Phone, Printer, ReceiptIndianRupee, RefreshCw, ShieldCheck, Smartphone, UserRound, WalletCards } from "lucide-react";
+import { ArrowLeft, CircleDollarSign as BadgeIndianRupee, Banknote, Building2, CheckCircle2, Download, GraduationCap, Mail, MapPin, Phone, Printer, ReceiptText as ReceiptIndianRupee, RefreshCw, ShieldCheck, Smartphone, UserRound, WalletCards } from "lucide-react";
 import { academyApi } from "../../api/academyApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { feePaymentApi } from "../../api/feeApi.js";
@@ -131,7 +131,7 @@ const ReceiptView = () => {
           {payment.paymentMode === "cash_online" ? <div className={styles.splitPayment}><article><span><Banknote size={20} /></span><div><small>Cash Amount</small><strong>{currency(payment.cashAmount)}</strong></div></article><b>+</b><article><span><Smartphone size={20} /></span><div><small>Online Amount</small><strong>{currency(payment.onlineAmount)}</strong></div></article><b>=</b><article className={styles.splitTotal}><span><WalletCards size={20} /></span><div><small>Total Paid</small><strong>{currency(payment.amountPaid)}</strong></div></article></div> : <div className={styles.singlePayment}><span>{payment.paymentMode === "cash" ? <Banknote size={22} /> : <Smartphone size={22} />}</span><div><small>{formatPaymentMode(payment.paymentMode)} Payment</small><strong>{currency(payment.amountPaid)}</strong></div></div>}
           <dl className={styles.totals}><div><dt>Subtotal</dt><dd>{currency(payment.amount)}</dd></div><div><dt>Discount</dt><dd className={styles.discount}>−{currency(payment.discount)}</dd></div><div className={styles.totalPaid}><dt>Amount Paid</dt><dd>{currency(payment.amountPaid)}</dd></div><div><dt>Balance</dt><dd>{currency(payment.pendingAmount)}</dd></div><div className={`${styles.paymentResult} ${resultClass}`}><dt>{status.key === "paid" ? "Paid in full" : status.label}</dt><dd>{status.key === "paid" ? <ShieldCheck size={16} /> : null}</dd></div></dl>
         </section>
-        <div className={styles.amountWords}><IndianRupee size={16} /><strong>Amount in words:</strong><span>{numberToWords(payment.amountPaid)}</span></div>
+        <div className={styles.amountWords}><BadgeIndianRupee size={16} /><strong>Amount in words:</strong><span>{numberToWords(payment.amountPaid)}</span></div>
         <footer className={styles.contactFooter}>{receiptAddress ? <span><MapPin size={14} />{receiptAddress}</span> : null}{academy?.phone ? <span><Phone size={14} />{academy.countryCode || "+91"} {academy.phone}</span> : null}{academy?.email ? <span><Mail size={14} />{academy.email}</span> : null}<span className={styles.generated}><Building2 size={14} />Computer-generated official receipt</span></footer>
       </main>
     </div>

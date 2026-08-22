@@ -1,5 +1,5 @@
 import {
-  BadgeIndianRupee,
+  CircleDollarSign as BadgeIndianRupee,
   BarChart3,
   Bell,
   Building2,

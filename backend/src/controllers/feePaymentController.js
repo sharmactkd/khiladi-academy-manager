@@ -2,6 +2,7 @@ import Student from "../models/Student.js";
 import FeePayment from "../models/FeePayment.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
+import { getCurrencySymbol } from "../utils/currency.js";
 import {
   buildStudentFeeStatus,
   collectStudentFee,
@@ -161,7 +162,7 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     receiptNumber: payment.receiptNumber,
     status: payment.status,
     currencyCode: payment.currencyCode || payment.branch?.currencyCode || "INR",
-    currencySymbol: payment.currencySymbol || payment.branch?.currencySymbol || "₹",
+    currencySymbol: payment.currencySymbol || payment.branch?.currencySymbol || getCurrencySymbol(payment.currencyCode || payment.branch?.currencyCode || "INR"),
   }));
 
   const collectionRate = students.length

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Activity, AlertTriangle, Award, BadgeIndianRupee, BarChart3, CalendarCheck2, ChevronRight, CircleDollarSign, GraduationCap, Medal, RefreshCw, ShieldCheck, Sparkles, TrendingUp, Trophy, UserCheck, UserRoundX, Users } from "lucide-react";
+import { Activity, AlertTriangle, Award, BarChart3, CalendarCheck2, ChevronRight, CircleDollarSign, GraduationCap, Medal, RefreshCw, ShieldCheck, Sparkles, TrendingUp, Trophy, UserCheck, UserRoundX, Users } from "lucide-react";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import AnalyticsFilters from "../../components/analytics/AnalyticsFilters.jsx";
 import { formatPaymentMode } from "../../utils/feePaymentModes.js";
@@ -49,7 +49,7 @@ const Overview = ({ data, canManageFees }) => {
     <section className={styles.kpis}>
       <Kpi icon={Users} label="Active Students" value={dashboard.activeStudents || 0} detail={`${dashboard.totalStudents || 0} total student records`} tone="red" />
       <Kpi icon={CalendarCheck2} label="Today Attendance" value={`${dashboard.todayAttendancePercentage || 0}%`} detail={`${dashboard.todayAttendanceCount || 0} attendance records`} tone="blue" />
-      {canManageFees ? <Kpi icon={BadgeIndianRupee} label="Monthly Collection" value={formatCurrency(dashboard.monthlyFeesCollected)} detail={`${formatCurrency(dashboard.pendingFees)} outstanding`} tone="green" /> : null}
+      {canManageFees ? <Kpi icon={CircleDollarSign} label="Monthly Collection" value={formatCurrency(dashboard.monthlyFeesCollected)} detail={`${formatCurrency(dashboard.pendingFees)} outstanding`} tone="green" /> : null}
       <Kpi icon={Trophy} label="Achievements" value={medalCount} detail={`${dashboard.upcomingBeltTests || 0} upcoming belt tests`} tone="purple" />
     </section>
     <section className={styles.chartGrid}>
@@ -85,7 +85,7 @@ const FeesPanel = ({ data }) => {
   const collected = sumValues(trend, "value");
   const transactions = sumValues(statuses);
   const paid = statuses.filter((item) => ["paid", "completed", "success"].includes(item.label.toLowerCase())).reduce((total, item) => total + item.value, 0);
-  return <><section className={styles.kpis}><Kpi icon={BadgeIndianRupee} label="Collection" value={formatCurrency(collected)} detail="Across the selected period" tone="green"/><Kpi icon={CircleDollarSign} label="Transactions" value={transactions} detail="All payment records" tone="blue"/><Kpi icon={ShieldCheck} label="Paid Records" value={paid} detail={`${transactions ? Math.round((paid / transactions) * 100) : 0}% of transactions`} tone="purple"/><Kpi icon={AlertTriangle} label="Needs Attention" value={Math.max(transactions - paid, 0)} detail="Due, partial or pending records"/></section><section className={styles.chartGrid}><ChartCard title="Collection Trend" subtitle="Fee amount collected by month" empty={!trend.length} wide><TrendArea data={trend} color="#1f9d62" currency/></ChartCard><ChartCard title="Fee Status" subtitle="Paid, pending and partial transactions" empty={!statuses.length}><DistributionPie data={statuses}/></ChartCard><ChartCard title="Payment Mix" subtitle="Cash, online and split payments" empty={!modes.length}><DistributionBars data={modes} horizontal color="#7255c5"/></ChartCard></section></>;
+  return <><section className={styles.kpis}><Kpi icon={CircleDollarSign} label="Collection" value={formatCurrency(collected)} detail="Across the selected period" tone="green"/><Kpi icon={CircleDollarSign} label="Transactions" value={transactions} detail="All payment records" tone="blue"/><Kpi icon={ShieldCheck} label="Paid Records" value={paid} detail={`${transactions ? Math.round((paid / transactions) * 100) : 0}% of transactions`} tone="purple"/><Kpi icon={AlertTriangle} label="Needs Attention" value={Math.max(transactions - paid, 0)} detail="Due, partial or pending records"/></section><section className={styles.chartGrid}><ChartCard title="Collection Trend" subtitle="Fee amount collected by month" empty={!trend.length} wide><TrendArea data={trend} color="#1f9d62" currency/></ChartCard><ChartCard title="Fee Status" subtitle="Paid, pending and partial transactions" empty={!statuses.length}><DistributionPie data={statuses}/></ChartCard><ChartCard title="Payment Mix" subtitle="Cash, online and split payments" empty={!modes.length}><DistributionBars data={modes} horizontal color="#7255c5"/></ChartCard></section></>;
 };
 
 const PerformancePanel = ({ data }) => {

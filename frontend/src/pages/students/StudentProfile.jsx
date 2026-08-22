@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  Activity, ArrowLeft, Award, BadgeIndianRupee, BookOpen, CalendarCheck2,
+  Activity, ArrowLeft, Award, CircleDollarSign as BadgeIndianRupee, BookOpen, CalendarCheck2,
   CalendarDays, CheckCircle2, Clock3, Edit3, ExternalLink, GraduationCap,
-  HeartPulse, IdCard, MapPin, Phone, ReceiptIndianRupee, Ruler,
+  HeartPulse, IdCard, MapPin, Percent as ReceiptIndianRupee, Ruler,
   ShieldCheck, ShieldPlus, UserRound, UsersRound, WalletCards, Weight, XCircle,
 } from "lucide-react";
 

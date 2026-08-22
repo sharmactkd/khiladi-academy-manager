@@ -1,5 +1,8 @@
+import { formatMoney } from "../../utils/currency.js";
+
 const InvoicePreview = ({ invoice }) => {
   if (!invoice) return <div className="card">Invoice not found.</div>;
+  const money = (value) => formatMoney(value, { currency: invoice.currency || "INR" });
 
   return (
     <div className="invoice-preview">
@@ -57,17 +60,17 @@ const InvoicePreview = ({ invoice }) => {
               <td>{item.name}</td>
               <td>{item.description}</td>
               <td>{item.quantity}</td>
-              <td>₹{item.amount}</td>
-              <td>₹{item.total}</td>
+              <td>{money(item.amount)}</td>
+              <td>{money(item.total)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
       <div className="invoice-total">
-        <p>Amount: ₹{invoice.amount}</p>
-        <p>Tax: ₹{invoice.tax}</p>
-        <h2>Total: ₹{invoice.total}</h2>
+        <p>Amount: {money(invoice.amount)}</p>
+        <p>Tax: {money(invoice.tax)}</p>
+        <h2>Total: {money(invoice.total)}</h2>
       </div>
     </div>
   );

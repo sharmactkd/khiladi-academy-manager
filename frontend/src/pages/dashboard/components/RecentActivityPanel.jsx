@@ -1,4 +1,4 @@
-import { IndianRupee, UserPlus } from "lucide-react";
+import { CircleDollarSign, UserPlus } from "lucide-react";
 import { formatRelativeTime } from "../dashboard.utils.js";
 
 const RecentActivityPanel = ({ items }) => (
@@ -6,7 +6,7 @@ const RecentActivityPanel = ({ items }) => (
     <header className="owner-panel__header"><div><span>Updates</span><h2>Recent activity</h2></div></header>
     <div className="owner-activity__list">
       {items.length ? items.map((item) => {
-        const Icon = item.type === "payment" ? IndianRupee : UserPlus;
+        const Icon = item.type === "payment" ? CircleDollarSign : UserPlus;
         return (
           <div key={item.id} className={`owner-activity__item owner-activity__item--${item.type}`}>
             <span><Icon size={16} /></span>

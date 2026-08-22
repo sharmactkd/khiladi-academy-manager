@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import PremiumBadge from "./PremiumBadge.jsx";
+import { formatMoney } from "../../utils/currency.js";
 
 const PlanCard = ({ plan, currentPlanCode }) => {
   const isCurrent = currentPlanCode === plan.code;
@@ -19,7 +20,7 @@ const PlanCard = ({ plan, currentPlanCode }) => {
         {plan.price === 0 ? (
           <strong>{plan.code === "enterprise" ? "Custom" : "Free"}</strong>
         ) : (
-          <strong>₹{plan.price}</strong>
+          <strong>{formatMoney(plan.price, { currency: plan.currency || "INR" })}</strong>
         )}
         <span> / {plan.billingCycle}</span>
       </div>

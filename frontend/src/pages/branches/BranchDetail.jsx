@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Award, Building2, CalendarCheck2, CalendarDays, CheckCircle2,
-  Crown, Dumbbell, Edit3, IndianRupee, Languages, Mail, MapPin, Phone,
+  Crown, Dumbbell, Edit3, CircleDollarSign as IndianRupee, Languages, Mail, MapPin, Phone,
   ShieldCheck, UserRound, Users, UsersRound, Warehouse, XCircle,
   WalletCards,
 } from "lucide-react";
@@ -14,7 +14,7 @@ import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import BranchDetailSectionHeader from "./components/BranchDetailSectionHeader.jsx";
 import "./BranchDetail.module.css";
-import { formatMoney } from "../../utils/currency.js";
+import { currencyMeta, formatMoney } from "../../utils/currency.js";
 
 const displayValue = (value, fallback = "Not added") =>
   String(value ?? "").trim() || fallback;
@@ -193,7 +193,7 @@ const BranchDetail = () => {
           <BranchDetailSectionHeader icon={Building2} eyebrow="Identity" title="Branch Information" description="Core identity and operating status." />
           <div className="branch-detail-items">
             <DetailItem icon={UserRound} label="Director Name">{displayValue(branch.directorName)}</DetailItem>
-            <DetailItem icon={WalletCards} label="Currency">{`${branch.currencyCode || "INR"} (${branch.currencySymbol || "₹"})`}</DetailItem>
+            <DetailItem icon={WalletCards} label="Currency">{`${currencyMeta(branch).code} (${currencyMeta(branch).symbol})`}</DetailItem>
             <DetailItem icon={Building2} label="Branch Code">{displayValue(branch.branchCode)}</DetailItem>
             <DetailItem icon={CalendarDays} label="Branch Since">{displayValue(branch.branchSince)}</DetailItem>
             <DetailItem icon={branch.isMainBranch ? Crown : ShieldCheck} label="Branch Type">{branch.isMainBranch ? "Main Branch" : "Academy Branch"}</DetailItem>

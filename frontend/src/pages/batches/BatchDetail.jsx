@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, BadgeIndianRupee, CalendarDays, CheckCircle2, Clock3, Dumbbell, Edit3, ExternalLink, FileText, GraduationCap, Hash, Languages, MapPin, MessageCircleMore, Plus, ShieldCheck, Target, UserRound, UsersRound, Video, WalletCards, XCircle } from "lucide-react";
+import { ArrowLeft, CircleDollarSign as BadgeIndianRupee, CalendarDays, CheckCircle2, Clock3, Dumbbell, Edit3, ExternalLink, FileText, GraduationCap, Hash, Languages, MapPin, MessageCircleMore, Plus, ShieldCheck, Target, UserRound, UsersRound, Video, WalletCards, XCircle } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
 import { studentApi } from "../../api/studentApi.js";

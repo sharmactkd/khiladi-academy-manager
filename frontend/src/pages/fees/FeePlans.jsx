@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 
 import { feePlanApi } from "../../api/feeApi.js";
 import { batchApi } from "../../api/batchApi.js";
-import { formatMoney } from "../../utils/currency.js";
+import { currencyMeta, formatMoney } from "../../utils/currency.js";
 
 const defaultForm = {
   name: "",
@@ -24,6 +24,8 @@ const FeePlans = () => {
   const [editingId, setEditingId] = useState(null);
 
   const [form, setForm] = useState(defaultForm);
+  const selectedBatch = batches.find((batch) => String(batch._id) === String(form.batch));
+  const selectedCurrency = currencyMeta(selectedBatch?.branch || {});
 
   const fetchPlans = async () => {
     try {
@@ -221,7 +223,7 @@ const FeePlans = () => {
           </label>
 
           <label>
-            Monthly Amount ({batches.find((batch) => String(batch._id) === String(form.batch))?.branch?.currencySymbol || "₹"}) *
+            Monthly Amount ({selectedCurrency.symbol}) *
             <input
               type="number"
               min="0"

@@ -1,4 +1,4 @@
-import { BellRing, CalendarDays, IndianRupee, Send } from "lucide-react";
+import { BellRing, CalendarDays, CircleDollarSign as IndianRupee, Send } from "lucide-react";
 import { useState } from "react";
 
 const channels = [{ id: "internal", label: "In-app" }, { id: "email", label: "Email" }, { id: "whatsapp", label: "WhatsApp" }];

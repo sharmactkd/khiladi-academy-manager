@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertTriangle, ArrowRight, Banknote, CalendarDays, CheckCircle2, Download, GraduationCap, IndianRupee, Plus, ReceiptIndianRupee, RefreshCw, TrendingDown, TrendingUp, Users, WalletCards } from "lucide-react";
+import { AlertTriangle, ArrowRight, Banknote, CalendarDays, CheckCircle2, CircleDollarSign, Download, GraduationCap, Plus, ReceiptText, RefreshCw, TrendingDown, TrendingUp, Users, WalletCards } from "lucide-react";
 import { academyApi } from "../../api/academyApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { feePaymentApi } from "../../api/feeApi.js";
@@ -71,7 +71,7 @@ const FeesDashboard = () => {
       <AcademyHeroHeader headingId="fees-dashboard-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Financial operations" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy) || "Complete main branch address not available"} summaryItems={[{ key: "branches", type: "branches", value: branches.length, label: `Active ${branches.length === 1 ? "Branch" : "Branches"}` }, { key: "students", icon: GraduationCap, value: data.activeStudents || 0, label: "Fee Accounts" }]} />
       <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><strong>Fees</strong></nav>
       <header className={styles.heading}>
-        <div className={styles.title}><span><ReceiptIndianRupee size={25} /></span><div><small>Financial operations</small><h1>Fee Dashboard</h1><p>Track collections, outstanding dues and payment activity.</p></div></div>
+        <div className={styles.title}><span><ReceiptText size={25} /></span><div><small>Financial operations</small><h1>Fee Dashboard</h1><p>Track collections, outstanding dues and payment activity.</p></div></div>
         <div className={styles.actions}><label><CalendarDays size={15} /><select value={`${filters.year}-${filters.month}`} onChange={(event) => { const [year, month] = event.target.value.split("-").map(Number); setFilters({ year, month }); }}>{Array.from({ length: 24 }, (_, index) => { const date = new Date(now.getFullYear(), now.getMonth() - index, 1); const value = `${date.getFullYear()}-${date.getMonth() + 1}`; return <option key={value} value={value}>{MONTHS[date.getMonth()].label} {date.getFullYear()}</option>; })}</select></label><button type="button" onClick={exportReport}><Download size={15} />Export Report</button><Link to="/fees/collect"><Plus size={16} />Collect Fee</Link></div>
       </header>
 
@@ -79,7 +79,7 @@ const FeesDashboard = () => {
         <section className={styles.kpis}>
           <article><span className={styles.greenIcon}><Banknote size={21} /></span><div><small>Collected This Month</small><strong>{currency(data.thisMonthCollection)}</strong><p className={change >= 0 ? styles.positive : styles.negative}><ChangeIcon size={13} />{Math.abs(change)}% <span>vs previous month</span></p></div></article>
           <article><span className={styles.amberIcon}><Users size={21} /></span><div><small>Outstanding Dues</small><strong>{currency(data.pendingAmount)}</strong><p>{data.summary?.due + data.summary?.partial + data.summary?.overdue || 0} students require attention</p></div></article>
-          <article><span className={styles.blueIcon}><IndianRupee size={21} /></span><div><small>Collection Rate</small><strong>{Number(data.collectionRate || 0).toFixed(1)}%</strong><div className={styles.progress}><i style={{ width: `${Math.min(Number(data.collectionRate || 0), 100)}%` }} /></div><p>Target: 85%</p></div></article>
+          <article><span className={styles.blueIcon}><CircleDollarSign size={21} /></span><div><small>Collection Rate</small><strong>{Number(data.collectionRate || 0).toFixed(1)}%</strong><div className={styles.progress}><i style={{ width: `${Math.min(Number(data.collectionRate || 0), 100)}%` }} /></div><p>Target: 85%</p></div></article>
           <article><span className={styles.purpleIcon}><WalletCards size={21} /></span><div><small>Total Transactions</small><strong>{data.totalTransactions || 0}</strong><div className={styles.modeCounts}>{paymentMix.map((item) => <span key={item.key}><b>{item.name === "Cash + Online" ? "Split" : item.name}</b><em>{item.transactions}</em></span>)}</div></div></article>
         </section>
 
