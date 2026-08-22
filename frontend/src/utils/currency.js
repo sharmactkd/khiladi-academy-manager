@@ -52,9 +52,40 @@ export const rememberDefaultCurrency = (source = {}) => {
 };
 
 export const formatMoney = (value, source = {}) => {
-  const { code } = currencyMeta(source);
-  try { return new Intl.NumberFormat(undefined, { style: "currency", currency: code, maximumFractionDigits: 2 }).format(Number(value || 0)); }
-  catch { return `${currencyMeta(source).symbol}${Number(value || 0).toLocaleString()}`; }
+  const { symbol } = currencyMeta(source);
+  const amount = Number(value || 0);
+
+  try {
+    const formattedAmount = new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(Number.isFinite(amount) ? amount : 0);
+
+    return `${symbol}${formattedAmount}`;
+  } catch {
+    return `${symbol}${Number.isFinite(amount) ? amount : 0}`;
+  }
 };
 
-export const branchFor = (branches = [], branchId = "") => branches.find((branch) => String(branch?._id) === String(branchId)) || branches.find((branch) => branch?.isMainBranch) || branches[0] || {};
+const referenceId = (reference) =>
+  String(reference?._id || reference?.id || reference || "").trim();
+
+export const branchFor = (branches = [], branchReference = "") => {
+  const branchId = referenceId(branchReference);
+  const matchedBranch = branchId
+    ? branches.find((branch) => referenceId(branch) === branchId)
+    : null;
+
+  if (matchedBranch) return matchedBranch;
+
+  // A populated student.branch already contains the saved currency fields.
+  if (
+    branchReference &&
+    typeof branchReference === "object" &&
+    (branchReference.currencyCode || branchReference.currencySymbol)
+  ) {
+    return branchReference;
+  }
+
+  return branches.find((branch) => branch?.isMainBranch) || branches[0] || {};
+};

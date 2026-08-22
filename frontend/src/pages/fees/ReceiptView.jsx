@@ -10,14 +10,22 @@ import useAuth from "../../hooks/useAuth.js";
 import { formatPaymentMode } from "../../utils/feePaymentModes.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import styles from "./ReceiptView.module.css";
-import { formatMoney } from "../../utils/currency.js";
+import { currencyMeta, currencyName, formatMoney } from "../../utils/currency.js";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const studentName = (student) => [student?.firstName, student?.lastName].filter(Boolean).join(" ").trim() || "Student";
 const joinAddress = (source) => [source?.address, source?.city, source?.state, source?.country].map((item) => String(item || "").trim()).filter(Boolean).join(", ");
 const normalizeAcademy = (response) => response?.data?.data?.academy || response?.data?.academy || null;
 const normalizeBranches = (response) => {
-  const list = response?.data?.data || response?.data || [];
+  const candidates = [
+    response?.data?.data?.branches,
+    response?.data?.branches,
+    response?.data?.data,
+    response?.data,
+    response?.branches,
+    response,
+  ];
+  const list = candidates.find(Array.isArray) || [];
   return Array.isArray(list) ? list.filter((item) => item?.isActive !== false) : [];
 };
 const formatDate = (value) => {
@@ -25,10 +33,12 @@ const formatDate = (value) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 };
-const numberToWords = (rawValue) => {
+const numberToWords = (rawValue, currencyCode = "INR") => {
   const value = Math.round(Number(rawValue || 0));
-  if (value === 0) return "Zero Rupees Only";
-  if (value < 0 || value > 99999999) return `${value.toLocaleString("en-IN")} Rupees Only`;
+  const displayName = currencyName(currencyCode);
+  const unitName = value === 1 ? displayName : `${displayName}s`;
+  if (value === 0) return `Zero ${unitName} Only`;
+  if (value < 0 || value > 99999999) return `${value.toLocaleString("en-IN")} ${unitName} Only`;
   const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
   const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
   const underHundred = (number) => number < 20 ? ones[number] : `${tens[Math.floor(number / 10)]}${number % 10 ? ` ${ones[number % 10]}` : ""}`;
@@ -39,7 +49,7 @@ const numberToWords = (rawValue) => {
   const lakh = Math.floor(remaining / 100000); if (lakh) { parts.push(`${underHundred(lakh)} Lakh`); remaining %= 100000; }
   const thousand = Math.floor(remaining / 1000); if (thousand) { parts.push(`${underHundred(thousand)} Thousand`); remaining %= 1000; }
   if (remaining) parts.push(underThousand(remaining));
-  return `${parts.join(" ")} Rupees Only`;
+  return `${parts.join(" ")} ${unitName} Only`;
 };
 
 const ReceiptView = () => {
@@ -68,8 +78,13 @@ const ReceiptView = () => {
   useEffect(() => { fetchReceipt(); }, [paymentId]);
 
   const mainBranch = branches.find((branch) => branch?.isMainBranch) || branches[0] || null;
-  const receiptBranch = payment?.student?.branch || mainBranch;
-  const currency = (value) => formatMoney(value, payment?.currencyCode ? payment : receiptBranch);
+  const receiptBranch = payment?.branch || payment?.student?.branch || mainBranch;
+  const receiptCurrencySource =
+    receiptBranch?.currencyCode || receiptBranch?.currencySymbol
+      ? receiptBranch
+      : payment;
+  const receiptCurrency = currencyMeta(receiptCurrencySource);
+  const currency = (value) => formatMoney(value, receiptCurrencySource);
   const academyAddress = joinAddress(mainBranch) || joinAddress(academy);
   const receiptAddress = joinAddress(receiptBranch) || academyAddress;
   const logoUrl = academy?.logo ? getAcademyLogoUrl(academy) : "";
@@ -131,7 +146,7 @@ const ReceiptView = () => {
           {payment.paymentMode === "cash_online" ? <div className={styles.splitPayment}><article><span><Banknote size={20} /></span><div><small>Cash Amount</small><strong>{currency(payment.cashAmount)}</strong></div></article><b>+</b><article><span><Smartphone size={20} /></span><div><small>Online Amount</small><strong>{currency(payment.onlineAmount)}</strong></div></article><b>=</b><article className={styles.splitTotal}><span><WalletCards size={20} /></span><div><small>Total Paid</small><strong>{currency(payment.amountPaid)}</strong></div></article></div> : <div className={styles.singlePayment}><span>{payment.paymentMode === "cash" ? <Banknote size={22} /> : <Smartphone size={22} />}</span><div><small>{formatPaymentMode(payment.paymentMode)} Payment</small><strong>{currency(payment.amountPaid)}</strong></div></div>}
           <dl className={styles.totals}><div><dt>Subtotal</dt><dd>{currency(payment.amount)}</dd></div><div><dt>Discount</dt><dd className={styles.discount}>−{currency(payment.discount)}</dd></div><div className={styles.totalPaid}><dt>Amount Paid</dt><dd>{currency(payment.amountPaid)}</dd></div><div><dt>Balance</dt><dd>{currency(payment.pendingAmount)}</dd></div><div className={`${styles.paymentResult} ${resultClass}`}><dt>{status.key === "paid" ? "Paid in full" : status.label}</dt><dd>{status.key === "paid" ? <ShieldCheck size={16} /> : null}</dd></div></dl>
         </section>
-        <div className={styles.amountWords}><BadgeIndianRupee size={16} /><strong>Amount in words:</strong><span>{numberToWords(payment.amountPaid)}</span></div>
+        <div className={styles.amountWords}><BadgeIndianRupee size={16} /><strong>Amount in words:</strong><span>{numberToWords(payment.amountPaid, receiptCurrency.code)}</span></div>
         <footer className={styles.contactFooter}>{receiptAddress ? <span><MapPin size={14} />{receiptAddress}</span> : null}{academy?.phone ? <span><Phone size={14} />{academy.countryCode || "+91"} {academy.phone}</span> : null}{academy?.email ? <span><Mail size={14} />{academy.email}</span> : null}<span className={styles.generated}><Building2 size={14} />Computer-generated official receipt</span></footer>
       </main>
     </div>

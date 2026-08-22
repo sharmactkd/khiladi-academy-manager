@@ -65,7 +65,15 @@ const normalizeAcademy = (response) =>
   response?.data?.data?.academy || response?.data?.academy || null;
 
 const normalizeBranches = (response) => {
-  const list = response?.data?.data || response?.data || [];
+  const candidates = [
+    response?.data?.data?.branches,
+    response?.data?.branches,
+    response?.data?.data,
+    response?.data,
+    response?.branches,
+    response,
+  ];
+  const list = candidates.find(Array.isArray) || [];
   return Array.isArray(list) ? list.filter((item) => item?.isActive !== false) : [];
 };
 
@@ -256,7 +264,9 @@ const CollectFee = () => {
   };
 
   const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0];
-  const feeBranch = branchFor(branches, selectedStudent?.branch?._id || selectedStudent?.branch || selectedStudent?.batch?.branch);
+  const studentBranchReference =
+    selectedStudent?.branch || selectedStudent?.batch?.branch || "";
+  const feeBranch = branchFor(branches, studentBranchReference);
   const feeCurrency = currencyMeta(feeBranch);
   const currency = (value) => formatMoney(value, feeBranch);
   const academyAddress = joinAddress(mainBranch) || joinAddress(academy);

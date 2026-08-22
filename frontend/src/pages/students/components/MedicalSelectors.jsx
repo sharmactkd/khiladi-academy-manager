@@ -1,38 +1,39 @@
-import { Check, Droplet, HeartPulse } from "lucide-react";
 import {
-  AllergiesIcon,
-  AsthmaIcon,
-  DiabetesIcon,
-  EpilepsyIcon,
-  HeartIssueIcon,
-  HighBpIcon,
-  JointPainIcon,
-  LowBpIcon,
-  OtherConditionIcon,
-  PreviousInjuryIcon,
-} from "./MedicalConditionIcons.jsx";
+  Activity,
+  AirVent,
+  Bandage,
+  Bone,
+  Brain,
+  BriefcaseMedical,
+  Check,
+  Droplet,
+  Gauge,
+  HeartPulse,
+  ShieldCheck,
+  Syringe,
+} from "lucide-react";
 
 export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+export const NO_KNOWN_CONDITION = "No Known Condition";
 export const OTHER_CONDITION = "Other Condition";
 
 export const MEDICAL_CONDITIONS = [
-  { label: "Asthma", icon: AsthmaIcon },
-  { label: "Diabetes", icon: DiabetesIcon },
-  { label: "Heart Issue", icon: HeartIssueIcon },
-  { label: "Allergies", icon: AllergiesIcon },
-  { label: "Epilepsy", icon: EpilepsyIcon },
-  { label: "High BP", icon: HighBpIcon },
-  { label: "Low BP", icon: LowBpIcon },
-  { label: "Joint Pain", icon: JointPainIcon },
-  { label: "Previous Injury", icon: PreviousInjuryIcon },
-  { label: OTHER_CONDITION, icon: OtherConditionIcon },
+  { label: NO_KNOWN_CONDITION, icon: ShieldCheck },
+  { label: "Asthma", icon: AirVent },
+  { label: "Diabetes", icon: Syringe },
+  { label: "Heart Issue", icon: HeartPulse },
+  { label: "Allergies", icon: Activity },
+  { label: "Epilepsy", icon: Brain },
+  { label: "High BP", icon: Gauge },
+  { label: "Low BP", icon: Gauge },
+  { label: "Joint Pain", icon: Bone },
+  { label: "Previous Injury", icon: Bandage },
+  { label: OTHER_CONDITION, icon: BriefcaseMedical },
 ];
 
 export const normalizeMedicalSelection = (values = []) => {
   const supported = new Set(MEDICAL_CONDITIONS.map(({ label }) => label));
-  const normalized = Array.isArray(values)
-    ? values.filter((value) => value && value !== "No Known Condition")
-    : [];
+  const normalized = Array.isArray(values) ? values.filter(Boolean) : [];
   const known = normalized.filter((value) => supported.has(value));
   const custom = normalized.filter((value) => !supported.has(value));
   return {
@@ -55,11 +56,18 @@ const MedicalSelectors = ({
   onOtherConditionChange,
 }) => {
   const toggleCondition = (condition) => {
-    const next = conditions.includes(condition)
-      ? conditions.filter((item) => item !== condition)
-      : [...conditions, condition];
+    if (condition === NO_KNOWN_CONDITION) {
+      onConditionsChange?.(conditions.includes(condition) ? [] : [condition]);
+      if (!conditions.includes(condition)) onOtherConditionChange?.("");
+      return;
+    }
+
+    const withoutNoKnown = conditions.filter((item) => item !== NO_KNOWN_CONDITION);
+    const next = withoutNoKnown.includes(condition)
+      ? withoutNoKnown.filter((item) => item !== condition)
+      : [...withoutNoKnown, condition];
     onConditionsChange?.(next);
-    if (condition === OTHER_CONDITION && conditions.includes(condition)) {
+    if (condition === OTHER_CONDITION && withoutNoKnown.includes(condition)) {
       onOtherConditionChange?.("");
     }
   };
