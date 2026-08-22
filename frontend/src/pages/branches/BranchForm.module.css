@@ -123,6 +123,9 @@
 :global(.add-branch-card select:focus),
 :global(.add-branch-card textarea:focus) { border-color: var(--ab-red); box-shadow: 0 0 0 3px rgba(207,0,6,.1); }
 :global(.add-branch-toggle-row) { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; padding: 0 16px 16px; }
+:global(.add-branch-inline-status) { min-width:0; display:grid; gap:6px; }
+:global(.add-branch-inline-status > span) { color:#334155; font-size:10px; font-weight:800; }
+:global(.add-branch-inline-status .add-branch-switch) { min-height:42px; padding:6px 10px; }
 :global(.add-branch-switch) { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 8px; padding: 10px; border: 1px solid #e4e9f0; border-radius: 10px; cursor: pointer; }
 :global(.add-branch-switch input) { position: absolute; opacity: 0; pointer-events: none; }
 :global(.add-branch-switch > span) { position: relative; width: 34px; height: 19px; border-radius: 999px; background: #cbd5e1; transition: background .16s ease; }

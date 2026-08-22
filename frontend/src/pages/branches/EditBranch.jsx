@@ -326,10 +326,10 @@ const EditBranch = () => {
               <label><span>Director Name <b>*</b></span><input value={form.directorName} onChange={(event) => updateField("directorName", event.target.value)} placeholder="Enter director name" required minLength={2} maxLength={120} /></label>
               <label><span>Branch Since</span><select value={form.branchSince} onChange={(event) => updateField("branchSince", event.target.value)}><option value="">Select Year</option>{Array.from({ length: currentYear - 1949 }, (_, index) => currentYear - index).map((year) => <option key={year} value={year}>{year} ({currentYear - year} Years)</option>)}</select></label>
               <CurrencySelector required value={form.currencyCode} onChange={(currency) => setForm((previous) => ({ ...previous, ...currency }))} />
+              <div className="add-branch-inline-status"><span>Status</span><label className="add-branch-switch"><input type="checkbox" checked={form.isActive} onChange={(event) => updateField("isActive", event.target.checked)} /><span /><div><strong>Active Branch</strong><small>Allow operational use immediately after creation.</small></div></label></div>
             </div>
             <div className="add-branch-toggle-row">
               <label className="add-branch-switch"><input type="checkbox" checked={form.isMainBranch} onChange={(event) => updateField("isMainBranch", event.target.checked)} /><span /><div><strong>Set as Main Branch</strong><small>Primary academy location for reports and defaults.</small></div></label>
-              <label className="add-branch-switch"><input type="checkbox" checked={form.isActive} onChange={(event) => updateField("isActive", event.target.checked)} /><span /><div><strong>Active Branch</strong><small>Allow operational use immediately after creation.</small></div></label>
             </div>
           </section>
 

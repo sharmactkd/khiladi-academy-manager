@@ -358,6 +358,23 @@ const AddBranch = () => {
                 </select>
               </label>
               <CurrencySelector required value={form.currencyCode} onChange={(currency) => setForm((previous) => ({ ...previous, ...currency }))} />
+              <div className="add-branch-inline-status">
+                <span>Status</span>
+                <label className="add-branch-switch">
+                  <input
+                    type="checkbox"
+                    checked={form.isActive}
+                    onChange={(event) =>
+                      updateField("isActive", event.target.checked)
+                    }
+                  />
+                  <span />
+                  <div>
+                    <strong>Active Branch</strong>
+                    <small>Allow operational use immediately after creation.</small>
+                  </div>
+                </label>
+              </div>
             </div>
             <div className="add-branch-toggle-row">
               <label className="add-branch-switch">
@@ -373,22 +390,6 @@ const AddBranch = () => {
                   <strong>Set as Main Branch</strong>
                   <small>
                     Primary academy location for reports and defaults.
-                  </small>
-                </div>
-              </label>
-              <label className="add-branch-switch">
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(event) =>
-                    updateField("isActive", event.target.checked)
-                  }
-                />
-                <span />
-                <div>
-                  <strong>Active Branch</strong>
-                  <small>
-                    Allow operational use immediately after creation.
                   </small>
                 </div>
               </label>
