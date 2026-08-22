@@ -224,7 +224,7 @@ export const getBatches = asyncHandler(async (req, res) => {
   if (skillLevel) query.skillLevel = skillLevel;
 
   const batches = await Batch.find(query)
-    .populate("branch", "branchName branchCode")
+    .populate("branch", "branchName branchCode currencyCode currencySymbol currencyCountryCode")
     .populate("coach", "name email role")
     .populate("students", "firstName lastName admissionNumber")
     .sort({ createdAt: -1 });
@@ -238,7 +238,7 @@ export const getBatchById = asyncHandler(async (req, res) => {
     academy: req.academyId,
     ...buildBranchAccessFilter(req.user),
   })
-    .populate("branch", "branchName branchCode")
+    .populate("branch", "branchName branchCode currencyCode currencySymbol currencyCountryCode")
     .populate("coach", "name email role")
     .populate("students", "firstName lastName admissionNumber");
 

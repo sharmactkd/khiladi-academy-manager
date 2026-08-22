@@ -14,6 +14,7 @@ import BatchAcademyHeader from "../batches/components/BatchAcademyHeader.jsx";
 import BatchDetailSectionHeader from "../batches/components/BatchDetailSectionHeader.jsx";
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
 import useAuth from "../../hooks/useAuth.js";
+import { formatMoney } from "../../utils/currency.js";
 import "./StudentProfile.module.css";
 
 const text = (value, fallback = "Not added") => String(value ?? "").trim() || fallback;
@@ -30,7 +31,7 @@ const formatDate = (value) => {
 };
 const formatPhone = (countryCode, phone) =>
   String(phone || "").trim() ? `${countryCode || "+91"} ${phone}` : "Not added";
-const currency = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const currency = (value, source) => formatMoney(value, source);
 const calculateAge = (value) => {
   const birth = value ? new Date(value) : null;
   if (!birth || Number.isNaN(birth.getTime())) return null;
@@ -296,9 +297,9 @@ const StudentProfile = () => {
         <section className="student-detail-card">
           <BatchDetailSectionHeader icon={WalletCards} eyebrow="Finance" title="Student Fee Setup" description="Fee, scholarship and discount configuration." />
           <div className="student-detail-items">
-            <DetailItem icon={BadgeIndianRupee} label="Monthly Fee" accent>{currency(student.monthlyFeeOverride)}</DetailItem>
+            <DetailItem icon={BadgeIndianRupee} label="Monthly Fee" accent>{currency(student.monthlyFeeOverride, student.branch)}</DetailItem>
             <DetailItem icon={CalendarDays} label="Fee Due Day">{student.feeDueDay ? `Day ${student.feeDueDay}` : "Not added"}</DetailItem>
-            <DetailItem icon={BadgeIndianRupee} label="Scholarship" accent>{currency(student.scholarshipAmount)}</DetailItem>
+            <DetailItem icon={BadgeIndianRupee} label="Scholarship" accent>{currency(student.scholarshipAmount, student.branch)}</DetailItem>
             <DetailItem icon={ReceiptIndianRupee} label="Discount">{Number(student.discountPercent || 0)}%</DetailItem>
           </div>
           <div className="student-detail-card-action">

@@ -700,7 +700,7 @@ export const getStudents = asyncHandler(async (req, res) => {
   }
 
   const students = await Student.find(query)
-    .populate("branch", "branchName branchCode")
+    .populate("branch", "branchName branchCode currencyCode currencySymbol currencyCountryCode")
     .populate(
       "batch",
       "batchName martialArt isActive monthlyFee quarterlyFee annualFee"
@@ -716,7 +716,7 @@ export const getStudentById = asyncHandler(async (req, res) => {
     academy: req.academyId,
     ...buildBranchAccessFilter(req.user),
   })
-    .populate("branch", "branchName branchCode")
+    .populate("branch", "branchName branchCode currencyCode currencySymbol currencyCountryCode")
     .populate(
       "batch",
       "batchName martialArt isActive monthlyFee quarterlyFee annualFee"

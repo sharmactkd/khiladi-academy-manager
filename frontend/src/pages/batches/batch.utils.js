@@ -42,5 +42,5 @@ export const formatGenderGroup = (value) => {
   return "Male & Female";
 };
 
-export const currency = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+export { formatMoney as currency } from "../../utils/currency.js";
 export const displayValue = (value) => String(value || "").trim() || "-";

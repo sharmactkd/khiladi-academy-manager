@@ -10,9 +10,9 @@ import useAuth from "../../hooks/useAuth.js";
 import { formatPaymentMode } from "../../utils/feePaymentModes.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import styles from "./ReceiptView.module.css";
+import { formatMoney } from "../../utils/currency.js";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const currency = (value) => `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 const studentName = (student) => [student?.firstName, student?.lastName].filter(Boolean).join(" ").trim() || "Student";
 const joinAddress = (source) => [source?.address, source?.city, source?.state, source?.country].map((item) => String(item || "").trim()).filter(Boolean).join(", ");
 const normalizeAcademy = (response) => response?.data?.data?.academy || response?.data?.academy || null;
@@ -69,6 +69,7 @@ const ReceiptView = () => {
 
   const mainBranch = branches.find((branch) => branch?.isMainBranch) || branches[0] || null;
   const receiptBranch = payment?.student?.branch || mainBranch;
+  const currency = (value) => formatMoney(value, payment?.currencyCode ? payment : receiptBranch);
   const academyAddress = joinAddress(mainBranch) || joinAddress(academy);
   const receiptAddress = joinAddress(receiptBranch) || academyAddress;
   const logoUrl = academy?.logo ? getAcademyLogoUrl(academy) : "";

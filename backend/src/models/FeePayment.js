@@ -22,6 +22,9 @@ const feePaymentSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", default: null, index: true },
+    currencyCode: { type: String, trim: true, uppercase: true, default: "INR", maxlength: 3 },
+    currencySymbol: { type: String, trim: true, default: "₹", maxlength: 12 },
 
     feePlan: {
       type: mongoose.Schema.Types.ObjectId,

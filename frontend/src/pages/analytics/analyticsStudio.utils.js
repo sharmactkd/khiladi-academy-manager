@@ -43,8 +43,7 @@ export const normalizeBatchAttendance = (items = []) => {
 export const sumValues = (items = [], key = "value") =>
   items.reduce((total, item) => total + Number(item?.[key] || 0), 0);
 
-export const formatCurrency = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+export const formatCurrency = (value, source) => formatMoney(value, source);
 
 export const joinAddress = (source) =>
   [source?.address, source?.city, source?.state, source?.country]
@@ -60,3 +59,4 @@ export const getDateRange = (preset) => {
   const iso = (date) => date.toISOString().slice(0, 10);
   return { fromDate: iso(start), toDate: iso(end) };
 };
+import { formatMoney } from "../../utils/currency.js";

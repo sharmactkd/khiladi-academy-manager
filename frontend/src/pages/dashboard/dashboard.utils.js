@@ -1,6 +1,4 @@
-const moneyFormatter = new Intl.NumberFormat("en-IN", {
-  maximumFractionDigits: 0,
-});
+import { formatMoney as formatCurrency } from "../../utils/currency.js";
 
 export const dateFormatter = new Intl.DateTimeFormat("en-IN", {
   day: "2-digit",
@@ -8,8 +6,7 @@ export const dateFormatter = new Intl.DateTimeFormat("en-IN", {
   year: "numeric",
 });
 
-export const formatMoney = (value) =>
-  `₹${moneyFormatter.format(Number(value) || 0)}`;
+export const formatMoney = (value, source) => formatCurrency(value, source);
 
 export const isEnabled = (value) =>
   value === true ||

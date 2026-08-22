@@ -97,6 +97,9 @@ const branchSchema = new mongoose.Schema(
     city: { type: String, trim: true, default: "", index: true },
     state: { type: String, trim: true, default: "", index: true },
     country: { type: String, trim: true, default: "India" },
+    currencyCode: { type: String, trim: true, uppercase: true, default: "INR", minlength: 3, maxlength: 3 },
+    currencySymbol: { type: String, trim: true, default: "₹", maxlength: 12 },
+    currencyCountryCode: { type: String, trim: true, uppercase: true, default: "IN", minlength: 2, maxlength: 2 },
     headCoachName: {
       type: String,
       trim: true,

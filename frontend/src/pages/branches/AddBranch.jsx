@@ -23,6 +23,7 @@ import { createBranch, getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
+import CurrencySelector from "../../components/common/CurrencySelector.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import BranchFormSectionHeader from "./components/BranchFormSectionHeader.jsx";
@@ -356,6 +357,7 @@ const AddBranch = () => {
                   ))}
                 </select>
               </label>
+              <CurrencySelector required value={form.currencyCode} onChange={(currency) => setForm((previous) => ({ ...previous, ...currency }))} />
             </div>
             <div className="add-branch-toggle-row">
               <label className="add-branch-switch">

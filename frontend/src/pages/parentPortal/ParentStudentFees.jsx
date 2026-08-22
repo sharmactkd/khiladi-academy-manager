@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { parentPortalApi } from "../../api/parentPortalApi.js";
+import { formatMoney } from "../../utils/currency.js";
 
 const ParentStudentFees = () => {
   const { studentId } = useParams();
@@ -59,9 +60,9 @@ const ParentStudentFees = () => {
               payments.map((payment) => (
                 <tr key={payment._id}>
                   <td>{payment.month}</td>
-                  <td>₹{payment.amount}</td>
-                  <td>₹{payment.discount}</td>
-                  <td>₹{payment.finalAmount}</td>
+                  <td>{formatMoney(payment.amount, payment)}</td>
+                  <td>{formatMoney(payment.discount, payment)}</td>
+                  <td>{formatMoney(payment.finalAmount, payment)}</td>
                   <td>{payment.status}</td>
                   <td>
                     {payment.paidDate

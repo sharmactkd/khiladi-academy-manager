@@ -4,6 +4,7 @@ import {
   ArrowLeft, Award, Building2, CalendarCheck2, CalendarDays, CheckCircle2,
   Crown, Edit3, IndianRupee, Languages, Mail, MapPin, Phone,
   ShieldCheck, UserRound, Users, UsersRound, Warehouse, XCircle,
+  WalletCards,
 } from "lucide-react";
 
 import { academyApi } from "../../api/academyApi.js";
@@ -13,6 +14,7 @@ import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import BranchDetailSectionHeader from "./components/BranchDetailSectionHeader.jsx";
 import "./BranchDetail.module.css";
+import { formatMoney } from "../../utils/currency.js";
 
 const displayValue = (value, fallback = "Not added") =>
   String(value ?? "").trim() || fallback;
@@ -179,7 +181,7 @@ const BranchDetail = () => {
         <MetricCard icon={CheckCircle2} label="Active Students" value={counts.activeStudents || 0} tone="green" />
         <MetricCard icon={UsersRound} label="Active Batches" value={counts.batches || 0} tone="blue" />
         <MetricCard icon={CalendarCheck2} label="Today Attendance" value={(counts.todayAttendancePercentage || 0) + "%"} tone="purple" />
-        <MetricCard icon={IndianRupee} label="Pending Fees" value={"₹" + pendingFees.toLocaleString("en-IN")} tone="orange" />
+        <MetricCard icon={IndianRupee} label="Pending Fees" value={formatMoney(pendingFees, branch)} tone="orange" />
       </section>
 
       <div className="branch-detail-primary-grid">
@@ -187,6 +189,7 @@ const BranchDetail = () => {
           <BranchDetailSectionHeader icon={Building2} eyebrow="Identity" title="Branch Information" description="Core identity and operating status." />
           <div className="branch-detail-items">
             <DetailItem icon={UserRound} label="Director Name">{displayValue(branch.directorName)}</DetailItem>
+            <DetailItem icon={WalletCards} label="Currency">{`${branch.currencyCode || "INR"} (${branch.currencySymbol || "₹"})`}</DetailItem>
             <DetailItem icon={Building2} label="Branch Code">{displayValue(branch.branchCode)}</DetailItem>
             <DetailItem icon={CalendarDays} label="Branch Since">{displayValue(branch.branchSince)}</DetailItem>
             <DetailItem icon={branch.isMainBranch ? Crown : ShieldCheck} label="Branch Type">{branch.isMainBranch ? "Main Branch" : "Academy Branch"}</DetailItem>

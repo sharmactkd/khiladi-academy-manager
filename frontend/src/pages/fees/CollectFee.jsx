@@ -31,6 +31,7 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { PAYMENT_MODE_OPTIONS } from "../../utils/feePaymentModes.js";
 import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import { branchFor, formatMoney } from "../../utils/currency.js";
 import styles from "./CollectFee.module.css";
 
 const PAYMENT_MODE_ICONS = {
@@ -49,7 +50,6 @@ const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
   label: new Date(2000, index, 1).toLocaleString("en-US", { month: "long" }),
 }));
 
-const currency = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 const studentName = (student) =>
   [student?.firstName, student?.lastName].filter(Boolean).join(" ").trim() || "Student";
 const joinAddress = (source) =>
@@ -256,6 +256,8 @@ const CollectFee = () => {
   };
 
   const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0];
+  const feeBranch = branchFor(branches, selectedStudent?.branch?._id || selectedStudent?.branch || selectedStudent?.batch?.branch);
+  const currency = (value) => formatMoney(value, feeBranch);
   const academyAddress = joinAddress(mainBranch) || joinAddress(academy);
   const selectedMonthLabel = MONTH_OPTIONS.find((month) => month.value === feeMonth)?.label || "Month";
 

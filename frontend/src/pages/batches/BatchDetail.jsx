@@ -109,7 +109,7 @@ const BatchDetail = () => {
         { id: "students", icon: UsersRound, label: "Active Students", value: count },
         { id: "seats", className: "is-green", icon: CheckCircle2, label: "Available Seats", value: seats },
         { id: "time", className: "is-blue", icon: Clock3, label: "Training Time", value: `${formatBatchTime(firstSchedule.startTime)} – ${formatBatchTime(firstSchedule.endTime)}` },
-        { id: "fee", className: "is-orange", icon: BadgeIndianRupee, label: "Monthly Fee", value: currency(batch.monthlyFee) },
+        { id: "fee", className: "is-orange", icon: BadgeIndianRupee, label: "Monthly Fee", value: currency(batch.monthlyFee, batch.branch) },
         { id: "level", className: "is-purple", icon: GraduationCap, label: "Skill Level", value: level },
       ]} getCardProps={() => ({ iconSize: 21 })} />
 
@@ -144,9 +144,9 @@ const BatchDetail = () => {
           <DetailItem icon={ShieldCheck} label="Maximum Belt">{batch.noMaxBeltLimit || !batch.maxBelt ? "No limit" : batch.maxBelt}</DetailItem>
         </div></section>
         <section className="batch-detail-card"><BatchDetailSectionHeader icon={WalletCards} eyebrow="05 · Finance" title="Batch Fee Structure" description="The same charges and order used on Add and Edit Batch." /><div className="batch-detail-items">
-          <DetailItem icon={BadgeIndianRupee} label="Monthly Fee" accent>{currency(batch.monthlyFee)}</DetailItem><DetailItem icon={BadgeIndianRupee} label="Quarterly Fee" accent>{currency(batch.quarterlyFee)}</DetailItem>
-          <DetailItem icon={BadgeIndianRupee} label="Annual Fee" accent>{currency(batch.annualFee)}</DetailItem><DetailItem icon={BadgeIndianRupee} label="Registration Fee" accent>{currency(batch.registrationFee)}</DetailItem>
-          <DetailItem icon={BadgeIndianRupee} label="Examination Fee" accent>{currency(batch.examinationFee)}</DetailItem><DetailItem icon={BadgeIndianRupee} label="Late Fee" accent>{currency(batch.lateFee)}</DetailItem>
+          <DetailItem icon={BadgeIndianRupee} label="Monthly Fee" accent>{currency(batch.monthlyFee, batch.branch)}</DetailItem><DetailItem icon={BadgeIndianRupee} label="Quarterly Fee" accent>{currency(batch.quarterlyFee, batch.branch)}</DetailItem>
+          <DetailItem icon={BadgeIndianRupee} label="Annual Fee" accent>{currency(batch.annualFee, batch.branch)}</DetailItem><DetailItem icon={BadgeIndianRupee} label="Registration Fee" accent>{currency(batch.registrationFee, batch.branch)}</DetailItem>
+          <DetailItem icon={BadgeIndianRupee} label="Examination Fee" accent>{currency(batch.examinationFee, batch.branch)}</DetailItem><DetailItem icon={BadgeIndianRupee} label="Late Fee" accent>{currency(batch.lateFee, batch.branch)}</DetailItem>
         </div></section>
       </div>
 
@@ -161,7 +161,7 @@ const BatchDetail = () => {
       <section className="batch-detail-card"><BatchDetailSectionHeader icon={MessageCircleMore} eyebrow="08 · Online" title="Links & Communication" description="Read-only WhatsApp and Google Meet resources." /><div className="batch-detail-links batch-detail-links--section"><ResourceLink href={batch.whatsappGroupLink} label="Open WhatsApp Group" icon={MessageCircleMore} /><ResourceLink href={batch.googleMeetLink} label="Open Google Meet" icon={Video} /></div></section>
 
       <section className="batch-detail-card batch-detail-students"><div className="batch-detail-students__header"><div><span><UsersRound size={19} /></span><div><small>Students</small><h2>Students in this Batch</h2><p>Active students currently assigned to this batch.</p></div></div><Link to={`/attendance/batch/${batch._id}`}>Attendance History <ExternalLink size={14} /></Link></div>
-        {!students.length ? <div className="batch-detail-students__empty"><UsersRound size={30} /><strong>No active students</strong><p>Add students to begin managing this batch.</p><Link className="btn btn-primary" to="/students/new"><Plus size={15} /> Add Student</Link></div> : <div className="batch-detail-table-wrap"><table className="batch-detail-table"><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Belt</th><th>Monthly Fee</th></tr></thead><tbody>{students.map((student) => <tr key={student._id}><td><code>{student.studentCode || student.admissionNumber || "-"}</code></td><td><Link to={`/students/${student._id}`}>{getStudentName(student)}</Link></td><td>{student.phone || "-"}</td><td>{student.beltRank || "-"}</td><td><strong>{currency(batch.monthlyFee)}</strong></td></tr>)}</tbody></table></div>}
+        {!students.length ? <div className="batch-detail-students__empty"><UsersRound size={30} /><strong>No active students</strong><p>Add students to begin managing this batch.</p><Link className="btn btn-primary" to="/students/new"><Plus size={15} /> Add Student</Link></div> : <div className="batch-detail-table-wrap"><table className="batch-detail-table"><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Belt</th><th>Monthly Fee</th></tr></thead><tbody>{students.map((student) => <tr key={student._id}><td><code>{student.studentCode || student.admissionNumber || "-"}</code></td><td><Link to={`/students/${student._id}`}>{getStudentName(student)}</Link></td><td>{student.phone || "-"}</td><td>{student.beltRank || "-"}</td><td><strong>{currency(batch.monthlyFee, batch.branch)}</strong></td></tr>)}</tbody></table></div>}
       </section>
     </div>
   );

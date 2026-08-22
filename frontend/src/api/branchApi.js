@@ -1,12 +1,23 @@
 import api from "./api.js";
+import { rememberDefaultCurrency } from "../utils/currency.js";
+
+const rememberFromResponse = (response) => {
+  const candidates = [response?.data?.data, response?.data, response];
+  const payload = candidates.find((item) => Array.isArray(item) || item?.currencyCode);
+  const branches = Array.isArray(payload) ? payload : [payload];
+  const branch = branches.find((item) => item?.isMainBranch) || branches[0];
+  if (branch) rememberDefaultCurrency(branch);
+};
 
 export const getBranches = async (params = {}) => {
   const res = await api.get("/branches", { params });
+  rememberFromResponse(res.data);
   return res.data;
 };
 
 export const getBranchById = async (id) => {
   const res = await api.get(`/branches/${id}`);
+  rememberFromResponse(res.data);
   return res.data;
 };
 

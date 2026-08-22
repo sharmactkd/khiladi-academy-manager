@@ -61,7 +61,7 @@ export const validateStudentInAcademy = async (academyId, studentId) => {
   return Student.findOne({
     _id: studentId,
     academy: academyId,
-  }).populate("batch", "batchName martialArt isActive monthlyFee quarterlyFee annualFee feeDueDay");
+  }).populate("batch", "batchName martialArt isActive monthlyFee quarterlyFee annualFee feeDueDay").populate("branch", "branchName currencyCode currencySymbol currencyCountryCode");
 };
 
 export const validateBatchInAcademy = async (academyId, batchId) => {
@@ -330,6 +330,9 @@ export const collectStudentFee = async ({
   const dueDay = Number(payload.dueDay || feeConfig.dueDay || 10);
   const dueDate = payload.dueDate || buildDueDate(feeMonth, feeYear, dueDay);
   const receiptNumber = await generateReceiptNumber(academyId);
+  const branch = student.branch && typeof student.branch === "object" ? student.branch : null;
+  const currencyCode = branch?.currencyCode || "INR";
+  const currencySymbol = branch?.currencySymbol || "₹";
 
   const existing = await FeePayment.findOne({
     academy: academyId,
@@ -356,6 +359,9 @@ export const collectStudentFee = async ({
     existing.notes = payload.notes || payload.note || existing.notes || "";
     existing.note = payload.notes || payload.note || existing.note || "";
     existing.batch = student.batch?._id || student.batch || null;
+    existing.branch = branch?._id || student.branch || null;
+    existing.currencyCode = currencyCode;
+    existing.currencySymbol = currencySymbol;
     existing.feePlan = feeConfig.feePlan?._id || null;
     existing.updatedBy = userId;
 
@@ -367,6 +373,9 @@ export const collectStudentFee = async ({
   academy: academyId,
   student: student._id,
   batch: student.batch?._id || student.batch || null,
+  branch: branch?._id || student.branch || null,
+  currencyCode,
+  currencySymbol,
   feePlan: feeConfig.feePlan?._id || null,
   feeMonth,
   feeYear,

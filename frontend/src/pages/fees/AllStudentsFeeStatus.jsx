@@ -4,9 +4,9 @@ import toast from "react-hot-toast";
 import { feePaymentApi } from "../../api/feeApi.js";
 import { formatPaymentMode } from "../../utils/feePaymentModes.js";
 import { batchApi } from "../../api/batchApi.js";
+import { formatMoney } from "../../utils/currency.js";
 
-const currency = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const currency = (value, source) => formatMoney(value, source);
 
 const getStatusBadge = (status) => {
   const value = status || "due";
@@ -203,11 +203,11 @@ const AllStudentsFeeStatus = () => {
 
                     <td>{item.student?.batch?.batchName || "-"}</td>
 
-                    <td>{currency(item.monthlyFee)}</td>
-                    <td>{currency(item.discount)}</td>
-                    <td>{currency(item.payableAmount)}</td>
-                    <td>{currency(item.paidAmount)}</td>
-                    <td>{currency(item.pendingAmount)}</td>
+                    <td>{currency(item.monthlyFee, item.student?.branch)}</td>
+                    <td>{currency(item.discount, item.student?.branch)}</td>
+                    <td>{currency(item.payableAmount, item.student?.branch)}</td>
+                    <td>{currency(item.paidAmount, item.student?.branch)}</td>
+                    <td>{currency(item.pendingAmount, item.student?.branch)}</td>
 
                     <td>
                       {item.dueDate

@@ -24,6 +24,7 @@ import { getBranchById, getBranches, updateBranch } from "../../api/branchApi.js
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
+import CurrencySelector from "../../components/common/CurrencySelector.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import BranchFormSectionHeader from "./components/BranchFormSectionHeader.jsx";
@@ -324,6 +325,7 @@ const EditBranch = () => {
               <label><span>Branch Code <b>*</b></span><input value={form.branchCode} onChange={(event) => updateField("branchCode", event.target.value.toUpperCase())} placeholder="Example: AGR-01" required maxLength={30} /></label>
               <label><span>Director Name <b>*</b></span><input value={form.directorName} onChange={(event) => updateField("directorName", event.target.value)} placeholder="Enter director name" required minLength={2} maxLength={120} /></label>
               <label><span>Branch Since</span><select value={form.branchSince} onChange={(event) => updateField("branchSince", event.target.value)}><option value="">Select Year</option>{Array.from({ length: currentYear - 1949 }, (_, index) => currentYear - index).map((year) => <option key={year} value={year}>{year} ({currentYear - year} Years)</option>)}</select></label>
+              <CurrencySelector required value={form.currencyCode} onChange={(currency) => setForm((previous) => ({ ...previous, ...currency }))} />
             </div>
             <div className="add-branch-toggle-row">
               <label className="add-branch-switch"><input type="checkbox" checked={form.isMainBranch} onChange={(event) => updateField("isMainBranch", event.target.checked)} /><span /><div><strong>Set as Main Branch</strong><small>Primary academy location for reports and defaults.</small></div></label>

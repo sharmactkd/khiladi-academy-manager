@@ -170,12 +170,13 @@ const FeeField = ({
   noFee = false,
   noFeeLabel = "",
   onNoFeeChange,
+  currencySymbol = "₹",
 }) => (
   <div className="batch-fee-field">
     <span className="batch-fee-field__label">{label}</span>
     <div className={`batch-money-control${disabled ? " is-disabled" : ""}`}>
       <span className="batch-money-control__prefix" aria-hidden="true">
-        ₹
+        {currencySymbol}
       </span>
       <input
         type="number"
@@ -339,6 +340,11 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
   }, [academy?.martialArts]);
   const allBatchTypes = [...BATCH_TYPES, ...(values.customBatchTypes || [])];
   const allLanguages = [...LANGUAGES, ...(values.customBatchLanguages || [])];
+
+  useEffect(() => {
+    const branch = branches.find((item) => String(item._id) === String(values.branch));
+    setValue("currencySymbol", branch?.currencySymbol || "₹");
+  }, [branches, setValue, values.branch]);
 
   const toggleMulti = (field, value) => {
     const current = watch(field) || [];
@@ -883,18 +889,18 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
             Configure the fee structure for this batch.
           </p>
           <div className="batch-fees-content">
-            <FeeField
+            <FeeField currencySymbol={values.currencySymbol || "₹"}
               label="Monthly Fee"
               name="monthlyFee"
               register={register}
             />
-            <FeeField
+            <FeeField currencySymbol={values.currencySymbol || "₹"}
               label="Quarterly Fee"
               name="quarterlyFee"
               register={register}
             />
-            <FeeField label="Annual Fee" name="annualFee" register={register} />
-            <FeeField
+            <FeeField currencySymbol={values.currencySymbol || "₹"} label="Annual Fee" name="annualFee" register={register} />
+            <FeeField currencySymbol={values.currencySymbol || "₹"}
               label="Registration Fee"
               name="registrationFee"
               register={register}
@@ -905,12 +911,12 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
                 setValue("noRegistrationFee", checked, { shouldDirty: true })
               }
             />
-            <FeeField
+            <FeeField currencySymbol={values.currencySymbol || "₹"}
               label="Examination Fee"
               name="examinationFee"
               register={register}
             />
-            <FeeField
+            <FeeField currencySymbol={values.currencySymbol || "₹"}
               label="Late Fee"
               name="lateFee"
               register={register}

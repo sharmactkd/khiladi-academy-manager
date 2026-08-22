@@ -41,6 +41,7 @@ const getActiveStudents = async (academyId, query = {}) => {
 
   return Student.find(filter)
     .populate("batch", "batchName martialArt isActive")
+    .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .sort({ firstName: 1, lastName: 1 });
 };
 
@@ -53,6 +54,7 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
   })
     .populate("student", "firstName lastName admissionNumber phone")
     .populate("batch", "batchName")
+    .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .sort({ paymentDate: -1 });
 
   const thisMonthPayments = payments.filter(
@@ -158,6 +160,8 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     onlineAmount: payment.onlineAmount || 0,
     receiptNumber: payment.receiptNumber,
     status: payment.status,
+    currencyCode: payment.currencyCode || payment.branch?.currencyCode || "INR",
+    currencySymbol: payment.currencySymbol || payment.branch?.currencySymbol || "₹",
   }));
 
   const collectionRate = students.length
@@ -226,6 +230,7 @@ export const collectFee = asyncHandler(async (req, res) => {
     const populatedPayment = await FeePayment.findById(feePayment._id)
       .populate("student", "firstName lastName admissionNumber phone email")
       .populate("batch", "batchName martialArt")
+      .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
       .populate("feePlan", "name monthlyAmount amount dueDay");
 
     return successResponse(
@@ -281,6 +286,7 @@ export const getFeePayments = asyncHandler(async (req, res) => {
   const payments = await FeePayment.find(query)
     .populate("student", "firstName lastName admissionNumber phone email")
     .populate("batch", "batchName martialArt")
+    .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .populate("feePlan", "name monthlyAmount amount dueDay")
     .sort({ paymentDate: -1, createdAt: -1 });
 
@@ -291,7 +297,9 @@ export const getStudentFeePayments = asyncHandler(async (req, res) => {
   const student = await Student.findOne({
     _id: req.params.studentId,
     academy: req.academyId,
-  }).populate("batch", "batchName martialArt isActive");
+  })
+    .populate("batch", "batchName martialArt isActive")
+    .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode");
 
   if (!student) {
     return errorResponse(res, "Student not found", 404);
@@ -331,10 +339,11 @@ export const getFeePaymentById = asyncHandler(async (req, res) => {
       select: "firstName lastName admissionNumber phone email address branch",
       populate: {
         path: "branch",
-        select: "branchName address city state country",
+        select: "branchName address city state country currencyCode currencySymbol currencyCountryCode",
       },
     })
     .populate("batch", "batchName martialArt")
+    .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .populate("feePlan", "name monthlyAmount amount dueDay")
     .populate("collectedBy", "name email");
 

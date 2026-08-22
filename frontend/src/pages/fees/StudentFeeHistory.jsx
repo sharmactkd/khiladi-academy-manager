@@ -4,9 +4,9 @@ import toast from "react-hot-toast";
 import { feePaymentApi } from "../../api/feeApi.js";
 import { formatPaymentMode } from "../../utils/feePaymentModes.js";
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import { formatMoney } from "../../utils/currency.js";
 
-const currency = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const currency = (value, source) => formatMoney(value, source);
 
 const getStudentName = (student) =>
   `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
@@ -42,6 +42,7 @@ const StudentFeeHistory = () => {
   if (loading) return <p>Loading fee history...</p>;
 
   const student = data.student;
+  const studentCurrency = student?.branch || {};
   const currentStatus = data.currentStatus;
   const payments = data.payments || [];
 
@@ -67,17 +68,17 @@ const StudentFeeHistory = () => {
       <div className="grid grid-4">
         <div className="card stat-card">
           <span>Current Fee</span>
-          <strong>{currency(currentStatus?.payableAmount)}</strong>
+          <strong>{currency(currentStatus?.payableAmount, studentCurrency)}</strong>
         </div>
 
         <div className="card stat-card">
           <span>Paid</span>
-          <strong>{currency(currentStatus?.paidAmount)}</strong>
+          <strong>{currency(currentStatus?.paidAmount, studentCurrency)}</strong>
         </div>
 
         <div className="card stat-card">
           <span>Pending</span>
-          <strong>{currency(currentStatus?.pendingAmount)}</strong>
+          <strong>{currency(currentStatus?.pendingAmount, studentCurrency)}</strong>
         </div>
 
         <div className="card stat-card">
@@ -165,10 +166,10 @@ const StudentFeeHistory = () => {
                     <td>
                       {payment.feeMonth}/{payment.feeYear}
                     </td>
-                    <td>{currency(payment.amount)}</td>
-                    <td>{currency(payment.discount)}</td>
-                    <td>{currency(payment.amountPaid)}</td>
-                    <td>{currency(payment.pendingAmount)}</td>
+                    <td>{currency(payment.amount, payment)}</td>
+                    <td>{currency(payment.discount, payment)}</td>
+                    <td>{currency(payment.amountPaid, payment)}</td>
+                    <td>{currency(payment.pendingAmount, payment)}</td>
                     <td>{formatPaymentMode(payment.paymentMode)}</td>
                     <td>
                       {payment.paymentDate

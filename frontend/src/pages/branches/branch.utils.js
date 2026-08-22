@@ -3,7 +3,7 @@ import { FACILITY_OPTIONS, LANGUAGE_OPTIONS } from "./branch.config.js";
 export const createInitialBranchForm = () => ({
   directorName: "", branchName: "", branchCode: "", countryCode: "+91",
   phone: "", phoneNumbers: [], email: "", address: "", city: "", state: "",
-  country: "India", headCoachName: "", headCoachCountryCode: "+91",
+  country: "India", currencyCode: "INR", currencySymbol: "₹", currencyCountryCode: "IN", headCoachName: "", headCoachCountryCode: "+91",
   headCoachPhone: "", headCoachAchievements: "", assistantCoachName: "",
   assistantCoachCountryCode: "+91", assistantCoachPhone: "",
   assistantCoachAchievements: "", additionalCoaches: [], customFacility: "",

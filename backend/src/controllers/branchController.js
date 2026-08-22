@@ -96,6 +96,9 @@ const normalizeBranchPayload = (body = {}) => {
     city: body.city || "",
     state: body.state || "",
     country: body.country || "India",
+    currencyCode: String(body.currencyCode || "INR").trim().toUpperCase(),
+    currencySymbol: String(body.currencySymbol || "₹").trim(),
+    currencyCountryCode: String(body.currencyCountryCode || "IN").trim().toUpperCase(),
 
     headCoachName: body.headCoachName || "",
     headCoachCountryCode: body.headCoachCountryCode || "+91",
