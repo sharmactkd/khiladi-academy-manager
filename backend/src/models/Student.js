@@ -167,7 +167,7 @@ const studentSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
-      enum: ["", "Sub-Junior", "Cadet", "Junior", "Senior"],
+      enum: ["", "Sub-Junior", "Cadet", "Junior", "Senior", "Under-14", "Under-17", "Under-19"],
       index: true,
     },
 
@@ -455,7 +455,9 @@ studentSchema.pre("validate", function () {
   this.aadhaarNumber = String(this.aadhaarNumber || "").replace(/\D/g, "").slice(0, 12);
 
   this.age = calculateAge(this.dateOfBirth);
-  this.ageCategory = getAgeCategory(this.age);
+  if (!this.ageCategory || (this.isModified("dateOfBirth") && !this.isModified("ageCategory"))) {
+    this.ageCategory = getAgeCategory(this.age);
+  }
 
   this.profileIncompleteFields = normalizeArray(this.profileIncompleteFields);
   this.legacySourceSheets = normalizeArray(this.legacySourceSheets);

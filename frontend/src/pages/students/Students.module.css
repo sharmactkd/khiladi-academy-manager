@@ -338,7 +338,7 @@
 }
 :global(.students-table) {
   width: 100%;
-  min-width: 1260px;
+  min-width: 1020px;
   border-collapse: collapse;
   table-layout: auto;
 }
@@ -395,21 +395,10 @@
   white-space: nowrap;
 }
 :global(.students-person) {
-  min-width: 180px;
+  min-width: 145px;
   display: flex;
   align-items: center;
-  gap: 9px;
 }
-:global(.students-person img) {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
-  border: 1px solid #dde4ed;
-  border-radius: 50%;
-  object-fit: cover;
-  background: #f2f5f8;
-}
-:global(.students-person span),
 :global(.students-person strong),
 :global(.students-person small) {
   min-width: 0;

@@ -24,7 +24,16 @@
   margin: 0 !important;
 }
 
+.trailing :global(.operations-custom-tag),
+.trailing :global(.add-branch-custom-row) {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+}
+
 .trailing input {
+  width: 100% !important;
   min-width: 0 !important;
 }
 

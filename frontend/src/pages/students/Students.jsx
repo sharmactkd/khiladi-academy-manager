@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  ChevronDown, Columns3, Download, Edit3,
+  ChevronDown, Download, Edit3,
   FileText, Filter, Printer, Search, Trash2, Upload,
   UserCheck, UserPlus, UsersRound, UserX, X,
 } from "lucide-react";
@@ -17,7 +17,7 @@ import { academyApi } from "../../api/academyApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import StudentImportModal from "../../components/students/StudentImportModal.jsx";
 import useAuth from "../../hooks/useAuth.js";
-import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import "./Students.module.css";
 
 const BLOOD_GROUPS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -728,23 +728,19 @@ const Students = () => {
       </section>
 
       <section className="students-table-card">
-        <div className="students-table-toolbar">
-          <div><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} /> <span>{selectedIds.length ? `${selectedIds.length} selected` : `${students.length} records`}</span>{selectedIds.length > 0 ? <button type="button" onClick={handleBulkDelete} disabled={bulkDeleting}><Trash2 size={15} /> {bulkDeleting ? "Deleting…" : "Delete Selected"}</button> : null}</div>
-          <div><span><Columns3 size={16} /> Complete student view</span></div>
-        </div>
+        {selectedIds.length > 0 ? <div className="students-table-toolbar students-table-toolbar--selection"><div><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} /><span>{selectedIds.length} selected</span><button type="button" onClick={handleBulkDelete} disabled={bulkDeleting}><Trash2 size={15} />{bulkDeleting ? "Deleting…" : "Delete Selected"}</button></div></div> : null}
         {loading ? <div className="students-state"><span /> Loading students…</div> : students.length === 0 ? <div className="students-state"><UsersRound size={31} /><strong>No students found</strong><p>Try changing your filters or add a new student.</p></div> : <div className="students-table-wrap" onScroll={handleStudentsScroll}><table className="students-table">
-          <thead><tr><th><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} /></th><th>Student</th><th>Code</th><th>Age / Category</th><th>Contact</th><th>School / Class</th><th>Batch</th><th>Martial Art</th><th>Belt</th><th>Blood</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} /></th><th>Student</th><th>Age / Category</th><th>Contact</th><th>School / Class</th><th>Batch</th><th>Martial Art</th><th>Belt</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>{visibleStudents.map((student) => {
             const fullName = getStudentFullName(student);
             const selected = selectedIds.includes(student._id);
             return <tr key={student._id} className={selected ? "is-selected" : ""} onClick={() => navigate(`/students/${student._id}`)}>
               <td onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected} onChange={() => toggleSelectOne(student._id)} /></td>
-              <td><div className="students-person"><img src={getStudentPhotoUrl(student)} alt="" /><span><strong>{fullName || "Unnamed Student"}</strong><small>{student.profileStatus === "incomplete" ? <em>Profile Incomplete</em> : `Admitted ${formatDate(student.joiningDate || student.createdAt) || "—"}`}</small></span></div></td>
-              <td><code>{student.studentCode || student.admissionNumber || "—"}</code></td>
+              <td><div className="students-person"><strong>{fullName || "Unnamed Student"}</strong></div></td>
               <td><strong>{student.age ?? "—"}</strong><small>{student.ageCategory || "Not added"}</small></td>
               <td><strong>{student.phone || "—"}</strong><small>{student.email || "Not added"}</small></td>
               <td><strong>{student.schoolName || student.education?.schoolName || "—"}</strong><small>{[student.className, student.section].filter(Boolean).join(" - ") || "Not added"}</small></td>
-              <td><strong>{student.batch?.batchName || "—"}</strong></td><td><strong>{student.martialArt || "—"}</strong></td><td><strong>{displayBelt(student)}</strong></td><td><b className="students-blood">{student.bloodGroup || "—"}</b></td>
+              <td><strong>{student.batch?.batchName || "—"}</strong></td><td><strong>{student.martialArt || "—"}</strong></td><td><strong>{displayBelt(student)}</strong></td>
               <td onClick={(event) => event.stopPropagation()}>{["active", "inactive"].includes(student.status) ? <button type="button" className={`students-status is-${student.status}`} onClick={() => handleStatusToggle(student)} disabled={statusUpdatingIds.includes(student._id)}><i><span /></i>{statusUpdatingIds.includes(student._id) ? "Saving…" : student.status}</button> : <span className="students-left-status">{student.status || "—"}</span>}</td>
               <td onClick={(event) => event.stopPropagation()}><div className="students-row-actions"><Link to={`/students/${student._id}/edit`} title="Edit student" aria-label={`Edit ${fullName || "student"}`}><Edit3 size={16} /></Link><button type="button" className="students-row-actions__delete" title="Delete student" aria-label={`Delete ${fullName || "student"}`} onClick={() => handleDelete(student)}><Trash2 size={16} /></button></div></td>
             </tr>;

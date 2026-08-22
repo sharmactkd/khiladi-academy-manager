@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
 import { ArrowLeft, BookOpen, HeartPulse, IdCard, MapPin, Phone, Save, ShieldAlert, UserRound } from "lucide-react";
 import { academyApi } from "../../api/academyApi.js";
@@ -18,12 +18,11 @@ import { TAEKWONDO_DAN_RANKS, isTaekwondoSport } from "../../components/taekwond
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import StudentFormSection from "./components/StudentFormSection.jsx";
+import MedicalSelectors, { buildMedicalConditionsPayload } from "./components/MedicalSelectors.jsx";
 import "../branches/BranchForm.module.css";
 import "../batches/BatchForm.module.css";
 import "./StudentForm.module.css";
 
-const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-const MEDICAL_CONDITIONS = ["Asthma", "Diabetes", "Heart Issue", "Allergies", "Epilepsy", "High BP", "Low BP", "Joint Pain", "Previous Injury"];
 const calculateAge = (dob) => {
   if (!dob) return "";
   const birth = new Date(dob);
@@ -34,6 +33,13 @@ const calculateAge = (dob) => {
   return result >= 0 ? result : "";
 };
 const ageCategoryFor = (age) => age === "" ? "" : age <= 11 ? "Sub-Junior" : age <= 14 ? "Cadet" : age <= 17 ? "Junior" : "Senior";
+const ageCategoryLabelFor = (age) => {
+  if (age === "") return "";
+  const primaryCategory = ageCategoryFor(age);
+  const underCategory = age <= 13 ? "Under-14" : age <= 16 ? "Under-17" : age <= 18 ? "Under-19" : "";
+  return [primaryCategory, underCategory].filter(Boolean).join(" / ");
+};
+const formatAadhaar = (value = "") => String(value).replace(/\D/g, "").slice(0, 12).replace(/(\d{4})(?=\d)/g, "$1-");
 const appendValue = (body, key, value) => body.append(key, typeof value === "object" && !(value instanceof File) ? JSON.stringify(value) : value ?? "");
 const unwrapList = (response, key) => {
   const candidates = [
@@ -66,6 +72,7 @@ const AddStudent = () => {
   const [parentContacts, setParentContacts] = useState([createPersonContact()]);
   const [emergencyContacts, setEmergencyContacts] = useState([createPersonContact()]);
   const [medicalConditions, setMedicalConditions] = useState([]);
+  const [otherMedicalCondition, setOtherMedicalCondition] = useState("");
   const { register, handleSubmit, control, setValue, formState: { errors } } = useForm({
     defaultValues: { branch: "", batch: "", gender: "male", status: "active", martialArt: "", beltRank: "", danRank: "", bloodGroup: "" },
   });
@@ -76,7 +83,8 @@ const AddStudent = () => {
   const status = useWatch({ control, name: "status" });
   const bloodGroup = useWatch({ control, name: "bloodGroup" });
   const age = useMemo(() => calculateAge(dob), [dob]);
-  const ageCategory = useMemo(() => ageCategoryFor(age), [age]);
+  const detectedAgeCategory = useMemo(() => ageCategoryFor(age), [age]);
+  const ageCategoryLabel = useMemo(() => ageCategoryLabelFor(age), [age]);
   const academyMartialArts = useMemo(() => normalizeOptions(academy?.martialArts), [academy?.martialArts]);
   const showBeltSelect = isTaekwondoSport(martialArt);
 
@@ -126,7 +134,6 @@ const AddStudent = () => {
     }
     setPhoto(file); setPhotoPreview(URL.createObjectURL(file));
   };
-  const toggleCondition = (condition) => setMedicalConditions((items) => items.includes(condition) ? items.filter((item) => item !== condition) : [...items, condition]);
   const errorFor = (name) => errors[name] ? <small>{errors[name].message}</small> : null;
   const mainBranch = branches.find((branch) => branch?.isMainBranch) || branches[0];
   const academyAddress = [
@@ -141,15 +148,16 @@ const AddStudent = () => {
       setSaving(true);
       const names = String(values.name || "").trim().split(/\s+/);
       const payload = {
-        admissionNumber: values.admissionNumber, aadhaarNumber: values.aadhaarNumber || "",
+        admissionNumber: values.admissionNumber, aadhaarNumber: String(values.aadhaarNumber || "").replace(/\D/g, ""),
         firstName: names[0] || "", lastName: names.slice(1).join(" "), gender: values.gender, dateOfBirth: values.dob,
+        ageCategory: detectedAgeCategory,
         branch: values.branch || "", batch: values.batch || "", ...studentContact, email: values.email || "", address: values.address || "",
         parentContacts: parentContacts.map(({ id, customRelation, ...contact }) => ({ ...contact, relation: contact.relation === "Other" ? customRelation : contact.relation })),
         emergencyContacts: emergencyContacts.map(({ id, customRelation, ...contact }) => ({ ...contact, relation: contact.relation === "Other" ? customRelation : contact.relation })),
         schoolName: values.schoolName || "", className: values.className || "",
         collegeName: values.collegeName || "", occupation: values.occupation || "", martialArt: values.martialArt || "Taekwondo",
         beltRank: values.beltRank || "", danRank: values.danRank || "", heightCm: values.heightCm || "", weightKg: values.weightKg || "",
-        bloodGroup: values.bloodGroup || "", medicalConditions, joiningDate: values.joiningDate || "", status: values.status || "active",
+        bloodGroup: values.bloodGroup || "", medicalConditions: buildMedicalConditionsPayload(medicalConditions, otherMedicalCondition), joiningDate: values.joiningDate || "", status: values.status || "active",
         notes: values.medicalNotes || "",
       };
       const body = new FormData();
@@ -209,13 +217,13 @@ const AddStudent = () => {
         <div className="student-form-identity"><div className="student-form-fields student-form-fields--three">
           <label><span>Full Name <b>*</b></span><input autoComplete="name" {...register("name", { required: "Name required" })} />{errorFor("name")}</label>
           <label><span>Admission Number <b>*</b></span><input {...register("admissionNumber", { required: "Admission number required" })} />{errorFor("admissionNumber")}</label>
-          <label><span>Aadhaar Number</span><input maxLength={12} inputMode="numeric" placeholder="12 digit Aadhaar number" {...register("aadhaarNumber", { pattern: { value: /^\d{12}$/, message: "Enter a valid 12 digit Aadhaar number" } })} />{errorFor("aadhaarNumber")}</label>
+          <label><span>Aadhaar Number</span><Controller name="aadhaarNumber" control={control} rules={{ validate: (value) => !value || /^\d{4}-\d{4}-\d{4}$/.test(value) || "Enter a valid 12 digit Aadhaar number" }} render={({ field }) => <input {...field} maxLength={14} inputMode="numeric" autoComplete="off" placeholder="0000-0000-0000" onChange={(event) => field.onChange(formatAadhaar(event.target.value))} />} />{errorFor("aadhaarNumber")}</label>
           <div className="student-chip-field student-gender-field"><OptionChipsField label="Gender" multiple={false} options={["Male", "Female"]} value={gender === "female" ? "Female" : "Male"} onChange={(value) => setValue("gender", value.toLowerCase())} /></div>
           <div className="student-demographics-row">
             <label><span>Joining Date</span><input type="date" {...register("joiningDate")} /></label>
             <label><span>Date of Birth <b>*</b></span><input type="date" max={new Date().toISOString().split("T")[0]} {...register("dob", { required: "Date of birth required" })} />{errorFor("dob")}</label>
             <label><span>Age</span><input value={age === "" ? "" : `${age} Years`} readOnly /></label>
-            <label><span>Age Category</span><input value={ageCategory} readOnly /></label>
+            <label><span>Age Category</span><input value={ageCategoryLabel} placeholder="Calculated from date of birth" readOnly /></label>
 
        <label><span>School Name</span><input {...register("schoolName")} /></label><label><span>Class</span><input {...register("className")} /></label><label><span>Company / Firm Name</span><input {...register("collegeName")} /></label><label><span>Occupation</span><input {...register("occupation")} /></label>
           </div>
@@ -239,15 +247,7 @@ const AddStudent = () => {
       </div>
       <div className="student-form-grid student-training-medical-grid">
         <StudentFormSection eyebrow="TRAINING" title="Training Information" description="Martial art, belt and rank assignment." icon={BookOpen}>
-          <div className="batch-form-page student-training-components"><div
-            className={`batch-form-card--profile student-training-grid${showBeltSelect && beltRank === "Black" ? " has-dan-rank" : ""}`}
-            style={{
-              "--student-training-columns":
-                showBeltSelect && beltRank === "Black"
-                  ? "max-content max-content 192px"
-                  : "max-content max-content",
-            }}
-          >
+          <div className="batch-form-page student-training-components"><div className={`batch-form-card--profile student-training-grid${showBeltSelect && beltRank === "Black" ? " has-dan-rank" : ""}`}>
             <SportsMartialArtsField className="batch-profile-sports" showHeader={false} allowCustom={false} options={academyMartialArts} selected={martialArt ? [martialArt] : []} customOptions={[]} onChange={(items) => setValue("martialArt", items.at(-1) || "")} />
             <div className="batch-limit-field--belt student-belt-field">
               <BeltTagsField
@@ -267,45 +267,14 @@ const AddStudent = () => {
               <label><span>Weight (kg)</span><input type="number" min="0" step="0.1" {...register("weightKg")} /></label>
             </div>
 
-            <section className="student-medical-selector" aria-labelledby="student-blood-group-label">
-              <div className="student-medical-selector__heading">
-                <strong id="student-blood-group-label">Blood Group</strong>
-                <small>Optional · click the selected group again to clear</small>
-              </div>
-              <div className="student-blood-group-grid" role="radiogroup" aria-labelledby="student-blood-group-label">
-                {BLOOD_GROUPS.map((group) => {
-                  const selected = bloodGroup === group;
-                  return <button
-                    key={group}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    className={selected ? "is-selected" : ""}
-                    onClick={() => setValue("bloodGroup", selected ? "" : group, { shouldDirty: true })}
-                  >
-                    <span>{group}</span>
-
-                  </button>;
-                })}
-              </div>
-            </section>
-
-            <section className="student-medical-selector student-medical-selector--conditions" aria-labelledby="student-medical-conditions-label">
-              <div className="student-medical-selector__heading">
-                <strong id="student-medical-conditions-label">Medical Conditions</strong>
-                <small>Select all that apply</small>
-              </div>
-              <div className="student-medical-conditions-grid">
-                {MEDICAL_CONDITIONS.map((condition) => {
-                  const selected = medicalConditions.includes(condition);
-                  return <label key={condition} className={selected ? "is-selected" : ""}>
-                    <input type="checkbox" checked={selected} onChange={() => toggleCondition(condition)} />
-
-                    <span>{condition}</span>
-                  </label>;
-                })}
-              </div>
-            </section>
+            <MedicalSelectors
+              bloodGroup={bloodGroup}
+              onBloodGroupChange={(value) => setValue("bloodGroup", value, { shouldDirty: true })}
+              conditions={medicalConditions}
+              onConditionsChange={setMedicalConditions}
+              otherCondition={otherMedicalCondition}
+              onOtherConditionChange={setOtherMedicalCondition}
+            />
 
             <label className="student-medical-notes">
               <span>Medical Notes</span>

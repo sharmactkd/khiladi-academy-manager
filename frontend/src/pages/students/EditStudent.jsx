@@ -18,12 +18,11 @@ import { TAEKWONDO_DAN_RANKS, isTaekwondoSport } from "../../components/taekwond
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
 import StudentFormSection from "./components/StudentFormSection.jsx";
+import MedicalSelectors, { buildMedicalConditionsPayload, normalizeMedicalSelection } from "./components/MedicalSelectors.jsx";
 import "../branches/BranchForm.module.css";
 import "../batches/BatchForm.module.css";
 import "./StudentForm.module.css";
 
-const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-const MEDICAL_CONDITIONS = ["Asthma", "Diabetes", "Heart Issue", "Allergies", "Epilepsy", "High BP", "Low BP", "Joint Pain", "Previous Injury"];
 const toDateInput = (value) => {
   if (!value) return "";
   const date = new Date(value);
@@ -86,6 +85,7 @@ const EditStudent = () => {
   const [parentContacts, setParentContacts] = useState([createPersonContact()]);
   const [emergencyContacts, setEmergencyContacts] = useState([createPersonContact()]);
   const [medicalConditions, setMedicalConditions] = useState([]);
+  const [otherMedicalCondition, setOtherMedicalCondition] = useState("");
   const { register, handleSubmit, control, reset, setValue, formState: { errors } } = useForm({
     defaultValues: { branch: "", batch: "", gender: "male", status: "active", martialArt: "", beltRank: "", danRank: "", bloodGroup: "" },
   });
@@ -168,7 +168,9 @@ const EditStudent = () => {
         countryCode: studentData?.emergencyContact?.countryCode || studentData?.emergencyContactCountryCode,
         phone: studentData?.emergencyContact?.phone || studentData?.emergencyContactPhone,
       }));
-      setMedicalConditions(normalizeOptions(studentData?.medicalConditions || studentData?.medicalInfo?.medicalConditions));
+      const medicalSelection = normalizeMedicalSelection(normalizeOptions(studentData?.medicalConditions || studentData?.medicalInfo?.medicalConditions));
+      setMedicalConditions(medicalSelection.conditions);
+      setOtherMedicalCondition(medicalSelection.otherCondition);
       setPhotoPreview(studentData?.profilePhoto ? getStudentPhotoUrl(studentData) : "");
       if (academyResult.status === "fulfilled") {
         const academyData = academyResult.value?.data?.data?.academy || academyResult.value?.data?.academy || null;
@@ -207,7 +209,6 @@ const EditStudent = () => {
     }
     setPhoto(file); setPhotoPreview(URL.createObjectURL(file));
   };
-  const toggleCondition = (condition) => setMedicalConditions((items) => items.includes(condition) ? items.filter((item) => item !== condition) : [...items, condition]);
   const errorFor = (name) => errors[name] ? <small>{errors[name].message}</small> : null;
   const mainBranch = branches.find((branch) => branch?.isMainBranch) || branches[0];
   const academyAddress = [
@@ -230,7 +231,7 @@ const EditStudent = () => {
         schoolName: values.schoolName || "", className: values.className || "",
         collegeName: values.collegeName || "", occupation: values.occupation || "", martialArt: values.martialArt || "Taekwondo",
         beltRank: values.beltRank || "", danRank: values.danRank || "", heightCm: values.heightCm || "", weightKg: values.weightKg || "",
-        bloodGroup: values.bloodGroup || "", medicalConditions, joiningDate: values.joiningDate || "", status: values.status || "active",
+        bloodGroup: values.bloodGroup || "", medicalConditions: buildMedicalConditionsPayload(medicalConditions, otherMedicalCondition), joiningDate: values.joiningDate || "", status: values.status || "active",
         notes: values.medicalNotes || "",
       };
       const body = new FormData();
@@ -350,45 +351,14 @@ const EditStudent = () => {
               <label><span>Weight (kg)</span><input type="number" min="0" step="0.1" {...register("weightKg")} /></label>
             </div>
 
-            <section className="student-medical-selector" aria-labelledby="student-blood-group-label">
-              <div className="student-medical-selector__heading">
-                <strong id="student-blood-group-label">Blood Group</strong>
-                <small>Optional · click the selected group again to clear</small>
-              </div>
-              <div className="student-blood-group-grid" role="radiogroup" aria-labelledby="student-blood-group-label">
-                {BLOOD_GROUPS.map((group) => {
-                  const selected = bloodGroup === group;
-                  return <button
-                    key={group}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    className={selected ? "is-selected" : ""}
-                    onClick={() => setValue("bloodGroup", selected ? "" : group, { shouldDirty: true })}
-                  >
-                    <span>{group}</span>
-
-                  </button>;
-                })}
-              </div>
-            </section>
-
-            <section className="student-medical-selector student-medical-selector--conditions" aria-labelledby="student-medical-conditions-label">
-              <div className="student-medical-selector__heading">
-                <strong id="student-medical-conditions-label">Medical Conditions</strong>
-                <small>Select all that apply</small>
-              </div>
-              <div className="student-medical-conditions-grid">
-                {MEDICAL_CONDITIONS.map((condition) => {
-                  const selected = medicalConditions.includes(condition);
-                  return <label key={condition} className={selected ? "is-selected" : ""}>
-                    <input type="checkbox" checked={selected} onChange={() => toggleCondition(condition)} />
-
-                    <span>{condition}</span>
-                  </label>;
-                })}
-              </div>
-            </section>
+            <MedicalSelectors
+              bloodGroup={bloodGroup}
+              onBloodGroupChange={(value) => setValue("bloodGroup", value, { shouldDirty: true })}
+              conditions={medicalConditions}
+              onConditionsChange={setMedicalConditions}
+              otherCondition={otherMedicalCondition}
+              onOtherConditionChange={setOtherMedicalCondition}
+            />
 
             <label className="student-medical-notes">
               <span>Medical Notes</span>
