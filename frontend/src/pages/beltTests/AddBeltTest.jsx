@@ -7,7 +7,6 @@ import {
   Award,
   BadgeCheck,
   CalendarDays,
-  Check,
   CheckCircle2,
   ClipboardCheck,
   FileBadge2,
@@ -652,7 +651,7 @@ const AddBeltTest = () => {
                     >
                       <span className={styles.resultIcon}><Icon size={16} /></span>
                       <span>{label}</span>
-                      {form.result === value ? <Check size={14} /> : null}
+
                     </button>
                   ))}
                 </div>

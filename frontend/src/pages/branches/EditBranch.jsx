@@ -23,6 +23,7 @@ import { batchApi } from "../../api/batchApi.js";
 import { getBranchById, getBranches, updateBranch } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
+import { MARTIAL_ART_OPTIONS, SportsMartialArtsField } from "../../components/common/AcademyOperationsFields.jsx";
 import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
 import CurrencySelector from "../../components/common/CurrencySelector.jsx";
 import useAuth from "../../hooks/useAuth.js";
@@ -92,6 +93,8 @@ const createInitialForm = () => ({
   customLanguage: "",
   customFacilities: [],
   customLanguages: [],
+  martialArts: [],
+  customMartialArts: [],
   branchSince: "",
   facilities: [],
   languagesSpoken: [],
@@ -113,6 +116,13 @@ const normalizeBranch = (branch) => ({
       }))
     : [],
   facilities: normalizeList(branch?.facilities).map(normalizeFacility),
+  martialArts: normalizeList(branch?.martialArts),
+  customMartialArts: [
+    ...new Set([
+      ...normalizeList(branch?.customMartialArts),
+      ...normalizeList(branch?.martialArts).filter((item) => !MARTIAL_ART_OPTIONS.includes(item)),
+    ]),
+  ],
   customFacilities: [
     ...new Set([
       ...normalizeList(branch?.customFacilities).map(normalizeFacility),
@@ -355,6 +365,7 @@ const EditBranch = () => {
         </section>
 
         <div className="add-branch-secondary-grid">
+          <SportsMartialArtsField className="add-branch-card add-branch-selection-card" selected={form.martialArts} customOptions={form.customMartialArts} onChange={(items) => updateField("martialArts", items)} onCustomOptionsChange={(items) => updateField("customMartialArts", items)} />
           <section className="add-branch-card add-branch-selection-card">
             <BranchFormSectionHeader icon={Warehouse} eyebrow="Infrastructure" title="Facilities" description="Select everything available at this location." />
             <div className="add-branch-chip-grid"><IconOptionGrid kind="facility" options={[...new Set([...FACILITY_OPTIONS, ...form.customFacilities])]} selected={form.facilities} customOptions={form.customFacilities} onToggle={(facility) => toggleArrayValue("facilities", facility)} onRemoveCustom={(facility) => removeCustomValue(facility, "facilities", "customFacilities")} trailingContent={<div className="add-branch-custom-row"><input value={form.customFacility} onChange={(event) => updateField("customFacility", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customFacility", "facilities")} placeholder="Add custom facility" /><button type="button" onClick={() => addCustomValue("customFacility", "facilities")} disabled={!form.customFacility.trim()}><Plus size={14} /> Add</button></div>} /></div>

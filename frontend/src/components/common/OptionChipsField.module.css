@@ -1,6 +1,10 @@
 .root { min-width: 0; }
 .label { display: block; margin-bottom: 8px; font-weight: 800; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chipWrap { position: relative; display: inline-flex; }
 .chip { display: inline-flex; align-items: center; gap: 6px; }
 .selected { color: var(--color-on-primary); background: var(--color-primary); }
+.remove { position: absolute; z-index: 2; top: -6px; right: -6px; width: 19px!important; height: 19px!important; min-height: 19px!important; display:grid!important; place-items:center; padding:0!important; border:2px solid #fff!important; border-radius:50%!important; background:#17233b!important; color:#fff!important; opacity:.82; pointer-events:auto; transform:scale(1); transition:opacity .16s ease,transform .16s ease,background .16s ease; }
+.customChip:hover .remove,.customChip:focus-within .remove { opacity:1; pointer-events:auto; transform:scale(1); }
+.remove:hover,.remove:focus-visible { background:#cf0006!important; }
 .custom { min-width: 220px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }

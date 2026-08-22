@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
-import { ArrowLeft, BookOpen, Check, HeartPulse, IdCard, MapPin, Phone, Save, ShieldAlert, UserRound } from "lucide-react";
+import { ArrowLeft, BookOpen, HeartPulse, IdCard, MapPin, Phone, Save, ShieldAlert, UserRound } from "lucide-react";
 import { academyApi } from "../../api/academyApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { getBranches } from "../../api/branchApi.js";
@@ -367,7 +367,7 @@ const EditStudent = () => {
                     onClick={() => setValue("bloodGroup", selected ? "" : group, { shouldDirty: true })}
                   >
                     <span>{group}</span>
-                    {selected ? <span className="student-selector-check" aria-hidden="true"><Check size={13} /></span> : null}
+
                   </button>;
                 })}
               </div>
@@ -383,7 +383,7 @@ const EditStudent = () => {
                   const selected = medicalConditions.includes(condition);
                   return <label key={condition} className={selected ? "is-selected" : ""}>
                     <input type="checkbox" checked={selected} onChange={() => toggleCondition(condition)} />
-                    <span className="student-condition-check" aria-hidden="true">{selected ? <Check size={12} /> : null}</span>
+
                     <span>{condition}</span>
                   </label>;
                 })}

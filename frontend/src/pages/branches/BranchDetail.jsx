@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Award, Building2, CalendarCheck2, CalendarDays, CheckCircle2,
-  Crown, Edit3, IndianRupee, Languages, Mail, MapPin, Phone,
+  Crown, Dumbbell, Edit3, IndianRupee, Languages, Mail, MapPin, Phone,
   ShieldCheck, UserRound, Users, UsersRound, Warehouse, XCircle,
   WalletCards,
 } from "lucide-react";
@@ -114,6 +114,10 @@ const BranchDetail = () => {
     () => normalizeList(branch?.languagesSpoken, branch?.customLanguages),
     [branch?.languagesSpoken, branch?.customLanguages]
   );
+  const martialArts = useMemo(
+    () => normalizeList(branch?.martialArts),
+    [branch?.martialArts],
+  );
   const additionalCoaches = useMemo(
     () => Array.isArray(branch?.additionalCoaches)
       ? branch.additionalCoaches.filter((coach) => coach?.name || coach?.phone || coach?.achievements)
@@ -219,8 +223,12 @@ const BranchDetail = () => {
 
       <div className="branch-detail-secondary-grid">
         <section className="branch-detail-card branch-detail-tags-card">
+          <BranchDetailSectionHeader icon={Dumbbell} eyebrow="Training" title="Sports / Martial Arts" description="Training disciplines available at this branch." />
+          <div className="branch-detail-tags">{martialArts.length ? martialArts.map((item) => <span key={item}>{item}</span>) : <p>No sports or martial arts added.</p>}</div>
+        </section>
+        <section className="branch-detail-card branch-detail-tags-card">
           <BranchDetailSectionHeader icon={Warehouse} eyebrow="Infrastructure" title="Facilities" description="Infrastructure available at this branch." />
-          <div className="branch-detail-tags">{facilities.length ? facilities.map((item) => <span key={item}><CheckCircle2 size={13} />{item}</span>) : <p>No facilities added.</p>}</div>
+          <div className="branch-detail-tags">{facilities.length ? facilities.map((item) => <span key={item}>{item}</span>) : <p>No facilities added.</p>}</div>
         </section>
         <section className="branch-detail-card branch-detail-tags-card">
           <BranchDetailSectionHeader icon={Languages} eyebrow="Communication" title="Languages Spoken" description="Languages supported by the branch team." />

@@ -145,6 +145,8 @@ const branchSchema = new mongoose.Schema(
       min: [1900, "Branch since year must be valid"],
       max: [new Date().getFullYear(), "Branch since cannot be in the future"],
     },
+    martialArts: { type: [String], default: [] },
+    customMartialArts: { type: [String], default: [] },
     facilities: { type: [String], default: [] },
     customFacilities: { type: [String], default: [] },
     languagesSpoken: { type: [String], default: [] },
@@ -206,6 +208,8 @@ branchSchema.pre("validate", function () {
     this.branchSince = null;
   }
 
+  this.martialArts = [...new Set(normalizeStringArray(this.martialArts))];
+  this.customMartialArts = [...new Set(normalizeStringArray(this.customMartialArts))];
   this.facilities = [...new Set(normalizeStringArray(this.facilities))];
   this.customFacilities = [...new Set(normalizeStringArray(this.customFacilities))];
   this.languagesSpoken = [...new Set(normalizeStringArray(this.languagesSpoken))];

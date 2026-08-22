@@ -3788,6 +3788,7 @@ Mobile par close button visible hoga.
   box-shadow: 0 7px 16px rgba(207, 0, 6, 0.18);
 }
 .operations-custom-tag {
+  box-sizing: border-box;
   width: min(520px, 100%);
   min-width: 270px;
   min-height: 40px;

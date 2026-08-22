@@ -58,6 +58,13 @@
   gap: 8px;
   margin-top: 7px;
 }
+:global(.batch-tag-option) { position:relative; display:inline-flex; }
+:global(.batch-tag-option__remove) { position:absolute!important; z-index:4; top:-6px; right:-6px; width:19px!important; height:19px!important; min-height:19px!important; display:grid!important; place-items:center; padding:0!important; border:2px solid #fff!important; border-radius:50%!important; background:#17233b!important; color:#fff!important; opacity:.82; pointer-events:auto; transform:scale(1); transition:opacity .16s ease,transform .16s ease,background .16s ease; }
+:global(.batch-tag-option.is-custom:hover .batch-tag-option__remove),
+:global(.batch-tag-option.is-custom:focus-within .batch-tag-option__remove) { opacity:1; pointer-events:auto; transform:scale(1); }
+:global(.batch-tag-option__remove:hover),
+:global(.batch-tag-option__remove:focus-visible) { background:#cf0006!important; }
+:global(.batch-branch-sports-empty) { grid-column:1/-1; margin:0; padding:9px 11px; border:1px dashed #f0a9ad; border-radius:9px; background:#fff7f7; color:#9f0005; font-size:12px; font-weight:700; }
 :global(.batch-single-select-tags button) {
   min-height: 38px;
   display: inline-flex;
@@ -1824,23 +1831,6 @@
   color: #ffffff;
   box-shadow: 0 8px 18px rgba(207, 0, 6, 0.22);
   transform: translateY(-1px);
-}
-:global(.batch-form-page
-  .batch-form-card--profile
-  .batch-single-select-tags
-  button.is-selected::before) {
-  content: "✓";
-  width: 17px;
-  height: 17px;
-  flex: 0 0 17px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #ffffff;
-  color: var(--btp-red);
-  font-size: 10px;
-  font-weight: 950;
-  line-height: 1;
 }
 :global(.batch-form-page .batch-form-card--profile .operations-tag-grid button > svg) {
   width: 14px;

@@ -1,3 +1,4 @@
+import { MARTIAL_ART_OPTIONS } from "../../components/common/AcademyOperationsFields.jsx";
 import { FACILITY_OPTIONS, LANGUAGE_OPTIONS } from "./branch.config.js";
 
 export const createInitialBranchForm = () => ({
@@ -8,7 +9,7 @@ export const createInitialBranchForm = () => ({
   assistantCoachCountryCode: "+91", assistantCoachPhone: "",
   assistantCoachAchievements: "", additionalCoaches: [], customFacility: "",
   customLanguage: "", customFacilities: [], customLanguages: [], branchSince: "",
-  facilities: [], languagesSpoken: [], isMainBranch: false, isActive: true,
+  martialArts: [], customMartialArts: [], facilities: [], languagesSpoken: [], isMainBranch: false, isActive: true,
 });
 
 export const unwrapList = (response) => {
@@ -55,6 +56,8 @@ export const normalizeBranchForm = (branch) => ({
     ? branch.additionalCoaches.map((coach) => ({ name: coach?.name || "", countryCode: coach?.countryCode || "+91", phone: coach?.phone || "", achievements: coach?.achievements || "" }))
     : [],
   facilities: normalizeList(branch?.facilities).map(normalizeFacility),
+  martialArts: normalizeList(branch?.martialArts),
+  customMartialArts: [...new Set([...normalizeList(branch?.customMartialArts), ...normalizeList(branch?.martialArts).filter((item) => !MARTIAL_ART_OPTIONS.includes(item))])],
   customFacilities: [...new Set([...normalizeList(branch?.customFacilities).map(normalizeFacility), ...normalizeList(branch?.facilities).map(normalizeFacility).filter((item) => !FACILITY_OPTIONS.includes(item))])],
   languagesSpoken: normalizeList(branch?.languagesSpoken),
   customLanguages: [...new Set([...normalizeList(branch?.customLanguages), ...normalizeList(branch?.languagesSpoken).filter((item) => !LANGUAGE_OPTIONS.includes(item))])],

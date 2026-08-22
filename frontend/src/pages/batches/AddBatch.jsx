@@ -12,6 +12,7 @@ import {
   UsersRound,
   MessageCircleMore,
   Video,
+  X,
 } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
@@ -110,6 +111,8 @@ const TagField = ({
   selected,
   onToggle,
   required = false,
+  customOptions = [],
+  onRemoveCustom,
   trailingContent = null,
 }) => (
   <div className="batch-tag-field batch-tag-field--wide">
@@ -122,17 +125,11 @@ const TagField = ({
         const value = typeof option === "string" ? option : option.value;
         const text = typeof option === "string" ? option : option.label;
         const active = selected.includes(value);
-        return (
-          <button
-            key={value}
-            type="button"
-            className={active ? "is-selected" : ""}
-            aria-pressed={active}
-            onClick={() => onToggle(value)}
-          >
-            {text}
-          </button>
-        );
+        const custom = customOptions.includes(value);
+        return <span className={`batch-tag-option${custom ? " is-custom" : ""}`} key={value}>
+          <button type="button" className={active ? "is-selected" : ""} aria-pressed={active} onClick={() => onToggle(value)}>{text}</button>
+          {custom && onRemoveCustom ? <button type="button" className="batch-tag-option__remove" aria-label={`Delete custom tag ${text}`} title={`Delete ${text}`} onClick={() => onRemoveCustom(value)}><X size={11}/></button> : null}
+        </span>;
       })}
       {trailingContent}
     </div>
@@ -334,10 +331,16 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
 
   const values = watch();
   const isEdit = mode === "edit" && Boolean(batchId);
+  const selectedBranch = useMemo(
+    () => branches.find((item) => String(item?._id) === String(values.branch)),
+    [branches, values.branch],
+  );
   const sports = useMemo(() => {
+    const branchSports = normalizeList(selectedBranch?.martialArts);
+    if (selectedBranch) return [...new Set(branchSports)];
     const academySports = normalizeList(academy?.martialArts);
-    return [...new Set([...DEFAULT_SPORTS, ...academySports])];
-  }, [academy?.martialArts]);
+    return [...new Set(academySports.length ? academySports : DEFAULT_SPORTS)];
+  }, [academy?.martialArts, selectedBranch]);
   const allBatchTypes = [...BATCH_TYPES, ...(values.customBatchTypes || [])];
   const allLanguages = [...LANGUAGES, ...(values.customBatchLanguages || [])];
 
@@ -356,6 +359,16 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
       { shouldDirty: true, shouldValidate: true },
     );
   };
+  const removeCustomTag = (value, catalogField, selectedField) => {
+    setValue(catalogField, (watch(catalogField) || []).filter((item) => item !== value), { shouldDirty: true });
+    setValue(selectedField, (watch(selectedField) || []).filter((item) => item !== value), { shouldDirty: true, shouldValidate: true });
+  };
+
+  useEffect(() => {
+    const current = values.martialArts || [];
+    const allowed = current.filter((item) => sports.includes(item));
+    if (allowed.length !== current.length) setValue("martialArts", allowed, { shouldDirty: true, shouldValidate: true });
+  }, [setValue, sports, values.martialArts]);
   const addCustom = (input, catalogField, selectedField, setter) => {
     const clean = input.trim().replace(/\s+/g, " ");
     if (!clean) return;
@@ -697,6 +710,8 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
                 options={allBatchTypes}
                 selected={values.batchTypes || []}
                 onToggle={(item) => toggleMulti("batchTypes", item)}
+                customOptions={values.customBatchTypes || []}
+                onRemoveCustom={(item) => removeCustomTag(item, "customBatchTypes", "batchTypes")}
                 trailingContent={
                   <div className="operations-custom-tag batch-custom-tag batch-custom-tag--inline">
                     <Plus size={15} aria-hidden="true" />
@@ -745,6 +760,7 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
               options={sports}
               selected={values.martialArts || []}
               customOptions={[]}
+              allowCustom={false}
               onChange={(items) =>
                 setValue("martialArts", items, {
                   shouldDirty: true,
@@ -752,6 +768,7 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
                 })
               }
             />
+            {selectedBranch && !sports.length ? <p className="batch-branch-sports-empty">Selected branch me koi Martial Art / Sport configured nahi hai. Pehle Edit Branch me training disciplines select karein.</p> : null}
           </div>
         </section>
 

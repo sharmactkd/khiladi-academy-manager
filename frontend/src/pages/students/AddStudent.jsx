@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
-import { ArrowLeft, BookOpen, Check, HeartPulse, IdCard, MapPin, Phone, Save, ShieldAlert, UserRound } from "lucide-react";
+import { ArrowLeft, BookOpen, HeartPulse, IdCard, MapPin, Phone, Save, ShieldAlert, UserRound } from "lucide-react";
 import { academyApi } from "../../api/academyApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { getBranches } from "../../api/branchApi.js";
@@ -216,7 +216,7 @@ const AddStudent = () => {
             <label><span>Date of Birth <b>*</b></span><input type="date" max={new Date().toISOString().split("T")[0]} {...register("dob", { required: "Date of birth required" })} />{errorFor("dob")}</label>
             <label><span>Age</span><input value={age === "" ? "" : `${age} Years`} readOnly /></label>
             <label><span>Age Category</span><input value={ageCategory} readOnly /></label>
-           
+
        <label><span>School Name</span><input {...register("schoolName")} /></label><label><span>Class</span><input {...register("className")} /></label><label><span>Company / Firm Name</span><input {...register("collegeName")} /></label><label><span>Occupation</span><input {...register("occupation")} /></label>
           </div>
         </div><ProfilePhotoField previewUrl={photoPreview} onChange={changePhoto} onRemove={() => { setPhoto(null); setPhotoPreview(""); }} disabled={saving} /></div>
@@ -284,7 +284,7 @@ const AddStudent = () => {
                     onClick={() => setValue("bloodGroup", selected ? "" : group, { shouldDirty: true })}
                   >
                     <span>{group}</span>
-                    {selected ? <span className="student-selector-check" aria-hidden="true"><Check size={13} /></span> : null}
+
                   </button>;
                 })}
               </div>
@@ -300,7 +300,7 @@ const AddStudent = () => {
                   const selected = medicalConditions.includes(condition);
                   return <label key={condition} className={selected ? "is-selected" : ""}>
                     <input type="checkbox" checked={selected} onChange={() => toggleCondition(condition)} />
-                    <span className="student-condition-check" aria-hidden="true">{selected ? <Check size={12} /> : null}</span>
+
                     <span>{condition}</span>
                   </label>;
                 })}

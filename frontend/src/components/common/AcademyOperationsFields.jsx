@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Dumbbell,
   Languages,
-  
+  Plus,
   Trash2,
   UserRound,
   UsersRound,
@@ -82,7 +82,7 @@ const CustomTagInput = ({
 
   return (
     <div className="operations-custom-tag">
-    
+      <Plus size={15} aria-hidden="true" />
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}

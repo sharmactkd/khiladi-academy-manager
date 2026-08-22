@@ -113,6 +113,8 @@ const normalizeBranchPayload = (body = {}) => {
     additionalCoaches: normalizeAdditionalCoaches(body.additionalCoaches),
     branchSince: body.branchSince ? Number(body.branchSince) : null,
 
+    martialArts: normalizeStringArray(body.martialArts),
+    customMartialArts: normalizeStringArray(body.customMartialArts),
     facilities: normalizeStringArray(body.facilities),
     customFacilities: normalizeStringArray(body.customFacilities),
     languagesSpoken: normalizeStringArray(body.languagesSpoken),

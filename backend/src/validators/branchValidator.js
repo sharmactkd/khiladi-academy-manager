@@ -38,6 +38,10 @@ const commonOptionalValidators = [
     .optional({ nullable: true, checkFalsy: true })
     .isInt({ min: 1900, max: new Date().getFullYear() })
     .withMessage("Branch since year must be valid"),
+  body("martialArts").optional().isArray(),
+  body("martialArts.*").optional().isString().trim().isLength({ max: 100 }),
+  body("customMartialArts").optional().isArray(),
+  body("customMartialArts.*").optional().isString().trim().isLength({ max: 100 }),
   body("facilities").optional().isArray(),
   body("facilities.*").optional().isString().trim().isLength({ max: 100 }),
   body("customFacilities").optional().isArray(),

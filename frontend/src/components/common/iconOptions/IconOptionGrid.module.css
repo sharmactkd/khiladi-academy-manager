@@ -12,18 +12,20 @@
 
 .trailing {
   grid-column: span 2;
-  min-width: 240px;
+  min-width: 0;
   align-self: center;
 }
 
 .trailing > * {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   height: auto;
   margin: 0 !important;
 }
 
 .trailing input {
-  min-width: 140px !important;
+  min-width: 0 !important;
 }
 
 @media (max-width: 520px) {
@@ -132,9 +134,9 @@
   background: #17233b !important;
   color: #ffffff !important;
   cursor: pointer;
-  opacity: 0;
-  transform: scale(0.72);
-  pointer-events: none;
+  opacity: 0.82;
+  transform: scale(1);
+  pointer-events: auto;
   transition: opacity 160ms ease, transform 160ms ease, background 160ms ease;
 }
 
@@ -146,8 +148,6 @@
 .grid .item:hover .remove,
 .grid .item:focus-within .remove {
   opacity: 1;
-  transform: scale(1);
-  pointer-events: auto;
 }
 
 .grid .item .remove:hover,
