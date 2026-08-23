@@ -216,6 +216,7 @@ const AttendanceTable = ({
   onRemoveDayNote,
   onToggleStudentStatus,
   onOpenMembership,
+  onOpenFeeCollection,
   canManageMembership = false,
   statusUpdatingIds = [],
   loading = false,
@@ -560,20 +561,32 @@ const AttendanceTable = ({
                   </td>
 
                   <td className="sticky-col sticky-paid-date">
-                    <DateMetaInput
-                      value={displayValue(
-                        formatEditableDueValue(getPaidDateValue(row)),
-                        ""
-                      )}
-                      onChange={(value) =>
-                        updateRowField(rowIndex, "importedPaidDate", value)
-                      }
-                      placeholder="DD-MM-YYYY"
-                      disabled={!onRowsChange}
-                      ariaLabel={`Paid date for ${
-                        row.name || row.importedName || "student"
-                      }`}
-                    />
+                    {row.rowType === "student" && row.studentId ? (
+                      <button
+                        type="button"
+                        className="monthly-register__paid-date-action"
+                        onClick={() => onOpenFeeCollection?.(row)}
+                        title={`Collect fee for ${row.name || "student"}`}
+                        aria-label={`Open fee collection for ${row.name || "student"}`}
+                      >
+                        {formatDateDDMMYYYY(getPaidDateValue(row))}
+                      </button>
+                    ) : (
+                      <DateMetaInput
+                        value={displayValue(
+                          formatEditableDueValue(getPaidDateValue(row)),
+                          ""
+                        )}
+                        onChange={(value) =>
+                          updateRowField(rowIndex, "importedPaidDate", value)
+                        }
+                        placeholder="DD-MM-YYYY"
+                        disabled={!onRowsChange}
+                        ariaLabel={`Paid date for ${
+                          row.name || row.importedName || "student"
+                        }`}
+                      />
+                    )}
                   </td>
 
                   <td

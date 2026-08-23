@@ -83,6 +83,14 @@ const getPaymentStatus = ({ pendingAmount, amountPaid }) => {
   return { key: "due", label: "Due" };
 };
 
+const getAttendanceReturnPath = (searchParams) => {
+  const requestedPath = searchParams.get("returnTo") || "";
+
+  return requestedPath === "/attendance" || requestedPath.startsWith("/attendance?")
+    ? requestedPath
+    : "";
+};
+
 const CollectFee = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -91,6 +99,7 @@ const CollectFee = () => {
   const studentIdFromUrl = searchParams.get("student") || "";
   const initialMonth = Number(searchParams.get("month")) || now.getMonth() + 1;
   const initialYear = Number(searchParams.get("year")) || now.getFullYear();
+  const attendanceReturnPath = getAttendanceReturnPath(searchParams);
 
   const [students, setStudents] = useState([]);
   const [academy, setAcademy] = useState(null);
@@ -250,6 +259,17 @@ const CollectFee = () => {
       });
       toast.success("Fee collected successfully");
       const payment = response?.data?.data || response?.data || null;
+
+      if (attendanceReturnPath) {
+        toast.success(
+          payment?.receiptNumber
+            ? `Receipt ${payment.receiptNumber} generated successfully`
+            : "Receipt generated successfully"
+        );
+        navigate(attendanceReturnPath, { replace: true });
+        return;
+      }
+
       navigate(payment?._id ? `/fees/receipt/${payment._id}` : "/fees/payments");
     } catch (error) {
       const details = error.response?.data?.data;

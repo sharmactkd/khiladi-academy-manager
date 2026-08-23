@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -22,6 +22,13 @@ import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import "./Attendance.module.css";
 
 const now = new Date();
+
+const numberFromSearch = (value, fallback, minimum, maximum) => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= minimum && parsed <= maximum
+    ? parsed
+    : fallback;
+};
 
 const months = [
   { value: 1, label: "Jan", fullLabel: "January" },
@@ -119,13 +126,19 @@ const getAllowedMonthLimit = () => {
 const Attendance = () => {
   const printRef = useRef(null);
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
-  const [batch, setBatch] = useState("");
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear] = useState(now.getFullYear());
+  const [batch, setBatch] = useState(searchParams.get("batch") || "");
+  const [month, setMonth] = useState(() =>
+    numberFromSearch(searchParams.get("month"), now.getMonth() + 1, 1, 12)
+  );
+  const [year, setYear] = useState(() =>
+    numberFromSearch(searchParams.get("year"), now.getFullYear(), 2000, 2100)
+  );
 
   const [days, setDays] = useState([]);
   const [rows, setRows] = useState([]);
@@ -169,6 +182,27 @@ const Attendance = () => {
   const selectedBatchOption = useMemo(
     () => batches.find((item) => item._id === batch) || selectedBatch || null,
     [batches, batch, selectedBatch]
+  );
+
+  const openFeeCollection = useCallback(
+    (row) => {
+      if (!row?.studentId) return;
+
+      const attendanceParams = new URLSearchParams();
+      if (batch) attendanceParams.set("batch", batch);
+      attendanceParams.set("month", String(month));
+      attendanceParams.set("year", String(year));
+
+      const feeParams = new URLSearchParams({
+        student: String(row.studentId),
+        month: String(month),
+        year: String(year),
+        returnTo: `/attendance?${attendanceParams.toString()}`,
+      });
+
+      navigate(`/fees/collect?${feeParams.toString()}`);
+    },
+    [batch, month, navigate, year]
   );
 
   const attendanceStats = useMemo(() => {
@@ -604,6 +638,7 @@ const Attendance = () => {
             onRemoveDayNote={removeDayNote}
             onToggleStudentStatus={toggleStudentStatus}
             onOpenMembership={setMembershipStudent}
+            onOpenFeeCollection={openFeeCollection}
             canManageMembership={["academy_owner", "super_admin"].includes(user?.role)}
             statusUpdatingIds={statusUpdatingIds}
             loading={loading}

@@ -103,6 +103,9 @@
 :global(.attendance-percentage>span) { height:5px; overflow:hidden; border-radius:999px; background:#e5eaf0; } :global(.attendance-percentage>span i) { display:block; height:100%; border-radius:inherit; background:#16a05a; }
 :global(.attendance-page .monthly-register__meta-input) { width:96px; min-width:96px; height:33px; padding:4px 6px; border-color:#d3dde8; font-size:11px; font-weight:750; text-align:center; }
 :global(.attendance-page .monthly-register__date-picker) { width:96px; min-width:96px; }
+:global(.attendance-page .monthly-register__paid-date-action) { width:96px; min-width:96px; height:33px; display:inline-flex; align-items:center; justify-content:center; padding:4px 6px; border:1px solid #d3dde8; border-radius:7px; background:#fff; color:#14213d; font-size:11px; font-weight:750; text-align:center; transition:border-color .18s ease, color .18s ease, background .18s ease, box-shadow .18s ease; }
+:global(.attendance-page .monthly-register__paid-date-action:hover),
+:global(.attendance-page .monthly-register__paid-date-action:focus-visible) { border-color:#ef8e94; background:#fff5f5; color:#b10e16; box-shadow:0 0 0 3px rgba(225, 29, 37, .08); outline:none; }
 :global(.attendance-page .monthly-register__date-display) { padding-right:6px; }
 :global(.membership-due-date) { width:140px; max-width:140px; min-height:33px; padding:5px 7px; border-radius:7px; font-size:10px; text-align:center; overflow:hidden; text-overflow:ellipsis; }
 :global(.membership-due-date:hover:not(:disabled)) { border-color:#ef8e94; color:#b10e16; background:#fff5f5; }

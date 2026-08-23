@@ -157,20 +157,35 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     }
   );
 
-  const recentPayments = payments.slice(0, 10).map((payment) => ({
-    _id: payment._id,
-    studentName: getStudentName(payment.student),
-    admissionNumber: payment.student?.admissionNumber || "",
-    amountPaid: payment.amountPaid,
-    paymentDate: payment.paymentDate,
-    paymentMode: payment.paymentMode,
-    cashAmount: payment.cashAmount || 0,
-    onlineAmount: payment.onlineAmount || 0,
-    receiptNumber: payment.receiptNumber,
-    status: payment.status,
-    currencyCode: payment.branch?.currencyCode || payment.student?.branch?.currencyCode || payment.currencyCode || "INR",
-    currencySymbol: payment.branch?.currencySymbol || payment.student?.branch?.currencySymbol || payment.currencySymbol || getCurrencySymbol(payment.branch?.currencyCode || payment.student?.branch?.currencyCode || payment.currencyCode || "INR"),
-  }));
+  const recentPayments = payments.slice(0, 10).map((payment) => {
+    const currentBranch = payment.student?.branch || payment.branch || null;
+    const currencyCode = currentBranch?.currencyCode || payment.currencyCode || "INR";
+
+    return {
+      _id: payment._id,
+      studentId: payment.student?._id || null,
+      studentName: getStudentName(payment.student),
+      admissionNumber: payment.student?.admissionNumber || "",
+      branchId: currentBranch?._id || null,
+      branch: currentBranch,
+      amountPaid: payment.amountPaid,
+      paymentDate: payment.paymentDate,
+      paymentMode: payment.paymentMode,
+      cashAmount: payment.cashAmount || 0,
+      onlineAmount: payment.onlineAmount || 0,
+      receiptNumber: payment.receiptNumber,
+      status: payment.status,
+      currencyCode,
+      currencySymbol:
+        currentBranch?.currencySymbol ||
+        payment.currencySymbol ||
+        getCurrencySymbol(currencyCode),
+      currencyCountryCode:
+        currentBranch?.currencyCountryCode ||
+        payment.currencyCountryCode ||
+        "IN",
+    };
+  });
 
   const collectionRate = students.length
     ? Number(((summary.paid / students.length) * 100).toFixed(1))
