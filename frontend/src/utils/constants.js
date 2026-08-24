@@ -1,4 +1,3 @@
-export const ACCESS_TOKEN_KEY = "khiladi_access_token";
 export const USER_KEY = "khiladi_user";
 
 export const USER_ROLES = {

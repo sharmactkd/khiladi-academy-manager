@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
+import crypto from "crypto";
 
 import env from "./config/env.js";
 
@@ -54,8 +55,18 @@ import {
   errorHandler,
   notFoundHandler,
 } from "./middlewares/errorMiddleware.js";
+import { apiRateLimiter } from "./middlewares/rateLimiter.js";
+import { mutationAuditMiddleware } from "./middlewares/mutationAuditMiddleware.js";
 
 const app = express();
+
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  req.requestId = crypto.randomUUID();
+  res.setHeader("X-Request-Id", req.requestId);
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
 app.use(
   helmet({
@@ -70,8 +81,19 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.set("trust proxy", env.TRUST_PROXY);
+
+app.use(
+  express.json({
+    limit: "2mb",
+    verify: (req, _res, buffer) => {
+      if (req.originalUrl?.startsWith("/api/tournament-sync/results/webhook")) {
+        req.rawBody = Buffer.from(buffer);
+      }
+    },
+  })
+);
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(cookieParser());
 
 if (!env.isProduction) {
@@ -79,7 +101,23 @@ if (!env.isProduction) {
 }
 
 
-app.use("/uploads", express.static("uploads"));
+app.use(
+  "/uploads",
+  express.static("uploads", {
+    dotfiles: "deny",
+    fallthrough: false,
+    index: false,
+    maxAge: "1d",
+    setHeaders: (res) => {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+      res.setHeader(
+        "Content-Security-Policy",
+        "default-src 'none'; img-src 'self'; sandbox"
+      );
+    },
+  })
+);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -87,10 +125,12 @@ app.get("/api/health", (req, res) => {
     message: "KHILADI Academy Manager API is running",
     data: {
       status: "ok",
-      environment: env.NODE_ENV,
     },
   });
 });
+
+app.use("/api", apiRateLimiter);
+app.use("/api", mutationAuditMiddleware);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/academy", academyRoutes);

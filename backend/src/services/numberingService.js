@@ -26,27 +26,13 @@ export const generateSequentialNumber = async ({
 
   const numberPrefix = buildPrefix({ prefix, academyId });
 
-  const latestRecord = await model
-    .findOne({
-      academy: academyId,
-      [fieldName]: { $regex: `^${numberPrefix}-` },
-    })
-    .sort({ createdAt: -1 })
-    .select(fieldName)
-    .lean();
+  const counter = await Sequence.findOneAndUpdate(
+    { scope: `${model.modelName}:${fieldName}:${numberPrefix}` },
+    { $inc: { value: 1 } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
 
-  let nextNumber = 1;
-
-  if (latestRecord?.[fieldName]) {
-    const parts = String(latestRecord[fieldName]).split("-");
-    const lastPart = Number(parts[parts.length - 1]);
-
-    if (!Number.isNaN(lastPart)) {
-      nextNumber = lastPart + 1;
-    }
-  }
-
-  return `${numberPrefix}-${padNumber(nextNumber)}`;
+  return `${numberPrefix}-${padNumber(counter.value)}`;
 };
 
 export const generateCardNumber = async ({ model, academyId }) => {
@@ -66,3 +52,4 @@ export const generateCertificateNumber = async ({ model, academyId }) => {
     prefix: "CERT",
   });
 };
+import Sequence from "../models/Sequence.js";

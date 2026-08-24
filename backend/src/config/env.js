@@ -14,6 +14,30 @@ requiredEnvVars.forEach((key) => {
   }
 });
 
+if (process.env.NODE_ENV === "production") {
+  ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"].forEach((key) => {
+    if (String(process.env[key]).length < 32) {
+      throw new Error(`${key} must contain at least 32 characters in production`);
+    }
+  });
+
+  if (process.env.JWT_ACCESS_SECRET === process.env.JWT_REFRESH_SECRET) {
+    throw new Error("JWT access and refresh secrets must be different");
+  }
+}
+
+const integrationEncryptionKey =
+  process.env.INTEGRATION_ENCRYPTION_KEY || process.env.JWT_REFRESH_SECRET;
+const dataEncryptionKey =
+  process.env.DATA_ENCRYPTION_KEY || process.env.JWT_REFRESH_SECRET;
+
+if (process.env.NODE_ENV === "production" && !process.env.INTEGRATION_ENCRYPTION_KEY) {
+  throw new Error("Missing required environment variable: INTEGRATION_ENCRYPTION_KEY");
+}
+if (process.env.NODE_ENV === "production" && !process.env.DATA_ENCRYPTION_KEY) {
+  throw new Error("Missing required environment variable: DATA_ENCRYPTION_KEY");
+}
+
 const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
   PORT: Number(process.env.PORT) || 5000,
@@ -30,6 +54,23 @@ const env = {
     process.env.REFRESH_TOKEN_COOKIE_NAME || "khiladi_refresh_token",
 
   MAX_REFRESH_SESSIONS: Number(process.env.MAX_REFRESH_SESSIONS) || 5,
+  INTEGRATION_ENCRYPTION_KEY: integrationEncryptionKey,
+  DATA_ENCRYPTION_KEY: dataEncryptionKey,
+  TOURNAMENT_API_ALLOWED_ORIGINS: String(
+    process.env.TOURNAMENT_API_ALLOWED_ORIGINS ||
+      (process.env.NODE_ENV === "production"
+        ? "https://khiladi-khoj.com"
+        : "http://localhost:5173,http://localhost:5001")
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+  TRUST_PROXY:
+    process.env.TRUST_PROXY === "true"
+      ? 1
+      : process.env.TRUST_PROXY === "false" || !process.env.TRUST_PROXY
+        ? false
+        : process.env.TRUST_PROXY,
 
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
 

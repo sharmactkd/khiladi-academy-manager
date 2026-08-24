@@ -6,6 +6,9 @@ export const getAssistantCoachBranchIds = (user) => {
   }
 
   const values = [
+    ...(Array.isArray(user.$locals?.authorizedBranchIds)
+      ? user.$locals.authorizedBranchIds
+      : []),
     user.branch,
     user.branchId,
     user.assignedBranch,

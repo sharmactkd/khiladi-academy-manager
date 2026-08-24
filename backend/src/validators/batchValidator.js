@@ -75,8 +75,18 @@ const common = [
   optionalMoney("uniformFee"),
   optionalMoney("examinationFee"),
   optionalMoney("lateFee"),
-  optionalText("whatsappGroupLink", 300),
-  optionalText("googleMeetLink", 300),
+  body("whatsappGroupLink")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isURL({ protocols: ["http", "https"], require_protocol: true })
+    .withMessage("WhatsApp link must use http or https")
+    .isLength({ max: 300 }),
+  body("googleMeetLink")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isURL({ protocols: ["http", "https"], require_protocol: true })
+    .withMessage("Google Meet link must use http or https")
+    .isLength({ max: 300 }),
   optionalText("notes", 2000),
   optionalBoolean("noCapacityLimit"),
   optionalBoolean("noMinAgeLimit"),

@@ -3,6 +3,7 @@ import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatMoney } from "./currency.js";
+import { printDomElement } from "./securePrint.js";
 
 const safeFileName = (value = "report") => {
   return String(value)
@@ -150,53 +151,9 @@ export const printElement = (elementId) => {
     return;
   }
 
-  const printWindow = window.open("", "_blank", "width=1200,height=800");
-
-  if (!printWindow) {
+  if (!printDomElement({ element, title: "Print Report" })) {
     window.print();
-    return;
   }
-
-  const documentStyles = [...document.querySelectorAll('style, link[rel="stylesheet"]')]
-    .map((node) => node.outerHTML)
-    .join("");
-
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Print Report</title>
-        ${documentStyles}
-        <style>
-          @page { size: A4 landscape; margin: 10mm; }
-          body {
-            margin: 0;
-            padding: 0;
-            color: #111827;
-            background: #ffffff;
-          }
-
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-
-          button, details, .no-print { display: none !important; }
-        </style>
-      </head>
-      <body>
-        ${element.innerHTML}
-      </body>
-    </html>
-  `);
-
-  printWindow.onload = () => {
-    window.setTimeout(() => {
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    }, 250);
-  };
-  printWindow.document.close();
 };
 
 export const downloadJson = ({ data, fileName = "report" }) => {

@@ -13,6 +13,18 @@ const buildRateLimiter = ({ windowMs, max, message }) => {
   });
 };
 
+export const apiRateLimiter = buildRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 1200,
+  message: "Too many API requests. Please slow down and try again.",
+});
+
+export const expensiveOperationRateLimiter = buildRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many bulk operations. Please try again later.",
+});
+
 export const authRateLimiter = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 20,

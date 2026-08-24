@@ -170,6 +170,10 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
       toast.error("Please select an .xlsx or .xls workbook");
       return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Workbook cannot exceed 10 MB");
+      return;
+    }
 
     setBusy(true);
     reset();

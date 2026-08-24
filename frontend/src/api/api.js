@@ -1,27 +1,20 @@
 import axios from "axios";
-import { ACCESS_TOKEN_KEY } from "../utils/constants.js";
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-let accessToken = localStorage.getItem(ACCESS_TOKEN_KEY) || null;
+// Deliberately memory-only. The HttpOnly refresh cookie restores the session
+// after a reload without exposing a long-lived bearer token to JavaScript.
+let accessToken = null;
 let isRefreshing = false;
 let failedQueue = [];
 
 export const setAccessToken = (token) => {
   accessToken = token || null;
-
-  if (token) {
-    localStorage.setItem(ACCESS_TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-  }
 };
 
 export const getAccessToken = () => accessToken;
 
 export const clearAccessToken = () => {
   accessToken = null;
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
 };
 
 const processQueue = (error, token = null) => {

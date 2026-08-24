@@ -28,6 +28,14 @@ export const protect = asyncHandler(async (req, res, next) => {
     return errorResponse(res, "User account is inactive or suspended", 403);
   }
 
+  if (
+    user.passwordChangedAt &&
+    decoded.iat &&
+    user.passwordChangedAt.getTime() > decoded.iat * 1000
+  ) {
+    return errorResponse(res, "Session expired after password change", 401);
+  }
+
   req.user = user;
   next();
 });

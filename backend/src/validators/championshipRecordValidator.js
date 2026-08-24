@@ -120,6 +120,17 @@ const commonChampionshipRecordRules = [
     .isFloat({ min: 0 })
     .withMessage("Bouts won cannot be negative"),
 
+  ...["certificateUrl", "medalPhotoUrl", "matchVideoUrl", "newsUrl"].map(
+    (field) =>
+      body(field)
+        .optional({ checkFalsy: true })
+        .trim()
+        .isURL({ protocols: ["http", "https"], require_protocol: true })
+        .withMessage(`${field} must use http or https`)
+        .isLength({ max: 500 })
+        .withMessage(`${field} cannot exceed 500 characters`)
+  ),
+
   body("boutsLost")
     .optional()
     .isFloat({ min: 0 })

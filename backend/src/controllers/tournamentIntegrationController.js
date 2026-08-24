@@ -7,6 +7,10 @@ import {
   hashSecret,
 } from "../services/webhookVerificationService.js";
 import { createIntegrationLog } from "../services/tournamentSyncService.js";
+import {
+  assertAllowedTournamentApiUrl,
+  encryptIntegrationSecret,
+} from "../utils/integrationSecurity.js";
 
 const safeIntegrationResponse = (integration) => {
   if (!integration) return null;
@@ -36,9 +40,12 @@ export const connectTournamentIntegration = asyncHandler(async (req, res) => {
     integrationName:
       req.body.integrationName?.trim() || "KHILADI Tournament Manager",
     provider: "khiladi_tournament_manager",
-    apiBaseUrl: req.body.apiBaseUrl?.trim() || "",
+    apiBaseUrl: req.body.apiBaseUrl
+      ? assertAllowedTournamentApiUrl(req.body.apiBaseUrl)
+      : "",
     apiKeyHash: hashSecret(apiKey),
     webhookSecretHash: hashSecret(webhookSecret),
+    webhookSecretEncrypted: encryptIntegrationSecret(webhookSecret),
     status: "active",
     lastError: "",
     createdBy: req.user._id,
@@ -161,7 +168,7 @@ export const regenerateTournamentIntegrationKey = asyncHandler(
     const integration = await TournamentIntegration.findOne({
       academy: req.academyId,
       provider: "khiladi_tournament_manager",
-    }).select("+apiKeyHash +webhookSecretHash");
+    }).select("+apiKeyHash +webhookSecretHash +webhookSecretEncrypted");
 
     if (!integration) {
       return errorResponse(res, "Tournament integration not found", 404);
@@ -172,6 +179,7 @@ export const regenerateTournamentIntegrationKey = asyncHandler(
 
     integration.apiKeyHash = hashSecret(apiKey);
     integration.webhookSecretHash = hashSecret(webhookSecret);
+    integration.webhookSecretEncrypted = encryptIntegrationSecret(webhookSecret);
     integration.status = "active";
     integration.lastError = "";
     integration.updatedBy = req.user._id;

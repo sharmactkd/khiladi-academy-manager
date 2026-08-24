@@ -1,7 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { authApi } from "../api/authApi.js";
-import { clearAccessToken, setAccessToken } from "../api/api.js";
-import { ACCESS_TOKEN_KEY, USER_KEY } from "../utils/constants.js";
+import { clearAccessToken, getAccessToken, setAccessToken } from "../api/api.js";
+import { USER_KEY } from "../utils/constants.js";
 import { getStoredJson, removeStoredItem, setStoredJson } from "../utils/storage.js";
 
 export const AuthContext = createContext(null);
@@ -40,29 +40,16 @@ export const AuthProvider = ({ children }) => {
     }
   }, [persistAuth]);
 
-useEffect(() => {
-  const boot = async () => {
-    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-    const storedUser = getStoredJson(USER_KEY);
-
-    if (token && storedUser) {
-      setAccessToken(token);
+  useEffect(() => {
+    const boot = async () => {
+      // Always validate/restore through the HttpOnly refresh cookie. Cached
+      // user data is display-only and never treated as proof of authentication.
+      await refreshAuth();
       setLoading(false);
-      return;
-    }
+    };
 
-    if (!token && !storedUser) {
-      persistAuth(null, null);
-      setLoading(false);
-      return;
-    }
-
-    await refreshAuth();
-    setLoading(false);
-  };
-
-  boot();
-}, [refreshAuth, persistAuth]);
+    boot();
+  }, [refreshAuth]);
 
   const register = async (payload) => {
     const response = await authApi.register(payload);
@@ -100,7 +87,7 @@ useEffect(() => {
   const value = useMemo(
     () => ({
       user,
-      accessToken: localStorage.getItem(ACCESS_TOKEN_KEY),
+      accessToken: getAccessToken(),
       loading,
       isAuthenticated: Boolean(user),
       register,

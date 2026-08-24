@@ -1,5 +1,7 @@
+import mongoose from "mongoose";
 import TournamentIntegration from "../models/TournamentIntegration.js";
 import TournamentResultSync from "../models/TournamentResultSync.js";
+import WebhookReceipt from "../models/WebhookReceipt.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import {
@@ -9,6 +11,7 @@ import {
   createIntegrationLog,
 } from "../services/tournamentSyncService.js";
 import { verifyWebhookSignature } from "../services/webhookVerificationService.js";
+import { decryptIntegrationSecret } from "../utils/integrationSecurity.js";
 
 export const importTournamentResultManually = asyncHandler(async (req, res) => {
   const integration = await getActiveTournamentIntegration(req.academyId);
@@ -121,6 +124,8 @@ export const getStudentTournamentResultSyncs = asyncHandler(async (req, res) => 
 
 export const tournamentResultWebhook = asyncHandler(async (req, res) => {
   const signature = req.headers["x-khiladi-signature"];
+  const eventId = String(req.headers["x-khiladi-event-id"] || "").trim();
+  const sentAt = Number(req.headers["x-khiladi-timestamp"] || 0);
   const academyId =
     req.headers["x-academy-id"] || req.body.academyId || req.query.academyId;
 
@@ -128,11 +133,23 @@ export const tournamentResultWebhook = asyncHandler(async (req, res) => {
     return errorResponse(res, "Academy ID is required for webhook", 400);
   }
 
+  if (!mongoose.isObjectIdOrHexString(academyId)) {
+    return errorResponse(res, "Invalid academy ID", 400);
+  }
+
+  if (!eventId || eventId.length > 160 || !Number.isFinite(sentAt)) {
+    return errorResponse(res, "Webhook event ID and timestamp are required", 400);
+  }
+
+  if (Math.abs(Date.now() - sentAt) > 5 * 60 * 1000) {
+    return errorResponse(res, "Webhook timestamp is outside the allowed window", 401);
+  }
+
   const integration = await TournamentIntegration.findOne({
     academy: academyId,
     provider: "khiladi_tournament_manager",
     status: "active",
-  }).select("+webhookSecretHash");
+  }).select("+webhookSecretHash +webhookSecretEncrypted");
 
   if (!integration) {
     await createIntegrationLog({
@@ -147,12 +164,24 @@ export const tournamentResultWebhook = asyncHandler(async (req, res) => {
     return errorResponse(res, "Active integration not found", 404);
   }
 
-  const rawBody = JSON.stringify(req.body || {});
+  if (!req.rawBody) {
+    return errorResponse(res, "Webhook raw body is unavailable", 400);
+  }
+
+  let webhookSecret;
+  try {
+    webhookSecret = decryptIntegrationSecret(integration.webhookSecretEncrypted);
+  } catch {
+    return errorResponse(res, "Webhook credentials must be regenerated", 409);
+  }
 
   const isValidSignature = verifyWebhookSignature({
-    payload: rawBody,
+    payload: Buffer.concat([
+      Buffer.from(`${sentAt}.${eventId}.`, "utf8"),
+      req.rawBody,
+    ]),
     signature,
-    rawSecret: integration.webhookSecretHash,
+    rawSecret: webhookSecret,
   });
 
   if (!isValidSignature) {
@@ -167,6 +196,15 @@ export const tournamentResultWebhook = asyncHandler(async (req, res) => {
     });
 
     return errorResponse(res, "Invalid webhook signature", 401);
+  }
+
+  try {
+    await WebhookReceipt.create({ integration: integration._id, eventId });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return errorResponse(res, "Webhook event was already processed", 409);
+    }
+    throw error;
   }
 
   try {

@@ -9,6 +9,7 @@ import {
   sendEmailCommunication,
   sendWhatsAppCommunication,
 } from "../services/communicationService.js";
+import { buildSafeSearchRegex } from "../utils/search.js";
 
 const allowedFields = [
   "title",
@@ -34,6 +35,45 @@ const buildPayload = (body) => {
   });
   return payload;
 };
+
+const getAnnouncementAccessContext = async (user) => {
+  // Parent accounts are linked to students through StudentGuardian. Student
+  // accounts currently have no verified User -> Student mapping, so granting
+  // student access here would be an IDOR. Keep it denied until such a link exists.
+  if (user.role !== "parent") {
+    return { academyIds: [], studentIds: [], batchIds: [] };
+  }
+
+  const links = await StudentGuardian.find({
+    guardianUser: user._id,
+    isActive: true,
+  }).populate("student", "batch");
+
+  return {
+    academyIds: [...new Set(links.map((link) => String(link.academy)))],
+    studentIds: links.map((link) => link.student?._id || link.student).filter(Boolean),
+    batchIds: links.map((link) => link.student?.batch).filter(Boolean),
+  };
+};
+
+const buildMyAnnouncementFilter = ({ user, context, id = null }) => ({
+  ...(id ? { _id: id } : {}),
+  academy: { $in: context.academyIds },
+  status: "published",
+  publishAt: { $lte: new Date() },
+  $and: [
+    { $or: [{ expiresAt: null }, { expiresAt: { $gte: new Date() } }] },
+    {
+      $or: [
+        { audienceType: "all" },
+        { audienceType: user.role === "parent" ? "parents" : "students" },
+        { audienceType: "batch", batch: { $in: context.batchIds } },
+        { audienceType: "individual", students: { $in: context.studentIds } },
+        { audienceType: "individual", guardianUsers: user._id },
+      ],
+    },
+  ],
+});
 
 const dispatchAnnouncement = async ({ announcement, userId }) => {
   if (announcement.status !== "published") return;
@@ -132,7 +172,7 @@ export const getAnnouncements = asyncHandler(async (req, res) => {
   if (req.query.priority) filter.priority = req.query.priority;
 
   if (req.query.search) {
-    const searchRegex = new RegExp(req.query.search.trim(), "i");
+    const searchRegex = buildSafeSearchRegex(req.query.search);
     filter.$or = [{ title: searchRegex }, { message: searchRegex }];
   }
 
@@ -151,35 +191,10 @@ export const getMyAnnouncements = asyncHandler(async (req, res) => {
     return errorResponse(res, "Only parent/student can access my announcements", 403);
   }
 
-  const links = await StudentGuardian.find({
-    guardianUser: req.user._id,
-    isActive: true,
-  }).populate("student", "batch");
-
-  const academyIds = [...new Set(links.map((link) => String(link.academy)))];
-  const studentIds = links.map((link) => link.student?._id || link.student);
-  const batchIds = links.map((link) => link.student?.batch).filter(Boolean);
-
-  const announcements = await Announcement.find({
-    academy: { $in: academyIds },
-    status: "published",
-    publishAt: { $lte: new Date() },
-    $or: [
-      { expiresAt: null },
-      { expiresAt: { $gte: new Date() } },
-    ],
-    $and: [
-      {
-        $or: [
-          { audienceType: "all" },
-          { audienceType: req.user.role === "parent" ? "parents" : "students" },
-          { audienceType: "batch", batch: { $in: batchIds } },
-          { audienceType: "individual", students: { $in: studentIds } },
-          { audienceType: "individual", guardianUsers: req.user._id },
-        ],
-      },
-    ],
-  }).sort({ publishAt: -1, createdAt: -1 });
+  const context = await getAnnouncementAccessContext(req.user);
+  const announcements = await Announcement.find(
+    buildMyAnnouncementFilter({ user: req.user, context })
+  ).sort({ publishAt: -1, createdAt: -1 });
 
   return successResponse(res, "My announcements fetched successfully", {
     announcements,
@@ -190,14 +205,15 @@ export const getAnnouncementById = asyncHandler(async (req, res) => {
   const filter = { _id: req.params.id };
 
   if (["parent", "student"].includes(req.user.role)) {
-    const links = await StudentGuardian.find({
-      guardianUser: req.user._id,
-      isActive: true,
-    }).populate("student", "batch");
-
-    const academyIds = [...new Set(links.map((link) => String(link.academy)))];
-    filter.academy = { $in: academyIds };
-    filter.status = "published";
+    const context = await getAnnouncementAccessContext(req.user);
+    Object.assign(
+      filter,
+      buildMyAnnouncementFilter({
+        user: req.user,
+        context,
+        id: req.params.id,
+      })
+    );
   } else {
     filter.academy = req.academyId;
   }

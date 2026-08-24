@@ -5,6 +5,7 @@ import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import FeePlan from "../models/FeePlan.js";
 import FeePayment from "../models/FeePayment.js";
+import Sequence from "../models/Sequence.js";
 import { getCurrencySymbol } from "../utils/currency.js";
 
 export const getMonthYearNow = () => {
@@ -39,14 +40,13 @@ export const generateReceiptNumber = async (academyId) => {
   const year = new Date().getFullYear();
   const prefix = `KAM-${year}`;
 
-  const count = await FeePayment.countDocuments({
-    academy: academyId,
-    receiptNumber: {
-      $regex: `^${prefix}`,
-    },
-  });
+  const counter = await Sequence.findOneAndUpdate(
+    { scope: `fee-receipt:${academyId}:${year}` },
+    { $inc: { value: 1 } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
 
-  return `${prefix}-${String(count + 1).padStart(5, "0")}`;
+  return `${prefix}-${String(counter.value).padStart(5, "0")}`;
 };
 
 export const getStudentFullName = (student) => {

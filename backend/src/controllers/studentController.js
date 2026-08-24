@@ -8,6 +8,8 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 
 import { buildBranchAccessFilter } from "../services/branchAccessService.js";
+import { buildSafeSearchRegex } from "../utils/search.js";
+import { hashSensitiveValue } from "../utils/fieldEncryption.js";
 import { getPlanLimit, isLimitUnlimited } from "../services/planService.js";
 import { getResourceUsage } from "../services/usageService.js";
 
@@ -686,20 +688,25 @@ export const getStudents = asyncHandler(async (req, res) => {
   if (bloodGroup) query.bloodGroup = bloodGroup;
 
   if (beltRank) {
-    query.beltRank = { $regex: beltRank, $options: "i" };
+    query.beltRank = buildSafeSearchRegex(beltRank, 40);
   }
 
   if (search) {
+    const searchRegex = buildSafeSearchRegex(search, 100);
+    const aadhaarDigits = String(search).replace(/\D/g, "");
     query.$or = [
-      { firstName: { $regex: search, $options: "i" } },
-      { lastName: { $regex: search, $options: "i" } },
-      { admissionNumber: { $regex: search, $options: "i" } },
-      { aadhaarNumber: { $regex: search, $options: "i" } },
-      { phone: { $regex: search, $options: "i" } },
+      { firstName: searchRegex },
+      { lastName: searchRegex },
+      { admissionNumber: searchRegex },
+      ...(aadhaarDigits.length === 12
+        ? [{ aadhaarHash: hashSensitiveValue(aadhaarDigits) }]
+        : []),
+      { phone: searchRegex },
     ];
   }
 
   const students = await Student.find(query)
+    .select("-medicalConditions -medicalNotes")
     .populate("branch", "branchName branchCode currencyCode currencySymbol currencyCountryCode")
     .populate(
       "batch",
@@ -715,7 +722,7 @@ export const getStudentById = asyncHandler(async (req, res) => {
     _id: req.params.id,
     academy: req.academyId,
     ...buildBranchAccessFilter(req.user),
-  })
+  }).select("+aadhaarNumber")
     .populate("branch", "branchName branchCode currencyCode currencySymbol currencyCountryCode")
     .populate(
       "batch",
@@ -734,7 +741,7 @@ export const updateStudent = asyncHandler(async (req, res) => {
     _id: req.params.id,
     academy: req.academyId,
     ...buildBranchAccessFilter(req.user),
-  });
+  }).select("+aadhaarNumber");
 
   if (!student) {
     return errorResponse(res, "Student not found", 404);

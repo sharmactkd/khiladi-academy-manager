@@ -1,4 +1,5 @@
 import axios from "axios";
+import { assertAllowedTournamentApiUrl } from "../utils/integrationSecurity.js";
 
 const normalizeBaseUrl = (apiBaseUrl) => {
   const value = String(apiBaseUrl || "").trim();
@@ -7,7 +8,7 @@ const normalizeBaseUrl = (apiBaseUrl) => {
     throw new Error("Tournament API base URL is not configured");
   }
 
-  return value.replace(/\/+$/, "");
+  return assertAllowedTournamentApiUrl(value);
 };
 
 export const createTournamentApiClient = ({ apiBaseUrl, apiKey }) => {
@@ -24,6 +25,9 @@ export const createTournamentApiClient = ({ apiBaseUrl, apiKey }) => {
   return axios.create({
     baseURL,
     timeout: 15000,
+    maxRedirects: 0,
+    maxContentLength: 1024 * 1024,
+    maxBodyLength: 1024 * 1024,
     headers,
   });
 };

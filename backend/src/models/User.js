@@ -1,8 +1,14 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 const refreshTokenSessionSchema = new mongoose.Schema(
   {
+    sessionId: {
+      type: String,
+      required: true,
+      default: () => crypto.randomUUID(),
+    },
     tokenHash: {
       type: String,
       required: true,
@@ -26,6 +32,10 @@ const refreshTokenSessionSchema = new mongoose.Schema(
     lastUsedAt: {
       type: Date,
       default: Date.now,
+    },
+    rotatedAt: {
+      type: Date,
+      default: null,
     },
   },
   { _id: false }

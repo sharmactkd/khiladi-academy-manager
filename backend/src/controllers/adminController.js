@@ -5,6 +5,7 @@ import AdminGrant from "../models/AdminGrant.js";
 import Payment from "../models/Payment.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse } from "../utils/apiResponse.js";
+import { buildSafeSearchRegex } from "../utils/search.js";
 
 const buildUserSearchQuery = ({ search, role }) => {
   const query = {};
@@ -14,7 +15,7 @@ const buildUserSearchQuery = ({ search, role }) => {
   }
 
   if (search) {
-    const regex = new RegExp(search.trim(), "i");
+    const regex = buildSafeSearchRegex(search);
 
     query.$or = [
       { name: regex },
@@ -64,7 +65,7 @@ export const getAcademies = asyncHandler(async (req, res) => {
   const page = Math.max(Number(req.query.page) || 1, 1); const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100); const filter = {};
   if (req.query.status) filter.subscriptionStatus = req.query.status;
   if (req.query.plan) filter.subscriptionPlan = req.query.plan;
-  if (req.query.search) { const regex = new RegExp(req.query.search.trim(), "i"); filter.$or = [{ academyName: regex }, { ownerName: regex }, { email: regex }, { city: regex }, { state: regex }]; }
+  if (req.query.search) { const regex = buildSafeSearchRegex(req.query.search); filter.$or = [{ academyName: regex }, { ownerName: regex }, { email: regex }, { city: regex }, { state: regex }]; }
   const [academies, total] = await Promise.all([Academy.find(filter).populate("owner", "name email phone role isActive isSuspended").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit), Academy.countDocuments(filter)]);
   return successResponse(res, "Academies fetched successfully", { academies, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
 });

@@ -1,12 +1,5 @@
 import { body } from "express-validator";
 
-const allowedPublicRoles = [
-  "academy_owner",
-  "assistant_coach",
-  "parent",
-  "student",
-];
-
 const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
 
@@ -43,8 +36,8 @@ export const registerValidator = [
 
   body("role")
     .optional()
-    .isIn(allowedPublicRoles)
-    .withMessage("Invalid role for public registration"),
+    .equals("academy_owner")
+    .withMessage("Only academy owners can register publicly"),
 ];
 
 export const loginValidator = [
@@ -64,8 +57,8 @@ export const googleLoginValidator = [
 
   body("role")
     .optional()
-    .isIn(allowedPublicRoles)
-    .withMessage("Invalid role for Google registration"),
+    .equals("academy_owner")
+    .withMessage("Only academy owners can register publicly"),
 ];
 
 export const forgotPasswordValidator = [

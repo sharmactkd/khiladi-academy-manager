@@ -19,6 +19,7 @@ import {
 import validateRequest from "../middlewares/validateRequest.js";
 import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
 import { uploadImage } from "../middlewares/uploadMiddleware.js";
+import { expensiveOperationRateLimiter } from "../middlewares/rateLimiter.js";
 
 import {
   studentIdValidator,
@@ -34,7 +35,21 @@ router.use(allowAcademyManagement);
 router.use(resolveUserAcademy);
 router.use(requireResolvedAcademy);
 
-router.post("/import", importStudents);
+router.post(
+  "/import",
+  expensiveOperationRateLimiter,
+  (req, res, next) => {
+    const rows = req.body?.students;
+    if (!Array.isArray(rows)) {
+      return res.status(400).json({ success: false, message: "students must be an array" });
+    }
+    if (rows.length > 2000) {
+      return res.status(413).json({ success: false, message: "A maximum of 2,000 students can be imported at once" });
+    }
+    return next();
+  },
+  importStudents
+);
 
 router.patch(
   "/:id/status",

@@ -18,6 +18,7 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import StudentImportModal from "../../components/students/StudentImportModal.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import { printDataTable } from "../../utils/securePrint.js";
 import "./Students.module.css";
 
 const BLOOD_GROUPS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -256,7 +257,6 @@ const Students = () => {
       "S. No.": index + 1,
       "Student Code": student.studentCode || student.admissionNumber || "",
       "Admission Number": student.admissionNumber || "",
-      "Aadhaar Number": student.aadhaarNumber || "",
       Name: getStudentFullName(student),
       Gender: student.gender || "",
       DOB: formatDate(student.dateOfBirth),
@@ -278,9 +278,6 @@ const Students = () => {
       "Belt Rank": displayBelt(student),
       Height: student.heightCm ?? student.physicalInfo?.heightCm ?? "",
       Weight: student.weightKg ?? student.physicalInfo?.weightKg ?? "",
-      "Medical Conditions": Array.isArray(student.medicalConditions)
-        ? student.medicalConditions.join(", ")
-        : "",
       Status: student.status || "",
       City: student.city || "",
       State: student.state || "",
@@ -448,119 +445,27 @@ const Students = () => {
       return;
     }
 
-    const rowsHtml = printList
-      .map((student, index) => {
-        return `
-          <tr>
-            <td>${index + 1}</td>
-            <td>${student.studentCode || student.admissionNumber || ""}</td>
-            <td>${getStudentFullName(student)}</td>
-            <td>${student.age ?? ""}</td>
-            <td>${student.ageCategory || ""}</td>
-            <td>${student.phone || ""}</td>
-            <td>${student.batch?.batchName || ""}</td>
-            <td>${student.martialArt || ""}</td>
-            <td>${displayBelt(student)}</td>
-            <td>${student.status || ""}</td>
-          </tr>
-        `;
-      })
-      .join("");
+    const didOpen = printDataTable({
+      title: "KHILADI Academy Manager",
+      subtitle: "Students List",
+      columns: ["S. No.", "Code", "Name", "Age", "Category", "Phone", "Batch", "Martial Art", "Belt", "Status"],
+      rows: printList.map((student, index) => [
+        index + 1,
+        student.studentCode || student.admissionNumber || "",
+        getStudentFullName(student),
+        student.age ?? "",
+        student.ageCategory || "",
+        student.phone || "",
+        student.batch?.batchName || "",
+        student.martialArt || "",
+        displayBelt(student),
+        student.status || "",
+      ]),
+    });
 
-    const printWindow = window.open("", "_blank", "width=1200,height=800");
-
-    if (!printWindow) {
+    if (!didOpen) {
       toast.error("Popup blocked hai. Browser me popup allow karein.");
-      return;
     }
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Students List</title>
-          <style>
-            * { box-sizing: border-box; }
-            body {
-              font-family: Arial, sans-serif;
-              margin: 24px;
-              color: #111827;
-            }
-            .header {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-              margin-bottom: 20px;
-              border-bottom: 2px solid #111827;
-              padding-bottom: 10px;
-            }
-            h1 { margin: 0; font-size: 22px; }
-            p { margin: 4px 0 0; font-size: 13px; color: #374151; }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              font-size: 11px;
-            }
-            th, td {
-              border: 1px solid #d1d5db;
-              padding: 7px;
-              text-align: left;
-              vertical-align: top;
-            }
-            th { background: #f3f4f6; font-weight: 700; }
-            tr:nth-child(even) { background: #fafafa; }
-            @media print {
-              body { margin: 12mm; }
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-
-        <body>
-          <div class="header">
-            <div>
-              <h1>KHILADI Academy Manager</h1>
-              <p>Students List</p>
-            </div>
-
-            <div>
-              <p>Date: ${new Date().toLocaleDateString("en-IN")}</p>
-              <p>Total Students: ${printList.length}</p>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>S. No.</th>
-                <th>Code</th>
-                <th>Name</th>
-                <th>Age</th>
-                <th>Category</th>
-                <th>Phone</th>
-                <th>Batch</th>
-                <th>Martial Art</th>
-                <th>Belt</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              ${rowsHtml}
-            </tbody>
-          </table>
-
-          <script>
-            window.onload = function () {
-              window.focus();
-              window.print();
-            };
-          </script>
-        </body>
-      </html>
-    `);
-
-    printWindow.document.close();
   };
 
   const handleBulkDelete = async () => {

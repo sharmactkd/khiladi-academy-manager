@@ -1,4 +1,5 @@
 import Academy from "../models/Academy.js";
+import Branch from "../models/Branch.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { errorResponse } from "../utils/apiResponse.js";
 
@@ -44,7 +45,28 @@ export const resolveUserAcademy = asyncHandler(async (req, res, next) => {
     return next();
   }
 
-  const academy = await Academy.findOne({ owner: req.user._id });
+  let academy;
+
+  if (req.user.role === "assistant_coach") {
+    const assignedBranches = await Branch.find({
+      $or: [{ manager: req.user._id }, { coaches: req.user._id }],
+      isActive: true,
+    }).select("_id academy");
+
+    const academyIds = [...new Set(assignedBranches.map((item) => String(item.academy)))];
+    if (academyIds.length !== 1) {
+      return errorResponse(
+        res,
+        academyIds.length ? "Coach assignments span multiple academies" : "No active branch is assigned to this coach",
+        403
+      );
+    }
+
+    academy = await Academy.findOne({ _id: academyIds[0], isActive: true });
+    req.user.$locals.authorizedBranchIds = assignedBranches.map((item) => item._id);
+  } else {
+    academy = await Academy.findOne({ owner: req.user._id });
+  }
 
   if (!academy) {
     return errorResponse(

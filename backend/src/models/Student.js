@@ -1,4 +1,9 @@
 import mongoose from "mongoose";
+import {
+  decryptSensitiveValue,
+  encryptSensitiveValue,
+  hashSensitiveValue,
+} from "../utils/fieldEncryption.js";
 
 const emergencyContactSchema = new mongoose.Schema(
   {
@@ -47,8 +52,17 @@ const medicalInfoSchema = new mongoose.Schema(
       default: "",
       enum: ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
     },
-    medicalConditions: { type: [String], default: [] },
-    notes: { type: String, trim: true, default: "" },
+    medicalConditions: {
+      type: [{ type: String, set: encryptSensitiveValue, get: decryptSensitiveValue }],
+      default: [],
+    },
+    notes: {
+      type: String,
+      trim: true,
+      default: "",
+      set: encryptSensitiveValue,
+      get: decryptSensitiveValue,
+    },
   },
   { _id: false }
 );
@@ -114,8 +128,18 @@ const studentSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
-      maxlength: 12,
+      select: false,
+      set: encryptSensitiveValue,
+      get: decryptSensitiveValue,
+      validate: {
+        validator: (value) => {
+          const decrypted = decryptSensitiveValue(value);
+          return !decrypted || /^\d{12}$/.test(decrypted);
+        },
+        message: "Aadhaar number must contain exactly 12 digits",
+      },
     },
+    aadhaarHash: { type: String, select: false, default: "", index: true },
 
     firstName: {
       type: String,
@@ -329,7 +353,7 @@ const studentSchema = new mongoose.Schema(
     },
 
     medicalConditions: {
-      type: [String],
+      type: [{ type: String, set: encryptSensitiveValue, get: decryptSensitiveValue }],
       default: [],
     },
 
@@ -412,11 +436,13 @@ const studentSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { getters: true },
+    toObject: { getters: true },
   }
 );
 
 studentSchema.index({ academy: 1, admissionNumber: 1 }, { unique: true });
-studentSchema.index({ academy: 1, aadhaarNumber: 1 });
+studentSchema.index({ academy: 1, aadhaarHash: 1 }, { sparse: true });
 studentSchema.index({ academy: 1, branch: 1 });
 studentSchema.index({ academy: 1, batch: 1 });
 studentSchema.index({ academy: 1, status: 1 });
@@ -452,7 +478,11 @@ const normalizeArray = (value) => {
 };
 
 studentSchema.pre("validate", function () {
-  this.aadhaarNumber = String(this.aadhaarNumber || "").replace(/\D/g, "").slice(0, 12);
+  const aadhaarDigits = String(this.aadhaarNumber || "")
+    .replace(/\D/g, "")
+    .slice(0, 12);
+  this.aadhaarNumber = aadhaarDigits;
+  this.aadhaarHash = aadhaarDigits ? hashSensitiveValue(aadhaarDigits) : "";
 
   this.age = calculateAge(this.dateOfBirth);
   if (!this.ageCategory || (this.isModified("dateOfBirth") && !this.isModified("ageCategory"))) {

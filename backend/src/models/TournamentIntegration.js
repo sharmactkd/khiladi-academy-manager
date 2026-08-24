@@ -34,6 +34,11 @@ const tournamentIntegrationSchema = new mongoose.Schema(
       required: [true, "Webhook secret hash is required"],
       select: false,
     },
+    webhookSecretEncrypted: {
+      type: String,
+      select: false,
+      default: "",
+    },
     status: {
       type: String,
       enum: ["active", "inactive", "error"],

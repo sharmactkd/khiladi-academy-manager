@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 import Branch from "../models/Branch.js";
+import Academy from "../models/Academy.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
@@ -130,6 +131,9 @@ const normalizeBranchPayload = (body = {}) => {
 
 const getAssignedBranchIdsForCoach = (user) => {
   const possibleValues = [
+    ...(Array.isArray(user?.$locals?.authorizedBranchIds)
+      ? user.$locals.authorizedBranchIds
+      : []),
     user?.branch,
     user?.branchId,
     user?.assignedBranch,
@@ -173,6 +177,21 @@ const validateAcademyUser = async ({ userId, academyId, allowedRoles }) => {
 
   if (user.role !== "super_admin" && !user.isActive) {
     throw new Error("Selected user is inactive");
+  }
+
+  if (user.role === "academy_owner") {
+    const ownsAcademy = await Academy.exists({ _id: academyId, owner: user._id });
+    if (!ownsAcademy) throw new Error("Selected owner does not belong to this academy");
+  }
+
+  if (user.role === "assistant_coach") {
+    const conflictingAssignment = await Branch.exists({
+      academy: { $ne: academyId },
+      $or: [{ manager: user._id }, { coaches: user._id }],
+    });
+    if (conflictingAssignment) {
+      throw new Error("Selected coach is assigned to another academy");
+    }
   }
 
   return user;

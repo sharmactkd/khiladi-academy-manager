@@ -6,13 +6,11 @@ const attendanceRecordSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Student",
       default: null,
-      index: true,
     },
 
     importedRowNumber: {
       type: Number,
       default: null,
-      index: true,
     },
 
     importedSourceSheet: {
@@ -96,7 +94,6 @@ const attendanceRecordSchema = new mongoose.Schema(
       type: String,
       enum: ["manual", "excel-import"],
       default: "manual",
-      index: true,
     },
 
     note: {

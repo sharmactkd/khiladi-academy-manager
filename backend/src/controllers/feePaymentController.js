@@ -3,6 +3,7 @@ import FeePayment from "../models/FeePayment.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import { getCurrencySymbol } from "../utils/currency.js";
+import { buildSafeSearchRegex } from "../utils/search.js";
 import {
   buildStudentFeeStatus,
   collectStudentFee,
@@ -32,11 +33,12 @@ const getActiveStudents = async (academyId, query = {}) => {
   }
 
   if (query.search) {
+    const searchRegex = buildSafeSearchRegex(query.search, 100);
     filter.$or = [
-      { firstName: { $regex: query.search, $options: "i" } },
-      { lastName: { $regex: query.search, $options: "i" } },
-      { admissionNumber: { $regex: query.search, $options: "i" } },
-      { phone: { $regex: query.search, $options: "i" } },
+      { firstName: searchRegex },
+      { lastName: searchRegex },
+      { admissionNumber: searchRegex },
+      { phone: searchRegex },
     ];
   }
 

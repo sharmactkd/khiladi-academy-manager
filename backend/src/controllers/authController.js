@@ -37,6 +37,7 @@ export const addRefreshTokenSession = async (user, refreshToken, req) => {
   normalizeRefreshTokenSessions(user);
 
   user.refreshTokens.unshift({
+    sessionId: crypto.randomUUID(),
     tokenHash: hashRefreshToken(refreshToken),
     createdAt: new Date(),
     expiresAt: getRefreshTokenExpiryDate(),
@@ -64,9 +65,9 @@ export const setRefreshTokenCookie = (res, refreshToken) => {
   res.cookie(env.REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
     httpOnly: true,
     secure: env.isProduction,
-    sameSite: "lax",
+    sameSite: "strict",
     maxAge: ms(env.REFRESH_TOKEN_EXPIRES_IN) || 30 * 24 * 60 * 60 * 1000,
-    path: "/",
+    path: "/api/auth",
   });
 };
 
@@ -74,8 +75,8 @@ export const clearRefreshTokenCookie = (res) => {
   res.clearCookie(env.REFRESH_TOKEN_COOKIE_NAME, {
     httpOnly: true,
     secure: env.isProduction,
-    sameSite: "lax",
-    path: "/",
+    sameSite: "strict",
+    path: "/api/auth",
   });
 };
 
@@ -116,14 +117,11 @@ const issueAuthResponse = async ({ req, res, user, message, statusCode = 200 }) 
 };
 
 export const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, phone, password, role = "academy_owner" } = req.body;
+  const { name, email, phone, password } = req.body;
+  const role = "academy_owner";
 
   if (!email && !phone) {
     return errorResponse(res, "Email or phone is required", 400);
-  }
-
-  if (role === "super_admin") {
-    return errorResponse(res, "super_admin cannot register publicly", 403);
   }
 
   const existingUser = await User.findOne({
@@ -215,14 +213,11 @@ export const loginUser = asyncHandler(async (req, res) => {
 });
 
 export const googleLogin = asyncHandler(async (req, res) => {
-  const { googleToken, role = "academy_owner" } = req.body;
+  const { googleToken } = req.body;
+  const role = "academy_owner";
 
   if (!env.GOOGLE_CLIENT_ID) {
     return errorResponse(res, "Google login is not configured", 500);
-  }
-
-  if (role === "super_admin") {
-    return errorResponse(res, "super_admin cannot register publicly", 403);
   }
 
   const ticket = await googleClient.verifyIdToken({
@@ -408,11 +403,15 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     return errorResponse(res, "Refresh token expired", 401);
   }
 
+  const nextRefreshToken = generateRefreshToken();
+  session.tokenHash = hashRefreshToken(nextRefreshToken);
   session.lastUsedAt = new Date();
-
+  session.rotatedAt = new Date();
+  session.expiresAt = getRefreshTokenExpiryDate();
   const accessToken = generateAccessToken(user);
 
   await user.save();
+  setRefreshTokenCookie(res, nextRefreshToken);
 
   return successResponse(res, "Access token refreshed", {
     user: buildSafeUserResponse(user),

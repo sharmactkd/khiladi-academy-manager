@@ -105,6 +105,8 @@ export const createBeltTestValidator = [
   body("certificateUrl")
     .optional({ checkFalsy: true })
     .trim()
+    .isURL({ protocols: ["http", "https"], require_protocol: true })
+    .withMessage("Certificate URL must use http or https")
     .isLength({ max: 500 })
     .withMessage("Certificate URL cannot exceed 500 characters"),
 ];
@@ -167,7 +169,9 @@ export const updateBeltTestValidator = [
     max: 80,
   }),
 
-  body("certificateUrl").optional({ checkFalsy: true }).trim().isLength({
+  body("certificateUrl").optional({ checkFalsy: true }).trim()
+    .isURL({ protocols: ["http", "https"], require_protocol: true })
+    .withMessage("Certificate URL must use http or https").isLength({
     max: 500,
   }),
 ];

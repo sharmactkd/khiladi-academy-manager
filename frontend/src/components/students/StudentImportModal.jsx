@@ -185,6 +185,12 @@ const StudentImportModal = ({
       return;
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Workbook cannot exceed 10 MB");
+      event.target.value = "";
+      return;
+    }
+
     try {
       setLoadingFile(true);
       setFileName(file.name);

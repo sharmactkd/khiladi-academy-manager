@@ -21,6 +21,7 @@ import {
   requireResolvedAcademy,
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
+import { expensiveOperationRateLimiter } from "../middlewares/rateLimiter.js";
 
 import {
   markAttendanceValidator,
@@ -42,7 +43,21 @@ router.post("/monthly-register", saveMonthlyRegister);
 router.put("/day-note", upsertAttendanceDayNote);
 router.delete("/day-note", removeAttendanceDayNote);
 
-router.post("/import", importOldAttendance);
+router.post(
+  "/import",
+  expensiveOperationRateLimiter,
+  (req, res, next) => {
+    const rows = req.body?.rows;
+    if (!Array.isArray(rows)) {
+      return res.status(400).json({ success: false, message: "rows must be an array" });
+    }
+    if (rows.length > 5000) {
+      return res.status(413).json({ success: false, message: "A maximum of 5,000 attendance rows can be imported at once" });
+    }
+    return next();
+  },
+  importOldAttendance
+);
 
 router.post("/mark", markAttendanceValidator, validateRequest, markAttendance);
 

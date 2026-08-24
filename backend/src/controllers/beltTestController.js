@@ -1,6 +1,7 @@
 import BeltTest from "../models/BeltTest.js";
 import Student from "../models/Student.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { buildSafeSearchRegex } from "../utils/search.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import { createBeltTestTimeline } from "../services/timelineService.js";
 
@@ -131,7 +132,7 @@ export const getBeltTests = asyncHandler(async (req, res) => {
   }
 
   if (req.query.search) {
-    const searchRegex = new RegExp(req.query.search.trim(), "i");
+    const searchRegex = buildSafeSearchRegex(req.query.search);
 
     filter.$or = [
       { currentBelt: searchRegex },

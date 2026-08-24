@@ -1,6 +1,7 @@
 import ChampionshipRecord from "../models/ChampionshipRecord.js";
 import Student from "../models/Student.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { buildSafeSearchRegex } from "../utils/search.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import { createChampionshipTimeline } from "../services/timelineService.js";
 
@@ -381,7 +382,7 @@ export const getChampionshipRecords = asyncHandler(async (req, res) => {
   }
 
   if (req.query.search) {
-    const searchRegex = new RegExp(req.query.search.trim(), "i");
+    const searchRegex = buildSafeSearchRegex(req.query.search);
 
     filter.$or = [
       { championshipName: searchRegex },
