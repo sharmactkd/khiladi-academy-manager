@@ -11,6 +11,8 @@
   --color-surface: #ffffff;
   --color-surface-subtle: #f9fafb;
   --color-surface-hover: #fffafa;
+  --color-surface-raised: #ffffff;
+  --color-overlay: rgba(15, 23, 42, 0.56);
 
   /* Typography */
   --color-text: #111827;
@@ -28,6 +30,8 @@
   --font-size-table: 12px;
   --font-size-meta: 11px;
   --font-size-eyebrow: 11px;
+  --font-size-button: 13px;
+  --font-size-input: 14px;
   --line-height-tight: 1.2;
   --line-height-body: 1.5;
 
@@ -59,6 +63,7 @@
   --shadow-card: 0 8px 24px rgba(17, 24, 39, 0.06);
   --shadow-card-hover: 0 12px 30px rgba(17, 24, 39, 0.1);
   --shadow-overlay: 0 24px 60px rgba(17, 24, 39, 0.16);
+  --shadow-focus: 0 0 0 3px rgba(207, 0, 6, 0.14);
 
   /* Border radius */
   --radius-xs: 6px;
@@ -79,6 +84,16 @@
   --control-height-sm: 36px;
   --control-height-lg: 48px;
   --control-padding-x: 14px;
+  --control-gap: 8px;
+
+  /* Shared spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
 
   /* Typography */
   --font-sans:

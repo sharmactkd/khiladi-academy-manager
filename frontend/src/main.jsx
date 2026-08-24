@@ -8,6 +8,7 @@ import "./styles/variables.css";
 import "./styles/global.css";
 import "./styles/responsive.css";
 import "./styles/legacyPremium.css";
+import "./styles/designSystem.css";
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
