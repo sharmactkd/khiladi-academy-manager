@@ -8,7 +8,6 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import khiladiLogo from "../../assets/images/branding/khiladi-logo.png";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
@@ -198,10 +197,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
       aria-label="Primary navigation"
     >
       <header className={styles.brand}>
-        <img
-  src={khiladiLogo}
-  alt="KHILADI Academy Manager"
-/>
+        <img src="/khiladi-logo.png" alt="KHILADI" />
         <div><h2>KHILADI</h2><p>Academy Manager</p></div>
         <button
           type="button"
