@@ -93,6 +93,7 @@ const buildStudentSnapshot = (student) => ({
   beltRank: student.beltRank || "",
   danRank: student.danRank || "",
   martialArt: student.martialArt || student.batch?.martialArt || "",
+  dateOfBirth: student.dateOfBirth || student.dob || null,
   branch: student.branch ? { branchName: student.branch.branchName || "" } : null,
   batch: student.batch ? { batchName: student.batch.batchName || "" } : null,
 });

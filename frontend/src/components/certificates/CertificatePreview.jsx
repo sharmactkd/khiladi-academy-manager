@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { Award, BadgeCheck, ShieldCheck } from "lucide-react";
+import { Award, ShieldCheck } from "lucide-react";
 import { getFileUrl } from "../../utils/fileUrl.js";
-import { certificateTitleFor, normalizeCertificateTemplate } from "../../pages/certificates/certificateTemplate.config.js";
+import { certificateTitleFor, getCertificateSize, normalizeCertificateTemplate } from "../../pages/certificates/certificateTemplate.config.js";
 import styles from "./CertificatePreview.module.css";
 
 const formatDate = (value) => value
@@ -40,8 +40,8 @@ const CertificatePreview = ({ certificate = {}, template: templateProp, academy:
   const brand = layout.brand;
   const title = content.title || certificateTitleFor(certificate.certificateType || template.certificateType);
   const academyLogo = getFileUrl(academy.logo, "");
-  const sealUrl = getFileUrl(brand.sealUrl, "");
   const background = getFileUrl(template.backgroundImage, "");
+  const pageSize = getCertificateSize(template);
 
   useEffect(() => {
     let active = true;
@@ -58,8 +58,11 @@ const CertificatePreview = ({ certificate = {}, template: templateProp, academy:
     "--cert-background": brand.backgroundColor,
     "--cert-heading-font": brand.headingFont,
     "--cert-body-font": brand.bodyFont,
+    "--cert-width-mm": `${pageSize.widthMm}mm`,
+    "--cert-height-mm": `${pageSize.heightMm}mm`,
+    aspectRatio: `${pageSize.widthMm}/${pageSize.heightMm}`,
     backgroundImage: background ? `url(${background})` : undefined,
-  }), [brand, background]);
+  }), [brand, background, pageSize.heightMm, pageSize.widthMm]);
 
   const className = [styles.certificate, styles[template.orientation], styles[brand.borderStyle], compact ? styles.compact : "", layout.print?.showSafeArea ? styles.safeArea : "", layout.print?.showBleed ? styles.bleed : ""].filter(Boolean).join(" ");
   const achievement = getAchievement({ certificate, source, student });
@@ -78,13 +81,13 @@ const CertificatePreview = ({ certificate = {}, template: templateProp, academy:
       <p className={styles.statement}>{content.statement}</p>
       {fields.includes("achievement") || fields.includes("beltAndDan") || fields.includes("eventName") ? <div className={styles.achievement}><span/>{achievement}<span/></div> : null}
     </main>
-    <section className={styles.bottomRow}>
+    <section className={styles.bottomRow} style={{ gridTemplateColumns: "1.2fr 2.4fr .55fr" }}>
       <div className={styles.meta}>
         {fields.includes("certificateNumber") ? <p><span>CERTIFICATE NO.</span><strong>{certificate.certificateNumber || "Pending"}</strong></p> : null}
         {fields.includes("issueDate") ? <p><span>ISSUE DATE</span><strong>{formatDate(certificate.issueDate)}</strong></p> : null}
+        {fields.includes("dateOfBirth") ? <p><span>DATE OF BIRTH</span><strong>{formatDate(student.dateOfBirth || student.dob)}</strong></p> : null}
       </div>
       {fields.includes("signatures") ? <div className={styles.signatures}>{layout.signatures.map((signature, index) => <div key={`${signature.role}-${index}`}>{signature.imageUrl ? <img src={getFileUrl(signature.imageUrl)} alt="Signature"/> : <em>{signature.name}</em>}<span/><strong>{signature.role}</strong></div>)}</div> : null}
-      {fields.includes("academySeal") ? <div className={styles.seal}>{sealUrl ? <img src={sealUrl} alt="Academy seal"/> : <><BadgeCheck/><span>VERIFIED<br/>ACADEMY</span></>}</div> : null}
       {qrUrl ? <div className={styles.qr}><img src={qrUrl} alt="Certificate verification QR"/><span>SCAN TO VERIFY</span></div> : null}
     </section>
     {certificate.status === "cancelled" ? <div className={styles.revoked}>CANCELLED</div> : null}

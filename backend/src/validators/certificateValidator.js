@@ -38,7 +38,11 @@ export const createCertificateTemplateValidator = [
 
   body("layoutJson").optional().isObject(),
   body("status").optional().isIn(["draft", "published", "archived"]),
-  body("pageSize").optional().equals("a4"),
+  body("pageSize").optional().isIn(["a4", "letter", "legal", "custom"]),
+  body("customPageSize").optional().isObject(),
+  body("customPageSize.width").if(body("pageSize").equals("custom")).isFloat({ min: 1, max: 200 }),
+  body("customPageSize.height").if(body("pageSize").equals("custom")).isFloat({ min: 1, max: 200 }),
+  body("customPageSize.unit").if(body("pageSize").equals("custom")).isIn(["cm", "in"]),
   body("orientation").optional().isIn(["landscape", "portrait"]),
 
   body("fields")
@@ -76,7 +80,11 @@ export const updateCertificateTemplateValidator = [
 
   body("layoutJson").optional().isObject(),
   body("status").optional().isIn(["draft", "published", "archived"]),
-  body("pageSize").optional().equals("a4"),
+  body("pageSize").optional().isIn(["a4", "letter", "legal", "custom"]),
+  body("customPageSize").optional().isObject(),
+  body("customPageSize.width").if(body("pageSize").equals("custom")).isFloat({ min: 1, max: 200 }),
+  body("customPageSize.height").if(body("pageSize").equals("custom")).isFloat({ min: 1, max: 200 }),
+  body("customPageSize.unit").if(body("pageSize").equals("custom")).isIn(["cm", "in"]),
   body("orientation").optional().isIn(["landscape", "portrait"]),
 
   body("fields").optional().isArray(),

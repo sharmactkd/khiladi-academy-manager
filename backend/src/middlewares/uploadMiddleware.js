@@ -12,6 +12,8 @@ const storage = multer.diskStorage({
       ? "uploads/students"
       : ["frontBackground", "backBackground"].includes(file.fieldname)
         ? "uploads/id-card-templates"
+        : file.fieldname === "certificateBackground" || file.fieldname.startsWith("signature")
+          ? "uploads/certificate-templates"
         : "uploads/academies";
 
     ensureDir(folder);

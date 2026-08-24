@@ -3,8 +3,8 @@ import api from "./api.js";
 export const certificateTemplateApi = {
   getAll: (params = {}) => api.get("/certificate-templates", { params }),
   getById: (id) => api.get(`/certificate-templates/${id}`),
-  create: (payload) => api.post("/certificate-templates", payload),
-  update: (id, payload) => api.patch(`/certificate-templates/${id}`, payload),
+  create: (payload) => api.post("/certificate-templates", payload, payload instanceof FormData ? { headers: { "Content-Type": "multipart/form-data" } } : undefined),
+  update: (id, payload) => api.patch(`/certificate-templates/${id}`, payload, payload instanceof FormData ? { headers: { "Content-Type": "multipart/form-data" } } : undefined),
   remove: (id) => api.delete(`/certificate-templates/${id}`),
 };
 

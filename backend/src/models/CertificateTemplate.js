@@ -41,8 +41,14 @@ const certificateTemplateSchema = new mongoose.Schema(
     },
     pageSize: {
       type: String,
-      enum: ["a4"],
+      enum: ["a4", "letter", "legal", "custom"],
       default: "a4",
+    },
+    customPageSize: {
+      width: { type: Number, min: 1, max: 200, default: null },
+      height: { type: Number, min: 1, max: 200, default: null },
+      unit: { type: String, enum: ["cm", "in"], default: "cm" },
+      _id: false,
     },
     orientation: {
       type: String,

@@ -7,12 +7,30 @@ const allowedFields = [
   "certificateType",
   "status",
   "pageSize",
+  "customPageSize",
   "orientation",
   "backgroundImage",
   "layoutJson",
   "fields",
   "isDefault",
 ];
+
+const uploadedPath = (file) => file ? `/${file.path.replace(/\\/g, "/")}` : "";
+
+const applyUploads = (payload, files = {}) => {
+  const background = uploadedPath(files.certificateBackground?.[0]);
+  if (background) payload.backgroundImage = background;
+
+  const signatureFiles = Array.from({ length: 6 }, (_, index) => files[`signature${index}`]?.[0]);
+  if (signatureFiles.some(Boolean)) {
+    const layout = { ...(payload.layoutJson || {}) };
+    const signatures = [...(layout.signatures || [])];
+    signatureFiles.forEach((file, index) => {
+      if (file && signatures[index]) signatures[index] = { ...signatures[index], imageUrl: uploadedPath(file) };
+    });
+    payload.layoutJson = { ...layout, signatures };
+  }
+};
 
 const buildPayload = (body) => {
   const payload = {};
@@ -46,6 +64,7 @@ const unsetOtherDefaults = async ({ academyId, certificateType, templateId = nul
 
 export const createCertificateTemplate = asyncHandler(async (req, res) => {
   const payload = buildPayload(req.body);
+  applyUploads(payload, req.files);
 
   const certificateType = payload.certificateType || "custom";
 
@@ -118,6 +137,7 @@ export const updateCertificateTemplate = asyncHandler(async (req, res) => {
   }
 
   const payload = buildPayload(req.body);
+  applyUploads(payload, req.files);
   const certificateType = payload.certificateType || template.certificateType;
 
   if (payload.isDefault === true) {
