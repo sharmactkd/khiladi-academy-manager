@@ -8,9 +8,10 @@ const ensureDir = (dir) => {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const folder =
-      file.fieldname === "profilePhoto"
-        ? "uploads/students"
+    const folder = file.fieldname === "profilePhoto"
+      ? "uploads/students"
+      : ["frontBackground", "backBackground"].includes(file.fieldname)
+        ? "uploads/id-card-templates"
         : "uploads/academies";
 
     ensureDir(folder);

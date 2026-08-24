@@ -57,6 +57,40 @@ const buildVerificationUrl = ({ verificationId, token }) => {
   return `${clientUrl}/verify/id-card/${verificationId}?token=${token}`;
 };
 
+const createIdCardRecord = async ({ academyId, userId, student, template, academy, payload = {} }) => {
+  const cardNumber = payload.cardNumber || (await generateCardNumber({
+    model: GeneratedIdCard,
+    academyId,
+  }));
+  const verificationId = crypto.randomBytes(12).toString("hex");
+  const verificationToken = crypto.randomBytes(24).toString("hex");
+  const qrCodeData = buildVerificationUrl({ verificationId, token: verificationToken });
+
+  const idCard = await GeneratedIdCard.create({
+    academy: academyId,
+    student: student._id,
+    template: template._id,
+    templateVersion: template.version || 1,
+    templateSnapshot: template.toObject(),
+    studentSnapshot: buildStudentSnapshot(student),
+    academySnapshot: buildAcademySnapshot(academy),
+    verificationId,
+    verificationTokenHash: hashToken(verificationToken),
+    cardNumber,
+    qrCodeData,
+    issuedDate: payload.issuedDate || new Date(),
+    validTill: payload.validTill || null,
+    status: "active",
+    createdBy: userId,
+    updatedBy: userId,
+  });
+
+  await createIdCardTimeline({ idCard, userId });
+  return GeneratedIdCard.findById(idCard._id)
+    .populate("student", "name firstName lastName admissionNumber studentCode phone beltRank profilePhoto photo status dateOfBirth dob")
+    .populate("template");
+};
+
 export const generateIdCard = asyncHandler(async (req, res) => {
   const student = await validateStudentAccess({
     academyId: req.academyId,
@@ -78,51 +112,61 @@ export const generateIdCard = asyncHandler(async (req, res) => {
 
   const academy = await Academy.findById(req.academyId).lean();
 
-  const cardNumber =
-    req.body.cardNumber ||
-    (await generateCardNumber({
-      model: GeneratedIdCard,
-      academyId: req.academyId,
-    }));
-
-  const verificationId = crypto.randomBytes(12).toString("hex");
-  const verificationToken = crypto.randomBytes(24).toString("hex");
-  const qrCodeData = buildVerificationUrl({ verificationId, token: verificationToken });
-
-  const idCard = await GeneratedIdCard.create({
-    academy: req.academyId,
-    student: student._id,
-    template: template._id,
-    templateVersion: template.version || 1,
-    templateSnapshot: template.toObject(),
-    studentSnapshot: buildStudentSnapshot(student),
-    academySnapshot: buildAcademySnapshot(academy),
-    verificationId,
-    verificationTokenHash: hashToken(verificationToken),
-    cardNumber,
-    qrCodeData,
-    issuedDate: req.body.issuedDate || new Date(),
-    validTill: req.body.validTill || null,
-    status: "active",
-    createdBy: req.user._id,
-    updatedBy: req.user._id,
-  });
-
-  await createIdCardTimeline({
-    idCard,
+  const populatedIdCard = await createIdCardRecord({
+    academyId: req.academyId,
     userId: req.user._id,
+    student,
+    template,
+    academy,
+    payload: req.body,
   });
-
-  const populatedIdCard = await GeneratedIdCard.findById(idCard._id)
-    .populate(
-  "student",
-  "name firstName lastName admissionNumber studentCode phone beltRank profilePhoto photo status dateOfBirth dob"
-)
-    .populate("template");
 
   return successResponse(res, "ID card generated successfully", {
     idCard: populatedIdCard,
   }, 201);
+});
+
+export const generateIdCardsBulk = asyncHandler(async (req, res) => {
+  const studentIds = [...new Set((req.body.students || []).map(String))].slice(0, 100);
+  if (!studentIds.length) return errorResponse(res, "Select at least one student", 400);
+
+  const template = await validateTemplateAccess({ academyId: req.academyId, templateId: req.body.template });
+  if (!template) return errorResponse(res, "ID card template not found in your academy", 404);
+
+  const students = await Student.find({ _id: { $in: studentIds }, academy: req.academyId })
+    .populate("branch", "branchName address city state country")
+    .populate("batch", "batchName martialArt");
+  if (students.length !== studentIds.length) return errorResponse(res, "One or more students were not found", 400);
+
+  const studentMap = new Map(students.map((student) => [String(student._id), student]));
+  const academy = await Academy.findById(req.academyId).lean();
+  const idCards = [];
+
+  for (const studentId of studentIds) {
+    const idCard = await createIdCardRecord({
+      academyId: req.academyId,
+      userId: req.user._id,
+      student: studentMap.get(studentId),
+      template,
+      academy,
+      payload: req.body,
+    });
+    idCards.push(idCard);
+  }
+
+  return successResponse(res, `${idCards.length} ID cards generated successfully`, { idCards }, 201);
+});
+
+export const getIdCardsBatch = asyncHandler(async (req, res) => {
+  const ids = [...new Set(String(req.query.ids || "").split(",").map((id) => id.trim()).filter(Boolean))].slice(0, 100);
+  if (!ids.length || ids.some((id) => !/^[a-f\d]{24}$/i.test(id))) {
+    return errorResponse(res, "Valid ID card IDs are required", 400);
+  }
+  const idCards = await GeneratedIdCard.find({ _id: { $in: ids }, academy: req.academyId })
+    .populate("student", "name firstName lastName admissionNumber studentCode phone beltRank profilePhoto photo status dateOfBirth dob")
+    .populate("template");
+  const map = new Map(idCards.map((card) => [String(card._id), card]));
+  return successResponse(res, "ID cards fetched successfully", { idCards: ids.map((id) => map.get(id)).filter(Boolean) });
 });
 
 export const verifyIdCard = asyncHandler(async (req, res) => {

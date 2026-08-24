@@ -33,8 +33,14 @@ const idCardTemplateSchema = new mongoose.Schema(
     },
     cardSize: {
       type: String,
-      enum: ["cr80"],
+      enum: ["cr80", "cr79", "cr100", "business", "custom"],
       default: "cr80",
+    },
+    customSize: {
+      width: { type: Number, default: null, min: 1, max: 100 },
+      height: { type: Number, default: null, min: 1, max: 100 },
+      unit: { type: String, enum: ["cm", "in"], default: "cm" },
+      _id: false,
     },
     frontDesign: {
       type: mongoose.Schema.Types.Mixed,

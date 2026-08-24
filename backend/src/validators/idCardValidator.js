@@ -24,7 +24,11 @@ export const createIdCardTemplateValidator = [
   body("backDesign").optional().isObject(),
   body("status").optional().isIn(["draft", "published", "archived"]),
   body("orientation").optional().isIn(["horizontal", "vertical"]),
-  body("cardSize").optional().equals("cr80"),
+  body("cardSize").optional().isIn(["cr80", "cr79", "cr100", "business", "custom"]),
+  body("customSize").optional().isObject(),
+  body("customSize.width").if(body("cardSize").equals("custom")).isFloat({ min: 1, max: 100 }),
+  body("customSize.height").if(body("cardSize").equals("custom")).isFloat({ min: 1, max: 100 }),
+  body("customSize.unit").if(body("cardSize").equals("custom")).isIn(["cm", "in"]),
   body("fontFamily").optional().trim().isLength({ min: 1, max: 80 }),
   body("photoShape").optional().isIn(["circle", "rounded", "square"]),
   body("primaryColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
@@ -77,7 +81,11 @@ export const updateIdCardTemplateValidator = [
   body("backDesign").optional().isObject(),
   body("status").optional().isIn(["draft", "published", "archived"]),
   body("orientation").optional().isIn(["horizontal", "vertical"]),
-  body("cardSize").optional().equals("cr80"),
+  body("cardSize").optional().isIn(["cr80", "cr79", "cr100", "business", "custom"]),
+  body("customSize").optional().isObject(),
+  body("customSize.width").if(body("cardSize").equals("custom")).isFloat({ min: 1, max: 100 }),
+  body("customSize.height").if(body("cardSize").equals("custom")).isFloat({ min: 1, max: 100 }),
+  body("customSize.unit").if(body("cardSize").equals("custom")).isIn(["cm", "in"]),
   body("fontFamily").optional().trim().isLength({ min: 1, max: 80 }),
   body("photoShape").optional().isIn(["circle", "rounded", "square"]),
   body("primaryColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
@@ -127,6 +135,14 @@ export const generateIdCardValidator = [
     .optional({ checkFalsy: true })
     .isISO8601()
     .withMessage("Valid till date must be valid"),
+];
+
+export const generateIdCardsBulkValidator = [
+  body("students").isArray({ min: 1, max: 100 }).withMessage("Select between 1 and 100 students"),
+  body("students.*").isMongoId().withMessage("Every student ID must be valid"),
+  body("template").isMongoId().withMessage("Valid template is required"),
+  body("issuedDate").optional({ checkFalsy: true }).isISO8601(),
+  body("validTill").optional({ checkFalsy: true }).isISO8601(),
 ];
 
 export const updateIdCardStatusValidator = [

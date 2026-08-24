@@ -7,6 +7,7 @@ const allowedFields = [
   "status",
   "orientation",
   "cardSize",
+  "customSize",
   "frontDesign",
   "backDesign",
   "logo",
@@ -33,6 +34,20 @@ const buildPayload = (body) => {
   return payload;
 };
 
+const uploadedPath = (file) => file ? `/${file.path.replace(/\\/g, "/")}` : "";
+
+const applyUploadedBackgrounds = (payload, files = {}) => {
+  const frontBackground = uploadedPath(files.frontBackground?.[0]);
+  const backBackground = uploadedPath(files.backBackground?.[0]);
+
+  if (frontBackground) {
+    payload.frontDesign = { ...(payload.frontDesign || {}), backgroundImage: frontBackground };
+  }
+  if (backBackground) {
+    payload.backDesign = { ...(payload.backDesign || {}), backgroundImage: backBackground };
+  }
+};
+
 const unsetOtherDefaults = async ({ academyId, templateId = null }) => {
   const filter = {
     academy: academyId,
@@ -52,6 +67,7 @@ const unsetOtherDefaults = async ({ academyId, templateId = null }) => {
 
 export const createIdCardTemplate = asyncHandler(async (req, res) => {
   const payload = buildPayload(req.body);
+  applyUploadedBackgrounds(payload, req.files);
 
   if (payload.isDefault === true) {
     payload.status = "published";
@@ -111,6 +127,7 @@ export const updateIdCardTemplate = asyncHandler(async (req, res) => {
   }
 
   const payload = buildPayload(req.body);
+  applyUploadedBackgrounds(payload, req.files);
 
   if (payload.isDefault === true) {
     payload.status = "published";

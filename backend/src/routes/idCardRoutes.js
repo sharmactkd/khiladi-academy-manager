@@ -2,6 +2,8 @@ import express from "express";
 
 import {
   generateIdCard,
+  generateIdCardsBulk,
+  getIdCardsBatch,
   getStudentIdCards,
   getIdCardById,
   updateIdCardStatus,
@@ -21,6 +23,7 @@ import {
   idCardIdValidator,
   idCardStudentIdValidator,
   generateIdCardValidator,
+  generateIdCardsBulkValidator,
   updateIdCardStatusValidator,
 } from "../validators/idCardValidator.js";
 
@@ -40,6 +43,16 @@ router.post(
   enforceLimit("idCards"),
   generateIdCard
 );
+
+router.post(
+  "/generate-bulk",
+  generateIdCardsBulkValidator,
+  validateRequest,
+  enforceLimit("idCards"),
+  generateIdCardsBulk
+);
+
+router.get("/batch", getIdCardsBatch);
 
 router.get(
   "/student/:studentId",
