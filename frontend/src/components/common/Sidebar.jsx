@@ -11,6 +11,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
+import khiladiLogo from "../../assets/images/branding/khiladi-logo.png";
 import useAuth from "../../hooks/useAuth.js";
 import useSidebarWorkspace from "../../hooks/useSidebarWorkspace.js";
 import {
@@ -197,14 +198,27 @@ const Sidebar = ({ isOpen = false, onClose }) => {
       aria-label="Primary navigation"
     >
       <header className={styles.brand}>
-        <img src="/khiladi-logo.png" alt="KHILADI" />
-        <div><h2>KHILADI</h2><p>Academy Manager</p></div>
+        <span className={styles.brandLogoFrame}>
+          <img
+            src={khiladiLogo}
+            alt="KHILADI"
+            className={styles.brandLogo}
+          />
+        </span>
+
+        <div className={styles.brandCopy}>
+          <h2>KHILADI</h2>
+          <p>Academy Manager</p>
+        </div>
+
         <button
           type="button"
           className={`sidebar-close ${styles.closeButton}`}
           onClick={onClose}
           aria-label="Close navigation menu"
-        ><X size={20} /></button>
+        >
+          <X size={20} />
+        </button>
       </header>
 
       <div className={styles.body} ref={popoverRef}>
