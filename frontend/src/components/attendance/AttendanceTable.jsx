@@ -173,10 +173,14 @@ const getDueDateValue = (row) =>
   row.importedDueDate || row.feeDueDate || "-";
 
 const getPaidDateValue = (row) =>
-  row.importedPaidDate || row.paidDate || row.feePaidDate || "-";
+  row.rowType === "student" && row.studentId
+    ? row.feePaidDate || row.paidDate || row.importedPaidDate || "-"
+    : row.importedPaidDate || row.paidDate || row.feePaidDate || "-";
 
 const getFeeStatusValue = (row) =>
-  row.importedFeeStatus || row.feeStatus || "due";
+  row.rowType === "student" && row.studentId
+    ? row.feeStatus || row.importedFeeStatus || "due"
+    : row.importedFeeStatus || row.feeStatus || "due";
 
 const isFutureDay = (day) => {
   const today = new Date();

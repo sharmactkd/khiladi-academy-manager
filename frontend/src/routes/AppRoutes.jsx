@@ -39,14 +39,14 @@ import AllStudentsFeeStatus from "../pages/fees/AllStudentsFeeStatus.jsx";
 import PaymentHistory from "../pages/fees/PaymentHistory.jsx";
 
 import BeltTests from "../pages/beltTests/BeltTests.jsx";
-import AddBeltTest from "../pages/beltTests/AddBeltTest.jsx";
 import EditBeltTest from "../pages/beltTests/EditBeltTest.jsx";
 import StudentBeltHistory from "../pages/beltTests/StudentBeltHistory.jsx";
 
 import ChampionshipRecords from "../pages/championships/ChampionshipRecords.jsx";
-import AddChampionshipRecord from "../pages/championships/AddChampionshipRecord.jsx";
 import EditChampionshipRecord from "../pages/championships/EditChampionshipRecord.jsx";
 import StudentChampionshipHistory from "../pages/championships/StudentChampionshipHistory.jsx";
+import AcademyEventStudio from "../pages/events/AcademyEventStudio.jsx";
+import AcademyEventList from "../pages/events/AcademyEventList.jsx";
 
 import StudentTimeline from "../pages/timeline/StudentTimeline.jsx";
 
@@ -501,7 +501,17 @@ const AppRoutes = () => {
 
             <Route
               path="/belt-tests/new"
-              element={<AddBeltTest />}
+              element={<AcademyEventStudio mode="belt" />}
+            />
+
+            <Route
+              path="/belt-tests/events"
+              element={<AcademyEventList mode="belt" />}
+            />
+
+            <Route
+              path="/belt-tests/events/:eventId"
+              element={<AcademyEventStudio mode="belt" />}
             />
 
             <Route
@@ -523,7 +533,17 @@ const AppRoutes = () => {
 
             <Route
               path="/championship-records/new"
-              element={<AddChampionshipRecord />}
+              element={<AcademyEventStudio mode="championship" />}
+            />
+
+            <Route
+              path="/championship-records/events"
+              element={<AcademyEventList mode="championship" />}
+            />
+
+            <Route
+              path="/championship-records/events/:eventId"
+              element={<AcademyEventStudio mode="championship" />}
             />
 
             <Route

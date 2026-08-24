@@ -19,6 +19,7 @@ import membershipRoutes from "./routes/membershipRoutes.js";
 
 import beltTestRoutes from "./routes/beltTestRoutes.js";
 import championshipRecordRoutes from "./routes/championshipRecordRoutes.js";
+import academyEventRoutes from "./routes/academyEventRoutes.js";
 import studentTimelineRoutes from "./routes/studentTimelineRoutes.js";
 import idCardTemplateRoutes from "./routes/idCardTemplateRoutes.js";
 import idCardRoutes from "./routes/idCardRoutes.js";
@@ -114,6 +115,7 @@ app.use("/api/memberships", membershipRoutes);
 
 app.use("/api/belt-tests", beltTestRoutes);
 app.use("/api/championship-records", championshipRecordRoutes);
+app.use("/api/academy-events", academyEventRoutes);
 app.use("/api/student-timeline", studentTimelineRoutes);
 app.use("/api/id-card-templates", idCardTemplateRoutes);
 app.use("/api/id-cards", idCardRoutes);

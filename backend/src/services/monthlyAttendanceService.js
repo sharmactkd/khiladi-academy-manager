@@ -163,12 +163,15 @@ const buildBlankAttendance = (days = []) => {
   return attendance;
 };
 
-const getLatestFeeMap = async ({ academyId, studentIds }) => {
+const getMonthlyFeeMap = async ({ academyId, studentIds, month, year }) => {
   if (!studentIds.length) return new Map();
 
   const payments = await FeePayment.find({
     academy: academyId,
     student: { $in: studentIds },
+    feeMonth: Number(month),
+    feeYear: Number(year),
+    status: { $ne: "cancelled" },
   })
     .sort({ paymentDate: -1, createdAt: -1 })
     .lean();
@@ -223,6 +226,12 @@ const buildRowFromRecord = ({ identity, attendance, index, fee, membership }) =>
   const normalizedPaidDate = hasExplicitDueDate
     ? clean(identity.importedPaidDate)
     : clean(identity.importedFeePaid);
+  const isLinkedStudent = identity.rowType === "student" && Boolean(identity.studentId);
+  const specialMembershipFeeStatus = ["waived", "complimentary"].includes(
+    clean(membership?.feeStatus).toLowerCase()
+  )
+    ? membership.feeStatus
+    : "";
 
   return {
     no: identity.importedSerialNo || index + 1,
@@ -257,13 +266,13 @@ const buildRowFromRecord = ({ identity, attendance, index, fee, membership }) =>
       student?.joiningDate ||
       student?.createdAt ||
       null,
-    feePaidDate:
-      formatDisplayDate(normalizedPaidDate) ||
-      fee?.paidDate ||
-      fee?.paymentDate ||
-      null,
+    feePaidDate: isLinkedStudent
+      ? fee?.paidDate || fee?.paymentDate || formatDisplayDate(normalizedPaidDate) || null
+      : formatDisplayDate(normalizedPaidDate) || fee?.paidDate || fee?.paymentDate || null,
     feePaid: formatDisplayDate(identity.importedFeePaid) || fee?.amountPaid || fee?.amount || "",
-    feeStatus: membership?.feeStatus || identity.importedFeeStatus || fee?.status || "due",
+    feeStatus: isLinkedStudent
+      ? specialMembershipFeeStatus || fee?.status || identity.importedFeeStatus || "due"
+      : identity.importedFeeStatus || fee?.status || membership?.feeStatus || "due",
     membership,
     attendance,
     ...counts,
@@ -273,6 +282,8 @@ const buildRowFromRecord = ({ identity, attendance, index, fee, membership }) =>
 const buildMonthlyRows = async ({
   academyObjectId,
   batchObjectId,
+  month,
+  year,
   days,
   attendanceDocs,
 }) => {
@@ -322,9 +333,11 @@ const buildMonthlyRows = async ({
   const studentMap = new Map(students.map((student) => [String(student._id), student]));
 
   const studentIds = students.map((student) => student._id);
-  const feeMap = await getLatestFeeMap({
+  const feeMap = await getMonthlyFeeMap({
     academyId: academyObjectId,
     studentIds,
+    month,
+    year,
   });
   const membershipMap = await getMembershipMap({
     academyId: academyObjectId,
@@ -502,6 +515,8 @@ export const getMonthlyAttendanceRegister = async ({
   const { rows, students } = await buildMonthlyRows({
     academyObjectId,
     batchObjectId,
+    month: numericMonth,
+    year: numericYear,
     days,
     attendanceDocs,
   });

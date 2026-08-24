@@ -96,7 +96,7 @@ const BeltTests = () => {
   return <div className={`page ${styles.page}`}>
     <AcademyHeroHeader headingId="belt-records-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Belt progression desk" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy) || "Complete main branch address not available"} summaryItems={[{ key: "students", icon: GraduationCap, value: stats.students, label: "Students" }, { key: "tests", icon: Award, value: beltTests.length, label: "Tests Recorded" }, { key: "passed", icon: BadgeCheck, value: stats.passed, label: "Latest Passes" }]}/>
     <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><strong>Belt Test Records</strong></nav>
-    <header className={styles.pageHeading}><div><span><Medal size={25}/></span><div><small>Progression records</small><h1>Belt Test Records</h1><p>Track student ranks, grading outcomes and complete promotion history.</p></div></div><Link to="/belt-tests/new"><Plus size={17}/>Add Belt Test</Link></header>
+    <header className={styles.pageHeading}><div><span><Medal size={25}/></span><div><small>Progression records</small><h1>Belt Test Records</h1><p>Track student ranks, grading outcomes and complete promotion history.</p></div></div><Link to="/belt-tests/events"><Plus size={17}/>Manage Belt Test Events</Link></header>
 
     <section className={styles.summaryGrid}>{[
       { label: "Academy Students", value: stats.students, note: "Across all batches", icon: Users, tone: "navy" },
