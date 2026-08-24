@@ -14,6 +14,10 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 
@@ -32,6 +36,21 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
 }
 
 .auth-page,
@@ -107,7 +126,7 @@ textarea {
 
 .form-field span {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--font-size-label);
 }
 
 input,
@@ -119,6 +138,12 @@ textarea {
   border-radius: 12px;
   padding: 12px 14px;
   outline: none;
+  font-size: var(--font-size-body);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select {
+  min-height: var(--control-height);
 }
 
 textarea {
@@ -142,6 +167,7 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   min-height: 44px;
+  font-size: var(--font-size-label);
 }
 
 .btn:disabled {
@@ -231,7 +257,7 @@ textarea:focus {
 
 .sidebar-section-title {
   margin: 16px 0 4px;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -1104,13 +1130,14 @@ th {
   margin-top: 16px;
 }
 
-.btn,
-button {
+.btn {
   border: 0;
   border-radius: 10px;
   padding: 10px 14px;
   cursor: pointer;
   font-weight: 600;
+  font-size: var(--font-size-label);
+  line-height: 1.2;
 }
 
 .btn-primary {
@@ -1612,7 +1639,7 @@ button:disabled,
 
 .attendance-cell--blank {
   background: #f8fafc;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .summary-heading {
@@ -1973,7 +2000,7 @@ button:disabled,
   z-index: 1;
 }
 .auth-brand-copy > span {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.14em;
   opacity: 0.78;
@@ -2046,12 +2073,33 @@ textarea:disabled {
 .btn {
   gap: 8px;
   border-radius: var(--radius-sm);
-  min-height: 42px;
+  min-height: var(--control-height);
   transition:
     transform var(--transition-fast),
     background var(--transition-fast),
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
+}
+
+/*
+ * Screen data tables share one readable scale. Physical document previews and
+ * print output are intentionally excluded by the media type.
+ */
+@media screen {
+  .dashboard-content table th,
+  .dashboard-content table td {
+    font-size: var(--font-size-table);
+    line-height: 1.45;
+  }
+
+  .dashboard-content table td strong {
+    font-size: var(--font-size-table);
+  }
+
+  .dashboard-content table td small {
+    font-size: var(--font-size-meta);
+    line-height: 1.4;
+  }
 }
 .btn:hover:not(:disabled) {
   transform: translateY(-1px);
@@ -2136,7 +2184,7 @@ textarea:disabled {
 }
 .sidebar-brand p {
   margin: 2px 0 0;
-  font-size: 11px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.68);
   letter-spacing: 0.04em;
 }
@@ -2177,7 +2225,7 @@ textarea:disabled {
 .sidebar-section-title {
   margin: 18px 10px 5px;
   color: rgba(255, 255, 255, 0.48);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.13em;
 }
 .sidebar-footer {
@@ -2241,7 +2289,7 @@ textarea:disabled {
   display: block;
   margin-bottom: 2px;
   color: var(--color-primary);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 850;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2276,7 +2324,7 @@ textarea:disabled {
 }
 .navbar-user-copy small {
   color: var(--color-muted);
-  font-size: 10px;
+  font-size: 12px;
   text-transform: capitalize;
 }
 .icon-btn,
@@ -2311,7 +2359,7 @@ textarea:disabled {
   border-radius: 9px;
   background: var(--color-primary);
   color: #fff;
-  font-size: 9px;
+  font-size: 11px;
 }
 .mobile-menu-btn,
 .sidebar-overlay {
@@ -2436,13 +2484,13 @@ tbody tr:hover {
 }
 .auth-product-name span {
   margin-top: 3px;
-  font-size: 11px;
+  font-size: 13px;
   opacity: 0.72;
   letter-spacing: 0.04em;
 }
 .auth-brand-eyebrow {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 850;
   letter-spacing: 0.14em;
   opacity: 0.76;
@@ -2478,7 +2526,7 @@ tbody tr:hover {
   z-index: 2;
   margin: 0;
   color: rgba(255, 255, 255, 0.56);
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.04em;
 }
 .auth-mobile-brand {
@@ -2533,7 +2581,7 @@ tbody tr:hover {
   align-items: center;
   gap: 12px;
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -2561,7 +2609,7 @@ tbody tr:hover {
   border-radius: var(--radius-sm);
   background: var(--color-surface-subtle);
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.55;
 }
 .auth-links {
@@ -2676,7 +2724,7 @@ tbody tr:hover {
   border-radius: 999px;
   background: #fffbeb;
   color: #92400e;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   line-height: 1.2;
   white-space: nowrap;
@@ -2720,7 +2768,7 @@ tbody tr:hover {
   height: 17px;
   flex: 0 0 30px;
   border-radius: 999px;
-  background: #94a3b8;
+  background: #64748b;
   transition: background 160ms ease;
 }
 
@@ -2830,7 +2878,7 @@ tbody tr:hover {
   border-radius: 999px;
   color: #991b1b;
   background: #fee2e2;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -3285,7 +3333,7 @@ Mobile par close button visible hoga.
   min-width: max-content;
   padding: 6px 11px;
   color: #64748b;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.2;
   text-align: center;
   white-space: nowrap;
@@ -3306,7 +3354,7 @@ Mobile par close button visible hoga.
   grid-row: 1;
 
   color: #cf0006;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -3572,7 +3620,7 @@ Mobile par close button visible hoga.
   display: block;
   margin-bottom: 3px;
   color: var(--batch-red);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -3590,7 +3638,7 @@ Mobile par close button visible hoga.
 .batch-detail-heading p {
   margin: 4px 0 0;
   color: var(--batch-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 .batches-heading__actions,
 .batch-detail-heading__actions {
@@ -3615,7 +3663,7 @@ Mobile par close button visible hoga.
   align-items: center;
   gap: 8px;
   color: var(--batch-muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 .batch-breadcrumb a {
@@ -3728,7 +3776,7 @@ Mobile par close button visible hoga.
 .operations-section-header small {
   display: block;
   color: #cf0006;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -3742,7 +3790,7 @@ Mobile par close button visible hoga.
 .operations-section-header p {
   margin: 3px 0 0;
   color: #64748b;
-  font-size: 9px;
+  font-size: 11px;
 }
 .operations-selection-section__body {
   display: grid;
@@ -3772,7 +3820,7 @@ Mobile par close button visible hoga.
   border-radius: 9px;
   color: #a90005;
   background: #fff;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
 }
 .operations-tag-grid > button:hover,
@@ -3810,7 +3858,7 @@ Mobile par close button visible hoga.
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  font-size: 11px;
+  font-size: 13px;
 }
 .operations-custom-tag input:focus {
   border: 0;
@@ -3831,7 +3879,7 @@ Mobile par close button visible hoga.
   border-radius: 7px;
   color: #fff;
   background: #cf0006;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 850;
 }
 .operations-custom-tag button:hover {
@@ -3868,7 +3916,7 @@ Mobile par close button visible hoga.
   display: grid;
   gap: 6px;
   color: #334155;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 750;
 }
 .operations-coach-card input,
@@ -3893,7 +3941,7 @@ Mobile par close button visible hoga.
 }
 .operations-additional-head small {
   color: #64748b;
-  font-size: 9px;
+  font-size: 11px;
 }
 .operations-additional-head button {
   display: inline-flex;
@@ -3905,7 +3953,7 @@ Mobile par close button visible hoga.
   border-radius: 8px;
   color: #334155;
   background: #fff;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 750;
 }
 .operations-additional-list {
@@ -3935,14 +3983,14 @@ Mobile par close button visible hoga.
   border-radius: 50%;
   color: #cf0006;
   background: #feecee;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 900;
 }
 .operations-additional-list label {
   display: grid;
   gap: 5px;
   color: #334155;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 750;
 }
 .operations-additional-list input {
@@ -3963,9 +4011,9 @@ Mobile par close button visible hoga.
   padding: 12px;
   border: 1px dashed #cbd5e1;
   border-radius: 9px;
-  color: #94a3b8;
+  color: #64748b;
   background: #fafbfc;
-  font-size: 9px;
+  font-size: 11px;
   text-align: center;
 }
 .operations-belt-field {
@@ -4164,7 +4212,7 @@ Mobile par close button visible hoga.
 }
 
 .premium-time-field__trigger .is-placeholder {
-  color: #94a3b8;
+  color: #64748b;
   font-weight: 650;
 }
 
@@ -4175,7 +4223,7 @@ Mobile par close button visible hoga.
 
 .premium-time-field__trigger:disabled {
   background: #f8fafc;
-  color: #94a3b8;
+  color: #64748b;
   cursor: not-allowed;
 }
 
@@ -4185,7 +4233,7 @@ Mobile par close button visible hoga.
 
 .premium-time-field__error {
   color: #b91c1c;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -4232,7 +4280,7 @@ Mobile par close button visible hoga.
   display: block;
   margin-bottom: 3px;
   color: var(--ptp-red);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -4516,7 +4564,7 @@ Mobile par close button visible hoga.
 
 .premium-time-picker__manual-minutes > span {
   color: var(--ptp-muted);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;

@@ -219,7 +219,7 @@
 
 :global(.academy-profile-hero__completion small) {
   color: var(--profile-muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -367,7 +367,7 @@
 
 :global(.academy-profile-card__header span) {
   color: var(--profile-red);
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 850;
   letter-spacing: 1.2px;
   line-height: 1;
@@ -422,7 +422,7 @@
 :global(.academy-profile-logo-preview > svg) {
   width: 42px;
   height: 42px;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 :global(.academy-profile-logo-upload) {
@@ -452,14 +452,14 @@
 
 :global(.academy-profile-logo-upload strong) {
   max-width: 94px;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.25;
 }
 
 :global(.academy-profile-logo-upload small) {
   max-width: 98px;
   color: rgba(255, 255, 255, 0.78);
-  font-size: 7px;
+  font-size: 11px;
   line-height: 1.25;
 }
 
@@ -625,7 +625,7 @@
   border: 0;
   background: transparent;
   box-shadow: none;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 :global(.academy-profile-custom-art input:focus) {
@@ -644,7 +644,7 @@
   border-radius: 7px;
   background: var(--profile-red);
   color: #ffffff;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 850;
   line-height: 1;
   white-space: nowrap;
@@ -765,7 +765,7 @@
   border-radius: 8px 8px 0 0;
   background: #f4f6f9;
   color: #64748b;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -834,7 +834,7 @@
   border-radius: 8px;
   background: #ffffff;
   color: var(--profile-red);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
 }
@@ -862,7 +862,7 @@
 :global(.academy-profile-social__fields input) {
   min-height: 34px;
   padding: 6px 9px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 :global(.academy-profile-social__icon) {
@@ -874,7 +874,7 @@
   border-radius: 7px;
   background: #f8fafc;
   color: var(--profile-navy);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 900;
 }
 
@@ -899,7 +899,7 @@
   gap: 3px;
   margin-right: auto;
   color: #64748b;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 

@@ -19,6 +19,18 @@
   --color-placeholder: #9ca3af;
   --color-on-primary: #ffffff;
 
+  /* Screen typography — one shared, readable application scale. */
+  --font-size-page-title: clamp(28px, 2.35vw, 34px);
+  --font-size-section-title: 18px;
+  --font-size-card-title: 16px;
+  --font-size-body: 14px;
+  --font-size-label: 13px;
+  --font-size-table: 12px;
+  --font-size-meta: 11px;
+  --font-size-eyebrow: 11px;
+  --line-height-tight: 1.2;
+  --line-height-body: 1.5;
+
   /* Borders */
   --color-border: #e5e7eb;
   --color-border-strong: #d1d5db;
@@ -64,6 +76,8 @@
 
   /* Form controls */
   --control-height: 44px;
+  --control-height-sm: 36px;
+  --control-height-lg: 48px;
   --control-padding-x: 14px;
 
   /* Typography */

@@ -56,7 +56,7 @@
   border-radius: 11px !important;
   background: #ffffff !important;
   color: #17233b !important;
-  font-size: 11px !important;
+  font-size: 13px !important;
   font-weight: 800;
   line-height: 1.2;
   white-space: normal !important;
@@ -171,7 +171,7 @@
 
 .compact .item .option {
   min-height: 76px !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
 }
 
 @media (max-width: 640px) {

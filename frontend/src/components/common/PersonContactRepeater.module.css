@@ -28,7 +28,7 @@
   border-radius: 8px;
   background: #fff0f1;
   color: #cf0006;
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -50,7 +50,7 @@
   display: grid;
   gap: 6px;
   color: #09162d;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -64,7 +64,7 @@
   background: #fff;
   padding: 8px 10px;
   color: #09162d;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .phoneRow {
@@ -118,7 +118,7 @@
   background: #fff;
   padding: 7px 11px;
   color: #cf0006;
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
 }

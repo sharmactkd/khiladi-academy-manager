@@ -13,8 +13,8 @@
 }
 
 :global(.phone-location-phone-heading > span) {
-  color: #94a3b8;
-  font-size: 9px;
+  color: #64748b;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -112,7 +112,7 @@
   border-radius: 0;
   background: #ffffff;
   color: #334155;
-  font-size: 11px;
+  font-size: 13px;
   text-align: left;
   cursor: pointer;
 }
@@ -125,7 +125,7 @@
 
 :global(.phone-location-code-options strong) {
   color: inherit;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 :global(.phone-location-add-button) {
@@ -139,7 +139,7 @@
   border-radius: 9px;
   background: #ffffff;
   color: #cf0006;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 850;
   white-space: nowrap;
   cursor: pointer;
@@ -152,7 +152,7 @@
 }
 
 :global(.phone-location-add-button:disabled) {
-  color: #94a3b8;
+  color: #64748b;
   border-color: #dbe2ea;
   background: #f8fafc;
   cursor: not-allowed;

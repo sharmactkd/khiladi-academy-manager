@@ -1,5 +1,5 @@
 .root {
-  --sidebar-red: #d90009;
+  --sidebar-red: #cf0006;
   --sidebar-red-dark: #a90008;
   --sidebar-navy: #10213d;
   --sidebar-muted: #65738a;
@@ -69,7 +69,7 @@
 .brandCopy h2 {
   margin: 0;
   overflow: hidden;
-  color: #c90008;
+  color: #cf0006;
   font-size: 19px;
   line-height: 1;
   letter-spacing: 0.04em;
@@ -82,7 +82,7 @@
   margin: 5px 0 0;
   overflow: hidden;
   color: #9c3238;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 650;
   letter-spacing: 0.02em;
   text-overflow: ellipsis;
@@ -157,7 +157,7 @@
   border: 2px solid #fff;
   border-radius: 50%;
   box-shadow: 0 0 0 1px #dde4ec;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -190,7 +190,7 @@
 .workspaceCopy small {
   margin-top: 3px;
   color: var(--sidebar-muted);
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .workspaceButton > svg {
@@ -238,13 +238,13 @@
 }
 
 .workspaceMenu a strong {
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .workspaceMenu a small {
   margin-top: 2px;
   color: var(--sidebar-muted);
-  font-size: 9.5px;
+  font-size: 12px;
 }
 
 .workspaceMenuIcon {
@@ -261,7 +261,7 @@
 .workspaceMenuTitle {
   margin: 5px 8px 3px;
   color: #8b96a6;
-  font-size: 8.5px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -281,7 +281,7 @@
   margin: 0;
   padding: 12px 9px;
   color: var(--sidebar-muted);
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .quickCreateWrap {
@@ -334,13 +334,13 @@
 
 .quickCreateMenu header strong {
   color: var(--sidebar-navy);
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .quickCreateMenu header small {
   margin-top: 2px;
   color: var(--sidebar-muted);
-  font-size: 9.5px;
+  font-size: 12px;
 }
 
 .quickCreateMenu a {
@@ -351,7 +351,7 @@
   gap: 9px;
   color: #35445b;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 650;
   text-decoration: none;
 }
@@ -493,7 +493,7 @@
 .root .nestedLink {
   min-height: 36px;
   padding: 8px 9px;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 650;
 }
 
@@ -528,7 +528,7 @@
   color: #c60008;
   background: #ffe7e9;
   border-radius: 999px;
-  font-size: 9.5px;
+  font-size: 12px;
   line-height: 1;
 }
 
@@ -548,7 +548,7 @@
 .utilities .navLink {
   min-height: 35px;
   padding-block: 7px;
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .userCard {
@@ -571,7 +571,7 @@
   color: var(--sidebar-navy);
   background: #ffe7e9;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 850;
 }
 
@@ -590,13 +590,13 @@
 
 .userCopy strong {
   color: var(--sidebar-navy);
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .userCopy small {
   margin-top: 2px;
   color: var(--sidebar-muted);
-  font-size: 9.5px;
+  font-size: 12px;
 }
 
 .userCard > svg {
@@ -615,7 +615,7 @@
   background: transparent;
   border: 0;
   border-radius: 9px;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 750;
 }
 

@@ -45,7 +45,7 @@
   display: grid;
   gap: 6px;
   color: var(--student-ink);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -86,7 +86,7 @@
 
 :global(.student-form-card__header [class*="eyebrow"]) {
   color: var(--student-red);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: .14em;
 }
@@ -100,7 +100,7 @@
 
 :global(.student-form-card__header p) {
   color: var(--student-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 :global(.student-identity-actions) {
@@ -114,7 +114,7 @@
   gap: 4px;
   min-width: 190px;
   color: var(--student-ink);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -126,7 +126,7 @@
   background: #fff;
   padding: 7px 10px;
   color: var(--student-ink);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 :global(.student-assignment-field > strong) {
@@ -147,7 +147,7 @@
   gap: 4px;
   min-width: 245px;
   color: var(--student-ink);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -205,7 +205,7 @@
   gap: 6px;
   min-width: 0;
   color: var(--student-ink);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -215,7 +215,7 @@
 
 :global(.student-demographics-row > label > small) {
   color: #dc2626;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -233,7 +233,7 @@
 
 :global(.student-chip-field [class*="label"]) {
   color: var(--student-ink);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -266,7 +266,7 @@
   background: #fff;
   padding: 8px 14px;
   color: var(--student-ink);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -293,7 +293,7 @@
   gap: 6px;
   min-width: 0;
   color: var(--student-ink);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -313,7 +313,7 @@
   color: var(--student-ink);
   padding: 9px 11px;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   outline: none;
   transition: border-color .18s ease, box-shadow .18s ease;
@@ -339,7 +339,7 @@
 :global(.student-form-fields > label > small),
 :global(.student-form-body > label > small) {
   color: #dc2626;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -502,7 +502,7 @@
   gap: 10px !important;
   padding: 0 !important;
   color: var(--student-ink);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -567,7 +567,7 @@
   gap: 7px;
   min-width: 0;
   color: var(--student-ink);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 750;
 }
 
@@ -621,7 +621,7 @@
 
 :global(.student-medical-panel__title small) {
   color: var(--student-red);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 850;
   letter-spacing: .12em;
   line-height: 1.2;
@@ -647,7 +647,7 @@
   border-radius: 999px;
   color: #64748b;
   background: #eef2f7;
-  font-size: 9px;
+  font-size: 11px;
   font-style: normal;
   font-weight: 750;
 }
@@ -655,7 +655,7 @@
 :global(.student-medical-panel__title p) {
   margin: 0;
   color: #718096;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -766,7 +766,7 @@
 
 :global(.student-medical-conditions-grid > button strong) {
   color: var(--student-ink);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1.25;
   text-align: center;
@@ -795,7 +795,7 @@
   display: grid;
   gap: 7px;
   color: var(--student-ink);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 750;
 }
 

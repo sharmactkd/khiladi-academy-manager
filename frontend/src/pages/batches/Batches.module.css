@@ -5,7 +5,7 @@
 :global(.batches-summary article){min-width:0;display:flex;align-items:center;gap:11px;min-height:88px;padding:14px;border:1px solid var(--batch-line);border-radius:13px;background:#fff;box-shadow:0 5px 18px rgba(8,22,47,.045)}
 :global(.batches-summary article>span){flex:0 0 40px;width:40px;height:40px;display:grid;place-items:center;border-radius:50%;background:#feecee;color:var(--batch-red)}
 :global(.batches-summary article>div){min-width:0;display:grid;gap:2px}
-:global(.batches-summary small){color:#475569;font-size:10px;font-weight:700}
+:global(.batches-summary small){color:#475569;font-size:12px;font-weight:700}
 :global(.batches-summary strong){color:var(--batch-red);font-size:25px;font-weight:950}
 :global(.batches-summary .is-green>span){background:#e8f7ed;color:#15803d}
 :global(.batches-summary .is-green strong){color:#15803d}
@@ -17,12 +17,12 @@
 :global(.batches-filters__title){display:flex;align-items:center;gap:9px;color:var(--batch-red)}
 :global(.batches-filters__title>div){display:grid}
 :global(.batches-filters__title strong){color:var(--batch-navy);font-size:12px}
-:global(.batches-filters__title small){color:var(--batch-muted);font-size:9px}
+:global(.batches-filters__title small){color:var(--batch-muted);font-size:11px}
 :global(.batches-filters__grid){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-:global(.batches-filters label){display:grid;gap:5px;color:#334155;font-size:9px;font-weight:750}
+:global(.batches-filters label){display:grid;gap:5px;color:#334155;font-size:11px;font-weight:750}
 :global(.batches-results){min-width:0}
 :global(.batches-card-list){display:grid;gap:12px}
-:global(.batches-state p){margin:0;font-size:10px}
+:global(.batches-state p){margin:0;font-size:12px}
 :global(.batches-spinner){width:36px;height:36px;border:4px solid #fee2e2;border-top-color:var(--batch-red);border-radius:50%;animation:owner-spin .85s linear infinite}
 @media (max-width:760px){:global(.batches-filters){grid-template-columns:1fr}}
 @media (max-width:760px){:global(.batches-filters__grid){grid-template-columns:1fr}}

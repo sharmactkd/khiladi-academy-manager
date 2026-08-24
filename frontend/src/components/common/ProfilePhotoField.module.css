@@ -67,14 +67,14 @@
 }
 
 .upload strong {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.25;
 }
 
 .upload small {
   max-width: 140px;
   color: rgb(255 255 255 / 76%);
-  font-size: 7px;
+  font-size: 13px;
   line-height: 1.35;
 }
 
@@ -103,12 +103,12 @@
 
 .copy strong {
   color: #08162f;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .copy small {
   color: #64748b;
-  font-size: 7px;
+  font-size: 13px;
 }
 
 .copy button {
@@ -123,7 +123,7 @@
   border-radius: 7px;
   background: #fff7f7;
   color: #cf0006;
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
