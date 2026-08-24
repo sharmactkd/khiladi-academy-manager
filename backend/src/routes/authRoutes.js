@@ -17,6 +17,7 @@ import {
   beginMfaSetup,
   disableMfa,
   enableMfa,
+  completeGoogleMfaLogin,
 } from "../controllers/authController.js";
 
 import {
@@ -30,6 +31,7 @@ import {
   disableMfaValidator,
   enableMfaValidator,
   sessionIdValidator,
+  googleMfaLoginValidator,
 } from "../validators/authValidator.js";
 
 import validateRequest from "../middlewares/validateRequest.js";
@@ -64,6 +66,14 @@ router.post(
   googleLoginValidator,
   validateRequest,
   googleLogin
+);
+
+router.post(
+  "/google/mfa",
+  loginRateLimiter,
+  googleMfaLoginValidator,
+  validateRequest,
+  completeGoogleMfaLogin
 );
 
 router.post(

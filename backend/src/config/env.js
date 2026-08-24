@@ -32,6 +32,8 @@ const dataEncryptionKey =
   process.env.DATA_ENCRYPTION_KEY || process.env.JWT_REFRESH_SECRET;
 const auditLogSigningKey =
   process.env.AUDIT_LOG_SIGNING_KEY || process.env.JWT_ACCESS_SECRET;
+const privateMediaSigningKey =
+  process.env.PRIVATE_MEDIA_SIGNING_KEY || process.env.DATA_ENCRYPTION_KEY;
 
 if (process.env.NODE_ENV === "production" && !process.env.INTEGRATION_ENCRYPTION_KEY) {
   throw new Error("Missing required environment variable: INTEGRATION_ENCRYPTION_KEY");
@@ -41,6 +43,9 @@ if (process.env.NODE_ENV === "production" && !process.env.DATA_ENCRYPTION_KEY) {
 }
 if (process.env.NODE_ENV === "production" && !process.env.AUDIT_LOG_SIGNING_KEY) {
   throw new Error("Missing required environment variable: AUDIT_LOG_SIGNING_KEY");
+}
+if (process.env.NODE_ENV === "production" && !process.env.PRIVATE_MEDIA_SIGNING_KEY) {
+  throw new Error("Missing required environment variable: PRIVATE_MEDIA_SIGNING_KEY");
 }
 
 const env = {
@@ -70,6 +75,11 @@ const env = {
   INTEGRATION_ENCRYPTION_KEY: integrationEncryptionKey,
   DATA_ENCRYPTION_KEY: dataEncryptionKey,
   AUDIT_LOG_SIGNING_KEY: auditLogSigningKey,
+  PRIVATE_MEDIA_SIGNING_KEY: privateMediaSigningKey,
+  PRIVATE_MEDIA_URL_TTL_SECONDS: Math.min(
+    Math.max(Number(process.env.PRIVATE_MEDIA_URL_TTL_SECONDS) || 300, 60),
+    3600
+  ),
   AUDIT_LOG_RETENTION_DAYS:
     Number(process.env.AUDIT_LOG_RETENTION_DAYS) || 365,
   TOURNAMENT_API_ALLOWED_ORIGINS: String(

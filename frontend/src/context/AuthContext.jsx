@@ -76,6 +76,14 @@ export const AuthProvider = ({ children }) => {
   const googleLogin = async (googleToken, role = "academy_owner") => {
     const response = await authApi.googleLogin({ googleToken, role });
     const data = response.data?.data;
+    if (data?.requiresMfa) return data;
+    persistAuth(data.user, data.accessToken);
+    return data;
+  };
+
+  const completeGoogleMfa = async (challengeToken, mfaCode) => {
+    const response = await authApi.completeGoogleMfa({ challengeToken, mfaCode });
+    const data = response.data?.data;
     persistAuth(data.user, data.accessToken);
     return data;
   };
@@ -101,6 +109,7 @@ export const AuthProvider = ({ children }) => {
       register,
       login,
       googleLogin,
+      completeGoogleMfa,
       verifyEmail,
       logout,
       refreshAuth,

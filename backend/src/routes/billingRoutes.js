@@ -7,6 +7,7 @@ import {
   getBillingInvoices,
   getBillingInvoiceById,
   cancelSubscription,
+  razorpayBillingWebhook,
 } from "../controllers/billingController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { allowRoles } from "../middlewares/roleMiddleware.js";
@@ -19,9 +20,13 @@ import {
   createOrderValidator,
   verifyPaymentValidator,
   invoiceIdValidator,
+  billingIdempotencyValidator,
 } from "../validators/billingValidator.js";
+import { tournamentWebhookRateLimiter } from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
+
+router.post("/webhook/razorpay", tournamentWebhookRateLimiter, razorpayBillingWebhook);
 
 router.use(protect);
 router.use(allowRoles("academy_owner", "super_admin"));
@@ -30,6 +35,7 @@ router.use(requireResolvedAcademy);
 
 router.post(
   "/create-order",
+  billingIdempotencyValidator,
   createOrderValidator,
   validateRequest,
   createBillingOrder

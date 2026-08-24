@@ -1,36 +1,24 @@
 import Invoice from "../models/Invoice.js";
 import env from "../config/env.js";
+import Sequence from "../models/Sequence.js";
 
 const padNumber = (value, size = 5) => {
   return String(value).padStart(size, "0");
 };
 
-export const generateInvoiceNumber = async () => {
+export const generateInvoiceNumber = async ({ session = null } = {}) => {
   const now = new Date();
   const prefix = `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(
     2,
     "0"
   )}`;
 
-  const latestInvoice = await Invoice.findOne({
-    invoiceNumber: { $regex: `^${prefix}-` },
-  })
-    .sort({ createdAt: -1 })
-    .select("invoiceNumber")
-    .lean();
-
-  let nextNumber = 1;
-
-  if (latestInvoice?.invoiceNumber) {
-    const parts = latestInvoice.invoiceNumber.split("-");
-    const lastPart = Number(parts[parts.length - 1]);
-
-    if (!Number.isNaN(lastPart)) {
-      nextNumber = lastPart + 1;
-    }
-  }
-
-  return `${prefix}-${padNumber(nextNumber)}`;
+  const counter = await Sequence.findOneAndUpdate(
+    { scope: `Invoice:invoiceNumber:${prefix}` },
+    { $inc: { value: 1 } },
+    { new: true, upsert: true, setDefaultsOnInsert: true, session }
+  );
+  return `${prefix}-${padNumber(counter.value)}`;
 };
 
 export const createInvoiceForPayment = async ({
@@ -40,15 +28,16 @@ export const createInvoiceForPayment = async ({
   plan,
   billingUser,
   createdBy,
+  session = null,
 }) => {
   const gstPercentage = Number(env.GST_PERCENTAGE || 0);
   const amount = Number(payment.amount || 0);
   const tax = Math.round((amount * gstPercentage) / 100);
   const total = amount + tax;
 
-  const invoiceNumber = await generateInvoiceNumber();
+  const invoiceNumber = await generateInvoiceNumber({ session });
 
-  return Invoice.create({
+  const [invoice] = await Invoice.create([{
     academy: academy._id || academy,
     subscription: subscription?._id || subscription || null,
     payment: payment._id || payment,
@@ -74,5 +63,6 @@ export const createInvoiceForPayment = async ({
       },
     ],
     createdBy,
-  });
+  }], { session });
+  return invoice;
 };

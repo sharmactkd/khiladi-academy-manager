@@ -18,6 +18,7 @@ const Login = () => {
   const {
     login,
     googleLogin,
+    completeGoogleMfa,
   } = useAuth();
 
   const [form, setForm] = useState({
@@ -30,6 +31,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] =
     useState(false);
+  const [googleMfaChallenge, setGoogleMfaChallenge] = useState("");
 
   const from =
     location.state?.from?.pathname ||
@@ -55,7 +57,11 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(form);
+      if (googleMfaChallenge) {
+        await completeGoogleMfa(googleMfaChallenge, form.mfaCode || "");
+      } else {
+        await login(form);
+      }
 
       navigate(from, {
         replace: true,
@@ -87,10 +93,17 @@ const Login = () => {
     try {
       setGoogleLoading(true);
 
-      await googleLogin(
+      const data = await googleLogin(
         credentialResponse.credential,
         "academy_owner"
       );
+
+      if (data?.requiresMfa && data?.challengeToken) {
+        setGoogleMfaChallenge(data.challengeToken);
+        setMfaRequired(true);
+        setForm((current) => ({ ...current, mfaCode: "" }));
+        return;
+      }
 
       navigate(from, {
         replace: true,
@@ -129,7 +142,7 @@ const Login = () => {
           </div>
         )}
 
-        <Input
+        {!googleMfaChallenge ? <Input
           label="Email or Phone"
           name="identifier"
           type="text"
@@ -139,7 +152,7 @@ const Login = () => {
           autoComplete="username"
           inputMode="email"
           required
-        />
+        /> : null}
 
         {mfaRequired ? (
           <Input
@@ -155,15 +168,15 @@ const Login = () => {
           />
         ) : null}
 
-        <div className="auth-password-heading">
+        {!googleMfaChallenge ? <div className="auth-password-heading">
           <span>Password</span>
 
           <Link to="/forgot-password">
             Forgot Password?
           </Link>
-        </div>
+        </div> : null}
 
-        <Input
+        {!googleMfaChallenge ? <Input
           label=""
           name="password"
           type="password"
@@ -172,7 +185,7 @@ const Login = () => {
           placeholder="Enter your password"
           autoComplete="current-password"
           required
-        />
+        /> : null}
 
         <Button
           type="submit"
@@ -184,14 +197,29 @@ const Login = () => {
           {loading ? "Verifying..." : mfaRequired ? "Verify & Login" : "Login"}
         </Button>
 
-        <div
+        {googleMfaChallenge ? (
+          <button
+            type="button"
+            className="btn btn-outline auth-submit-button"
+            onClick={() => {
+              setGoogleMfaChallenge("");
+              setMfaRequired(false);
+              setForm((current) => ({ ...current, mfaCode: "" }));
+              setError("");
+            }}
+          >
+            Use another login method
+          </button>
+        ) : null}
+
+        {!googleMfaChallenge ? <div
           className="auth-divider"
           role="separator"
         >
           <span>or continue with</span>
-        </div>
+        </div> : null}
 
-        <div className="google-login-container">
+        {!googleMfaChallenge ? <div className="google-login-container">
           {googleLoading ? (
             <button
               type="button"
@@ -218,7 +246,7 @@ const Login = () => {
               width="320"
             />
           )}
-        </div>
+        </div> : null}
 
         <p className="auth-links">
           Don&apos;t have an account?{" "}

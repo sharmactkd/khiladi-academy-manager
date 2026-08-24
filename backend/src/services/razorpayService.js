@@ -37,6 +37,12 @@ export const createRazorpayOrder = async ({
   });
 };
 
+export const fetchRazorpayPayment = async (paymentId) => {
+  const client = getRazorpayClient();
+  if (!client) throw new Error("Razorpay is not configured");
+  return client.payments.fetch(paymentId);
+};
+
 export const verifyRazorpaySignature = ({
   razorpayOrderId,
   razorpayPaymentId,
@@ -49,5 +55,18 @@ export const verifyRazorpaySignature = ({
     .update(body)
     .digest("hex");
 
-  return expectedSignature === razorpaySignature;
+  const expected = Buffer.from(expectedSignature, "hex");
+  const received = Buffer.from(String(razorpaySignature || ""), "hex");
+  return expected.length === received.length && crypto.timingSafeEqual(expected, received);
+};
+
+export const verifyRazorpayWebhookSignature = ({ rawBody, signature }) => {
+  if (!env.RAZORPAY_WEBHOOK_SECRET || !rawBody || !signature) return false;
+  const expectedHex = crypto
+    .createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET)
+    .update(rawBody)
+    .digest("hex");
+  const expected = Buffer.from(expectedHex, "hex");
+  const received = Buffer.from(String(signature), "hex");
+  return expected.length === received.length && crypto.timingSafeEqual(expected, received);
 };

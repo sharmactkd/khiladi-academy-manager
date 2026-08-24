@@ -129,6 +129,10 @@ const invoiceSchema = new mongoose.Schema(
 
 invoiceSchema.index({ academy: 1, createdAt: -1 });
 invoiceSchema.index({ academy: 1, status: 1 });
+invoiceSchema.index(
+  { payment: 1 },
+  { unique: true, partialFilterExpression: { payment: { $type: "objectId" } } }
+);
 
 const Invoice = mongoose.model("Invoice", invoiceSchema);
 

@@ -190,6 +190,18 @@ const userSchema = new mongoose.Schema(
       default: [],
     },
 
+    mfaLoginChallengeHash: {
+      type: String,
+      select: false,
+      default: undefined,
+    },
+
+    mfaLoginChallengeExpires: {
+      type: Date,
+      select: false,
+      default: undefined,
+    },
+
     refreshTokens: {
       type: [refreshTokenSessionSchema],
       default: [],

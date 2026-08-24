@@ -48,3 +48,9 @@ export const tournamentWebhookRateLimiter = buildRateLimiter({
   max: 60,
   message: "Too many tournament webhook requests. Please try again later.",
 });
+
+export const privateMediaRateLimiter = buildRateLimiter({
+  windowMs: 5 * 60 * 1000,
+  max: 2000,
+  message: "Too many private media requests. Please try again later.",
+});

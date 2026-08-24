@@ -81,6 +81,18 @@ export const googleLoginValidator = [
     .withMessage("Only academy owners can register publicly"),
 ];
 
+export const googleMfaLoginValidator = [
+  body("challengeToken")
+    .trim()
+    .isLength({ min: 64, max: 64 })
+    .isHexadecimal()
+    .withMessage("A valid Google MFA challenge is required"),
+  body("mfaCode")
+    .trim()
+    .isLength({ min: 6, max: 20 })
+    .withMessage("Enter a valid authenticator or recovery code"),
+];
+
 export const forgotPasswordValidator = [
   body("email")
     .trim()

@@ -50,6 +50,7 @@ import smartTimelineRoutes from "./routes/smartTimelineRoutes.js";
 import tournamentIntegrationRoutes from "./routes/tournamentIntegrationRoutes.js";
 import tournamentEntrySyncRoutes from "./routes/tournamentEntrySyncRoutes.js";
 import tournamentResultSyncRoutes from "./routes/tournamentResultSyncRoutes.js";
+import mediaRoutes from "./routes/mediaRoutes.js";
 
 import {
   errorHandler,
@@ -87,7 +88,10 @@ app.use(
   express.json({
     limit: "2mb",
     verify: (req, _res, buffer) => {
-      if (req.originalUrl?.startsWith("/api/tournament-sync/results/webhook")) {
+      if (
+        req.originalUrl?.startsWith("/api/tournament-sync/results/webhook") ||
+        req.originalUrl?.startsWith("/api/billing/webhook/razorpay")
+      ) {
         req.rawBody = Buffer.from(buffer);
       }
     },
@@ -100,6 +104,9 @@ if (!env.isProduction) {
   app.use(morgan("dev"));
 }
 
+
+app.use("/uploads/students", (_req, res) => res.status(404).end());
+app.use("/uploads/certificate-templates", (_req, res) => res.status(404).end());
 
 app.use(
   "/uploads",
@@ -131,6 +138,7 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api", apiRateLimiter);
 app.use("/api", mutationAuditMiddleware);
+app.use("/api/media", mediaRoutes);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/academy", academyRoutes);

@@ -1,5 +1,12 @@
 import { body, param } from "express-validator";
 
+export const billingIdempotencyValidator = [
+  body("idempotencyKey")
+    .trim()
+    .isUUID()
+    .withMessage("A valid idempotency key is required"),
+];
+
 export const createOrderValidator = [
   body("planCode")
     .trim()

@@ -1,3 +1,5 @@
+import { signPrivateMediaReferences } from "./privateMedia.js";
+
 export const apiResponse = (
   res,
   statusCode,
@@ -11,7 +13,7 @@ export const apiResponse = (
   };
 
   if (data !== null) {
-    response.data = data;
+    response.data = signPrivateMediaReferences(data);
   }
 
   return res.status(statusCode).json(response);

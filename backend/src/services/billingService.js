@@ -160,6 +160,7 @@ export const activateSubscription = async ({
   createdBy = null,
   freeMonths = 0,
   status = "active",
+  session = null,
 }) => {
   const startDate = new Date();
 
@@ -189,10 +190,11 @@ export const activateSubscription = async ({
         isCurrent: false,
         updatedBy: createdBy,
       },
-    }
+    },
+    { session }
   );
 
-  const subscription = await Subscription.create({
+  const [subscription] = await Subscription.create([{
     academy: academy._id || academy,
     plan: plan._id,
     planCode: plan.code,
@@ -208,17 +210,17 @@ export const activateSubscription = async ({
     isCurrent: true,
     createdBy,
     updatedBy: createdBy,
-  });
+  }], { session });
 
   if (payment) {
     payment.subscription = subscription._id;
-    await payment.save();
+    await payment.save({ session });
   }
 
   const academyDoc =
     typeof academy.save === "function"
       ? academy
-      : await Academy.findById(academy);
+      : await Academy.findById(academy).session(session);
 
   if (academyDoc) {
     academyDoc.subscriptionStatus =
@@ -232,7 +234,7 @@ export const activateSubscription = async ({
       defaultCurrency: plan.currency || "INR",
     };
 
-    await academyDoc.save();
+    await academyDoc.save({ session });
   }
 
   return subscription;
@@ -246,6 +248,7 @@ export const completePaidBilling = async ({
   freeMonths = 0,
   billingUser,
   createdBy,
+  session = null,
 }) => {
   const subscription = await activateSubscription({
     academy,
@@ -255,12 +258,23 @@ export const completePaidBilling = async ({
     createdBy,
     freeMonths,
     status: "active",
+    session,
   });
 
   if (coupon) {
-    coupon.usedCount += 1;
-    coupon.updatedBy = createdBy;
-    await coupon.save();
+    const updatedCoupon = await Coupon.findOneAndUpdate(
+      {
+        _id: coupon._id,
+        isActive: true,
+        $or: [
+          { maxRedemptions: 0 },
+          { $expr: { $lt: ["$usedCount", "$maxRedemptions"] } },
+        ],
+      },
+      { $inc: { usedCount: 1 }, $set: { updatedBy: createdBy } },
+      { new: true, session }
+    );
+    if (!updatedCoupon) throw new Error("Coupon redemption limit reached");
   }
 
   const invoice = await createInvoiceForPayment({
@@ -270,6 +284,7 @@ export const completePaidBilling = async ({
     plan,
     billingUser,
     createdBy,
+    session,
   });
 
   return {

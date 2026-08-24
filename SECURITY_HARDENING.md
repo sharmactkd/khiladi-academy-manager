@@ -108,3 +108,26 @@ git status --short
 Dependency advisories without an upstream fix still require monitoring. In
 particular, replace the npm `xlsx` package with a maintained SheetJS distribution
 or another workbook library before treating untrusted workbooks as fully safe.
+# Private media, payment integrity and federated MFA
+
+- Student photos, certificate backgrounds and signature images are stored under
+  `backend/private-uploads` and are returned only through short-lived HMAC-signed
+  URLs. Legacy private paths under `uploads/students` and
+  `uploads/certificate-templates` are blocked from static serving and signed at
+  response time for backward compatibility.
+- Set an independent `PRIVATE_MEDIA_SIGNING_KEY` in production. Signed URL
+  lifetime is controlled by `PRIVATE_MEDIA_URL_TTL_SECONDS` (60-3600 seconds).
+- Subscription checkout requires a UUID idempotency key. Razorpay payment
+  completion is accepted only after both callback/webhook verification and a
+  captured provider payment match on order, amount and currency. Configure the
+  Razorpay webhook URL as `/api/billing/webhook/razorpay`, subscribe to
+  `payment.captured`, and set the same secret in `RAZORPAY_WEBHOOK_SECRET`.
+- Payment, subscription, invoice and coupon redemption updates run in one
+  MongoDB transaction. Production MongoDB must therefore be a replica set or
+  managed cluster with transaction support. Allow the new unique indexes on
+  payment IDs, checkout idempotency keys and invoice payment references to be
+  created during deployment; resolve any legacy duplicate records before the
+  index build if MongoDB reports a duplicate-key error.
+- Google-authenticated accounts with application MFA enabled receive a
+  five-minute, one-time challenge. Access and refresh tokens are issued only
+  after TOTP or recovery-code verification succeeds.

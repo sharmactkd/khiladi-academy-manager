@@ -33,7 +33,7 @@ const paymentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["created", "paid", "failed", "refunded"],
+      enum: ["creating", "created", "processing", "paid", "failed", "refunded"],
       default: "created",
       index: true,
     },
@@ -52,7 +52,11 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
-      index: true,
+    },
+    idempotencyKey: {
+      type: String,
+      trim: true,
+      default: "",
     },
     razorpaySignature: {
       type: String,
@@ -74,6 +78,16 @@ const paymentSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    processingStartedAt: {
+      type: Date,
+      default: null,
+    },
+    failureReason: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 240,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -85,6 +99,20 @@ const paymentSchema = new mongoose.Schema(
 
 paymentSchema.index({ academy: 1, status: 1 });
 paymentSchema.index({ academy: 1, createdAt: -1 });
+paymentSchema.index(
+  { razorpayPaymentId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { razorpayPaymentId: { $type: "string", $gt: "" } },
+  }
+);
+paymentSchema.index(
+  { academy: 1, idempotencyKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { idempotencyKey: { $type: "string", $gt: "" } },
+  }
+);
 
 const Payment = mongoose.model("Payment", paymentSchema);
 

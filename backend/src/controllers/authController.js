@@ -30,6 +30,14 @@ const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 const verificationExpiry = () =>
   new Date(Date.now() + env.EMAIL_VERIFICATION_EXPIRES_MINUTES * 60 * 1000);
 
+const createGoogleMfaChallenge = async (user) => {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  user.mfaLoginChallengeHash = hashToken(rawToken);
+  user.mfaLoginChallengeExpires = new Date(Date.now() + 5 * 60 * 1000);
+  await user.save({ validateBeforeSave: false });
+  return rawToken;
+};
+
 const createEmailVerification = async (user) => {
   if (!user.email) return null;
   const rawToken = crypto.randomBytes(32).toString("hex");
@@ -300,6 +308,60 @@ export const loginUser = asyncHandler(async (req, res) => {
   });
 });
 
+export const completeGoogleMfaLogin = asyncHandler(async (req, res) => {
+  const challengeHash = hashToken(req.body.challengeToken);
+  const user = await User.findOne({
+    mfaLoginChallengeHash: challengeHash,
+    mfaLoginChallengeExpires: { $gt: new Date() },
+  }).select(
+    "+mfaSecret +mfaRecoveryCodes +mfaLoginChallengeHash +mfaLoginChallengeExpires +failedLoginAttempts +lockedUntil"
+  );
+
+  if (!user || !user.mfaEnabled) {
+    return errorResponse(res, "Google MFA challenge is invalid or expired", 401);
+  }
+  if (!user.isActive || user.isSuspended || user.isLoginLocked()) {
+    return errorResponse(res, "User account is unavailable", 403);
+  }
+
+  const recoveryHash = hashRecoveryCode(req.body.mfaCode);
+  const recoveryIndex = user.mfaRecoveryCodes.indexOf(recoveryHash);
+  const validTotp = verifyMfaCode({ secret: user.mfaSecret, code: req.body.mfaCode });
+  if (!validTotp && recoveryIndex < 0) {
+    await recordFailedLogin(user);
+    return errorResponse(res, "Invalid authenticator code", 401, { code: "MFA_INVALID" });
+  }
+
+  const update = {
+    $unset: { mfaLoginChallengeHash: 1, mfaLoginChallengeExpires: 1 },
+  };
+  if (recoveryIndex >= 0) update.$pull = { mfaRecoveryCodes: recoveryHash };
+
+  const consumedUser = await User.findOneAndUpdate(
+    {
+      _id: user._id,
+      mfaLoginChallengeHash: challengeHash,
+      mfaLoginChallengeExpires: { $gt: new Date() },
+    },
+    update,
+    { new: true }
+  ).select("+failedLoginAttempts +lockedUntil");
+  if (!consumedUser) {
+    return errorResponse(res, "Google MFA challenge has already been used", 409);
+  }
+
+  await clearFailedLogin(consumedUser);
+  consumedUser.lastLoginAt = new Date();
+  await consumedUser.save({ validateBeforeSave: false });
+  await createAuditLog({ req, user: consumedUser._id, action: "GOOGLE_MFA_LOGIN_COMPLETED" });
+  return issueAuthResponse({
+    req,
+    res,
+    user: consumedUser,
+    message: "Google login successful",
+  });
+});
+
 export const googleLogin = asyncHandler(async (req, res) => {
   const { googleToken } = req.body;
   const role = "academy_owner";
@@ -358,6 +420,21 @@ export const googleLogin = asyncHandler(async (req, res) => {
 
   if (!user.isActive || user.isSuspended) {
     return errorResponse(res, "User account is inactive or suspended", 403);
+  }
+
+  if (user.mfaEnabled) {
+    const challengeToken = await createGoogleMfaChallenge(user);
+    await createAuditLog({
+      req,
+      user: user._id,
+      action: "GOOGLE_MFA_CHALLENGE_CREATED",
+    });
+    return successResponse(
+      res,
+      "Authenticator code required",
+      { requiresMfa: true, challengeToken, provider: "google" },
+      202
+    );
   }
 
   await createAuditLog({

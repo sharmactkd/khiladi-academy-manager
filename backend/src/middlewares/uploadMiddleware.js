@@ -35,18 +35,19 @@ const IMAGE_TYPES = [
 ];
 
 const resolveUploadFolder = (fieldName = "") => {
-  if (fieldName === "profilePhoto") return "uploads/students";
+  if (fieldName === "profilePhoto") return "private-uploads/students";
 
   if (["frontBackground", "backBackground"].includes(fieldName)) {
     return "uploads/id-card-templates";
   }
 
   if (
-    fieldName === "certificateBackground" ||
-    /^signature[0-5]$/.test(fieldName)
+    fieldName === "certificateBackground"
   ) {
-    return "uploads/certificate-templates";
+    return "private-uploads/certificate-templates";
   }
+
+  if (/^signature[0-5]$/.test(fieldName)) return "private-uploads/signatures";
 
   if (fieldName === "logo") return "uploads/academies";
 

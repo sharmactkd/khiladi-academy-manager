@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BadgeCheck, ChevronRight, CreditCard, LockKeyhole, ShieldCheck, Sparkles, Tag } from "lucide-react";
 import { planApi } from "../../api/planApi.js";
@@ -26,6 +26,7 @@ const loadRazorpayScript = () => {
 const Checkout = () => {
   const { planCode } = useParams();
   const navigate = useNavigate();
+  const idempotencyKey = useRef(window.crypto.randomUUID());
 
   const [plan, setPlan] = useState(null);
   const [couponCode, setCouponCode] = useState("");
@@ -75,6 +76,7 @@ const Checkout = () => {
       const orderResponse = await billingApi.createOrder({
         planCode,
         couponCode: couponCode.trim() || undefined,
+        idempotencyKey: idempotencyKey.current,
       });
 
       const orderData = orderResponse.data?.data;
