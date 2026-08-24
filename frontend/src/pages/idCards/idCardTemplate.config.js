@@ -10,10 +10,10 @@ export const ID_CARD_FIELDS = [
 export const FRONT_FIELDS = ["studentPhoto", "fullName", "admissionNumber", "martialArt", "beltRank", "branch", "validTill", "qrCode"];
 export const BACK_FIELDS = ["cardNumber", "batch", "phone", "emergencyContact", "academyAddress", "terms", "qrCode"];
 export const ID_CARD_SIZE_PRESETS = [
-  { key: "cr80", label: "CR80 · Standard", note: "Bank card / standard ID", widthMm: 85.6, heightMm: 53.98 },
-  { key: "cr79", label: "CR79 · Adhesive", note: "Card inserts and badges", widthMm: 83.9, heightMm: 51 },
-  { key: "cr100", label: "CR100 · Oversized", note: "Events and high visibility", widthMm: 98.5, heightMm: 67 },
-  { key: "business", label: "3.5 × 2 inch", note: "Business-card format", widthMm: 88.9, heightMm: 50.8 },
+  { key: "cr80", label: "3.37 × 2.13 inches", note: "Standard ID / bank card · 85.60 × 53.98 mm", widthMm: 85.6, heightMm: 53.98 },
+  { key: "cr79", label: "3.30 × 2.01 inches", note: "Adhesive card insert · 83.90 × 51.00 mm", widthMm: 83.9, heightMm: 51 },
+  { key: "cr100", label: "3.88 × 2.64 inches", note: "Oversized event ID · 98.50 × 67.00 mm", widthMm: 98.5, heightMm: 67 },
+  { key: "business", label: "3.50 × 2.00 inches", note: "Business-card format · 88.90 × 50.80 mm", widthMm: 88.9, heightMm: 50.8 },
   { key: "custom", label: "Custom Size", note: "Enter width and height", widthMm: null, heightMm: null },
 ];
 

@@ -12,7 +12,12 @@ export const getFileUrl = (path, fallback = "") => {
 
   const value = String(path);
 
-  if (value.startsWith("http://") || value.startsWith("https://")) {
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("blob:") ||
+    value.startsWith("data:")
+  ) {
     return value;
   }
 
