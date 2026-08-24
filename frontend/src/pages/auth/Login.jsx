@@ -26,6 +26,7 @@ const Login = () => {
   });
 
   const [error, setError] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] =
     useState(false);
@@ -60,6 +61,10 @@ const Login = () => {
         replace: true,
       });
     } catch (err) {
+      const code = err.response?.data?.data?.code;
+      if (code === "MFA_REQUIRED" || code === "MFA_INVALID") {
+        setMfaRequired(true);
+      }
       setError(
         err.response?.data?.message ||
           "Login failed"
@@ -136,6 +141,20 @@ const Login = () => {
           required
         />
 
+        {mfaRequired ? (
+          <Input
+            label="Authenticator or Recovery Code"
+            name="mfaCode"
+            type="text"
+            value={form.mfaCode || ""}
+            onChange={handleChange}
+            placeholder="6-digit code"
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            required
+          />
+        ) : null}
+
         <div className="auth-password-heading">
           <span>Password</span>
 
@@ -162,7 +181,7 @@ const Login = () => {
           loading={loading}
           disabled={googleLoading}
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? "Verifying..." : mfaRequired ? "Verify & Login" : "Login"}
         </Button>
 
         <div

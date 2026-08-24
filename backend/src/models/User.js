@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import {
+  decryptSensitiveValue,
+  encryptSensitiveValue,
+} from "../utils/fieldEncryption.js";
 
 const refreshTokenSessionSchema = new mongoose.Schema(
   {
@@ -109,6 +113,18 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
+    emailVerificationToken: {
+      type: String,
+      select: false,
+      default: undefined,
+    },
+
+    emailVerificationExpires: {
+      type: Date,
+      select: false,
+      default: undefined,
+    },
+
     isPhoneVerified: {
       type: Boolean,
       default: false,
@@ -140,6 +156,38 @@ const userSchema = new mongoose.Schema(
     lastLoginAt: {
       type: Date,
       default: null,
+    },
+
+    failedLoginAttempts: {
+      type: Number,
+      select: false,
+      default: 0,
+      min: 0,
+    },
+
+    lockedUntil: {
+      type: Date,
+      select: false,
+      default: null,
+    },
+
+    mfaEnabled: {
+      type: Boolean,
+      default: false,
+    },
+
+    mfaSecret: {
+      type: String,
+      select: false,
+      default: "",
+      set: encryptSensitiveValue,
+      get: decryptSensitiveValue,
+    },
+
+    mfaRecoveryCodes: {
+      type: [String],
+      select: false,
+      default: [],
     },
 
     refreshTokens: {
@@ -195,6 +243,10 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+userSchema.methods.isLoginLocked = function () {
+  return Boolean(this.lockedUntil && this.lockedUntil > new Date());
+};
+
 userSchema.methods.createSafeResponse = function () {
   return {
     id: this._id,
@@ -208,6 +260,7 @@ userSchema.methods.createSafeResponse = function () {
     isPhoneVerified: this.isPhoneVerified,
     isActive: this.isActive,
     isSuspended: this.isSuspended,
+    mfaEnabled: this.mfaEnabled,
     lastLoginAt: this.lastLoginAt,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,

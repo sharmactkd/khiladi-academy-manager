@@ -30,12 +30,17 @@ const integrationEncryptionKey =
   process.env.INTEGRATION_ENCRYPTION_KEY || process.env.JWT_REFRESH_SECRET;
 const dataEncryptionKey =
   process.env.DATA_ENCRYPTION_KEY || process.env.JWT_REFRESH_SECRET;
+const auditLogSigningKey =
+  process.env.AUDIT_LOG_SIGNING_KEY || process.env.JWT_ACCESS_SECRET;
 
 if (process.env.NODE_ENV === "production" && !process.env.INTEGRATION_ENCRYPTION_KEY) {
   throw new Error("Missing required environment variable: INTEGRATION_ENCRYPTION_KEY");
 }
 if (process.env.NODE_ENV === "production" && !process.env.DATA_ENCRYPTION_KEY) {
   throw new Error("Missing required environment variable: DATA_ENCRYPTION_KEY");
+}
+if (process.env.NODE_ENV === "production" && !process.env.AUDIT_LOG_SIGNING_KEY) {
+  throw new Error("Missing required environment variable: AUDIT_LOG_SIGNING_KEY");
 }
 
 const env = {
@@ -54,8 +59,19 @@ const env = {
     process.env.REFRESH_TOKEN_COOKIE_NAME || "khiladi_refresh_token",
 
   MAX_REFRESH_SESSIONS: Number(process.env.MAX_REFRESH_SESSIONS) || 5,
+  REQUIRE_EMAIL_VERIFICATION:
+    process.env.REQUIRE_EMAIL_VERIFICATION === "true" ||
+    process.env.NODE_ENV === "production",
+  EMAIL_VERIFICATION_EXPIRES_MINUTES:
+    Number(process.env.EMAIL_VERIFICATION_EXPIRES_MINUTES) || 30,
+  MAX_FAILED_LOGIN_ATTEMPTS:
+    Number(process.env.MAX_FAILED_LOGIN_ATTEMPTS) || 5,
+  LOGIN_LOCK_MINUTES: Number(process.env.LOGIN_LOCK_MINUTES) || 15,
   INTEGRATION_ENCRYPTION_KEY: integrationEncryptionKey,
   DATA_ENCRYPTION_KEY: dataEncryptionKey,
+  AUDIT_LOG_SIGNING_KEY: auditLogSigningKey,
+  AUDIT_LOG_RETENTION_DAYS:
+    Number(process.env.AUDIT_LOG_RETENTION_DAYS) || 365,
   TOURNAMENT_API_ALLOWED_ORIGINS: String(
     process.env.TOURNAMENT_API_ALLOWED_ORIGINS ||
       (process.env.NODE_ENV === "production"
@@ -85,6 +101,9 @@ const env = {
   FRONTEND_RESET_PASSWORD_URL:
     process.env.FRONTEND_RESET_PASSWORD_URL ||
     "http://localhost:5173/reset-password",
+  FRONTEND_VERIFY_EMAIL_URL:
+    process.env.FRONTEND_VERIFY_EMAIL_URL ||
+    "http://localhost:5173/verify-email",
 
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || "",
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || "",

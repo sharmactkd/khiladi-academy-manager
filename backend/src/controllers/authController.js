@@ -12,10 +12,50 @@ import {
   hashToken,
 } from "../utils/generateToken.js";
 import env from "../config/env.js";
-import { sendPasswordResetEmail } from "../services/emailService.js";
+import {
+  sendEmailVerificationEmail,
+  sendPasswordResetEmail,
+} from "../services/emailService.js";
 import logger from "../utils/logger.js";
+import {
+  createMfaSecret,
+  createMfaUri,
+  createRecoveryCodes,
+  hashRecoveryCode,
+  verifyMfaCode,
+} from "../utils/mfa.js";
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+
+const verificationExpiry = () =>
+  new Date(Date.now() + env.EMAIL_VERIFICATION_EXPIRES_MINUTES * 60 * 1000);
+
+const createEmailVerification = async (user) => {
+  if (!user.email) return null;
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  user.emailVerificationToken = hashToken(rawToken);
+  user.emailVerificationExpires = verificationExpiry();
+  await user.save({ validateBeforeSave: false });
+  const verificationUrl = `${env.FRONTEND_VERIFY_EMAIL_URL}?token=${rawToken}`;
+  await sendEmailVerificationEmail({ to: user.email, verificationUrl });
+  return rawToken;
+};
+
+const recordFailedLogin = async (user) => {
+  user.failedLoginAttempts = Number(user.failedLoginAttempts || 0) + 1;
+  if (user.failedLoginAttempts >= env.MAX_FAILED_LOGIN_ATTEMPTS) {
+    user.lockedUntil = new Date(Date.now() + env.LOGIN_LOCK_MINUTES * 60 * 1000);
+    user.failedLoginAttempts = 0;
+  }
+  await user.save({ validateBeforeSave: false });
+};
+
+const clearFailedLogin = async (user) => {
+  if (!user.failedLoginAttempts && !user.lockedUntil) return;
+  user.failedLoginAttempts = 0;
+  user.lockedUntil = null;
+  await user.save({ validateBeforeSave: false });
+};
 
 const getRefreshTokenExpiryDate = () => {
   const milliseconds = ms(env.REFRESH_TOKEN_EXPIRES_IN);
@@ -120,8 +160,8 @@ export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, phone, password } = req.body;
   const role = "academy_owner";
 
-  if (!email && !phone) {
-    return errorResponse(res, "Email or phone is required", 400);
+  if (!email) {
+    return errorResponse(res, "Email is required for secure registration", 400);
   }
 
   const existingUser = await User.findOne({
@@ -159,6 +199,16 @@ export const registerUser = asyncHandler(async (req, res) => {
     metadata: { role: user.role },
   });
 
+  if (env.REQUIRE_EMAIL_VERIFICATION && user.email) {
+    await createEmailVerification(user);
+    return successResponse(
+      res,
+      "Registration successful. Verify your email to continue.",
+      { user: buildSafeUserResponse(user), requiresEmailVerification: true },
+      201
+    );
+  }
+
   return issueAuthResponse({
     req,
     res,
@@ -169,13 +219,13 @@ export const registerUser = asyncHandler(async (req, res) => {
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
-  const { identifier, password } = req.body;
+  const { identifier, password, mfaCode } = req.body;
 
   const normalizedIdentifier = String(identifier || "").trim().toLowerCase();
 
   const user = await User.findOne({
     $or: [{ email: normalizedIdentifier }, { phone: normalizedIdentifier }],
-  }).select("+password");
+  }).select("+password +failedLoginAttempts +lockedUntil +mfaSecret +mfaRecoveryCodes");
 
   if (!user) {
     return errorResponse(res, "Invalid credentials", 401);
@@ -185,6 +235,14 @@ export const loginUser = asyncHandler(async (req, res) => {
     return errorResponse(res, "User account is inactive or suspended", 403);
   }
 
+  if (user.isLoginLocked()) {
+    return errorResponse(
+      res,
+      `Account temporarily locked. Try again after ${user.lockedUntil.toISOString()}`,
+      423
+    );
+  }
+
   if (user.loginProvider !== "local") {
     return errorResponse(res, `Please login using ${user.loginProvider}`, 400);
   }
@@ -192,7 +250,37 @@ export const loginUser = asyncHandler(async (req, res) => {
   const isPasswordValid = await user.comparePassword(password);
 
   if (!isPasswordValid) {
+    await recordFailedLogin(user);
     return errorResponse(res, "Invalid credentials", 401);
+  }
+
+  if (user.mfaEnabled) {
+    if (!mfaCode) {
+      return errorResponse(res, "Authenticator code required", 401, {
+        code: "MFA_REQUIRED",
+      });
+    }
+    const normalizedRecovery = hashRecoveryCode(mfaCode);
+    const recoveryIndex = user.mfaRecoveryCodes.indexOf(normalizedRecovery);
+    const validTotp = verifyMfaCode({ secret: user.mfaSecret, code: mfaCode });
+    if (!validTotp && recoveryIndex < 0) {
+      await recordFailedLogin(user);
+      return errorResponse(res, "Invalid authenticator code", 401, {
+        code: "MFA_INVALID",
+      });
+    }
+    if (recoveryIndex >= 0) {
+      user.mfaRecoveryCodes.splice(recoveryIndex, 1);
+      await user.save({ validateBeforeSave: false });
+    }
+  }
+
+  await clearFailedLogin(user);
+
+  if (env.REQUIRE_EMAIL_VERIFICATION && user.email && !user.isEmailVerified) {
+    return errorResponse(res, "Email verification required", 403, {
+      code: "EMAIL_VERIFICATION_REQUIRED",
+    });
   }
 
   user.lastLoginAt = new Date();
@@ -229,6 +317,10 @@ export const googleLogin = asyncHandler(async (req, res) => {
 
   if (!payload?.email) {
     return errorResponse(res, "Google account email not found", 400);
+  }
+
+  if (!payload.email_verified) {
+    return errorResponse(res, "Google account email is not verified", 403);
   }
 
   const email = payload.email.toLowerCase();
@@ -364,6 +456,50 @@ export const resetPassword = asyncHandler(async (req, res) => {
   return successResponse(res, "Password reset successful");
 });
 
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const tokenHash = hashToken(req.body.token);
+  const user = await User.findOne({
+    emailVerificationToken: tokenHash,
+    emailVerificationExpires: { $gt: new Date() },
+  }).select("+emailVerificationToken +emailVerificationExpires");
+
+  if (!user) {
+    return errorResponse(res, "Invalid or expired email verification link", 400);
+  }
+  if (!user.isActive || user.isSuspended) {
+    return errorResponse(res, "User account is inactive or suspended", 403);
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+  await user.save({ validateBeforeSave: false });
+
+  await createAuditLog({ req, user: user._id, action: "EMAIL_VERIFIED" });
+  return issueAuthResponse({ req, res, user, message: "Email verified successfully" });
+});
+
+export const resendEmailVerification = asyncHandler(async (req, res) => {
+  const email = String(req.body.email || "").trim().toLowerCase();
+  const genericMessage =
+    "If an unverified account exists, a new verification link has been sent";
+  const user = await User.findOne({ email }).select(
+    "+emailVerificationToken +emailVerificationExpires"
+  );
+
+  if (!user || user.isEmailVerified || !user.isActive || user.isSuspended) {
+    return successResponse(res, genericMessage);
+  }
+
+  await createEmailVerification(user);
+  await createAuditLog({
+    req,
+    user: user._id,
+    action: "EMAIL_VERIFICATION_RESENT",
+  });
+  return successResponse(res, genericMessage);
+});
+
 export const refreshAccessToken = asyncHandler(async (req, res) => {
   const refreshToken = req.cookies?.[env.REFRESH_TOKEN_COOKIE_NAME];
 
@@ -385,6 +521,13 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   if (!user.isActive || user.isSuspended) {
     clearRefreshTokenCookie(res);
     return errorResponse(res, "User account is inactive or suspended", 403);
+  }
+
+  if (env.REQUIRE_EMAIL_VERIFICATION && user.email && !user.isEmailVerified) {
+    clearRefreshTokenCookie(res);
+    return errorResponse(res, "Email verification required", 403, {
+      code: "EMAIL_VERIFICATION_REQUIRED",
+    });
   }
 
   normalizeRefreshTokenSessions(user);
@@ -449,4 +592,101 @@ export const getMe = asyncHandler(async (req, res) => {
   return successResponse(res, "Current user fetched successfully", {
     user: buildSafeUserResponse(req.user),
   });
+});
+
+export const getActiveSessions = asyncHandler(async (req, res) => {
+  const currentHash = req.cookies?.[env.REFRESH_TOKEN_COOKIE_NAME]
+    ? hashRefreshToken(req.cookies[env.REFRESH_TOKEN_COOKIE_NAME])
+    : "";
+  normalizeRefreshTokenSessions(req.user);
+  await req.user.save({ validateBeforeSave: false });
+  const sessions = req.user.refreshTokens.map((session) => ({
+    sessionId: session.sessionId,
+    createdAt: session.createdAt,
+    expiresAt: session.expiresAt,
+    lastUsedAt: session.lastUsedAt,
+    userAgent: session.userAgent,
+    ip: session.ip,
+    current: Boolean(currentHash && session.tokenHash === currentHash),
+  }));
+  return successResponse(res, "Active sessions fetched", { sessions });
+});
+
+export const revokeSession = asyncHandler(async (req, res) => {
+  const currentHash = req.cookies?.[env.REFRESH_TOKEN_COOKIE_NAME]
+    ? hashRefreshToken(req.cookies[env.REFRESH_TOKEN_COOKIE_NAME])
+    : "";
+  const target = req.user.refreshTokens.find(
+    (session) => session.sessionId === req.params.sessionId
+  );
+  if (!target) return errorResponse(res, "Session not found", 404);
+  const revokedCurrent = Boolean(currentHash && target.tokenHash === currentHash);
+  req.user.refreshTokens = req.user.refreshTokens.filter(
+    (session) => session.sessionId !== req.params.sessionId
+  );
+  await req.user.save({ validateBeforeSave: false });
+  if (revokedCurrent) clearRefreshTokenCookie(res);
+  await createAuditLog({
+    req,
+    user: req.user._id,
+    action: "SESSION_REVOKED",
+    metadata: { sessionId: req.params.sessionId, revokedCurrent },
+  });
+  return successResponse(res, "Session revoked", { revokedCurrent });
+});
+
+export const revokeAllSessions = asyncHandler(async (req, res) => {
+  req.user.refreshTokens = [];
+  await req.user.save({ validateBeforeSave: false });
+  clearRefreshTokenCookie(res);
+  await createAuditLog({ req, user: req.user._id, action: "ALL_SESSIONS_REVOKED" });
+  return successResponse(res, "All sessions revoked");
+});
+
+export const beginMfaSetup = asyncHandler(async (req, res) => {
+  if (req.user.mfaEnabled) {
+    return errorResponse(res, "Multi-factor authentication is already enabled", 409);
+  }
+  const secret = createMfaSecret();
+  return successResponse(res, "MFA setup created", {
+    secret,
+    otpauthUrl: createMfaUri({ secret, email: req.user.email }),
+  });
+});
+
+export const enableMfa = asyncHandler(async (req, res) => {
+  if (!verifyMfaCode({ secret: req.body.secret, code: req.body.code })) {
+    return errorResponse(res, "Invalid authenticator code", 400);
+  }
+  const recoveryCodes = createRecoveryCodes();
+  req.user.mfaSecret = req.body.secret;
+  req.user.mfaRecoveryCodes = recoveryCodes.map(hashRecoveryCode);
+  req.user.mfaEnabled = true;
+  await req.user.save({ validateBeforeSave: false });
+  await createAuditLog({ req, user: req.user._id, action: "MFA_ENABLED" });
+  return successResponse(res, "Multi-factor authentication enabled", {
+    recoveryCodes,
+  });
+});
+
+export const disableMfa = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select(
+    "+password +mfaSecret +mfaRecoveryCodes"
+  );
+  if (!user?.mfaEnabled || !(await user.comparePassword(req.body.password))) {
+    return errorResponse(res, "Password or MFA configuration is invalid", 401);
+  }
+  const recoveryHash = hashRecoveryCode(req.body.code);
+  const valid =
+    verifyMfaCode({ secret: user.mfaSecret, code: req.body.code }) ||
+    user.mfaRecoveryCodes.includes(recoveryHash);
+  if (!valid) return errorResponse(res, "Invalid authenticator code", 401);
+  user.mfaEnabled = false;
+  user.mfaSecret = "";
+  user.mfaRecoveryCodes = [];
+  user.refreshTokens = [];
+  await user.save({ validateBeforeSave: false });
+  clearRefreshTokenCookie(res);
+  await createAuditLog({ req, user: user._id, action: "MFA_DISABLED" });
+  return successResponse(res, "Multi-factor authentication disabled");
 });

@@ -54,9 +54,17 @@ export const AuthProvider = ({ children }) => {
   const register = async (payload) => {
     const response = await authApi.register(payload);
     const data = response.data?.data;
-    persistAuth(data.user, data.accessToken);
+    if (data?.accessToken) persistAuth(data.user, data.accessToken);
+    else persistAuth(null, null);
     return data;
   };
+
+  const verifyEmail = useCallback(async (token) => {
+    const response = await authApi.verifyEmail({ token });
+    const data = response.data?.data;
+    persistAuth(data?.user, data?.accessToken);
+    return data;
+  }, [persistAuth]);
 
   const login = async (payload) => {
     const response = await authApi.login(payload);
@@ -93,10 +101,11 @@ export const AuthProvider = ({ children }) => {
       register,
       login,
       googleLogin,
+      verifyEmail,
       logout,
       refreshAuth,
     }),
-    [user, loading, refreshAuth]
+    [user, loading, refreshAuth, verifyEmail]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

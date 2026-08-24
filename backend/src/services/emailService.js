@@ -25,8 +25,6 @@ export const sendEmail = async ({ to, subject, text, html }) => {
     logger.warn(
       `Email service not configured. Development email skipped for: ${to}`
     );
-    logger.info(`Email subject: ${subject}`);
-    logger.info(`Email text: ${text}`);
     return;
   }
 
@@ -37,6 +35,19 @@ export const sendEmail = async ({ to, subject, text, html }) => {
     text,
     html,
   });
+};
+
+export const sendEmailVerificationEmail = async ({ to, verificationUrl }) => {
+  const subject = "Verify your KHILADI Academy Manager email";
+  const text = `Verify your email address using this link. It expires shortly:\n\n${verificationUrl}\n\nIf you did not create this account, ignore this email.`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10223e">
+      <h2>Verify your email</h2>
+      <p>Confirm this email address to activate your KHILADI Academy Manager account.</p>
+      <p><a href="${verificationUrl}" style="display:inline-block;padding:11px 18px;background:#cf0006;color:#fff;text-decoration:none;border-radius:8px;font-weight:700">Verify email</a></p>
+      <p>If you did not create this account, you can safely ignore this message.</p>
+    </div>`;
+  await sendEmail({ to, subject, text, html });
 };
 
 export const sendPasswordResetEmail = async ({ to, resetUrl }) => {

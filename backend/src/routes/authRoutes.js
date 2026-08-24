@@ -9,6 +9,14 @@ import {
   refreshAccessToken,
   logoutUser,
   getMe,
+  getActiveSessions,
+  resendEmailVerification,
+  revokeAllSessions,
+  revokeSession,
+  verifyEmail,
+  beginMfaSetup,
+  disableMfa,
+  enableMfa,
 } from "../controllers/authController.js";
 
 import {
@@ -17,6 +25,11 @@ import {
   googleLoginValidator,
   forgotPasswordValidator,
   resetPasswordValidator,
+  resendEmailVerificationValidator,
+  verifyEmailValidator,
+  disableMfaValidator,
+  enableMfaValidator,
+  sessionIdValidator,
 } from "../validators/authValidator.js";
 
 import validateRequest from "../middlewares/validateRequest.js";
@@ -71,8 +84,36 @@ router.post(
 
 router.post("/refresh", authRateLimiter, refreshAccessToken);
 
+router.post(
+  "/verify-email",
+  authRateLimiter,
+  verifyEmailValidator,
+  validateRequest,
+  verifyEmail
+);
+
+router.post(
+  "/resend-verification",
+  authRateLimiter,
+  resendEmailVerificationValidator,
+  validateRequest,
+  resendEmailVerification
+);
+
 router.post("/logout", authRateLimiter, logoutUser);
 
 router.get("/me", protect, getMe);
+router.get("/sessions", protect, getActiveSessions);
+router.delete("/sessions", protect, revokeAllSessions);
+router.delete(
+  "/sessions/:sessionId",
+  protect,
+  sessionIdValidator,
+  validateRequest,
+  revokeSession
+);
+router.post("/mfa/setup", protect, beginMfaSetup);
+router.post("/mfa/enable", protect, enableMfaValidator, validateRequest, enableMfa);
+router.post("/mfa/disable", protect, disableMfaValidator, validateRequest, disableMfa);
 
 export default router;

@@ -311,11 +311,11 @@ const Sidebar = ({ isOpen = false, onClose }) => {
             {visibleUtilities.map((item) => <SidebarLink key={item.id} item={item} onNavigate={handleNavigate} />)}
           </div>
         ) : null}
-        <div className={styles.userCard}>
+        <NavLink to="/account/security" className={styles.userCard} onClick={handleNavigate}>
           <span className={styles.userAvatar}>{initialsOf(userName)}</span>
           <span className={styles.userCopy}><strong>{userName}</strong><small>{roleLabel}</small></span>
           <UserRound size={17} />
-        </div>
+        </NavLink>
         <button type="button" className={styles.logout} onClick={handleLogout}>
           <LogOut size={18} /><span>Logout</span>
         </button>

@@ -4,6 +4,8 @@ import Login from "../pages/auth/Login.jsx";
 import Register from "../pages/auth/Register.jsx";
 import ForgotPassword from "../pages/auth/ForgotPassword.jsx";
 import ResetPassword from "../pages/auth/ResetPassword.jsx";
+import VerifyEmail from "../pages/auth/VerifyEmail.jsx";
+import AccountSecurity from "../pages/account/AccountSecurity.jsx";
 
 import OwnerDashboard from "../pages/dashboard/OwnerDashboard.jsx";
 import CreateAcademy from "../pages/onboarding/CreateAcademy.jsx";
@@ -158,6 +160,7 @@ const AppRoutes = () => {
         path="/reset-password"
         element={<ResetPassword />}
       />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/verify/id-card/:verificationId" element={<VerifyIdCard />} />
       <Route path="/verify/certificate/:verificationId" element={<VerifyCertificate />} />
 
@@ -167,6 +170,7 @@ const AppRoutes = () => {
             path="/dashboard"
             element={<OwnerDashboard />}
           />
+          <Route path="/account/security" element={<AccountSecurity />} />
 
 
           {/* BILLING */}

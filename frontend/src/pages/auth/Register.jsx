@@ -44,10 +44,11 @@ const Register = () => {
     setLoading(true);
 
     try {
-      await register(form);
+      const data = await register(form);
 
-      navigate("/dashboard", {
+      navigate(data?.requiresEmailVerification ? "/verify-email" : "/dashboard", {
         replace: true,
+        state: data?.requiresEmailVerification ? { email: form.email } : undefined,
       });
     } catch (err) {
       setError(
@@ -123,42 +124,6 @@ const Register = () => {
           helperText="Use uppercase, lowercase, number and special character."
           required
         />
-
-        <label className="form-field">
-          <span className="form-field__label">
-            Account Role
-
-            <span
-              className="form-field__required"
-              aria-hidden="true"
-            >
-              *
-            </span>
-          </span>
-
-          <select
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            required
-          >
-            <option value="academy_owner">
-              Academy Owner
-            </option>
-
-            <option value="assistant_coach">
-              Assistant Coach
-            </option>
-
-            <option value="parent">
-              Parent
-            </option>
-
-            <option value="student">
-              Student
-            </option>
-          </select>
-        </label>
 
         <p className="auth-form-note">
           By creating an account, you agree to use

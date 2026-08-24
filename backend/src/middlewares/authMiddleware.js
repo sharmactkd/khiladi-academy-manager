@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { verifyAccessToken } from "../utils/generateToken.js";
 import { errorResponse } from "../utils/apiResponse.js";
+import env from "../config/env.js";
 
 export const protect = asyncHandler(async (req, res, next) => {
   const authHeader = req.headers.authorization || "";
@@ -26,6 +27,12 @@ export const protect = asyncHandler(async (req, res, next) => {
 
   if (!user.isActive || user.isSuspended) {
     return errorResponse(res, "User account is inactive or suspended", 403);
+  }
+
+  if (env.REQUIRE_EMAIL_VERIFICATION && user.email && !user.isEmailVerified) {
+    return errorResponse(res, "Email verification required", 403, {
+      code: "EMAIL_VERIFICATION_REQUIRED",
+    });
   }
 
   if (
