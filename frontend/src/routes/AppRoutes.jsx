@@ -576,6 +576,11 @@ const AppRoutes = () => {
             />
 
             <Route
+              path="/id-cards/print-batch"
+              element={<PrintIdCard batch />}
+            />
+
+            <Route
               path="/id-cards/:id/print"
               element={<PrintIdCard />}
             />
