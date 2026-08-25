@@ -41,6 +41,11 @@ const ageCategoryLabelFor = (age) => {
 };
 const formatAadhaar = (value = "") => String(value).replace(/\D/g, "").slice(0, 12).replace(/(\d{4})(?=\d)/g, "$1-");
 const appendValue = (body, key, value) => body.append(key, typeof value === "object" && !(value instanceof File) ? JSON.stringify(value) : value ?? "");
+const getRequestErrorMessage = (error) => {
+  const data = error?.response?.data?.data;
+  const errors = Array.isArray(data) ? data : data?.errors;
+  return errors?.[0]?.message || error?.response?.data?.message || "Student could not be added";
+};
 const unwrapList = (response, key) => {
   const candidates = [
     response,
@@ -167,7 +172,7 @@ const AddStudent = () => {
       toast.success("Student added successfully");
       navigate("/students");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Student could not be added");
+      toast.error(getRequestErrorMessage(error));
     } finally { setSaving(false); }
   };
 

@@ -59,8 +59,8 @@ export const createStudentValidator = [
     .trim()
     .notEmpty()
     .withMessage("First name is required")
-    .isLength({ min: 2, max: 100 })
-    .withMessage("First name must be between 2 and 100 characters"),
+    .isLength({ min: 1, max: 100 })
+    .withMessage("First name cannot exceed 100 characters"),
 
   body("lastName")
     .optional({ checkFalsy: true })
@@ -75,7 +75,7 @@ export const createStudentValidator = [
 
   body("batch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
   body("branch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
-  body("gender").isIn(["male", "female", "other"]).withMessage("Invalid gender"),
+  body("gender").optional({ checkFalsy: true }).isIn(["male", "female", "other"]).withMessage("Invalid gender"),
   body("email").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
 
   phoneValidator("phone", "Phone", "countryCode"),

@@ -51,6 +51,11 @@ const calculateAge = (dob) => {
 };
 const ageCategoryFor = (age) => age === "" ? "" : age <= 11 ? "Sub-Junior" : age <= 14 ? "Cadet" : age <= 17 ? "Junior" : "Senior";
 const appendValue = (body, key, value) => body.append(key, typeof value === "object" && !(value instanceof File) ? JSON.stringify(value) : value ?? "");
+const getRequestErrorMessage = (error) => {
+  const data = error?.response?.data?.data;
+  const errors = Array.isArray(data) ? data : data?.errors;
+  return errors?.[0]?.message || error?.response?.data?.message || "Student could not be updated";
+};
 const unwrapList = (response, key) => {
   const candidates = [
     response,
@@ -241,7 +246,7 @@ const EditStudent = () => {
       toast.success("Student updated successfully");
       navigate(`/students/${id}`);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Student could not be updated");
+      toast.error(getRequestErrorMessage(error));
     } finally { setSaving(false); }
   };
 
