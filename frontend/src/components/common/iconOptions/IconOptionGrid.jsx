@@ -23,27 +23,27 @@ const IconOptionGrid = ({
   const customSet = new Set(customOptions.map((item) => String(item).toLowerCase()));
 
   return (
-    <div className={clsx(styles.grid, compact && styles.compact, className)}>
+    <div className={clsx(styles.grid, "ui-choice-grid", compact && styles.compact, compact && "is-compact", className)}>
       {options.map(asOption).filter((item) => item.value).map((item) => {
         const active = selectedValues.includes(item.value);
         const custom = customSet.has(String(item.value).toLowerCase());
         return (
-          <div className={clsx(styles.item, custom && styles.custom)} key={item.value}>
+          <div className={clsx(styles.item, "ui-choice-wrap", custom && styles.custom, custom && "is-custom")} key={item.value}>
             <button
               type="button"
-              className={clsx(styles.option, active && styles.selected)}
+              className={clsx(styles.option, "ui-choice ui-choice--tile", active && styles.selected, active && "is-selected")}
               aria-pressed={active}
               disabled={item.disabled}
               onClick={() => onToggle?.(item.value)}
               title={`${active ? "Clear" : "Select"} ${item.label}`}
             >
-              <span className={styles.icon}><OptionIcon kind={kind} value={item.value} /></span>
-              <span className={styles.label}>{item.label}</span>
+              <span className={clsx(styles.icon, "ui-choice-icon")}><OptionIcon kind={kind} value={item.value} /></span>
+              <span className={clsx(styles.label, "ui-choice-text")}>{item.label}</span>
             </button>
             {custom && onRemoveCustom ? (
               <button
                 type="button"
-                className={styles.remove}
+                className={clsx(styles.remove, "ui-choice-remove")}
                 aria-label={`Delete custom ${optionKindLabel(kind)} ${item.label}`}
                 title={`Delete ${item.label}`}
                 onClick={() => onRemoveCustom(item.value)}
@@ -54,7 +54,7 @@ const IconOptionGrid = ({
           </div>
         );
       })}
-      {trailingContent ? <div className={styles.trailing}>{trailingContent}</div> : null}
+      {trailingContent ? <div className={clsx(styles.trailing, "ui-choice-trailing")}>{trailingContent}</div> : null}
     </div>
   );
 };

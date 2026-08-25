@@ -13,7 +13,7 @@ const AcademyMartialArtsField = ({ customSport, customSports, options, selectedS
         customOptions={customSports}
         onToggle={onToggle}
         onRemoveCustom={onRemoveCustom}
-        trailingContent={<div className="academy-profile-custom-art"><Plus size={15} aria-hidden="true" /><input aria-label="Add custom sport or martial art" placeholder="Add custom sport / martial art" value={customSport} onChange={(event) => onCustomSportChange(event.target.value)} onKeyDown={onCustomSportKeyDown} />{customSport.trim() ? <button type="button" className="academy-profile-custom-art__add" onClick={onAdd}><Plus size={13} aria-hidden="true" />Add Sport</button> : null}</div>}
+        trailingContent={<div className="academy-profile-custom-art ui-choice-custom"><Plus size={15} aria-hidden="true" /><input aria-label="Add custom sport or martial art" placeholder="Add custom sport / martial art" value={customSport} onChange={(event) => onCustomSportChange(event.target.value)} onKeyDown={onCustomSportKeyDown} />{customSport.trim() ? <button type="button" className="academy-profile-custom-art__add" onClick={onAdd}><Plus size={13} aria-hidden="true" />Add Sport</button> : null}</div>}
       />
     </div>
   </section>

@@ -81,7 +81,7 @@ const CustomTagInput = ({
   };
 
   return (
-    <div className="operations-custom-tag">
+    <div className="operations-custom-tag ui-choice-custom">
       <Plus size={15} aria-hidden="true" />
       <input
         value={value}

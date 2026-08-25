@@ -5,7 +5,6 @@ import {
   Bone,
   Brain,
   BriefcaseMedical,
-  Check,
   Droplet,
   Gauge,
   HeartPulse,
@@ -82,7 +81,7 @@ const MedicalSelectors = ({
           <p>Select a blood group. Select it again to clear.</p>
         </div>
       </div>
-      <div className="student-blood-group-grid" role="radiogroup" aria-labelledby="student-blood-group-label">
+      <div className="student-blood-group-grid ui-choice-grid" role="radiogroup" aria-labelledby="student-blood-group-label">
         {BLOOD_GROUPS.map((group) => {
           const selected = bloodGroup === group;
           return <button
@@ -90,7 +89,7 @@ const MedicalSelectors = ({
             type="button"
             role="radio"
             aria-checked={selected}
-            className={selected ? "is-selected" : ""}
+            className={`ui-choice ui-choice--tile ${selected ? "is-selected" : ""}`}
             onClick={() => onBloodGroupChange?.(selected ? "" : group)}
           >
             <Droplet size={21} aria-hidden="true" />
@@ -109,19 +108,18 @@ const MedicalSelectors = ({
           <p>Select every condition that applies.</p>
         </div>
       </div>
-      <div className="student-medical-conditions-grid">
+      <div className="student-medical-conditions-grid ui-choice-grid">
         {MEDICAL_CONDITIONS.map(({ label, icon: Icon }) => {
           const selected = conditions.includes(label);
           return <button
             key={label}
             type="button"
             aria-pressed={selected}
-            className={selected ? "is-selected" : ""}
+            className={`ui-choice ui-choice--tile ${selected ? "is-selected" : ""}`}
             onClick={() => toggleCondition(label)}
           >
-            <span className="student-condition-icon"><Icon size={21} aria-hidden="true" /></span>
+            <span className="student-condition-icon ui-choice-icon"><Icon size={21} aria-hidden="true" /></span>
             <strong>{label}</strong>
-            {selected ? <span className="student-condition-check"><Check size={12} strokeWidth={3} /></span> : null}
           </button>;
         })}
       </div>

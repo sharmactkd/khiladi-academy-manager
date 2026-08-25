@@ -12,7 +12,6 @@ import {
   UsersRound,
   MessageCircleMore,
   Video,
-  X,
 } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
@@ -21,6 +20,7 @@ import { academyApi } from "../../api/academyApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import PremiumTimePicker from "../../components/common/PremiumTimePicker.jsx";
+import OptionChipsField from "../../components/common/OptionChipsField.jsx";
 import {
   BeltTagsField as OperationsBeltTagsField,
   CoachesInChargeSection,
@@ -116,50 +116,31 @@ const TagField = ({
   customOptions = [],
   onRemoveCustom,
   trailingContent = null,
-}) => (
-  <div className="batch-tag-field batch-tag-field--wide">
-    <span className="batch-field-label">
-      {label}
-      {required ? <b> *</b> : null}
-    </span>
-    <div className="batch-single-select-tags batch-multi-select-tags">
-      {options.map((option) => {
-        const value = typeof option === "string" ? option : option.value;
-        const text = typeof option === "string" ? option : option.label;
-        const active = selected.includes(value);
-        const custom = customOptions.includes(value);
-        return <span className={`batch-tag-option${custom ? " is-custom" : ""}`} key={value}>
-          <button type="button" className={active ? "is-selected" : ""} aria-pressed={active} onClick={() => onToggle(value)}>{text}</button>
-          {custom && onRemoveCustom ? <button type="button" className="batch-tag-option__remove" aria-label={`Delete custom tag ${text}`} title={`Delete ${text}`} onClick={() => onRemoveCustom(value)}><X size={11}/></button> : null}
-        </span>;
-      })}
-      {trailingContent}
-    </div>
-  </div>
-);
+}) => <OptionChipsField
+  className="batch-tag-field batch-tag-field--wide"
+  customValues={customOptions}
+  label={`${label}${required ? " *" : ""}`}
+  multiple
+  onChange={(next) => {
+    const changed = next.find((item) => !selected.includes(item))
+      || selected.find((item) => !next.includes(item));
+    if (changed) onToggle(changed);
+  }}
+  onRemoveCustom={onRemoveCustom}
+  options={options}
+  selected={selected}
+  trailingContent={trailingContent}
+  value={selected}
+/>;
 
-const SingleTagField = ({ label, options, selected, onSelect }) => (
-  <div className="batch-tag-field batch-tag-field--wide">
-    <span className="batch-field-label">{label}</span>
-    <div className="batch-single-select-tags">
-      {options.map((option) => {
-        const value = typeof option === "string" ? option : option.value;
-        const text = typeof option === "string" ? option : option.label;
-        return (
-          <button
-            key={value}
-            type="button"
-            className={selected === value ? "is-selected" : ""}
-            aria-pressed={selected === value}
-            onClick={() => onSelect(value)}
-          >
-            {text}
-          </button>
-        );
-      })}
-    </div>
-  </div>
-);
+const SingleTagField = ({ label, options, selected, onSelect }) => <OptionChipsField
+  className="batch-tag-field batch-tag-field--wide"
+  label={label}
+  multiple={false}
+  onChange={onSelect}
+  options={options}
+  value={selected}
+/>;
 
 const FeeField = ({
   label,
@@ -715,7 +696,7 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
                 customOptions={values.customBatchTypes || []}
                 onRemoveCustom={(item) => removeCustomTag(item, "customBatchTypes", "batchTypes")}
                 trailingContent={
-                  <div className="operations-custom-tag batch-custom-tag batch-custom-tag--inline">
+                  <div className="operations-custom-tag ui-choice-custom batch-custom-tag batch-custom-tag--inline">
                     <Plus size={15} aria-hidden="true" />
                     <input
                       value={customBatchType}

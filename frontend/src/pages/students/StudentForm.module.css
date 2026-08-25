@@ -285,10 +285,7 @@
 
 :global(.student-chip-field [class*="chip"]) {
   min-height: 37px;
-  border: 1px solid #ff8f96;
-  border-radius: 9px;
-  background: #fff;
-  padding: 8px 14px;
+    padding: 8px 14px;
   color: var(--student-ink);
   font-size: 12px;
   font-weight: 600;
