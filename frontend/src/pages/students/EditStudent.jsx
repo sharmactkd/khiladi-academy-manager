@@ -292,12 +292,12 @@ const EditStudent = () => {
       </div>}>
         <div className="student-form-identity"><div className="student-form-fields student-form-fields--three">
           <label><span>Full Name <b>*</b></span><input autoComplete="name" {...register("name", { required: "Name required" })} />{errorFor("name")}</label>
-          <label><span>Admission Number <b>*</b></span><input {...register("admissionNumber", { required: "Admission number required" })} />{errorFor("admissionNumber")}</label>
+          <label><span>Admission Number</span><input placeholder="Existing number remains if left blank" {...register("admissionNumber")} />{errorFor("admissionNumber")}</label>
           <label><span>Aadhaar Number</span><input maxLength={12} inputMode="numeric" placeholder="12 digit Aadhaar number" {...register("aadhaarNumber", { pattern: { value: /^\d{12}$/, message: "Enter a valid 12 digit Aadhaar number" } })} />{errorFor("aadhaarNumber")}</label>
           <div className="student-chip-field student-gender-field"><OptionChipsField label="Gender" multiple={false} options={["Male", "Female"]} value={gender === "female" ? "Female" : "Male"} onChange={(value) => setValue("gender", value.toLowerCase())} /></div>
           <div className="student-demographics-row">
             <label><span>Joining Date</span><input type="date" {...register("joiningDate")} /></label>
-            <label><span>Date of Birth <b>*</b></span><input type="date" max={new Date().toISOString().split("T")[0]} {...register("dob", { required: "Date of birth required" })} />{errorFor("dob")}</label>
+            <label><span>Date of Birth</span><input type="date" max={new Date().toISOString().split("T")[0]} {...register("dob")} />{errorFor("dob")}</label>
             <label><span>Age</span><input value={age === "" ? "" : `${age} Years`} readOnly /></label>
             <label><span>Age Category</span><input value={ageCategory} readOnly /></label>
 

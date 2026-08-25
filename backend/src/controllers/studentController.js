@@ -508,6 +508,20 @@ export const createStudent = asyncHandler(async (req, res) => {
 
   if (payload.branch) await validateBranch(academyId, payload.branch);
 
+  if (!payload.admissionNumber) {
+    payload.admissionNumber = await buildAdmissionNumber({
+      academyId,
+      row: payload,
+      rowIndex: 0,
+      usedAdmissionNumbers: new Set(),
+    });
+  }
+
+  const hasDateOfBirth = Boolean(parseDateSafely(payload.dateOfBirth, null));
+  payload.dateOfBirth = hasDateOfBirth ? payload.dateOfBirth : null;
+  payload.profileIncompleteFields = hasDateOfBirth ? [] : ["dateOfBirth"];
+  payload.profileStatus = hasDateOfBirth ? "complete" : "incomplete";
+
   const existing = await Student.findOne({
     academy: academyId,
     admissionNumber: payload.admissionNumber,
@@ -751,24 +765,20 @@ export const updateStudent = asyncHandler(async (req, res) => {
 
   if (payload.branch) await validateBranch(req.academyId, payload.branch);
 
+  // Admission number is system-generated when omitted during creation. An
+  // empty edit field must never erase that stable identity.
+  if (!payload.admissionNumber) delete payload.admissionNumber;
+
   Object.keys(payload).forEach((key) => {
     student[key] = payload[key];
   });
 
-  if (student.profileStatus === "incomplete") {
-    const supplied = new Set(Object.keys(req.body || {}));
-    const remaining = (student.profileIncompleteFields || []).filter((field) => {
-      if (field === "dateOfBirth" && supplied.has("dateOfBirth")) {
-        return !parseDateSafely(req.body.dateOfBirth, null);
-      }
-      if (field === "gender" && supplied.has("gender")) {
-        return !cleanString(req.body.gender);
-      }
-      return true;
-    });
-    student.profileIncompleteFields = remaining;
-    if (!remaining.length) student.profileStatus = "complete";
-  }
+  const hasDateOfBirth = Boolean(parseDateSafely(student.dateOfBirth, null));
+  const remaining = new Set(student.profileIncompleteFields || []);
+  if (hasDateOfBirth) remaining.delete("dateOfBirth");
+  else remaining.add("dateOfBirth");
+  student.profileIncompleteFields = [...remaining];
+  student.profileStatus = remaining.size ? "incomplete" : "complete";
 
   if (req.file) {
     student.profilePhoto = getUploadedFilePath(req.file);

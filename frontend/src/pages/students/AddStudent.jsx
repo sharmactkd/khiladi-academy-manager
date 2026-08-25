@@ -221,12 +221,12 @@ const AddStudent = () => {
       </div>}>
         <div className="student-form-identity"><div className="student-form-fields student-form-fields--three">
           <label><span>Full Name <b>*</b></span><input autoComplete="name" {...register("name", { required: "Name required" })} />{errorFor("name")}</label>
-          <label><span>Admission Number <b>*</b></span><input {...register("admissionNumber", { required: "Admission number required" })} />{errorFor("admissionNumber")}</label>
+          <label><span>Admission Number</span><input placeholder="Auto-generated if left blank" {...register("admissionNumber")} />{errorFor("admissionNumber")}</label>
           <label><span>Aadhaar Number</span><Controller name="aadhaarNumber" control={control} rules={{ validate: (value) => !value || /^\d{4}-\d{4}-\d{4}$/.test(value) || "Enter a valid 12 digit Aadhaar number" }} render={({ field }) => <input {...field} maxLength={14} inputMode="numeric" autoComplete="off" placeholder="0000-0000-0000" onChange={(event) => field.onChange(formatAadhaar(event.target.value))} />} />{errorFor("aadhaarNumber")}</label>
           <div className="student-chip-field student-gender-field"><OptionChipsField label="Gender" multiple={false} options={["Male", "Female"]} value={gender === "female" ? "Female" : "Male"} onChange={(value) => setValue("gender", value.toLowerCase())} /></div>
           <div className="student-demographics-row">
             <label><span>Joining Date</span><input type="date" {...register("joiningDate")} /></label>
-            <label><span>Date of Birth <b>*</b></span><input type="date" max={new Date().toISOString().split("T")[0]} {...register("dob", { required: "Date of birth required" })} />{errorFor("dob")}</label>
+            <label><span>Date of Birth</span><input type="date" max={new Date().toISOString().split("T")[0]} {...register("dob")} />{errorFor("dob")}</label>
             <label><span>Age</span><input value={age === "" ? "" : `${age} Years`} readOnly /></label>
             <label><span>Age Category</span><input value={ageCategoryLabel} placeholder="Calculated from date of birth" readOnly /></label>
 

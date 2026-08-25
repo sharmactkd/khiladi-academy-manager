@@ -50,9 +50,8 @@ export const studentIdValidator = [
 
 export const createStudentValidator = [
   body("admissionNumber")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("Admission number is required")
     .isLength({ max: 40 })
     .withMessage("Admission number cannot exceed 40 characters"),
 
@@ -70,8 +69,7 @@ export const createStudentValidator = [
     .withMessage("Last name cannot exceed 100 characters"),
 
   body("dateOfBirth")
-    .notEmpty()
-    .withMessage("DOB is required")
+    .optional({ nullable: true, checkFalsy: true })
     .isISO8601()
     .withMessage("DOB must be a valid date"),
 
