@@ -73,6 +73,17 @@ const normalizeOptions = (value) => {
   if (typeof value !== "string" || !value.trim()) return [];
   try { return normalizeOptions(JSON.parse(value)); } catch { return value.split(",").map((item) => item.trim()).filter(Boolean); }
 };
+const normalizeEntityId = (value) => {
+  const candidate = value?._id ?? value?.$oid ?? value;
+  if (typeof candidate === "string") return candidate;
+  if (candidate && typeof candidate === "object") {
+    const keys = Object.keys(candidate);
+    if (keys.length && keys.every((key) => /^\d+$/.test(key))) {
+      return keys.sort((left, right) => Number(left) - Number(right)).map((key) => candidate[key]).join("");
+    }
+  }
+  return "";
+};
 
 const EditStudent = () => {
   const { id } = useParams();
@@ -84,6 +95,7 @@ const EditStudent = () => {
   const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [studentContact, setStudentContact] = useState({ countryCode: "+91", phone: "", country: "India", state: "", city: "" });
@@ -133,8 +145,8 @@ const EditStudent = () => {
       if (!mounted) return;
       setStudent(studentData);
       reset({
-        branch: studentData?.branch?._id || studentData?.branch || "",
-        batch: studentData?.batch?._id || studentData?.batch || "",
+        branch: normalizeEntityId(studentData?.branch),
+        batch: normalizeEntityId(studentData?.batch),
         gender: studentData?.gender || "male",
         status: studentData?.status || "active",
         martialArt: studentData?.martialArt || "",
@@ -187,14 +199,14 @@ const EditStudent = () => {
         const activeBranches = unwrapList(branchResult.value, "branches").filter((branch) => branch?.isActive !== false);
         setBranches(activeBranches);
         if (activeBranches.length === 1 && !studentData?.branch) {
-          setValue("branch", activeBranches[0]._id, { shouldValidate: true });
+          setValue("branch", normalizeEntityId(activeBranches[0]), { shouldValidate: true });
         }
       }
       if (batchResult.status === "fulfilled") {
         const activeBatches = unwrapList(batchResult.value, "batches").filter((batch) => batch?.isActive !== false);
         setBatches(activeBatches);
         if (activeBatches.length === 1 && !studentData?.batch) {
-          setValue("batch", activeBatches[0]._id, { shouldValidate: true });
+          setValue("batch", normalizeEntityId(activeBatches[0]), { shouldValidate: true });
         }
       }
     }).finally(() => { if (mounted) setLoading(false); });
@@ -226,11 +238,12 @@ const EditStudent = () => {
   const onSubmit = async (values) => {
     try {
       setSaving(true);
+      setSubmitError("");
       const names = String(values.name || "").trim().split(/\s+/);
       const payload = {
         admissionNumber: values.admissionNumber, aadhaarNumber: values.aadhaarNumber || "",
         firstName: names[0] || "", lastName: names.slice(1).join(" "), gender: values.gender, dateOfBirth: values.dob,
-        branch: values.branch || "", batch: values.batch || "", ...studentContact, email: values.email || "", address: values.address || "",
+        branch: normalizeEntityId(values.branch), batch: normalizeEntityId(values.batch), ...studentContact, email: values.email || "", address: values.address || "",
         parentContacts: parentContacts.map(({ id, customRelation, ...contact }) => ({ ...contact, relation: contact.relation === "Other" ? customRelation : contact.relation })),
         emergencyContacts: emergencyContacts.map(({ id, customRelation, ...contact }) => ({ ...contact, relation: contact.relation === "Other" ? customRelation : contact.relation })),
         schoolName: values.schoolName || "", className: values.className || "",
@@ -239,14 +252,20 @@ const EditStudent = () => {
         bloodGroup: values.bloodGroup || "", medicalConditions: buildMedicalConditionsPayload(medicalConditions, otherMedicalCondition), joiningDate: values.joiningDate || "", status: values.status || "active",
         notes: values.medicalNotes || "",
       };
-      const body = new FormData();
-      Object.entries(payload).forEach(([key, value]) => appendValue(body, key, value));
-      if (photo) body.append("profilePhoto", photo);
-      await studentApi.update(id, body);
+      if (photo) {
+        const body = new FormData();
+        Object.entries(payload).forEach(([key, value]) => appendValue(body, key, value));
+        body.append("profilePhoto", photo);
+        await studentApi.update(id, body);
+      } else {
+        await studentApi.update(id, payload);
+      }
       toast.success("Student updated successfully");
       navigate(`/students/${id}`);
     } catch (error) {
-      toast.error(getRequestErrorMessage(error));
+      const message = getRequestErrorMessage(error);
+      setSubmitError(message);
+      toast.error(message);
     } finally { setSaving(false); }
   };
 
@@ -280,11 +299,11 @@ const EditStudent = () => {
       <StudentFormSection eyebrow="IDENTITY" title="Basic Information" description="Student identity, admission and membership details." icon={IdCard} action={<div className="student-identity-actions">
         <div className="student-assignment-field">
           <span>Branch</span>
-          {branches.length > 1 ? <select {...register("branch")}><option value="">Select Branch</option>{branches.map((branch) => <option key={branch._id} value={branch._id}>{branch.branchName}</option>)}</select> : <strong>{branches[0]?.branchName || "No Active Branch"}</strong>}
+          {branches.length > 1 ? <select {...register("branch")}><option value="">Select Branch</option>{branches.map((branch) => { const branchId = normalizeEntityId(branch); return <option key={branchId} value={branchId}>{branch.branchName}</option>; })}</select> : <strong>{branches[0]?.branchName || "No Active Branch"}</strong>}
         </div>
         <div className="student-assignment-field">
           <span>Batch</span>
-          {batches.length > 1 ? <select {...register("batch")}><option value="">Select Batch</option>{batches.map((batch) => <option key={batch._id} value={batch._id}>{batch.batchName}</option>)}</select> : <strong>{batches[0]?.batchName || "No Active Batch"}</strong>}
+          {batches.length > 1 ? <select {...register("batch")}><option value="">Select Batch</option>{batches.map((batch) => { const batchId = normalizeEntityId(batch); return <option key={batchId} value={batchId}>{batch.batchName}</option>; })}</select> : <strong>{batches[0]?.batchName || "No Active Batch"}</strong>}
         </div>
         <div className="student-status-field">
           <span>Status</span>
@@ -372,6 +391,7 @@ const EditStudent = () => {
           </div>
         </StudentFormSection>
       </div>
+      {submitError ? <div className="student-submit-error" role="alert"><ShieldAlert size={18} /><span><strong>Student could not be updated.</strong>{submitError}</span></div> : null}
       <FormActionBar
         className="student-form-actions"
         title="Ready to update this student?"

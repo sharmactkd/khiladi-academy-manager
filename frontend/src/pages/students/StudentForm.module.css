@@ -11,6 +11,30 @@
   gap: 16px;
 }
 
+:global(.student-submit-error) {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  color: #991b1b;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+:global(.student-submit-error > svg) {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #e30613;
+}
+
+:global(.student-submit-error > span) {
+  display: grid;
+  gap: 2px;
+}
+
 :global(.student-form-grid) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

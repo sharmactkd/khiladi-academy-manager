@@ -2,6 +2,32 @@ import { body, param, query } from "express-validator";
 
 const phoneRegex = /^[0-9\s()+-]{1,25}$/;
 
+const normalizeMongoId = (value) => {
+  const candidate = value?._id ?? value?.$oid ?? value;
+  if (typeof candidate === "string") return candidate.trim();
+
+  // Backward compatibility for clients that received an ObjectId corrupted
+  // into an indexed-character object by an older API serializer.
+  if (candidate && typeof candidate === "object") {
+    const keys = Object.keys(candidate);
+    if (keys.length && keys.every((key) => /^\d+$/.test(key))) {
+      return keys
+        .sort((left, right) => Number(left) - Number(right))
+        .map((key) => candidate[key])
+        .join("");
+    }
+  }
+
+  return value;
+};
+
+const optionalMongoIdValidator = (field, label) =>
+  body(field)
+    .optional({ nullable: true, checkFalsy: true })
+    .customSanitizer(normalizeMongoId)
+    .isMongoId()
+    .withMessage(`${label} must be a valid ID`);
+
 const phoneValidator = (field, label, countryCodeField) =>
   body(field)
     .optional({ checkFalsy: true })
@@ -73,8 +99,8 @@ export const createStudentValidator = [
     .isISO8601()
     .withMessage("DOB must be a valid date"),
 
-  body("batch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
-  body("branch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
+  optionalMongoIdValidator("batch", "Batch"),
+  optionalMongoIdValidator("branch", "Branch"),
   body("gender").optional({ checkFalsy: true }).isIn(["male", "female", "other"]).withMessage("Invalid gender"),
   body("email").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
 
@@ -104,8 +130,8 @@ export const updateStudentValidator = [
   body("firstName")
     .optional({ checkFalsy: true })
     .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage("First name must be between 2 and 100 characters"),
+    .isLength({ min: 1, max: 100 })
+    .withMessage("First name cannot exceed 100 characters"),
 
   body("lastName")
     .optional({ checkFalsy: true })
@@ -113,9 +139,9 @@ export const updateStudentValidator = [
     .isLength({ max: 100 })
     .withMessage("Last name cannot exceed 100 characters"),
 
-  body("batch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
-  body("branch").optional({ nullable: true, checkFalsy: true }).isMongoId(),
-  body("gender").optional().isIn(["male", "female", "other"]),
+  optionalMongoIdValidator("batch", "Batch"),
+  optionalMongoIdValidator("branch", "Branch"),
+  body("gender").optional({ checkFalsy: true }).isIn(["male", "female", "other"]),
 
   body("dateOfBirth")
     .optional({ nullable: true, checkFalsy: true })

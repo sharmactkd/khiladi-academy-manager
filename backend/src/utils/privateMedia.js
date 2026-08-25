@@ -71,11 +71,31 @@ export const signPrivateMediaReferences = (value, seen = new WeakSet()) => {
     return isPrivateMediaPath(value) ? createSignedPrivateMediaUrl(value) : value;
   }
   if (!value || typeof value !== "object" || value instanceof Date || Buffer.isBuffer(value)) return value;
+
+  // ObjectIds are scalar references, not traversable records. Handle them
+  // before cycle detection so a repeated id is consistently returned as a
+  // string everywhere in the response.
+  if (value?._bsontype === "ObjectId" || value?.constructor?.name === "ObjectId") {
+    return value.toString();
+  }
+
   if (seen.has(value)) return value;
   seen.add(value);
 
   if (Array.isArray(value)) return value.map((item) => signPrivateMediaReferences(item, seen));
   const source = typeof value.toJSON === "function" ? value.toJSON() : value;
+
+  // Mongoose ObjectIds serialize to their 24-character hexadecimal string.
+  // Treat that result as a scalar. Recursing with Object.entries("abc") would
+  // otherwise turn it into { 0: "a", 1: "b", 2: "c" }, corrupting every
+  // populated/reference id returned by the API.
+  if (typeof source === "string") {
+    return isPrivateMediaPath(source) ? createSignedPrivateMediaUrl(source) : source;
+  }
+  if (!source || typeof source !== "object" || source instanceof Date || Buffer.isBuffer(source)) {
+    return source;
+  }
+
   return Object.fromEntries(
     Object.entries(source).map(([key, item]) => [key, signPrivateMediaReferences(item, seen)])
   );
