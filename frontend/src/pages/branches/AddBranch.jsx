@@ -479,7 +479,7 @@ const AddBranch = () => {
                   onChange={(event) =>
                     updateField("headCoachAchievements", event.target.value)
                   }
-                  placeholder="Dan rank, certifications, medals, coaching experienceâ€¦"
+                  placeholder="Dan rank, certifications, medals, coaching experience…"
                   rows={3}
                   maxLength={1000}
                 />
@@ -518,7 +518,7 @@ const AddBranch = () => {
                       event.target.value,
                     )
                   }
-                  placeholder="Dan rank, certifications, medals, coaching experienceâ€¦"
+                  placeholder="Dan rank, certifications, medals, coaching experience…"
                   rows={3}
                   maxLength={1000}
                 />
@@ -673,7 +673,7 @@ const AddBranch = () => {
             disabled={isSaving}
           >
             <Plus size={16} />{" "}
-            {savingMode === "create-another" ? "Savingâ€¦" : "Save & Add Another"}
+            {savingMode === "create-another" ? "Saving…" : "Save & Add Another"}
           </button>
           <button
             type="submit"
@@ -683,7 +683,7 @@ const AddBranch = () => {
             disabled={isSaving}
           >
             <Save size={16} />{" "}
-            {savingMode === "create" ? "Creatingâ€¦" : "Create Branch"}
+            {savingMode === "create" ? "Creating…" : "Create Branch"}
           </button>
         </footer>
       </form>

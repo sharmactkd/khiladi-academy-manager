@@ -44,7 +44,7 @@ export const ownerNavigation = [
     label: "Academy",
     icon: Building2,
     children: [
-      { id: "academy-profile", label: "Academy Profile", to: "/academy/profile" },
+      { id: "academy-profile", label: "Academy Profile", to: "/academy/profile", roles: OWNER_ROLES },
       { id: "branches", label: "Branches", to: "/branches" },
       { id: "batches", label: "Batches", to: "/batches" },
     ],
@@ -197,6 +197,6 @@ export const quickCreateItems = [
     to: "/championship-records/new",
     icon: Trophy,
   },
-  { id: "branch", label: "Add branch", to: "/branches/new", icon: Building2 },
+  { id: "branch", label: "Add branch", to: "/branches/new", icon: Building2, roles: OWNER_ROLES },
   { id: "batch", label: "Add batch", to: "/batches/new", icon: Plus },
 ];

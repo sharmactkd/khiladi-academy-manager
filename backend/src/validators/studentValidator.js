@@ -1,24 +1,22 @@
 import { body, param, query } from "express-validator";
 
-const phoneRegex = /^[0-9-]{1,15}$/;
-const indiaPhoneRegex = /^[0-9]{10}$/;
-const indiaPhoneDisplayRegex = /^[0-9]{4}-[0-9]{2}-[0-9]{4}$/;
+const phoneRegex = /^[0-9\s()+-]{1,25}$/;
 
-const phoneValidator = (field, label) =>
+const phoneValidator = (field, label, countryCodeField) =>
   body(field)
     .optional({ checkFalsy: true })
     .trim()
     .matches(phoneRegex)
-    .withMessage(`${label} must contain numbers and hyphen only`)
-    .custom((value) => {
-      const phone = String(value || "").trim();
-      const normalizedPhone = phone.replace(/-/g, "");
+    .withMessage(`${label} contains unsupported characters`)
+    .custom((value, { req }) => {
+      const digits = String(value || "").replace(/\D/g, "");
+      const countryCode = String(req.body?.[countryCodeField] || "+91");
 
-      const isValidDisplayFormat = indiaPhoneDisplayRegex.test(phone);
-      const isValidDigits = indiaPhoneRegex.test(normalizedPhone);
-
-      if (!isValidDisplayFormat || !isValidDigits) {
-        throw new Error(`${label} must be in format 0000-00-0000`);
+      if (countryCode === "+91" && digits.length !== 10) {
+        throw new Error(`${label} must contain exactly 10 digits for India`);
+      }
+      if (countryCode !== "+91" && (digits.length < 4 || digits.length > 15)) {
+        throw new Error(`${label} must contain 4 to 15 digits`);
       }
 
       return true;
@@ -37,7 +35,10 @@ const contactArrayValidator = (field, label) =>
       contact && typeof contact === "object" &&
       String(contact.name || "").length <= 150 &&
       String(contact.relation || "").length <= 80 &&
-      String(contact.phone || "").replace(/\D/g, "").length <= 15
+      (!contact.phone || (() => {
+        const length = String(contact.phone).replace(/\D/g, "").length;
+        return length >= 4 && length <= 15;
+      })())
     );
     if (!valid) throw new Error(`${label} contains invalid contact details`);
     return true;
@@ -79,8 +80,8 @@ export const createStudentValidator = [
   body("gender").isIn(["male", "female", "other"]).withMessage("Invalid gender"),
   body("email").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
 
-  phoneValidator("phone", "Phone"),
-  phoneValidator("emergencyContactPhone", "Emergency contact phone"),
+  phoneValidator("phone", "Phone", "countryCode"),
+  phoneValidator("emergencyContactPhone", "Emergency contact phone", "emergencyContactCountryCode"),
   contactArrayValidator("parentContacts", "Parent contacts"),
   contactArrayValidator("emergencyContacts", "Emergency contacts"),
 
@@ -130,9 +131,9 @@ export const updateStudentValidator = [
 
   body("email").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
 
-  phoneValidator("phone", "Phone"),
-  phoneValidator("parentPhone", "Parent phone"),
-  phoneValidator("emergencyContactPhone", "Emergency contact phone"),
+  phoneValidator("phone", "Phone", "countryCode"),
+  phoneValidator("parentPhone", "Parent phone", "parentCountryCode"),
+  phoneValidator("emergencyContactPhone", "Emergency contact phone", "emergencyContactCountryCode"),
   contactArrayValidator("parentContacts", "Parent contacts"),
   contactArrayValidator("emergencyContacts", "Emergency contacts"),
 

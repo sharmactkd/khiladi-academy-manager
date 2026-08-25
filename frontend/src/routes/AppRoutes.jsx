@@ -115,6 +115,8 @@ import ProtectedRoute from "./ProtectedRoute.jsx";
 import RoleRoute from "./RoleRoute.jsx";
 
 import DashboardLayout from "../layouts/DashboardLayout.jsx";
+import useAuth from "../hooks/useAuth.js";
+import { getRoleLandingPath } from "../utils/authLanding.js";
 
 const managementRoles = [
   "super_admin",
@@ -142,12 +144,18 @@ const billingRoles = [
   "academy_owner",
 ];
 
+const RoleLandingRedirect = () => {
+  const { isAuthenticated, loading, user } = useAuth();
+  if (loading) return null;
+  return <Navigate to={isAuthenticated ? getRoleLandingPath(user?.role) : "/login"} replace />;
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
       <Route
         path="/"
-        element={<Navigate to="/dashboard" replace />}
+        element={<RoleLandingRedirect />}
       />
 
       <Route path="/login" element={<Login />} />
@@ -166,10 +174,6 @@ const AppRoutes = () => {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
-          <Route
-            path="/dashboard"
-            element={<OwnerDashboard />}
-          />
           <Route path="/account/security" element={<AccountSecurity />} />
 
 
@@ -291,12 +295,8 @@ const AppRoutes = () => {
               />
             }
           >
+            <Route path="/dashboard" element={<OwnerDashboard />} />
 
-             <Route
-    path="/academy/profile"
-    element={<AcademyProfile />}
-  />
-  
             {/* BRANCHES */}
 
             <Route
@@ -687,6 +687,8 @@ const AppRoutes = () => {
               <RoleRoute allowedRoles={ownerRoles} />
             }
           >
+            <Route path="/academy/profile" element={<AcademyProfile />} />
+
             <Route
               path="/branches/new"
               element={<AddBranch />}

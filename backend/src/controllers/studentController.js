@@ -73,7 +73,7 @@ const cleanString = (value, maxLength = 500) => {
 };
 
 const cleanPhone = (value) =>
-  cleanString(value).replace(/\D/g, "").slice(0, 10);
+  cleanString(value).replace(/\D/g, "").slice(0, 15);
 
 const cleanAadhaar = (value) =>
   cleanString(value).replace(/\D/g, "").slice(0, 12);

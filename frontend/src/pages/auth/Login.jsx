@@ -10,6 +10,7 @@ import AuthLayout from "../../layouts/AuthLayout.jsx";
 import Button from "../../components/common/Button.jsx";
 import Input from "../../components/common/Input.jsx";
 import useAuth from "../../hooks/useAuth.js";
+import { getRoleLandingPath } from "../../utils/authLanding.js";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -33,9 +34,8 @@ const Login = () => {
     useState(false);
   const [googleMfaChallenge, setGoogleMfaChallenge] = useState("");
 
-  const from =
-    location.state?.from?.pathname ||
-    "/dashboard";
+  const requestedPath = location.state?.from?.pathname;
+  const destinationFor = (user) => requestedPath || getRoleLandingPath(user?.role);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -57,13 +57,14 @@ const Login = () => {
     setLoading(true);
 
     try {
+      let data;
       if (googleMfaChallenge) {
-        await completeGoogleMfa(googleMfaChallenge, form.mfaCode || "");
+        data = await completeGoogleMfa(googleMfaChallenge, form.mfaCode || "");
       } else {
-        await login(form);
+        data = await login(form);
       }
 
-      navigate(from, {
+      navigate(destinationFor(data?.user), {
         replace: true,
       });
     } catch (err) {
@@ -105,7 +106,7 @@ const Login = () => {
         return;
       }
 
-      navigate(from, {
+      navigate(destinationFor(data?.user), {
         replace: true,
       });
     } catch (err) {

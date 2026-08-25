@@ -75,6 +75,7 @@ const CoachCard = ({ title, name, countryCode, phone, achievements }) => (
 const BranchDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
+  const canManageBranch = ["super_admin", "academy_owner"].includes(user?.role);
   const [academy, setAcademy] = useState(null);
   const [branch, setBranch] = useState(null);
   const [counts, setCounts] = useState({});
@@ -176,7 +177,7 @@ const BranchDetail = () => {
         </div>
         <div className="branch-detail-heading__actions">
           <Link to="/branches" className="btn btn-outline"><ArrowLeft size={16} /> Back</Link>
-          <Link to={"/branches/" + branch._id + "/edit"} className="btn btn-primary"><Edit3 size={16} /> Edit Branch</Link>
+          {canManageBranch ? <Link to={"/branches/" + branch._id + "/edit"} className="btn btn-primary"><Edit3 size={16} /> Edit Branch</Link> : null}
         </div>
       </header>
 

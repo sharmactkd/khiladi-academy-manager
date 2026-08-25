@@ -25,6 +25,7 @@ import "./Branches.module.css";
 const Branches = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const canManageBranches = ["super_admin", "academy_owner"].includes(user?.role);
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [allBranches, setAllBranches] = useState([]);
@@ -109,6 +110,7 @@ const Branches = () => {
   };
 
   const handleDeactivate = async (branch) => {
+    if (!canManageBranches) return;
     if (!window.confirm(`Deactivate ${branch.branchName || "this branch"}?`)) return;
     try {
       setDeactivatingId(branch._id);
@@ -138,7 +140,7 @@ const Branches = () => {
 
       <header className="branches-heading">
         <div><span>Academy network</span><h2>Branches</h2><p>Manage every academy location, coach and operational status from one workspace.</p></div>
-        <Link to="/branches/new" className="btn btn-primary branches-add-button"><Plus size={17} /> Add Branch</Link>
+        {canManageBranches ? <Link to="/branches/new" className="btn btn-primary branches-add-button"><Plus size={17} /> Add Branch</Link> : null}
       </header>
 
       <MetricGrid className="branches-stats" items={[
@@ -165,8 +167,8 @@ const Branches = () => {
 
       <section className="branches-results" aria-busy={loading}>
         {loading ? <div className="branches-state"><span className="branches-spinner" /><strong>Loading branches…</strong></div> : visibleBranches.length ? (
-          <div className="branches-card-list">{visibleBranches.map((branch) => <BranchCard key={branch._id} branch={branch} busy={deactivatingId===branch._id} onOpen={(item)=>navigate(`/branches/${item._id}`)} onDeactivate={handleDeactivate}/>)}</div>
-        ) : <div className="branches-state"><Building2 size={34} /><strong>No branches found</strong><p>Try another filter or add your first branch.</p><Link to="/branches/new" className="btn btn-primary branches-add-button"><Plus size={16} /> Add Branch</Link></div>}
+          <div className="branches-card-list">{visibleBranches.map((branch) => <BranchCard key={branch._id} branch={branch} canManage={canManageBranches} busy={deactivatingId===branch._id} onOpen={(item)=>navigate(`/branches/${item._id}`)} onDeactivate={handleDeactivate}/>)}</div>
+        ) : <div className="branches-state"><Building2 size={34} /><strong>No branches found</strong><p>{canManageBranches ? "Try another filter or add your first branch." : "Try another search or status filter."}</p>{canManageBranches ? <Link to="/branches/new" className="btn btn-primary branches-add-button"><Plus size={16} /> Add Branch</Link> : null}</div>}
 
         {!loading && branches.length > PAGE_SIZE ? <footer className="branches-pagination"><span>Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, branches.length)} of {branches.length}</span><div><button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)}>Previous</button>{Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => <button type="button" key={page} className={currentPage === page ? "is-active" : ""} onClick={() => setCurrentPage(page)}>{page}</button>)}<button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => page + 1)}>Next</button></div></footer> : null}
       </section>

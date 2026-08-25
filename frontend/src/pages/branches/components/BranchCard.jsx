@@ -6,7 +6,7 @@ import "./BranchCard.module.css";
 const value = (input, fallback = "Not added") => String(input ?? "").trim() || fallback;
 const phone = (code, number) => String(number || "").trim() ? `${code || "+91"} ${number}` : "Not added";
 
-const BranchCard = ({ branch, busy = false, onDeactivate, onOpen }) => {
+const BranchCard = ({ branch, canManage = false, busy = false, onDeactivate, onOpen }) => {
   const active = branch?.isActive !== false;
   const address = joinAddressParts([branch?.address, branch?.city || branch?.district, branch?.state, branch?.country]);
   const open = () => onOpen?.(branch);
@@ -46,10 +46,10 @@ const BranchCard = ({ branch, busy = false, onDeactivate, onOpen }) => {
           <div><span><UserRound size={16} /></span><p><small>Head Coach</small><strong>{value(branch?.headCoachName)}</strong><em>{phone(branch?.headCoachCountryCode, branch?.headCoachPhone)}</em></p></div>
         </section>
 
-        <div className="branch-list-card__actions" onClick={(event) => event.stopPropagation()}>
+        {canManage ? <div className="branch-list-card__actions" onClick={(event) => event.stopPropagation()}>
           <Link to={`/branches/${branch._id}/edit`}><Pencil size={15} /> Edit</Link>
           {active ? <button type="button" onClick={() => onDeactivate?.(branch)} disabled={busy}><Power size={15} />{busy ? "Working…" : "Deactivate"}</button> : <span>Branch is inactive</span>}
-        </div>
+        </div> : null}
       </div>
     </article>
   );

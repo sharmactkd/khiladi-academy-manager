@@ -160,16 +160,9 @@ const PendingFees = () => {
                         Collect
                       </Link>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          toast(
-                            "Reminder feature placeholder hai"
-                          )
-                        }
-                      >
+                      <Link to={`/communication?tab=reminders&type=fee&student=${item.student?._id || ""}`}>
                         Reminder
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))}

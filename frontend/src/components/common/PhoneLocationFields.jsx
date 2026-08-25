@@ -9,8 +9,9 @@ const DEFAULT_DIAL_CODE = "+91";
 
 const onlyDigits = (value) => String(value || "").replace(/\D/g, "");
 
-const formatPhone = (digits) => {
-  const clean = onlyDigits(digits);
+const formatPhone = (digits, dialCode = DEFAULT_DIAL_CODE) => {
+  const clean = onlyDigits(digits).slice(0, dialCode === "+91" ? 10 : 15);
+  if (dialCode !== "+91") return clean;
   if (clean.length <= 4) return clean;
   if (clean.length <= 6) return `${clean.slice(0, 4)}-${clean.slice(4)}`;
   return `${clean.slice(0, 4)}-${clean.slice(4, 6)}-${clean.slice(6, 10)}`;
@@ -163,11 +164,11 @@ const PhoneLocationFields = ({
       item.dialCode === "+91" ? onlyDigits(phone).slice(0, 10) : onlyDigits(phone);
 
     update("countryCode", item.dialCode);
-    update("phone", formatPhone(digits));
+    update("phone", formatPhone(digits, item.dialCode));
     updatePhoneNumbers(
       normalizedPhones.map((number, index) =>
         index === 0
-          ? { ...number, countryCode: item.dialCode, phone: formatPhone(digits) }
+          ? { ...number, countryCode: item.dialCode, phone: formatPhone(digits, item.dialCode) }
           : number
       )
     );
@@ -180,12 +181,12 @@ const PhoneLocationFields = ({
     const digits =
       countryCode === "+91"
         ? onlyDigits(event.target.value).slice(0, 10)
-        : onlyDigits(event.target.value);
+        : onlyDigits(event.target.value).slice(0, 15);
 
-    update("phone", formatPhone(digits));
+    update("phone", formatPhone(digits, countryCode));
     updatePhoneNumbers(
       normalizedPhones.map((number, index) =>
-        index === 0 ? { ...number, phone: formatPhone(digits) } : number
+        index === 0 ? { ...number, phone: formatPhone(digits, countryCode) } : number
       )
     );
   };
@@ -206,8 +207,8 @@ const PhoneLocationFields = ({
         const digits =
           number.countryCode === "+91"
             ? onlyDigits(value).slice(0, 10)
-            : onlyDigits(value);
-        return { ...number, phone: formatPhone(digits) };
+            : onlyDigits(value).slice(0, 15);
+        return { ...number, phone: formatPhone(digits, number.countryCode) };
       }
 
       return { ...number, [field]: value };

@@ -6,8 +6,8 @@ const Unauthorized = () => {
       <div className="card center-card">
         <h1>Unauthorized</h1>
         <p className="muted">You do not have permission to access this page.</p>
-        <Link className="btn btn-primary" to="/dashboard">
-          Go to Dashboard
+        <Link className="btn btn-primary" to="/">
+          Go to Home
         </Link>
       </div>
     </main>

@@ -6,8 +6,8 @@ const NotFound = () => {
       <div className="card center-card">
         <h1>404</h1>
         <p className="muted">Page not found.</p>
-        <Link className="btn btn-primary" to="/dashboard">
-          Go to Dashboard
+        <Link className="btn btn-primary" to="/">
+          Go to Home
         </Link>
       </div>
     </main>

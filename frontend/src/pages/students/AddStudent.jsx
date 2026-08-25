@@ -171,6 +171,11 @@ const AddStudent = () => {
     } finally { setSaving(false); }
   };
 
+  const onInvalid = (formErrors) => {
+    const firstError = Object.values(formErrors || {})[0];
+    toast.error(firstError?.message || "Please complete all required student fields");
+  };
+
   return <div className="page add-branch-page student-form-page">
     <AcademyHeroHeader
       headingId="add-student-academy-name"
@@ -195,7 +200,7 @@ const AddStudent = () => {
       </div>
       <Link className="btn btn-outline" to="/students"><ArrowLeft size={16} /> Back to Students</Link>
     </div>
-    <form className="student-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+    <form className="student-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
       <StudentFormSection eyebrow="IDENTITY" title="Basic Information" description="Student identity, admission and membership details." icon={IdCard} action={<div className="student-identity-actions">
         <div className="student-assignment-field">
           <span>Branch</span>
