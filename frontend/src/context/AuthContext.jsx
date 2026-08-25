@@ -3,6 +3,7 @@ import { authApi } from "../api/authApi.js";
 import { clearAccessToken, getAccessToken, setAccessToken } from "../api/api.js";
 import { USER_KEY } from "../utils/constants.js";
 import { getStoredJson, removeStoredItem, setStoredJson } from "../utils/storage.js";
+import { clearRequestCache } from "../api/requestCache.js";
 
 export const AuthContext = createContext(null);
 
@@ -11,6 +12,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const persistAuth = useCallback((userData, token) => {
+    clearRequestCache();
     setUser(userData || null);
 
     if (userData) {
@@ -96,6 +98,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     clearAccessToken();
+    clearRequestCache();
     setUser(null);
     removeStoredItem(USER_KEY);
   };

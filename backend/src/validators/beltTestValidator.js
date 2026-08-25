@@ -177,6 +177,7 @@ export const updateBeltTestValidator = [
 ];
 
 export const listBeltTestsValidator = [
+  query("latestByStudent").optional().isBoolean(),
   query("page").optional().isInt({ min: 1 }),
   query("limit").optional().isInt({ min: 1, max: 100 }),
   query("student").optional({ checkFalsy: true }).isMongoId(),

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Country, State, City } from "country-state-city";
+import Country from "country-state-city/lib/country.js";
+import State from "country-state-city/lib/state.js";
 import ReactCountryFlag from "react-country-flag";
 import { Plus, Trash2 } from "lucide-react";
 import "./PhoneLocationFields.module.css";
@@ -77,6 +78,7 @@ const PhoneLocationFields = ({
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [codeSearch, setCodeSearch] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
+  const [districts, setDistricts] = useState([]);
 
   useEffect(() => {
     const nextCountry =
@@ -95,9 +97,26 @@ const PhoneLocationFields = ({
     [selectedCountryIso]
   );
 
-  const districts = useMemo(() => {
-    if (!selectedCountryIso || !selectedStateIso) return [];
-    return City.getCitiesOfState(selectedCountryIso, selectedStateIso);
+  useEffect(() => {
+    let active = true;
+    if (!selectedCountryIso || !selectedStateIso) {
+      setDistricts([]);
+      return () => {
+        active = false;
+      };
+    }
+
+    // The global city dataset is several megabytes. Load it only when a user
+    // actually chooses a state instead of blocking every form's first render.
+    import("country-state-city/lib/city.js").then(({ default: City }) => {
+      if (active) {
+        setDistricts(City.getCitiesOfState(selectedCountryIso, selectedStateIso));
+      }
+    });
+
+    return () => {
+      active = false;
+    };
   }, [selectedCountryIso, selectedStateIso]);
 
   const countryCodeOptions = useMemo(() => {

@@ -1,115 +1,90 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import Login from "../pages/auth/Login.jsx";
-import Register from "../pages/auth/Register.jsx";
-import ForgotPassword from "../pages/auth/ForgotPassword.jsx";
-import ResetPassword from "../pages/auth/ResetPassword.jsx";
-import VerifyEmail from "../pages/auth/VerifyEmail.jsx";
-import AccountSecurity from "../pages/account/AccountSecurity.jsx";
-
-import OwnerDashboard from "../pages/dashboard/OwnerDashboard.jsx";
-import CreateAcademy from "../pages/onboarding/CreateAcademy.jsx";
-
-import AdminControlCenter from "../pages/admin/AdminControlCenter.jsx";
-
-import Unauthorized from "../pages/errors/Unauthorized.jsx";
-import NotFound from "../pages/errors/NotFound.jsx";
-
-import AcademyProfile from "../pages/academy/AcademyProfile.jsx";
-
-import Students from "../pages/students/Students.jsx";
-import AddStudent from "../pages/students/AddStudent.jsx";
-import EditStudent from "../pages/students/EditStudent.jsx";
-import StudentProfile from "../pages/students/StudentProfile.jsx";
-
-import Batches from "../pages/batches/Batches.jsx";
-import AddBatch from "../pages/batches/AddBatch.jsx";
-import EditBatch from "../pages/batches/EditBatch.jsx";
-import BatchDetail from "../pages/batches/BatchDetail.jsx";
-
-import Attendance from "../pages/attendance/Attendance.jsx";
-import StudentAttendanceHistory from "../pages/attendance/StudentAttendanceHistory.jsx";
-import BatchAttendanceHistory from "../pages/attendance/BatchAttendanceHistory.jsx";
-
-import FeesDashboard from "../pages/fees/FeesDashboard.jsx";
-import FeePlans from "../pages/fees/FeePlans.jsx";
-import CollectFee from "../pages/fees/CollectFee.jsx";
-import PendingFees from "../pages/fees/PendingFees.jsx";
-import StudentFeeHistory from "../pages/fees/StudentFeeHistory.jsx";
-import ReceiptView from "../pages/fees/ReceiptView.jsx";
-import AllStudentsFeeStatus from "../pages/fees/AllStudentsFeeStatus.jsx";
-import PaymentHistory from "../pages/fees/PaymentHistory.jsx";
-
-import BeltTests from "../pages/beltTests/BeltTests.jsx";
-import EditBeltTest from "../pages/beltTests/EditBeltTest.jsx";
-import StudentBeltHistory from "../pages/beltTests/StudentBeltHistory.jsx";
-
-import ChampionshipRecords from "../pages/championships/ChampionshipRecords.jsx";
-import EditChampionshipRecord from "../pages/championships/EditChampionshipRecord.jsx";
-import StudentChampionshipHistory from "../pages/championships/StudentChampionshipHistory.jsx";
-import AcademyEventStudio from "../pages/events/AcademyEventStudio.jsx";
-import AcademyEventList from "../pages/events/AcademyEventList.jsx";
-
-import StudentTimeline from "../pages/timeline/StudentTimeline.jsx";
-
-import IdCardTemplates from "../pages/idCards/IdCardTemplates.jsx";
-import GenerateIdCard from "../pages/idCards/GenerateIdCard.jsx";
-import PrintIdCard from "../pages/idCards/PrintIdCard.jsx";
-import StudentIdCards from "../pages/idCards/StudentIdCards.jsx";
-import VerifyIdCard from "../pages/idCards/VerifyIdCard.jsx";
-
-import CertificateTemplates from "../pages/certificates/CertificateTemplates.jsx";
-import GenerateCertificate from "../pages/certificates/GenerateCertificate.jsx";
-import PrintCertificate from "../pages/certificates/PrintCertificate.jsx";
-import StudentCertificates from "../pages/certificates/StudentCertificates.jsx";
-import VerifyCertificate from "../pages/certificates/VerifyCertificate.jsx";
-
-import CreateParentLink from "../pages/parentLinks/CreateParentLink.jsx";
-import StudentParentLinks from "../pages/parentLinks/StudentParentLinks.jsx";
-
-import ParentDashboard from "../pages/parentPortal/ParentDashboard.jsx";
-import ParentStudentProfile from "../pages/parentPortal/ParentStudentProfile.jsx";
-import ParentStudentAttendance from "../pages/parentPortal/ParentStudentAttendance.jsx";
-import ParentStudentFees from "../pages/parentPortal/ParentStudentFees.jsx";
-import ParentStudentProgress from "../pages/parentPortal/ParentStudentProgress.jsx";
-import ParentStudentDocuments from "../pages/parentPortal/ParentStudentDocuments.jsx";
-
-import CreateAnnouncement from "../pages/announcements/CreateAnnouncement.jsx";
-import AnnouncementDetail from "../pages/announcements/AnnouncementDetail.jsx";
-import MyAnnouncements from "../pages/announcements/MyAnnouncements.jsx";
-
-import Notifications from "../pages/notifications/Notifications.jsx";
-
-import CommunicationHub from "../pages/communication/CommunicationHub.jsx";
-
-import SubscriptionBillingHub from "../pages/billing/SubscriptionBillingHub.jsx";
-import Checkout from "../pages/billing/Checkout.jsx";
-import PaymentSuccess from "../pages/billing/PaymentSuccess.jsx";
-import PaymentFailed from "../pages/billing/PaymentFailed.jsx";
-import InvoiceDetail from "../pages/billing/InvoiceDetail.jsx";
-
-import Branches from "../pages/branches/Branches.jsx";
-import AddBranch from "../pages/branches/AddBranch.jsx";
-import EditBranch from "../pages/branches/EditBranch.jsx";
-import BranchDetail from "../pages/branches/BranchDetail.jsx";
-
-import AnalyticsStudio from "../pages/analytics/AnalyticsStudio.jsx";
-
-import Reports from "../pages/reports/Reports.jsx";
-import ReportPreview from "../pages/reports/ReportPreview.jsx";
-
-import SkillsStudio from "../pages/skills/SkillsStudio.jsx";
-import LegacyStudentSkillRedirect from "../pages/skills/LegacyStudentSkillRedirect.jsx";
-
-import SmartTimeline from "../pages/smartTimeline/SmartTimeline.jsx";
-
-import StudentPerformance from "../pages/performance/StudentPerformance.jsx";
-
-import TournamentIntegration from "../pages/tournamentIntegration/TournamentIntegration.jsx";
-import SubmitTournamentEntry from "../pages/tournamentIntegration/SubmitTournamentEntry.jsx";
-import SyncedTournamentEntries from "../pages/tournamentIntegration/SyncedTournamentEntries.jsx";
-import ImportTournamentResults from "../pages/tournamentIntegration/ImportTournamentResults.jsx";
-import StudentTournamentHistory from "../pages/tournamentIntegration/StudentTournamentHistory.jsx";
+const Login = lazy(() => import("../pages/auth/Login.jsx"));
+const Register = lazy(() => import("../pages/auth/Register.jsx"));
+const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword.jsx"));
+const ResetPassword = lazy(() => import("../pages/auth/ResetPassword.jsx"));
+const VerifyEmail = lazy(() => import("../pages/auth/VerifyEmail.jsx"));
+const AccountSecurity = lazy(() => import("../pages/account/AccountSecurity.jsx"));
+const OwnerDashboard = lazy(() => import("../pages/dashboard/OwnerDashboard.jsx"));
+const CreateAcademy = lazy(() => import("../pages/onboarding/CreateAcademy.jsx"));
+const AdminControlCenter = lazy(() => import("../pages/admin/AdminControlCenter.jsx"));
+const Unauthorized = lazy(() => import("../pages/errors/Unauthorized.jsx"));
+const NotFound = lazy(() => import("../pages/errors/NotFound.jsx"));
+const AcademyProfile = lazy(() => import("../pages/academy/AcademyProfile.jsx"));
+const Students = lazy(() => import("../pages/students/Students.jsx"));
+const AddStudent = lazy(() => import("../pages/students/AddStudent.jsx"));
+const EditStudent = lazy(() => import("../pages/students/EditStudent.jsx"));
+const StudentProfile = lazy(() => import("../pages/students/StudentProfile.jsx"));
+const Batches = lazy(() => import("../pages/batches/Batches.jsx"));
+const AddBatch = lazy(() => import("../pages/batches/AddBatch.jsx"));
+const EditBatch = lazy(() => import("../pages/batches/EditBatch.jsx"));
+const BatchDetail = lazy(() => import("../pages/batches/BatchDetail.jsx"));
+const Attendance = lazy(() => import("../pages/attendance/Attendance.jsx"));
+const StudentAttendanceHistory = lazy(() => import("../pages/attendance/StudentAttendanceHistory.jsx"));
+const BatchAttendanceHistory = lazy(() => import("../pages/attendance/BatchAttendanceHistory.jsx"));
+const FeesDashboard = lazy(() => import("../pages/fees/FeesDashboard.jsx"));
+const FeePlans = lazy(() => import("../pages/fees/FeePlans.jsx"));
+const CollectFee = lazy(() => import("../pages/fees/CollectFee.jsx"));
+const PendingFees = lazy(() => import("../pages/fees/PendingFees.jsx"));
+const StudentFeeHistory = lazy(() => import("../pages/fees/StudentFeeHistory.jsx"));
+const ReceiptView = lazy(() => import("../pages/fees/ReceiptView.jsx"));
+const AllStudentsFeeStatus = lazy(() => import("../pages/fees/AllStudentsFeeStatus.jsx"));
+const PaymentHistory = lazy(() => import("../pages/fees/PaymentHistory.jsx"));
+const BeltTests = lazy(() => import("../pages/beltTests/BeltTests.jsx"));
+const EditBeltTest = lazy(() => import("../pages/beltTests/EditBeltTest.jsx"));
+const StudentBeltHistory = lazy(() => import("../pages/beltTests/StudentBeltHistory.jsx"));
+const ChampionshipRecords = lazy(() => import("../pages/championships/ChampionshipRecords.jsx"));
+const EditChampionshipRecord = lazy(() => import("../pages/championships/EditChampionshipRecord.jsx"));
+const StudentChampionshipHistory = lazy(() => import("../pages/championships/StudentChampionshipHistory.jsx"));
+const AcademyEventStudio = lazy(() => import("../pages/events/AcademyEventStudio.jsx"));
+const AcademyEventList = lazy(() => import("../pages/events/AcademyEventList.jsx"));
+const StudentTimeline = lazy(() => import("../pages/timeline/StudentTimeline.jsx"));
+const IdCardTemplates = lazy(() => import("../pages/idCards/IdCardTemplates.jsx"));
+const GenerateIdCard = lazy(() => import("../pages/idCards/GenerateIdCard.jsx"));
+const PrintIdCard = lazy(() => import("../pages/idCards/PrintIdCard.jsx"));
+const StudentIdCards = lazy(() => import("../pages/idCards/StudentIdCards.jsx"));
+const VerifyIdCard = lazy(() => import("../pages/idCards/VerifyIdCard.jsx"));
+const CertificateTemplates = lazy(() => import("../pages/certificates/CertificateTemplates.jsx"));
+const GenerateCertificate = lazy(() => import("../pages/certificates/GenerateCertificate.jsx"));
+const PrintCertificate = lazy(() => import("../pages/certificates/PrintCertificate.jsx"));
+const StudentCertificates = lazy(() => import("../pages/certificates/StudentCertificates.jsx"));
+const VerifyCertificate = lazy(() => import("../pages/certificates/VerifyCertificate.jsx"));
+const CreateParentLink = lazy(() => import("../pages/parentLinks/CreateParentLink.jsx"));
+const StudentParentLinks = lazy(() => import("../pages/parentLinks/StudentParentLinks.jsx"));
+const ParentDashboard = lazy(() => import("../pages/parentPortal/ParentDashboard.jsx"));
+const ParentStudentProfile = lazy(() => import("../pages/parentPortal/ParentStudentProfile.jsx"));
+const ParentStudentAttendance = lazy(() => import("../pages/parentPortal/ParentStudentAttendance.jsx"));
+const ParentStudentFees = lazy(() => import("../pages/parentPortal/ParentStudentFees.jsx"));
+const ParentStudentProgress = lazy(() => import("../pages/parentPortal/ParentStudentProgress.jsx"));
+const ParentStudentDocuments = lazy(() => import("../pages/parentPortal/ParentStudentDocuments.jsx"));
+const CreateAnnouncement = lazy(() => import("../pages/announcements/CreateAnnouncement.jsx"));
+const AnnouncementDetail = lazy(() => import("../pages/announcements/AnnouncementDetail.jsx"));
+const MyAnnouncements = lazy(() => import("../pages/announcements/MyAnnouncements.jsx"));
+const Notifications = lazy(() => import("../pages/notifications/Notifications.jsx"));
+const CommunicationHub = lazy(() => import("../pages/communication/CommunicationHub.jsx"));
+const SubscriptionBillingHub = lazy(() => import("../pages/billing/SubscriptionBillingHub.jsx"));
+const Checkout = lazy(() => import("../pages/billing/Checkout.jsx"));
+const PaymentSuccess = lazy(() => import("../pages/billing/PaymentSuccess.jsx"));
+const PaymentFailed = lazy(() => import("../pages/billing/PaymentFailed.jsx"));
+const InvoiceDetail = lazy(() => import("../pages/billing/InvoiceDetail.jsx"));
+const Branches = lazy(() => import("../pages/branches/Branches.jsx"));
+const AddBranch = lazy(() => import("../pages/branches/AddBranch.jsx"));
+const EditBranch = lazy(() => import("../pages/branches/EditBranch.jsx"));
+const BranchDetail = lazy(() => import("../pages/branches/BranchDetail.jsx"));
+const AnalyticsStudio = lazy(() => import("../pages/analytics/AnalyticsStudio.jsx"));
+const Reports = lazy(() => import("../pages/reports/Reports.jsx"));
+const ReportPreview = lazy(() => import("../pages/reports/ReportPreview.jsx"));
+const SkillsStudio = lazy(() => import("../pages/skills/SkillsStudio.jsx"));
+const LegacyStudentSkillRedirect = lazy(() => import("../pages/skills/LegacyStudentSkillRedirect.jsx"));
+const SmartTimeline = lazy(() => import("../pages/smartTimeline/SmartTimeline.jsx"));
+const StudentPerformance = lazy(() => import("../pages/performance/StudentPerformance.jsx"));
+const TournamentIntegration = lazy(() => import("../pages/tournamentIntegration/TournamentIntegration.jsx"));
+const SubmitTournamentEntry = lazy(() => import("../pages/tournamentIntegration/SubmitTournamentEntry.jsx"));
+const SyncedTournamentEntries = lazy(() => import("../pages/tournamentIntegration/SyncedTournamentEntries.jsx"));
+const ImportTournamentResults = lazy(() => import("../pages/tournamentIntegration/ImportTournamentResults.jsx"));
+const StudentTournamentHistory = lazy(() => import("../pages/tournamentIntegration/StudentTournamentHistory.jsx"));
 
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import RoleRoute from "./RoleRoute.jsx";
@@ -150,9 +125,27 @@ const RoleLandingRedirect = () => {
   return <Navigate to={isAuthenticated ? getRoleLandingPath(user?.role) : "/login"} replace />;
 };
 
+const RouteLoadingFallback = () => (
+  <div
+    role="status"
+    aria-live="polite"
+    style={{
+      minHeight: "38vh",
+      display: "grid",
+      placeItems: "center",
+      color: "#64748b",
+      fontSize: 14,
+      fontWeight: 700,
+    }}
+  >
+    Loading page…
+  </div>
+);
+
 const AppRoutes = () => {
   return (
-    <Routes>
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Routes>
       <Route
         path="/"
         element={<RoleLandingRedirect />}
@@ -745,7 +738,8 @@ const AppRoutes = () => {
       />
 
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 };
 

@@ -173,6 +173,7 @@ export const updateStudentValidator = [
 export const listStudentsValidator = [
   query("page").optional().isInt({ min: 1 }),
   query("limit").optional().isInt({ min: 1, max: 100 }),
+  query("paginated").optional().isBoolean(),
   query("status").optional().isIn(["active", "inactive", "left"]),
   query("batch").optional({ checkFalsy: true }).isMongoId(),
 ];

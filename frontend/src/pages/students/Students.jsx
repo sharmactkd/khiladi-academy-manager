@@ -6,10 +6,6 @@ import {
   FileText, Filter, Printer, Search, Trash2, Upload,
   UserCheck, UserPlus, UsersRound, UserX, X,
 } from "lucide-react";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
 import { studentApi } from "../../api/studentApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { getBranches } from "../../api/branchApi.js";
@@ -70,8 +66,10 @@ const Students = () => {
   const [statusUpdatingIds, setStatusUpdatingIds] = useState([]);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(20);
-  const LOAD_STEP = 20;
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, total: 0, pages: 1, hasNextPage: false });
+  const [summary, setSummary] = useState({ total: 0, active: 0, incomplete: 0, newThisMonth: 0 });
+  const PAGE_SIZE = 30;
 
   const [filters, setFilters] = useState({
     search: "",
@@ -98,36 +96,20 @@ const Students = () => {
     return selectedStudents.length > 0 ? selectedStudents : students;
   }, [selectedStudents, students]);
 
-  const visibleStudents = useMemo(() => {
-    return students.slice(0, visibleCount);
-  }, [students, visibleCount]);
+  const visibleStudents = students;
 
-  const activeCount = useMemo(
-    () => students.filter((student) => student.status === "active").length,
-    [students]
-  );
-  const incompleteCount = useMemo(
-    () => students.filter((student) => student.profileStatus === "incomplete").length,
-    [students]
-  );
-  const newThisMonthCount = useMemo(() => {
-    const now = new Date();
-    return students.filter((student) => {
-      const created = new Date(student.createdAt || student.joiningDate || "");
-      return !Number.isNaN(created.getTime()) &&
-        created.getMonth() === now.getMonth() &&
-        created.getFullYear() === now.getFullYear();
-    }).length;
-  }, [students]);
+  const activeCount = summary.active;
+  const incompleteCount = summary.incomplete;
+  const newThisMonthCount = summary.newThisMonth;
 
   const activeFilterCount = useMemo(
     () => Object.values(filters).filter((value) => String(value || "").trim()).length,
     [filters]
   );
 
-  const fetchStudents = async () => {
+  const fetchStudents = async ({ page = 1, append = false } = {}) => {
     try {
-      setLoading(true);
+      append ? setLoadingMore(true) : setLoading(true);
 
       const cleanFilters = Object.fromEntries(
         Object.entries(filters).filter(([, value]) =>
@@ -135,18 +117,24 @@ const Students = () => {
         )
       );
 
-      const response = await studentApi.getAll(cleanFilters);
-      const list = Array.isArray(response?.data)
-        ? response.data
-        : response?.data?.data || [];
+      const response = await studentApi.getAll({
+        ...cleanFilters,
+        page,
+        limit: PAGE_SIZE,
+        paginated: true,
+      });
+      const payload = response?.data || {};
+      const list = Array.isArray(payload?.students) ? payload.students : [];
 
-      setStudents(Array.isArray(list) ? list : []);
-      setSelectedIds([]);
-      setVisibleCount(LOAD_STEP);
+      setStudents((current) => append ? [...current, ...list] : list);
+      setPagination(payload.pagination || { page, total: list.length, pages: 1, hasNextPage: false });
+      setSummary(payload.summary || { total: list.length, active: 0, incomplete: 0, newThisMonth: 0 });
+      if (!append) setSelectedIds([]);
     } catch (error) {
       toast.error(error.response?.data?.message || "Students load nahi hue");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -222,7 +210,7 @@ const Students = () => {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(fetchStudents, 350);
+    const timer = setTimeout(() => fetchStudents({ page: 1, append: false }), 350);
     return () => clearTimeout(timer);
   }, [filters]);
 
@@ -247,9 +235,8 @@ const Students = () => {
 
     if (scrollHeight - scrollTop - clientHeight > 180) return;
 
-    setVisibleCount((current) =>
-      Math.min(current + LOAD_STEP, students.length)
-    );
+    if (!pagination.hasNextPage || loadingMore) return;
+    fetchStudents({ page: pagination.page + 1, append: true });
   };
 
   const buildExportRows = (list) => {
@@ -303,7 +290,7 @@ const Students = () => {
     ]);
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const exportList = printableStudents;
 
     if (exportList.length === 0) {
@@ -311,6 +298,7 @@ const Students = () => {
       return;
     }
 
+    const XLSX = await import("xlsx");
     const rows = buildExportRows(exportList);
     const worksheet = XLSX.utils.json_to_sheet(rows);
 
@@ -364,7 +352,7 @@ const Students = () => {
     toast.success(`${exportList.length} students export ho gaye`);
   };
 
-  const handleSavePdf = () => {
+  const handleSavePdf = async () => {
     const exportList = printableStudents;
 
     if (exportList.length === 0) {
@@ -372,6 +360,10 @@ const Students = () => {
       return;
     }
 
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
     const doc = new jsPDF({
       orientation: "landscape",
       unit: "pt",
@@ -586,7 +578,7 @@ const Students = () => {
           <span>Student Management</span>
           <div className="students-heading-card__title-row">
             <h1>Students</h1>
-            <b><UsersRound size={16} /> {students.length} Students</b>
+            <b><UsersRound size={16} /> {summary.total} Students</b>
           </div>
           <p>Manage academy students, profiles and enrollment records.</p>
         </div>
@@ -609,7 +601,7 @@ const Students = () => {
       </header>
 
       <section className="students-metrics" aria-label="Student overview">
-        <article className="students-metric students-metric--red"><span><UsersRound /></span><div><small>Total Students</small><strong>{students.length}</strong></div></article>
+        <article className="students-metric students-metric--red"><span><UsersRound /></span><div><small>Total Students</small><strong>{summary.total}</strong></div></article>
         <article className="students-metric students-metric--green"><span><UserCheck /></span><div><small>Active</small><strong>{activeCount}</strong></div></article>
         <article className="students-metric students-metric--amber"><span><UserX /></span><div><small>Profile Incomplete</small><strong>{incompleteCount}</strong></div></article>
         <article className="students-metric students-metric--blue"><span><UserPlus /></span><div><small>New This Month</small><strong>{newThisMonthCount}</strong></div></article>
@@ -651,7 +643,7 @@ const Students = () => {
             </tr>;
           })}</tbody>
         </table></div>}
-        {!loading && students.length > 0 ? <footer className="students-list-footer"><span>Showing {visibleStudents.length} of {students.length} students</span>{visibleStudents.length < students.length ? <span>Scroll down to load more students</span> : <strong>All students loaded</strong>}</footer> : null}
+        {!loading && students.length > 0 ? <footer className="students-list-footer"><span>Showing {visibleStudents.length} of {pagination.total} students</span>{loadingMore ? <span>Loading more students…</span> : pagination.hasNextPage ? <span>Scroll down to load more students</span> : <strong>All students loaded</strong>}</footer> : null}
       </section>
     </div>
   );

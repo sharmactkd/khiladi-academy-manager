@@ -719,14 +719,55 @@ export const getStudents = asyncHandler(async (req, res) => {
     ];
   }
 
-  const students = await Student.find(query)
+  const requestedLimit = Math.min(Math.max(Number(req.query.limit) || 0, 0), 100);
+  const isPaginated = req.query.paginated === "true" || Boolean(req.query.page);
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = requestedLimit || 30;
+
+  const buildStudentsQuery = () => Student.find(query)
     .select("-medicalConditions -medicalNotes")
     .populate("branch", "branchName branchCode currencyCode currencySymbol currencyCountryCode")
     .populate(
       "batch",
       "batchName martialArt isActive monthlyFee quarterlyFee annualFee"
     )
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean();
+
+  if (isPaginated) {
+    const summaryFilter = {
+      academy: req.academyId,
+      ...buildBranchAccessFilter(req.user),
+    };
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [students, total, active, incomplete, newThisMonth] = await Promise.all([
+      buildStudentsQuery().skip((page - 1) * limit).limit(limit),
+      Student.countDocuments(query),
+      Student.countDocuments({ ...summaryFilter, status: "active" }),
+      Student.countDocuments({ ...summaryFilter, profileStatus: "incomplete" }),
+      Student.countDocuments({ ...summaryFilter, createdAt: { $gte: startOfMonth } }),
+    ]);
+    const pages = Math.max(Math.ceil(total / limit), 1);
+
+    return successResponse(res, "Students fetched successfully", {
+      students,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages,
+        hasNextPage: page < pages,
+      },
+      summary: { total, active, incomplete, newThisMonth },
+    });
+  }
+
+  const studentsQuery = buildStudentsQuery();
+  if (requestedLimit) studentsQuery.limit(requestedLimit);
+  const students = await studentsQuery;
 
   return successResponse(res, "Students fetched successfully", students);
 });

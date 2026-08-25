@@ -25,14 +25,13 @@ const formatDate = (value) => value ? new Date(value).toLocaleDateString("en-GB"
 const formatScore = (record) => { if (record?.marks === null || record?.marks === undefined || record?.marks === "") return "Not added"; if (record?.outOf === null || record?.outOf === undefined || record?.outOf === "") return String(record.marks); const percentage = Number(record.outOf) > 0 ? Math.round((Number(record.marks) / Number(record.outOf)) * 100) : null; return `${record.marks}/${record.outOf}${percentage === null ? "" : ` · ${percentage}%`}`; };
 const getRank = (belt, dan) => [belt, dan].filter(Boolean).join(" · ") || "Not added";
 
-const fetchAllBeltTests = async () => {
-  const firstResponse = await beltTestApi.getAll({ page: 1, limit: 100 });
-  const firstPayload = getPayload(firstResponse);
-  const firstRecords = Array.isArray(firstPayload?.beltTests) ? firstPayload.beltTests : [];
-  const pages = Number(firstPayload?.pagination?.pages || 1);
-  if (pages <= 1) return firstRecords;
-  const responses = await Promise.all(Array.from({ length: pages - 1 }, (_, index) => beltTestApi.getAll({ page: index + 2, limit: 100 })));
-  return responses.reduce((records, response) => records.concat(getPayload(response)?.beltTests || []), firstRecords);
+const fetchLatestBeltTests = async () => {
+  const response = await beltTestApi.getAll({ latestByStudent: true });
+  const payload = getPayload(response);
+  return {
+    records: Array.isArray(payload?.beltTests) ? payload.beltTests : [],
+    total: Number(payload?.pagination?.total || 0),
+  };
 };
 
 const BeltTests = () => {
@@ -41,6 +40,7 @@ const BeltTests = () => {
   const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);
   const [beltTests, setBeltTests] = useState([]);
+  const [totalTests, setTotalTests] = useState(0);
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState("");
@@ -52,10 +52,11 @@ const BeltTests = () => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [studentsResult, batchesResult, testsResult, academyResult, branchesResult] = await Promise.allSettled([studentApi.getAll({}), batchApi.getAll(), fetchAllBeltTests(), academyApi.getMyAcademy(), getBranches({ status: "active" })]);
+      const [studentsResult, batchesResult, testsResult, academyResult, branchesResult] = await Promise.allSettled([studentApi.getAll({}), batchApi.getAll(), fetchLatestBeltTests(), academyApi.getMyAcademy(), getBranches({ status: "active" })]);
       if (studentsResult.status === "rejected" || testsResult.status === "rejected") throw studentsResult.reason || testsResult.reason;
       setStudents(normalizeList(studentsResult.value, "students"));
-      setBeltTests(testsResult.value);
+      setBeltTests(testsResult.value.records);
+      setTotalTests(testsResult.value.total);
       setBatches(batchesResult.status === "fulfilled" ? normalizeList(batchesResult.value, "batches").filter((item) => item?.isActive !== false) : []);
       if (academyResult.status === "fulfilled") setAcademy(normalizeAcademy(academyResult.value));
       if (branchesResult.status === "fulfilled") setBranches(normalizeBranches(branchesResult.value));
@@ -94,7 +95,7 @@ const BeltTests = () => {
   const resetFilters = () => { setSelectedBatchId(""); setViewMode("all"); setFilters({ search: "", result: "" }); };
 
   return <div className={`page ${styles.page}`}>
-    <AcademyHeroHeader headingId="belt-records-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Belt progression desk" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy) || "Complete main branch address not available"} summaryItems={[{ key: "students", icon: GraduationCap, value: stats.students, label: "Students" }, { key: "tests", icon: Award, value: beltTests.length, label: "Tests Recorded" }, { key: "passed", icon: BadgeCheck, value: stats.passed, label: "Latest Passes" }]}/>
+    <AcademyHeroHeader headingId="belt-records-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Belt progression desk" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy) || "Complete main branch address not available"} summaryItems={[{ key: "students", icon: GraduationCap, value: stats.students, label: "Students" }, { key: "tests", icon: Award, value: totalTests, label: "Tests Recorded" }, { key: "passed", icon: BadgeCheck, value: stats.passed, label: "Latest Passes" }]}/>
     <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><strong>Belt Test Records</strong></nav>
     <header className={styles.pageHeading}><div><span><Medal size={25}/></span><div><small>Progression records</small><h1>Belt Test Records</h1><p>Track student ranks, grading outcomes and complete promotion history.</p></div></div><Link to="/belt-tests/events"><Plus size={17}/>Manage Belt Test Events</Link></header>
 
@@ -112,8 +113,8 @@ const BeltTests = () => {
     </section>
 
     <section className={styles.recordsCard}>
-      <header><div><small>{selectedBatch ? `${selectedBatch.batchName} · ${selectedBatch.martialArt || "Martial Art"}` : "All academy batches"}</small><h2>Student Progression Register</h2><p>Showing {filteredRows.length} matching student{filteredRows.length === 1 ? "" : "s"}</p></div><span><Award size={16}/>{beltTests.length} total tests</span></header>
-      {loading ? <div className={styles.loadingState}><span/><span/><span/><p>Loading belt progression records...</p></div> : visibleRows.length ? <div className={styles.tableViewport}><table><thead><tr><th>No.</th><th>Student</th><th>Contact / Batch</th><th>Current Rank</th><th>Last Promotion</th><th>Score</th><th>Test Date</th><th>Result</th><th>Actions</th></tr></thead><tbody>{visibleRows.map(({ student, latestTest }, index) => <tr key={student._id} className={student.status !== "active" ? styles.inactiveRow : ""} onDoubleClick={() => navigate(`/students/${student._id}/belt-history`)}><td>{(safePage - 1) * PAGE_SIZE + index + 1}</td><td><div className={styles.studentCell}><img src={getStudentPhotoUrl(student)} alt="" onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }}/><span><button type="button" onClick={() => navigate(`/students/${student._id}`)}>{getStudentName(student)}</button><small>{getStudentCode(student)}</small></span></div></td><td><div className={styles.stackCell}><strong>{student.phone || "Not added"}</strong><small>{student.batch?.batchName || "No batch assigned"}</small></div></td><td><span className={styles.rankPill}>{getRank(student.beltRank, student.danRank)}</span></td><td>{latestTest ? <div className={styles.promotionCell}><span>{getRank(latestTest.currentBelt, latestTest.currentDanRank)}</span><ArrowRight size={13}/><strong>{getRank(latestTest.promotedToBelt, latestTest.promotedToDanRank)}</strong></div> : <span className={styles.muted}>No test recorded</span>}</td><td><strong className={styles.score}>{formatScore(latestTest)}</strong></td><td><div className={styles.dateCell}><CalendarDays size={14}/><span>{formatDate(latestTest?.testDate)}</span></div></td><td>{latestTest ? <span className={`${styles.resultBadge} ${styles[`result${latestTest.result}`]}`}>{latestTest.result === "pass" ? <CheckCircle2 size={13}/> : latestTest.result === "fail" ? <XCircle size={13}/> : <Clock3 size={13}/>} {latestTest.result}</span> : <span className={styles.notTested}>Not tested</span>}</td><td><div className={styles.actions}><Link to={`/belt-tests/new?student=${student._id}`} title="Add belt test"><Plus size={15}/></Link>{latestTest ? <Link to={`/belt-tests/${latestTest._id}/edit`} title="Edit latest test"><Pencil size={14}/></Link> : null}<Link to={`/students/${student._id}/belt-history`} title="View belt history"><History size={15}/></Link></div></td></tr>)}</tbody></table></div> : <div className={styles.emptyState}><span><Award size={26}/></span><h3>No matching records</h3><p>Filters clear karein ya student ke liye pehla belt test add karein.</p><div><button type="button" onClick={resetFilters}><RotateCcw size={15}/>Clear Filters</button><Link to="/belt-tests/new"><Plus size={15}/>Add Belt Test</Link></div></div>}
+      <header><div><small>{selectedBatch ? `${selectedBatch.batchName} · ${selectedBatch.martialArt || "Martial Art"}` : "All academy batches"}</small><h2>Student Progression Register</h2><p>Showing {filteredRows.length} matching student{filteredRows.length === 1 ? "" : "s"}</p></div><span><Award size={16}/>{totalTests} total tests</span></header>
+      {loading ? <div className={styles.loadingState}><span/><span/><span/><p>Loading belt progression records...</p></div> : visibleRows.length ? <div className={styles.tableViewport}><table><thead><tr><th>No.</th><th>Student</th><th>Contact / Batch</th><th>Current Rank</th><th>Last Promotion</th><th>Score</th><th>Test Date</th><th>Result</th><th>Actions</th></tr></thead><tbody>{visibleRows.map(({ student, latestTest }, index) => <tr key={student._id} className={student.status !== "active" ? styles.inactiveRow : ""} onDoubleClick={() => navigate(`/students/${student._id}/belt-history`)}><td>{(safePage - 1) * PAGE_SIZE + index + 1}</td><td><div className={styles.studentCell}><img loading="lazy" decoding="async" src={getStudentPhotoUrl(student)} alt="" onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }}/><span><button type="button" onClick={() => navigate(`/students/${student._id}`)}>{getStudentName(student)}</button><small>{getStudentCode(student)}</small></span></div></td><td><div className={styles.stackCell}><strong>{student.phone || "Not added"}</strong><small>{student.batch?.batchName || "No batch assigned"}</small></div></td><td><span className={styles.rankPill}>{getRank(student.beltRank, student.danRank)}</span></td><td>{latestTest ? <div className={styles.promotionCell}><span>{getRank(latestTest.currentBelt, latestTest.currentDanRank)}</span><ArrowRight size={13}/><strong>{getRank(latestTest.promotedToBelt, latestTest.promotedToDanRank)}</strong></div> : <span className={styles.muted}>No test recorded</span>}</td><td><strong className={styles.score}>{formatScore(latestTest)}</strong></td><td><div className={styles.dateCell}><CalendarDays size={14}/><span>{formatDate(latestTest?.testDate)}</span></div></td><td>{latestTest ? <span className={`${styles.resultBadge} ${styles[`result${latestTest.result}`]}`}>{latestTest.result === "pass" ? <CheckCircle2 size={13}/> : latestTest.result === "fail" ? <XCircle size={13}/> : <Clock3 size={13}/>} {latestTest.result}</span> : <span className={styles.notTested}>Not tested</span>}</td><td><div className={styles.actions}><Link to={`/belt-tests/new?student=${student._id}`} title="Add belt test"><Plus size={15}/></Link>{latestTest ? <Link to={`/belt-tests/${latestTest._id}/edit`} title="Edit latest test"><Pencil size={14}/></Link> : null}<Link to={`/students/${student._id}/belt-history`} title="View belt history"><History size={15}/></Link></div></td></tr>)}</tbody></table></div> : <div className={styles.emptyState}><span><Award size={26}/></span><h3>No matching records</h3><p>Filters clear karein ya student ke liye pehla belt test add karein.</p><div><button type="button" onClick={resetFilters}><RotateCcw size={15}/>Clear Filters</button><Link to="/belt-tests/new"><Plus size={15}/>Add Belt Test</Link></div></div>}
       {!loading && filteredRows.length ? <footer><p>Showing <strong>{(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredRows.length)}</strong> of <strong>{filteredRows.length}</strong> students</p><div><button type="button" disabled={safePage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft size={15}/>Previous</button><span>Page <strong>{safePage}</strong> of {pages}</span><button type="button" disabled={safePage === pages} onClick={() => setPage((value) => Math.min(pages, value + 1))}>Next<ChevronRight size={15}/></button></div></footer> : null}
     </section>
   </div>;

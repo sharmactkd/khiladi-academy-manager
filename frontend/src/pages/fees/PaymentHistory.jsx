@@ -31,30 +31,33 @@ const PaymentHistory = () => {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, total: 0, pages: 1 });
+  const [summary, setSummary] = useState({ collected: 0, balance: 0, paid: 0, split: 0 });
 
   const fetchPayments = async () => {
     try {
       setLoading(true);
       const cleanFilters = Object.fromEntries(Object.entries(filters).filter(([, value]) => String(value || "").trim()));
-      const [paymentResult, academyResult, branchResult] = await Promise.allSettled([feePaymentApi.getPayments(cleanFilters), academyApi.getMyAcademy(), getBranches({ status: "active" })]);
+      const [paymentResult, academyResult, branchResult] = await Promise.allSettled([feePaymentApi.getPayments({ ...cleanFilters, search: search.trim() || undefined, page, limit: PAGE_SIZE, paginated: true }), academyApi.getMyAcademy(), getBranches({ status: "active" })]);
       if (paymentResult.status !== "fulfilled") throw paymentResult.reason;
-      setPayments(paymentResult.value.data?.data || []);
+      const paymentPayload = paymentResult.value.data?.data || {};
+      setPayments(Array.isArray(paymentPayload.payments) ? paymentPayload.payments : []);
+      setPagination(paymentPayload.pagination || { page, total: 0, pages: 1 });
+      setSummary(paymentPayload.summary || { collected: 0, balance: 0, paid: 0, split: 0 });
       if (academyResult.status === "fulfilled") setAcademy(normalizeAcademy(academyResult.value));
       if (branchResult.status === "fulfilled") setBranches(normalizeBranches(branchResult.value));
     } catch (error) { toast.error(error.response?.data?.message || "Payments load nahi hue"); }
     finally { setLoading(false); }
   };
-  useEffect(() => { fetchPayments(); setPage(1); }, [filters.month, filters.year, filters.paymentMode, filters.status]);
+  useEffect(() => {
+    const timer = window.setTimeout(fetchPayments, search.trim() ? 300 : 0);
+    return () => window.clearTimeout(timer);
+  }, [filters.month, filters.year, filters.paymentMode, filters.status, search, page]);
+  useEffect(() => { setPage(1); }, [filters.month, filters.year, filters.paymentMode, filters.status, search]);
 
-  const filteredPayments = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return payments;
-    return payments.filter((payment) => [studentName(payment.student), payment.student?.admissionNumber, payment.receiptNumber, payment.student?.phone, payment.batch?.batchName].some((value) => String(value || "").toLowerCase().includes(query)));
-  }, [payments, search]);
-  useEffect(() => { setPage(1); }, [search]);
-  const pageCount = Math.max(Math.ceil(filteredPayments.length / PAGE_SIZE), 1);
-  const visiblePayments = filteredPayments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const summary = useMemo(() => filteredPayments.reduce((acc, payment) => { acc.collected += Number(payment.amountPaid || 0); acc.balance += Number(payment.pendingAmount || 0); acc.paid += payment.status === "paid" ? 1 : 0; acc.split += payment.paymentMode === "cash_online" ? 1 : 0; return acc; }, { collected: 0, balance: 0, paid: 0, split: 0 }), [filteredPayments]);
+  const filteredPayments = payments;
+  const pageCount = Math.max(Number(pagination.pages) || 1, 1);
+  const visiblePayments = payments;
   const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0];
   const summaryCurrency = scopeCurrencySource(branches) || { currencyCode: "MIX", currencySymbol: "MIX " };
   const currency = (value, source = summaryCurrency) => formatMoney(value, source);
@@ -70,12 +73,12 @@ const PaymentHistory = () => {
 
   return (
     <div className={`page ${styles.page}`}>
-      <AcademyHeroHeader headingId="payment-history-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Payment records" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy) || "Complete main branch address not available"} summaryItems={[{ key: "branches", type: "branches", value: branches.length, label: `Active ${branches.length === 1 ? "Branch" : "Branches"}` }, { key: "records", icon: ReceiptText, value: payments.length, label: "Payment Records" }]} />
+      <AcademyHeroHeader headingId="payment-history-academy" academyName={academy?.academyName || "KHILADI Academy"} ownerName={academy?.ownerName || user?.name || "Academy Owner"} logoUrl={academy?.logo ? getAcademyLogoUrl(academy) : ""} eyebrow="Payment records" addressLabel={mainBranch?.branchName || "Main Branch"} address={joinAddress(mainBranch) || joinAddress(academy) || "Complete main branch address not available"} summaryItems={[{ key: "branches", type: "branches", value: branches.length, label: `Active ${branches.length === 1 ? "Branch" : "Branches"}` }, { key: "records", icon: ReceiptText, value: pagination.total, label: "Payment Records" }]} />
       <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><Link to="/fees">Fees</Link><span>/</span><strong>Payment History</strong></nav>
       <header className={styles.heading}><div><span><ReceiptText size={25} /></span><div><small>Financial ledger</small><h1>Payment History</h1><p>Search, review and export every recorded fee transaction.</p></div></div><div className={styles.headerActions}><Link to="/fees"><ArrowLeft size={16}/>Fee Dashboard</Link><button type="button" onClick={exportPayments} disabled={!filteredPayments.length}><Download size={16}/>Export CSV</button><Link className={styles.primaryAction} to="/fees/collect"><Plus size={16}/>Collect Fee</Link></div></header>
 
       <section className={styles.summaryGrid}>
-        <article><span className={styles.greenIcon}><CircleDollarSign size={20}/></span><div><small>Filtered Collection</small><strong>{currency(summary.collected)}</strong><p>Across {filteredPayments.length} transactions</p></div></article>
+        <article><span className={styles.greenIcon}><CircleDollarSign size={20}/></span><div><small>Filtered Collection</small><strong>{currency(summary.collected)}</strong><p>Across {pagination.total} transactions</p></div></article>
         <article><span className={styles.redIcon}><FileText size={20}/></span><div><small>Outstanding Balance</small><strong>{currency(summary.balance)}</strong><p>In current result set</p></div></article>
         <article><span className={styles.blueIcon}><CheckCircle2 size={20}/></span><div><small>Paid Transactions</small><strong>{summary.paid}</strong><p>Completed fee records</p></div></article>
         <article><span className={styles.purpleIcon}><WalletCards size={20}/></span><div><small>Split Payments</small><strong>{summary.split}</strong><p>Cash + Online records</p></div></article>
@@ -93,9 +96,9 @@ const PaymentHistory = () => {
       </section>
 
       <section className={styles.tableCard}>
-        <header><div><h2>Transaction Ledger</h2><p>{filteredPayments.length} payment {filteredPayments.length === 1 ? "record" : "records"} found</p></div><span><CalendarDays size={15}/>Newest first</span></header>
+        <header><div><h2>Transaction Ledger</h2><p>{pagination.total} payment {pagination.total === 1 ? "record" : "records"} found</p></div><span><CalendarDays size={15}/>Newest first</span></header>
         {loading ? <div className={styles.state}><RefreshCw className={styles.spinner} size={24}/><strong>Loading payments...</strong></div> : !filteredPayments.length ? <div className={styles.state}><ReceiptIndianRupee size={28}/><strong>No payments found</strong><p>Try changing or clearing your current filters.</p>{hasFilters ? <button onClick={clearFilters}>Clear Filters</button> : null}</div> : <div className={styles.tableWrap}><table><thead><tr><th>Student</th><th>Receipt</th><th>Fee Period</th><th>Payment</th><th>Payable</th><th>Paid</th><th>Balance</th><th>Date</th><th>Status</th><th aria-label="Actions"/></tr></thead><tbody>{visiblePayments.map((payment) => { const name = studentName(payment.student); const statusKey = String(payment.status || "due"); const rowCurrency = paymentCurrencySource(payment, mainBranch); return <tr key={payment._id} onDoubleClick={() => navigate(`/fees/receipt/${payment._id}`)}><td><span className={styles.avatar}>{name.charAt(0)}</span><div><strong>{name}</strong><small>{payment.student?.admissionNumber || "No admission number"}</small></div></td><td><strong className={styles.receiptNo}>{payment.receiptNumber || "—"}</strong></td><td><strong>{MONTHS[Number(payment.feeMonth) - 1]?.label || payment.feeMonth} {payment.feeYear}</strong></td><td><span className={styles.modeIcon}>{payment.paymentMode === "cash" ? <Banknote size={15}/> : payment.paymentMode === "online" ? <Smartphone size={15}/> : <WalletCards size={15}/>}</span><div><strong>{formatPaymentMode(payment.paymentMode)}</strong>{payment.paymentMode === "cash_online" ? <small>Cash {currency(payment.cashAmount, rowCurrency)} + Online {currency(payment.onlineAmount, rowCurrency)}</small> : null}</div></td><td>{currency(payment.finalAmount, rowCurrency)}</td><td><strong className={styles.paidAmount}>{currency(payment.amountPaid, rowCurrency)}</strong></td><td><strong className={Number(payment.pendingAmount || 0) > 0 ? styles.pendingAmount : ""}>{currency(payment.pendingAmount, rowCurrency)}</strong></td><td>{formatDate(payment.paymentDate)}</td><td><span className={`${styles.status} ${styles[`status${statusKey.charAt(0).toUpperCase()}${statusKey.slice(1)}`]}`}>{statusKey}</span></td><td><Link className={styles.receiptAction} to={`/fees/receipt/${payment._id}`} title="View receipt"><ReceiptIndianRupee size={16}/><ArrowRight size={13}/></Link></td></tr>; })}</tbody></table></div>}
-        {!loading && filteredPayments.length ? <footer><span>Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredPayments.length)} of {filteredPayments.length}</span><div><button type="button" onClick={() => setPage((value) => Math.max(value - 1, 1))} disabled={page === 1}><ChevronLeft size={15}/>Previous</button><strong>{page} <span>of {pageCount}</span></strong><button type="button" onClick={() => setPage((value) => Math.min(value + 1, pageCount))} disabled={page === pageCount}>Next<ChevronRight size={15}/></button></div></footer> : null}
+        {!loading && filteredPayments.length ? <footer><span>Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, pagination.total)} of {pagination.total}</span><div><button type="button" onClick={() => setPage((value) => Math.max(value - 1, 1))} disabled={page === 1}><ChevronLeft size={15}/>Previous</button><strong>{page} <span>of {pageCount}</span></strong><button type="button" onClick={() => setPage((value) => Math.min(value + 1, pageCount))} disabled={page === pageCount}>Next<ChevronRight size={15}/></button></div></footer> : null}
       </section>
     </div>
   );

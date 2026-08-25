@@ -1,11 +1,13 @@
 import Student from "../models/Student.js";
 import FeePayment from "../models/FeePayment.js";
+import mongoose from "mongoose";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import { getCurrencySymbol } from "../utils/currency.js";
 import { buildSafeSearchRegex } from "../utils/search.js";
 import {
   buildStudentFeeStatus,
+  buildStudentsFeeStatuses,
   collectStudentFee,
   getMonthYearNow,
 } from "../services/feeService.js";
@@ -43,18 +45,25 @@ const getActiveStudents = async (academyId, query = {}) => {
   }
 
   return Student.find(filter)
-    .populate("batch", "batchName martialArt isActive")
+    .populate(
+      "batch",
+      "batchName martialArt isActive monthlyFee feeDueDay"
+    )
     .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .sort({ firstName: 1, lastName: 1 });
 };
 
 export const getFeesDashboard = asyncHandler(async (req, res) => {
   const { month, year } = getMonthYearFromQuery(req.query);
-
-  const payments = await FeePayment.find({
+  const trendPeriods = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(year, month - 6 + index, 1);
+    return { feeMonth: date.getMonth() + 1, feeYear: date.getFullYear() };
+  });
+  const paymentFilter = {
     academy: req.academyId,
     status: { $ne: "cancelled" },
-  })
+  };
+  const recentPaymentsQuery = FeePayment.find(paymentFilter)
     .populate({
       path: "student",
       select: "firstName lastName admissionNumber phone branch",
@@ -65,17 +74,34 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     })
     .populate("batch", "batchName")
     .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
-    .sort({ paymentDate: -1 });
+    .sort({ paymentDate: -1 })
+    .limit(10)
+    .lean();
+
+  const academyObjectId = new mongoose.Types.ObjectId(String(req.academyId));
+  const [payments, totalCollectionResult, recentPaymentDocuments] =
+    await Promise.all([
+      FeePayment.find({ ...paymentFilter, $or: trendPeriods })
+        .select("feeMonth feeYear amountPaid paymentMode")
+        .lean(),
+      FeePayment.aggregate([
+        {
+          $match: {
+            academy: academyObjectId,
+            status: { $ne: "cancelled" },
+          },
+        },
+        { $group: { _id: null, total: { $sum: "$amountPaid" } } },
+      ]),
+      recentPaymentsQuery,
+    ]);
 
   const thisMonthPayments = payments.filter(
     (payment) =>
       Number(payment.feeMonth) === month && Number(payment.feeYear) === year
   );
 
-  const totalCollection = payments.reduce(
-    (sum, payment) => sum + Number(payment.amountPaid || 0),
-    0
-  );
+  const totalCollection = Number(totalCollectionResult[0]?.total || 0);
 
   const thisMonthCollection = thisMonthPayments.reduce(
     (sum, payment) => sum + Number(payment.amountPaid || 0),
@@ -93,10 +119,8 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     0
   );
 
-  const monthlyTrend = Array.from({ length: 6 }, (_, index) => {
-    const date = new Date(year, month - 6 + index, 1);
-    const trendMonth = date.getMonth() + 1;
-    const trendYear = date.getFullYear();
+  const monthlyTrend = trendPeriods.map(({ feeMonth: trendMonth, feeYear: trendYear }) => {
+    const date = new Date(trendYear, trendMonth - 1, 1);
     const amount = payments
       .filter(
         (payment) =>
@@ -130,16 +154,12 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
   );
 
   const students = await getActiveStudents(req.academyId);
-  const statuses = await Promise.all(
-    students.map((student) =>
-      buildStudentFeeStatus({
-        academyId: req.academyId,
-        student,
-        month,
-        year,
-      })
-    )
-  );
+  const statuses = await buildStudentsFeeStatuses({
+    academyId: req.academyId,
+    students,
+    month,
+    year,
+  });
 
   const pendingAmount = statuses.reduce(
     (sum, item) => sum + Number(item.pendingAmount || 0),
@@ -159,7 +179,7 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     }
   );
 
-  const recentPayments = payments.slice(0, 10).map((payment) => {
+  const recentPayments = recentPaymentDocuments.map((payment) => {
     const currentBranch = payment.student?.branch || payment.branch || null;
     const currencyCode = currentBranch?.currencyCode || payment.currencyCode || "INR";
 
@@ -222,16 +242,12 @@ export const getStudentsFeeStatus = asyncHandler(async (req, res) => {
 
   const students = await getActiveStudents(req.academyId, req.query);
 
-  const data = await Promise.all(
-    students.map((student) =>
-      buildStudentFeeStatus({
-        academyId: req.academyId,
-        student,
-        month,
-        year,
-      })
-    )
-  );
+  const data = await buildStudentsFeeStatuses({
+    academyId: req.academyId,
+    students,
+    month,
+    year,
+  });
 
   const filteredData = req.query.status
     ? data.filter((item) => item.status === req.query.status)
@@ -274,16 +290,12 @@ export const getPendingFees = asyncHandler(async (req, res) => {
 
   const students = await getActiveStudents(req.academyId, req.query);
 
-  const data = await Promise.all(
-    students.map((student) =>
-      buildStudentFeeStatus({
-        academyId: req.academyId,
-        student,
-        month,
-        year,
-      })
-    )
-  );
+  const data = await buildStudentsFeeStatuses({
+    academyId: req.academyId,
+    students,
+    month,
+    year,
+  });
 
   const pending = data.filter((item) =>
     ["due", "partial", "overdue"].includes(item.status)
@@ -308,7 +320,24 @@ export const getFeePayments = asyncHandler(async (req, res) => {
   if (req.query.month) query.feeMonth = Number(req.query.month);
   if (req.query.year) query.feeYear = Number(req.query.year);
 
-  const payments = await FeePayment.find(query)
+  if (req.query.search) {
+    const searchRegex = buildSafeSearchRegex(req.query.search, 100);
+    const studentIds = await Student.find({
+      academy: req.academyId,
+      $or: [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { admissionNumber: searchRegex },
+        { phone: searchRegex },
+      ],
+    }).distinct("_id");
+    query.$or = [
+      { student: { $in: studentIds } },
+      { receiptNumber: searchRegex },
+    ];
+  }
+
+  const buildPaymentsQuery = () => FeePayment.find(query)
     .populate({
       path: "student",
       select: "firstName lastName admissionNumber phone email branch",
@@ -320,7 +349,42 @@ export const getFeePayments = asyncHandler(async (req, res) => {
     .populate("batch", "batchName martialArt")
     .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
     .populate("feePlan", "name monthlyAmount amount dueDay")
-    .sort({ paymentDate: -1, createdAt: -1 });
+    .sort({ paymentDate: -1, createdAt: -1 })
+    .lean();
+
+  const isPaginated = req.query.paginated === "true" || Boolean(req.query.page);
+  if (isPaginated) {
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+    const aggregateQuery = {
+      ...query,
+      academy: new mongoose.Types.ObjectId(String(req.academyId)),
+    };
+    const [payments, total, totals] = await Promise.all([
+      buildPaymentsQuery().skip((page - 1) * limit).limit(limit),
+      FeePayment.countDocuments(query),
+      FeePayment.aggregate([
+        { $match: aggregateQuery },
+        {
+          $group: {
+            _id: null,
+            collected: { $sum: { $ifNull: ["$amountPaid", 0] } },
+            balance: { $sum: { $ifNull: ["$pendingAmount", 0] } },
+            paid: { $sum: { $cond: [{ $eq: ["$status", "paid"] }, 1, 0] } },
+            split: { $sum: { $cond: [{ $eq: ["$paymentMode", "cash_online"] }, 1, 0] } },
+          },
+        },
+      ]),
+    ]);
+    const pages = Math.max(Math.ceil(total / limit), 1);
+    return successResponse(res, "Fee payments fetched successfully", {
+      payments,
+      pagination: { page, limit, total, pages, hasNextPage: page < pages },
+      summary: totals[0] || { collected: 0, balance: 0, paid: 0, split: 0 },
+    });
+  }
+
+  const payments = await buildPaymentsQuery();
 
   return successResponse(res, "Fee payments fetched successfully", payments);
 });

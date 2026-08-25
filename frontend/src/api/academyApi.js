@@ -1,4 +1,5 @@
 import api from "./api.js";
+import { cachedRequest, invalidateRequestCache } from "./requestCache.js";
 
 const multipartConfig = {
   headers: {
@@ -7,17 +8,23 @@ const multipartConfig = {
 };
 
 export const academyApi = {
-  createAcademy: (payload) =>
-    payload instanceof FormData
-      ? api.post("/academy", payload, multipartConfig)
-      : api.post("/academy", payload),
+  createAcademy: async (payload) => {
+    const response = payload instanceof FormData
+      ? await api.post("/academy", payload, multipartConfig)
+      : await api.post("/academy", payload);
+    invalidateRequestCache("workspace:");
+    return response;
+  },
 
-  getMyAcademy: () => api.get("/academy/my"),
+  getMyAcademy: () => cachedRequest("workspace:academy", () => api.get("/academy/my")),
 
-  updateMyAcademy: (payload) =>
-    payload instanceof FormData
-      ? api.patch("/academy/my", payload, multipartConfig)
-      : api.patch("/academy/my", payload),
+  updateMyAcademy: async (payload) => {
+    const response = payload instanceof FormData
+      ? await api.patch("/academy/my", payload, multipartConfig)
+      : await api.patch("/academy/my", payload);
+    invalidateRequestCache("workspace:");
+    return response;
+  },
 };
 
 export default academyApi;

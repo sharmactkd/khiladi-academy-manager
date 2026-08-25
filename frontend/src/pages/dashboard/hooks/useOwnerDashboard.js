@@ -46,13 +46,21 @@ const useOwnerDashboard = () => {
       setError("");
 
       try {
-        const academyResponse = await academyApi.getMyAcademy();
-        setAcademy(academyResponse.data?.data?.academy || null);
-
-        const [branchesResult, batchesResult] = await Promise.allSettled([
+        const [academyResult, branchesResult, batchesResult, billingResult] =
+          await Promise.allSettled([
+          academyApi.getMyAcademy(),
           getBranches({ status: "active" }),
           batchApi.getAll(),
+          canManageBilling
+            ? billingApi.getMySubscription()
+            : Promise.resolve(null),
         ]);
+
+        setAcademy(
+          academyResult.status === "fulfilled"
+            ? academyResult.value?.data?.data?.academy || null
+            : null
+        );
 
         setBranches(
           branchesResult.status === "fulfilled"
@@ -65,15 +73,14 @@ const useOwnerDashboard = () => {
             : null
         );
 
-        let billingData = null;
-        if (canManageBilling) {
-          try {
-            const billingResponse = await billingApi.getMySubscription();
-            billingData = billingResponse.data?.data || null;
-            setBilling(billingData);
-          } catch {
-            setBilling(null);
-          }
+        const billingData =
+          billingResult.status === "fulfilled"
+            ? billingResult.value?.data?.data || null
+            : null;
+        setBilling(billingData);
+
+        if (academyResult.status === "rejected") {
+          throw academyResult.reason;
         }
 
         const analyticsAllowed =

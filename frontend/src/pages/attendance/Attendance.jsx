@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import {
   CalendarCheck2, FileSpreadsheet, Printer, RefreshCcw, Save, TrendingUp,
@@ -447,7 +446,8 @@ const Attendance = () => {
     window.print();
   };
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
+    const XLSX = await import("xlsx");
     if (!formattedRows.length) {
       toast.error("Export ke liye data nahi hai");
       return;

@@ -1,4 +1,4 @@
-import { Country } from "country-state-city";
+import Country from "country-state-city/lib/country.js";
 
 const PREFERRED_COUNTRY = { EUR: "EU", USD: "US", GBP: "GB", INR: "IN", AED: "AE", SAR: "SA", CAD: "CA", AUD: "AU", JPY: "JP", CNY: "CN" };
 

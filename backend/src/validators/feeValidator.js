@@ -246,4 +246,7 @@ export const listFeePaymentsValidator = [
     .isInt({ min: 2020 }),
 
   query("search").optional({ checkFalsy: true }).trim(),
+  query("page").optional().isInt({ min: 1 }),
+  query("limit").optional().isInt({ min: 1, max: 100 }),
+  query("paginated").optional().isBoolean(),
 ];

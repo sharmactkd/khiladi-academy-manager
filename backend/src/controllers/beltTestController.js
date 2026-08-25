@@ -143,6 +143,28 @@ export const getBeltTests = asyncHandler(async (req, res) => {
     ];
   }
 
+  if (req.query.latestByStudent === "true") {
+    const [beltTests, total] = await Promise.all([
+      BeltTest.aggregate([
+        { $match: filter },
+        { $sort: { testDate: -1, createdAt: -1 } },
+        { $group: { _id: "$student", record: { $first: "$$ROOT" } } },
+        { $replaceRoot: { newRoot: "$record" } },
+      ]),
+      BeltTest.countDocuments(filter),
+    ]);
+
+    return successResponse(res, "Latest belt tests fetched successfully", {
+      beltTests,
+      pagination: {
+        total,
+        page: 1,
+        limit: beltTests.length,
+        pages: 1,
+      },
+    });
+  }
+
   const [beltTests, total] = await Promise.all([
     BeltTest.find(filter)
       .sort({ testDate: -1, createdAt: -1 })

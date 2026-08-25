@@ -305,6 +305,127 @@ export const buildStudentFeeStatus = async ({
   };
 };
 
+export const buildStudentsFeeStatuses = async ({
+  academyId,
+  students = [],
+  month,
+  year,
+}) => {
+  if (!students.length) return [];
+
+  const studentIds = students.map((student) => student._id);
+  const [academy, plans, payments] = await Promise.all([
+    Academy.findById(academyId)
+      .select("settings.defaultMonthlyFee defaultMonthlyFee")
+      .lean(),
+    FeePlan.find({ academy: academyId, isActive: true })
+      .sort({ createdAt: -1 })
+      .lean(),
+    FeePayment.find({
+      academy: academyId,
+      student: { $in: studentIds },
+      feeMonth: Number(month),
+      feeYear: Number(year),
+      status: { $ne: "cancelled" },
+    })
+      .sort({ paymentDate: -1 })
+      .lean(),
+  ]);
+
+  const defaultAmount = Number(
+    academy?.settings?.defaultMonthlyFee || academy?.defaultMonthlyFee || 0
+  );
+  const planByBatch = new Map();
+  let defaultPlan = null;
+  plans.forEach((plan) => {
+    const batchId = plan.batch ? String(plan.batch) : "";
+    if (batchId && !planByBatch.has(batchId)) planByBatch.set(batchId, plan);
+    if (!batchId && plan.isDefault && !defaultPlan) defaultPlan = plan;
+  });
+
+  const paymentsByStudent = new Map();
+  payments.forEach((payment) => {
+    const key = String(payment.student);
+    const current = paymentsByStudent.get(key) || { payments: [], amountPaid: 0 };
+    current.payments.push(payment);
+    current.amountPaid += Number(payment.amountPaid || 0);
+    paymentsByStudent.set(key, current);
+  });
+
+  return students.map((student) => {
+    const batch = student.batch || null;
+    const batchId = batch?._id || batch;
+    const feePlan = planByBatch.get(String(batchId || "")) || defaultPlan;
+    const batchMonthlyAmount = Number(
+      typeof batch === "object" ? batch.monthlyFee || 0 : 0
+    );
+    const hasStudentOverride = Number(student.monthlyFeeOverride || 0) > 0;
+    const feePlanAmount = Number(feePlan?.monthlyAmount || feePlan?.amount || 0);
+    const baseAmount = hasStudentOverride
+      ? Number(student.monthlyFeeOverride)
+      : batchMonthlyAmount > 0
+        ? batchMonthlyAmount
+        : feePlanAmount > 0
+          ? feePlanAmount
+          : defaultAmount;
+    const dueDay = Number(
+      student.feeDueDay ||
+      (typeof batch === "object" ? batch.feeDueDay : null) ||
+      feePlan?.dueDay ||
+      10
+    );
+    const scholarshipAmount = Number(student.scholarshipAmount || 0);
+    const discountPercent = Number(student.discountPercent || 0);
+    const percentDiscount = Math.round((baseAmount * discountPercent) / 100);
+    const discount = Math.min(baseAmount, scholarshipAmount + percentDiscount);
+    const payableAmount = Math.max(baseAmount - discount, 0);
+    const paymentSummary = paymentsByStudent.get(String(student._id)) || {
+      payments: [],
+      amountPaid: 0,
+    };
+    const latestPayment = paymentSummary.payments[0] || null;
+    const dueDate = buildDueDate(month, year, dueDay);
+    const status = calculateFeeStatus({
+      payableAmount,
+      paidAmount: paymentSummary.amountPaid,
+      dueDate,
+    });
+
+    return {
+      student: {
+        _id: student._id,
+        admissionNumber: student.admissionNumber,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        name: getStudentFullName(student),
+        phone: student.phone,
+        email: student.email,
+        batch,
+        branch: student.branch || null,
+        status: student.status,
+      },
+      feePlan: feePlan || null,
+      month,
+      year,
+      monthKey: buildFeeMonthKey(month, year),
+      monthName: getMonthName(month),
+      monthlyFee: baseAmount,
+      batchMonthlyFee: batchMonthlyAmount,
+      discount,
+      payableAmount,
+      paidAmount: paymentSummary.amountPaid,
+      pendingAmount: Math.max(payableAmount - paymentSummary.amountPaid, 0),
+      dueDay,
+      dueDate,
+      paidDate: latestPayment?.paymentDate || null,
+      paymentMode: latestPayment?.paymentMode || "",
+      receiptNumber: latestPayment?.receiptNumber || "",
+      paymentId: latestPayment?._id || null,
+      status,
+    };
+  });
+};
+
 export const collectStudentFee = async ({
   academyId,
   userId,

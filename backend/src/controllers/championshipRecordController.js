@@ -398,6 +398,48 @@ export const getChampionshipRecords = asyncHandler(async (req, res) => {
     ];
   }
 
+  if (req.query.latestByStudent === "true") {
+    const [championshipRecords, totals] = await Promise.all([
+      ChampionshipRecord.aggregate([
+        { $match: filter },
+        { $sort: { startDate: -1, createdAt: -1 } },
+        { $group: { _id: "$student", record: { $first: "$$ROOT" } } },
+        { $replaceRoot: { newRoot: "$record" } },
+      ]),
+      ChampionshipRecord.aggregate([
+        { $match: filter },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            gold: { $sum: { $cond: [{ $eq: ["$result", "Gold"] }, 1, 0] } },
+            medals: {
+              $sum: {
+                $cond: [
+                  { $in: ["$result", ["Gold", "Silver", "Bronze"]] },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ]),
+    ]);
+    const summary = totals[0] || { total: 0, gold: 0, medals: 0 };
+
+    return successResponse(res, "Latest championship records fetched successfully", {
+      championshipRecords,
+      summary,
+      pagination: {
+        total: summary.total,
+        page: 1,
+        limit: championshipRecords.length,
+        pages: 1,
+      },
+    });
+  }
+
   const [championshipRecords, total] = await Promise.all([
     ChampionshipRecord.find(filter)
       .sort({ startDate: -1, createdAt: -1 })

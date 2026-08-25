@@ -214,6 +214,7 @@ export const updateChampionshipRecordValidation = [
 ];
 
 export const getChampionshipRecordsValidation = [
+  query("latestByStudent").optional().isBoolean(),
   query("student").optional().isMongoId().withMessage("Invalid student id"),
 
   query("championshipType")

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import AttendanceCell from "./AttendanceCell.jsx";
 import AttendanceSummary from "./AttendanceSummary.jsx";
 import MembershipBadge from "./MembershipBadge.jsx";
@@ -233,6 +234,25 @@ const AttendanceTable = ({
 
   const [contextMenu, setContextMenu] = useState(null);
   const [noteEditor, setNoteEditor] = useState(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const tableScrollRef = useRef(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: isPrinting ? 0 : safeRows.length,
+    getScrollElement: () => tableScrollRef.current,
+    estimateSize: () => 51,
+    overscan: 10,
+  });
+
+  const virtualRows = isPrinting
+    ? safeRows.map((_, index) => ({ index, key: index, start: 0, end: 0 }))
+    : rowVirtualizer.getVirtualItems();
+  const firstVirtualRow = virtualRows[0];
+  const lastVirtualRow = virtualRows[virtualRows.length - 1];
+  const topPadding = isPrinting ? 0 : firstVirtualRow?.start || 0;
+  const bottomPadding = isPrinting
+    ? 0
+    : Math.max(rowVirtualizer.getTotalSize() - (lastVirtualRow?.end || 0), 0);
 
   useEffect(() => {
     const closeContextMenu = () => setContextMenu(null);
@@ -252,6 +272,17 @@ const AttendanceTable = ({
       window.removeEventListener("click", closeContextMenu);
       window.removeEventListener("scroll", closeContextMenu, true);
       window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    const enterPrintMode = () => setIsPrinting(true);
+    const leavePrintMode = () => setIsPrinting(false);
+    window.addEventListener("beforeprint", enterPrintMode);
+    window.addEventListener("afterprint", leavePrintMode);
+    return () => {
+      window.removeEventListener("beforeprint", enterPrintMode);
+      window.removeEventListener("afterprint", leavePrintMode);
     };
   }, []);
 
@@ -289,19 +320,16 @@ const AttendanceTable = ({
   const updateCell = (rowIndex, dateKey, value) => {
     if (typeof onRowsChange !== "function") return;
 
-    const nextRows = safeRows.map((row, index) => {
-      if (index !== rowIndex) return row;
-
-      const nextRow = {
-        ...row,
-        attendance: {
-          ...(row.attendance || {}),
-          [dateKey]: value,
-        },
-      };
-
-      return recalculateRow(nextRow, days);
-    });
+    const nextRows = [...safeRows];
+    const row = safeRows[rowIndex];
+    const nextRow = {
+      ...row,
+      attendance: {
+        ...(row.attendance || {}),
+        [dateKey]: value,
+      },
+    };
+    nextRows[rowIndex] = recalculateRow(nextRow, days);
 
     onRowsChange(nextRows);
   };
@@ -309,11 +337,9 @@ const AttendanceTable = ({
   const updateRowField = (rowIndex, field, value) => {
     if (typeof onRowsChange !== "function") return;
 
-    onRowsChange(
-      safeRows.map((row, index) =>
-        index === rowIndex ? { ...row, [field]: value } : row
-      )
-    );
+    const nextRows = [...safeRows];
+    nextRows[rowIndex] = { ...safeRows[rowIndex], [field]: value };
+    onRowsChange(nextRows);
   };
 
   const editExistingNote = () => {
@@ -380,7 +406,7 @@ const AttendanceTable = ({
 
   return (
     <>
-      <div className="monthly-register-table-wrap">
+      <div ref={tableScrollRef} className="monthly-register-table-wrap">
         <table
           className="monthly-register-table"
           style={{ width: `${tableWidth}px`, minWidth: `${tableWidth}px` }}
@@ -501,7 +527,18 @@ const AttendanceTable = ({
           </thead>
 
           <tbody>
-            {safeRows.map((row, rowIndex) => {
+            {topPadding > 0 && (
+              <tr aria-hidden="true">
+                <td
+                  colSpan={days.length + 11}
+                  style={{ height: `${topPadding}px`, padding: 0, border: 0 }}
+                />
+              </tr>
+            )}
+
+            {virtualRows.map((virtualRow) => {
+              const rowIndex = virtualRow.index;
+              const row = safeRows[rowIndex];
               const rowKey =
                 row.studentId || row.importedRowNumber || rowIndex;
               const isInactive =
@@ -510,6 +547,8 @@ const AttendanceTable = ({
               return (
                 <tr
                   key={rowKey}
+                  data-index={rowIndex}
+                  ref={isPrinting ? undefined : rowVirtualizer.measureElement}
                   className={
                     isInactive ? "monthly-register__row--inactive" : ""
                   }
@@ -641,6 +680,15 @@ const AttendanceTable = ({
                 </tr>
               );
             })}
+
+            {bottomPadding > 0 && (
+              <tr aria-hidden="true">
+                <td
+                  colSpan={days.length + 11}
+                  style={{ height: `${bottomPadding}px`, padding: 0, border: 0 }}
+                />
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
