@@ -402,7 +402,7 @@ const AttendanceTable = ({
     );
   }
 
-  const tableWidth = 728 + days.length * 42 + 316;
+  const tableWidth = 752 + days.length * 42 + 316;
 
   return (
     <>
@@ -417,7 +417,7 @@ const AttendanceTable = ({
             <col style={{ width: 130 }} />
             <col style={{ width: 156 }} />
             <col style={{ width: 112 }} />
-            <col style={{ width: 84 }} />
+            <col style={{ width: 108 }} />
             {days.map((day) => <col key={`column-${day.dateKey}`} style={{ width: 42 }} />)}
             <col style={{ width: 54 }} />
             <col style={{ width: 54 }} />
