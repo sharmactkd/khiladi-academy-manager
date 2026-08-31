@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import {
   Activity, ArrowLeft, Award, CircleDollarSign as BadgeIndianRupee, BookOpen, CalendarCheck2,
   CalendarDays, CheckCircle2, Clock3, Edit3, ExternalLink, GraduationCap,
-  HeartPulse, IdCard, MapPin, Percent as ReceiptIndianRupee, Ruler,
+  HeartPulse, IdCard, MapPin, Percent as ReceiptIndianRupee, Phone, Ruler,
   ShieldCheck, ShieldPlus, UserRound, UsersRound, WalletCards, Weight, XCircle,
 } from "lucide-react";
 
@@ -12,6 +12,8 @@ import PageState from "../../components/common/PageState.jsx";
 import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
 import BatchAcademyHeader from "../batches/components/BatchAcademyHeader.jsx";
 import BatchDetailSectionHeader from "../batches/components/BatchDetailSectionHeader.jsx";
+import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
+import BeltTileSelector from "../../components/taekwondoBelts/BeltTileSelector.jsx";
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
 import useAuth from "../../hooks/useAuth.js";
 import { formatMoney } from "../../utils/currency.js";
@@ -268,14 +270,60 @@ const StudentProfile = () => {
       </div>
 
       <div className="student-detail-primary-grid">
-        <section className="student-detail-card">
-          <BatchDetailSectionHeader icon={Award} eyebrow="Training" title="Training Information" description="Martial art, belt and rank assignment." />
-          <div className="student-detail-items">
-            <DetailItem icon={Activity} label="Martial Art / Sport">{text(student.martialArt)}</DetailItem>
-            <DetailItem icon={Award} label="Belt Rank" accent>{beltLabel(student)}</DetailItem>
-            {student.beltRank === "Black" ? <DetailItem icon={ShieldPlus} label="Dan Rank">{text(student.danRank)}</DetailItem> : null}
-          </div>
-        </section>
+       <section className="student-detail-card">
+  <BatchDetailSectionHeader
+    icon={Award}
+    eyebrow="Training"
+    title="Training Information"
+    description="Martial art, belt and rank assignment."
+  />
+
+  <div className="student-detail-training">
+    <div className="student-detail-training-field">
+      <span className="student-detail-training-label">
+        Martial Art / Sport
+      </span>
+
+      {student.martialArt ? (
+        <IconOptionGrid
+          kind="sport"
+          options={[student.martialArt]}
+          selected={[student.martialArt]}
+          interactive={false}
+        />
+      ) : (
+        <p className="student-detail-empty-note">
+          No martial art added.
+        </p>
+      )}
+    </div>
+
+    <div className="student-detail-training-field">
+      <span className="student-detail-training-label">
+        Belt Rank
+      </span>
+
+      {student.beltRank ? (
+        <BeltTileSelector
+          value={student.beltRank}
+          readOnly
+          options={[student.beltRank]}
+        />
+      ) : (
+        <p className="student-detail-empty-note">
+          No belt rank added.
+        </p>
+      )}
+
+      {student.beltRank === "Black" && student.danRank ? (
+        <div className="student-detail-dan-rank">
+          <small>Dan Rank</small>
+          <strong>{student.danRank}</strong>
+        </div>
+      ) : null}
+    </div>
+  </div>
+</section>
 
         <section className="student-detail-card">
           <BatchDetailSectionHeader icon={HeartPulse} eyebrow="Health" title="Medical Information" description="Health details important for safe training." />

@@ -40,13 +40,6 @@
   grid-column: 1 / -1;
 }
 
-/* Keep the searchable country menu above the following form cards. */
-:global(.student-contact-card) {
-  position: relative;
-  z-index: 5;
-  overflow: visible;
-}
-
 :global(.student-contact-email) {
   min-width: 0;
   display: grid;
@@ -71,6 +64,13 @@
   border-radius: 15px;
   background: var(--student-surface);
   box-shadow: 0 10px 28px rgb(15 23 42 / 5%);
+}
+
+/* Allow the searchable country dropdown to escape the contact card. */
+:global(.student-form-card.student-contact-card) {
+  position: relative;
+  z-index: 5;
+  overflow: visible;
 }
 
 :global(.student-form-card__header) {

@@ -8,16 +8,14 @@ import {
   Droplet,
   Gauge,
   HeartPulse,
-  ShieldCheck,
   Syringe,
 } from "lucide-react";
 
 export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-export const NO_KNOWN_CONDITION = "No Known Condition";
 export const OTHER_CONDITION = "Other Condition";
 
 export const MEDICAL_CONDITIONS = [
-  { label: NO_KNOWN_CONDITION, icon: ShieldCheck },
+
   { label: "Asthma", icon: AirVent },
   { label: "Diabetes", icon: Syringe },
   { label: "Heart Issue", icon: HeartPulse },
@@ -54,22 +52,17 @@ const MedicalSelectors = ({
   otherCondition = "",
   onOtherConditionChange,
 }) => {
-  const toggleCondition = (condition) => {
-    if (condition === NO_KNOWN_CONDITION) {
-      onConditionsChange?.(conditions.includes(condition) ? [] : [condition]);
-      if (!conditions.includes(condition)) onOtherConditionChange?.("");
-      return;
-    }
+ const toggleCondition = (condition) => {
+  const next = conditions.includes(condition)
+    ? conditions.filter((item) => item !== condition)
+    : [...conditions, condition];
 
-    const withoutNoKnown = conditions.filter((item) => item !== NO_KNOWN_CONDITION);
-    const next = withoutNoKnown.includes(condition)
-      ? withoutNoKnown.filter((item) => item !== condition)
-      : [...withoutNoKnown, condition];
-    onConditionsChange?.(next);
-    if (condition === OTHER_CONDITION && withoutNoKnown.includes(condition)) {
-      onOtherConditionChange?.("");
-    }
-  };
+  onConditionsChange?.(next);
+
+  if (condition === OTHER_CONDITION && conditions.includes(condition)) {
+    onOtherConditionChange?.("");
+  }
+};
 
   return <div className="student-medical-selectors">
     <section className="student-medical-panel" aria-labelledby="student-blood-group-label">

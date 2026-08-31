@@ -62,3 +62,64 @@
 @media(max-width:760px){:global(.student-detail-heading){align-items:flex-start;flex-direction:column}:global(.student-detail-heading__actions){width:100%}:global(.student-detail-heading__actions .btn){flex:1}:global(.student-detail-metrics){grid-template-columns:repeat(2,minmax(0,1fr))}:global(.student-detail-contact-grid){grid-template-columns:1fr}}
 @media(max-width:700px){:global(.student-detail-basic-assignments){grid-template-columns:1fr}:global(.student-detail-basic-layout){grid-template-columns:1fr}:global(.student-detail-basic-photo){min-height:270px}:global(.student-detail-location-row),:global(.student-detail-person-row__fields){grid-template-columns:1fr}}
 @media(max-width:520px){:global(.student-detail-metrics),:global(.student-detail-items),:global(.student-detail-link-grid),:global(.student-detail-basic-fields),:global(.student-detail-top-links){grid-template-columns:1fr}:global(.student-detail-item--wide){grid-column:auto}:global(.student-detail-photo-card){grid-template-columns:105px minmax(0,1fr);padding:10px}:global(.student-detail-photo),:global(.student-detail-photo img){min-height:145px}:global(.student-detail-contact dl){grid-template-columns:1fr}:global(.student-detail-heading__title){align-items:flex-start}:global(.student-detail-heading__actions .btn){flex:1 1 100%}:global(.student-detail-person-row){grid-template-columns:1fr}:global(.student-detail-person-row__number){width:100%}}
+
+:global(.student-detail-training) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 15px 16px 18px;
+}
+
+:global(.student-detail-training-field) {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+:global(.student-detail-training-label) {
+  display: block;
+  color: #09162d;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+:global(.student-detail-training-field .ui-choice-grid) {
+  width: 100%;
+}
+
+:global(.student-detail-training-field .student-detail-empty-note) {
+  margin: 0;
+}
+
+:global(.student-detail-dan-rank) {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: max-content;
+  max-width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #e7ebf1;
+  border-radius: 9px;
+  background: #fbfcfe;
+}
+
+:global(.student-detail-dan-rank small) {
+  color: var(--sd-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+:global(.student-detail-dan-rank strong) {
+  color: #18243a;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+@media (max-width: 700px) {
+  :global(.student-detail-training) {
+    grid-template-columns: 1fr;
+  }
+}
+
