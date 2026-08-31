@@ -194,11 +194,12 @@ const BranchDetail = () => {
           <BranchDetailSectionHeader icon={Building2} eyebrow="Identity" title="Branch Information" description="Core identity and operating status." />
           <div className="branch-detail-items">
             <DetailItem icon={UserRound} label="Director Name">{displayValue(branch.directorName)}</DetailItem>
-            <DetailItem icon={WalletCards} label="Currency">{`${currencyMeta(branch).code} (${currencyMeta(branch).symbol})`}</DetailItem>
             <DetailItem icon={Building2} label="Branch Code">{displayValue(branch.branchCode)}</DetailItem>
-            <DetailItem icon={CalendarDays} label="Branch Since">{displayValue(branch.branchSince)}</DetailItem>
             <DetailItem icon={branch.isMainBranch ? Crown : ShieldCheck} label="Branch Type">{branch.isMainBranch ? "Main Branch" : "Academy Branch"}</DetailItem>
-          </div>
+            <DetailItem icon={CalendarDays} label="Branch Since">{displayValue(branch.branchSince)}</DetailItem>
+          
+            <DetailItem icon={WalletCards} label="Currency">{`${currencyMeta(branch).code} (${currencyMeta(branch).symbol})`}</DetailItem>
+           </div>
         </section>
         <section className="branch-detail-card">
           <BranchDetailSectionHeader icon={MapPin} eyebrow="Contact" title="Phone & Location" description="Official communication and complete address." />

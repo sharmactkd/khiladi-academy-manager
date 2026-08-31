@@ -1,15 +1,15 @@
 import { useState } from "react";
 import {
+  Check,
   Dumbbell,
   Languages,
-  Plus,
+  
   Trash2,
   UserRound,
   UsersRound,
 } from "lucide-react";
 
 import PhoneLocationFields from "./PhoneLocationFields.jsx";
-import IconOptionGrid from "./iconOptions/IconOptionGrid.jsx";
 import { TAEKWONDO_BELTS } from "../taekwondoBelts/taekwondoBelts.js";
 
 export const MARTIAL_ART_OPTIONS = [
@@ -81,8 +81,8 @@ const CustomTagInput = ({
   };
 
   return (
-    <div className="operations-custom-tag ui-choice-custom">
-      <Plus size={15} aria-hidden="true" />
+    <div className="operations-custom-tag">
+    
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -103,26 +103,40 @@ const CustomTagInput = ({
 };
 
 const TagSelector = ({
-  customOptions = [],
-  kind,
-  onRemoveCustom,
   options,
   selected,
   onToggle,
   trailingContent = null,
-}) => (
-  <div className="operations-tag-grid">
-    <IconOptionGrid
-      kind={kind}
-      options={uniqueValues(options)}
-      selected={selected}
-      customOptions={customOptions}
-      onToggle={onToggle}
-      onRemoveCustom={onRemoveCustom}
-      trailingContent={trailingContent}
-    />
-  </div>
-);
+}) => {
+  const normalizedOptions = uniqueValues(options);
+
+  return (
+    <div
+      className={`operations-tag-grid${
+        normalizedOptions.length === 1 && !trailingContent
+          ? " operations-tag-grid--single"
+          : ""
+      }`}
+    >
+      {normalizedOptions.map((item) => {
+        const active = selected.includes(item);
+        return (
+          <button
+            type="button"
+            key={item}
+            className={active ? "is-selected" : ""}
+            aria-pressed={active}
+            onClick={() => onToggle(item)}
+          >
+            {active ? <Check size={13} aria-hidden="true" /> : null}
+            {item}
+          </button>
+        );
+      })}
+      {trailingContent}
+    </div>
+  );
+};
 
 export const SportsMartialArtsField = ({
   selected = [],
@@ -152,10 +166,6 @@ export const SportsMartialArtsField = ({
     if (!selected.includes(existing)) onChange?.([...selected, existing]);
     setCustomValue("");
   };
-  const removeCustom = (item) => {
-    onCustomOptionsChange?.(customOptions.filter((value) => value !== item));
-    onChange?.(selected.filter((value) => value !== item));
-  };
 
   return (
     <section className={`operations-selection-section ${className}`.trim()}>
@@ -173,11 +183,8 @@ export const SportsMartialArtsField = ({
           </span>
         ) : null}
         <TagSelector
-          kind="sport"
           options={allOptions}
           selected={selected}
-          customOptions={customOptions}
-          onRemoveCustom={onCustomOptionsChange ? removeCustom : undefined}
           onToggle={toggle}
           trailingContent={allowCustom ? (
             <CustomTagInput
@@ -220,10 +227,6 @@ export const LanguagesSpokenField = ({
     if (!selected.includes(existing)) onChange?.([...selected, existing]);
     setCustomValue("");
   };
-  const removeCustom = (item) => {
-    onCustomOptionsChange?.(customOptions.filter((value) => value !== item));
-    onChange?.(selected.filter((value) => value !== item));
-  };
 
   return (
     <section className={`operations-selection-section ${className}`.trim()}>
@@ -240,11 +243,8 @@ export const LanguagesSpokenField = ({
           <span className="operations-field-label">Languages Spoken</span>
         ) : null}
         <TagSelector
-          kind="language"
           options={allOptions}
           selected={selected}
-          customOptions={customOptions}
-          onRemoveCustom={removeCustom}
           onToggle={toggle}
           trailingContent={
             <CustomTagInput
@@ -420,6 +420,15 @@ export const CoachesInChargeSection = ({
   );
 };
 
+const beltTone = (belt) => {
+  const value = String(belt || "").toLowerCase();
+  return (
+    ["white", "yellow", "green", "blue", "red", "black"].find((color) =>
+      value.includes(color),
+    ) || "mixed"
+  );
+};
+
 export const BeltTagsField = ({
   label,
   description = "",
@@ -434,21 +443,30 @@ export const BeltTagsField = ({
     {description ? (
       <small className="operations-belt-description">{description}</small>
     ) : null}
-    <IconOptionGrid
-      className="operations-belt-tags"
-      compact
-      kind="belt"
-      options={includeNoLimit ? [...TAEKWONDO_BELTS, "No Limit"] : TAEKWONDO_BELTS}
-      selected={noLimit ? ["No Limit"] : value ? [value] : []}
-      onToggle={(belt) => {
-        if (belt === "No Limit") {
-          onNoLimitChange?.(!noLimit);
-          if (!noLimit) onChange?.("");
-          return;
-        }
-        onNoLimitChange?.(false);
-        onChange?.(value === belt ? "" : belt);
-      }}
-    />
+    <div className="operations-belt-tags">
+      {TAEKWONDO_BELTS.map((belt) => (
+        <button
+          key={belt}
+          type="button"
+          data-belt-tone={beltTone(belt)}
+          className={!noLimit && value === belt ? "is-selected" : ""}
+          onClick={() => {
+            onNoLimitChange?.(false);
+            onChange?.(belt);
+          }}
+        >
+          {belt}
+        </button>
+      ))}
+      {includeNoLimit ? (
+        <button
+          type="button"
+          className={`operations-belt-no-limit${noLimit ? " is-selected" : ""}`}
+          onClick={() => onNoLimitChange?.(!noLimit)}
+        >
+          {noLimit ? <Check size={13} aria-hidden="true" /> : null}No Limit
+        </button>
+      ) : null}
+    </div>
   </div>
 );

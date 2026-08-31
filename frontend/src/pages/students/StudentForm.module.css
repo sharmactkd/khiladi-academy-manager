@@ -11,30 +11,6 @@
   gap: 16px;
 }
 
-:global(.student-submit-error) {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  color: #991b1b;
-  background: #fff1f2;
-  border: 1px solid #fecdd3;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-:global(.student-submit-error > svg) {
-  flex: 0 0 auto;
-  margin-top: 1px;
-  color: #e30613;
-}
-
-:global(.student-submit-error > span) {
-  display: grid;
-  gap: 2px;
-}
-
 :global(.student-form-grid) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -69,7 +45,7 @@
   display: grid;
   gap: 6px;
   color: var(--student-ink);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -110,7 +86,7 @@
 
 :global(.student-form-card__header [class*="eyebrow"]) {
   color: var(--student-red);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: .14em;
 }
@@ -124,7 +100,7 @@
 
 :global(.student-form-card__header p) {
   color: var(--student-muted);
-  font-size: 12px;
+  font-size: 10px;
 }
 
 :global(.student-identity-actions) {
@@ -138,7 +114,7 @@
   gap: 4px;
   min-width: 190px;
   color: var(--student-ink);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
 }
 
@@ -150,7 +126,7 @@
   background: #fff;
   padding: 7px 10px;
   color: var(--student-ink);
-  font-size: 12px;
+  font-size: 10px;
 }
 
 :global(.student-assignment-field > strong) {
@@ -171,7 +147,7 @@
   gap: 4px;
   min-width: 245px;
   color: var(--student-ink);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
 }
 
@@ -229,7 +205,7 @@
   gap: 6px;
   min-width: 0;
   color: var(--student-ink);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -239,7 +215,7 @@
 
 :global(.student-demographics-row > label > small) {
   color: #dc2626;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
 }
 
@@ -257,7 +233,7 @@
 
 :global(.student-chip-field [class*="label"]) {
   color: var(--student-ink);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -285,9 +261,12 @@
 
 :global(.student-chip-field [class*="chip"]) {
   min-height: 37px;
-    padding: 8px 14px;
+  border: 1px solid #ff8f96;
+  border-radius: 9px;
+  background: #fff;
+  padding: 8px 14px;
   color: var(--student-ink);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
 }
 
@@ -314,7 +293,7 @@
   gap: 6px;
   min-width: 0;
   color: var(--student-ink);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -334,7 +313,7 @@
   color: var(--student-ink);
   padding: 9px 11px;
   font: inherit;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   outline: none;
   transition: border-color .18s ease, box-shadow .18s ease;
@@ -360,7 +339,7 @@
 :global(.student-form-fields > label > small),
 :global(.student-form-body > label > small) {
   color: #dc2626;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
 }
 
@@ -413,7 +392,8 @@
   max-width: none !important;
   margin: 0 !important;
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) 192px !important;
+  grid-template-columns:
+    var(--student-training-columns, repeat(2, minmax(0, 1fr))) !important;
   grid-template-areas: none !important;
   align-items: start;
   justify-content: start !important;
@@ -448,11 +428,11 @@
 }
 
 :global(.student-training-components .batch-profile-sports) {
-  width: 100%;
+  width: max-content;
   max-width: 100%;
   min-width: 0;
   grid-area: auto !important;
-  grid-column: 1 / -1 !important;
+  grid-column: 1 !important;
   grid-row: 1 !important;
   order: initial !important;
   align-self: start;
@@ -469,7 +449,7 @@
   .batch-profile-sports
   .operations-tag-grid
 ) {
-  width: 100% !important;
+  width: max-content !important;
   max-width: 100% !important;
   margin: 0 !important;
   justify-content: flex-start !important;
@@ -479,8 +459,8 @@
 :global(.student-training-components .operations-belt-field) {
   width: 100%;
   min-width: 0;
-  grid-column: 1 !important;
-  grid-row: 2 !important;
+  grid-column: 2 !important;
+  grid-row: 1 !important;
   order: initial !important;
   align-self: start;
   display: grid !important;
@@ -493,8 +473,8 @@
 :global(.student-training-components .student-belt-field) {
   width: 100%;
   min-width: 0;
-  grid-column: 1 !important;
-  grid-row: 2 !important;
+  grid-column: 2 !important;
+  grid-row: 1 !important;
   align-self: start;
   padding: 0 !important;
   border: 0 !important;
@@ -514,8 +494,8 @@
   width: 100%;
   min-width: 0;
   display: grid;
-  grid-column: 2 !important;
-  grid-row: 2 !important;
+  grid-column: 3 !important;
+  grid-row: 1 !important;
   order: initial !important;
   align-self: start;
   grid-template-rows: auto auto;
@@ -523,7 +503,7 @@
   gap: 10px !important;
   padding: 0 !important;
   color: var(--student-ink);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -546,27 +526,56 @@
 }
 
 :global(.student-training-components .student-belt-field .operations-belt-tags) {
-  width: 100% !important;
-  max-width: 100% !important;
+  width: max-content !important;
+  max-width: none !important;
   display: flex !important;
-  flex-flow: row nowrap !important;
-  overflow-x: auto;
+  flex-wrap: nowrap !important;
   justify-content: flex-start !important;
   gap: 8px !important;
 }
 
+:global(.student-training-components .student-belt-field .operations-belt-tags > button) {
+  width: 106px !important;
+  min-width: 106px !important;
+  flex: 0 0 106px;
+}
+
 @media (max-width: 1280px) {
   :global(.student-training-components .student-training-grid) {
-    grid-template-columns: minmax(0, 1fr) 192px !important;
+    grid-template-columns: max-content minmax(0, 1fr) 192px !important;
+  }
+
+  :global(.student-training-components .student-training-grid:not(.has-dan-rank)) {
+    grid-template-columns: max-content minmax(0, 1fr) !important;
   }
 
   :global(.student-training-components .student-belt-field .operations-belt-tags) {
     width: 100% !important;
     max-width: 100% !important;
-    display: flex !important;
-    flex-flow: row nowrap !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)) !important;
   }
 
+  :global(.student-training-components .student-belt-field .operations-belt-tags > button) {
+    width: 100% !important;
+    min-width: 88px !important;
+    flex-basis: auto;
+  }
+}
+
+/* Never stretch a single available belt/tag across the entire training row. */
+:global(.student-training-components .operations-tag-grid--single) {
+  width: 100% !important;
+  display: flex !important;
+  grid-template-columns: none !important;
+  justify-content: flex-start !important;
+}
+
+:global(.student-training-components .operations-tag-grid--single > button) {
+  width: auto !important;
+  min-width: 106px !important;
+  max-width: min(180px, 100%) !important;
+  flex: 0 0 auto !important;
 }
 
 :global(.student-medical-content) {
@@ -588,7 +597,7 @@
   gap: 7px;
   min-width: 0;
   color: var(--student-ink);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 750;
 }
 
@@ -596,120 +605,56 @@
   min-height: 48px !important;
 }
 
-:global(.student-medical-selectors) {
+:global(.student-medical-selector) {
   display: grid;
-  gap: 14px;
-  padding: 2px 0 16px;
+  gap: 11px;
+  padding: 14px 0;
   border-top: 1px solid #edf1f5;
 }
 
-:global(.student-medical-panel) {
-  min-width: 0;
-  display: grid;
-  gap: 16px;
-  margin-top: 14px;
-  padding: 18px;
-  border: 1px solid #dbe4ef;
-  border-radius: 14px;
-  background: #fbfcfe;
-  box-shadow: 0 7px 20px rgb(15 23 42 / 4%);
-}
-
-:global(.student-medical-panel__title) {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-}
-
-:global(.student-medical-panel__icon) {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #ffb9be;
-  border-radius: 50%;
-  color: var(--student-red);
-  background: #fff;
-}
-
-:global(.student-medical-panel__title > div) {
-  min-width: 0;
+:global(.student-medical-selector__heading) {
   display: grid;
   gap: 3px;
 }
 
-:global(.student-medical-panel__title small) {
-  color: var(--student-red);
-  font-size: 11px;
-  font-weight: 850;
-  letter-spacing: .12em;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
-:global(.student-medical-panel__title div > div) {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-:global(.student-medical-panel__title strong) {
+:global(.student-medical-selector__heading strong) {
   color: var(--student-ink);
-  font-size: 15px;
-  font-weight: 850;
+  font-size: 12px;
+  font-weight: 800;
   line-height: 1.25;
 }
 
-:global(.student-medical-panel__title em) {
-  padding: 3px 8px;
-  border-radius: 999px;
-  color: #64748b;
-  background: #eef2f7;
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 750;
-}
-
-:global(.student-medical-panel__title p) {
-  margin: 0;
+:global(.student-medical-selector__heading small) {
   color: #718096;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 :global(.student-blood-group-grid) {
-  display: grid;
-  grid-template-columns: repeat(8, minmax(72px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
 }
 
 :global(.student-blood-group-grid > button) {
-  min-width: 0;
-  min-height: 76px;
-  display: flex;
-  flex-direction: column;
+  min-width: 76px;
+  min-height: 42px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 8px;
   box-sizing: border-box;
-  padding: 10px 8px !important;
+  padding: 8px 13px !important;
   border: 1px solid #d8e0ea !important;
-  border-radius: 11px !important;
+  border-radius: 10px !important;
   background: #fff !important;
-  color: var(--student-red) !important;
-  box-shadow: 0 3px 9px rgb(15 23 42 / 4%);
-  transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
-}
-
-:global(.student-blood-group-grid > button strong) {
-  color: var(--student-ink);
-  font-size: 12px;
-  font-weight: 850;
+  color: #17233b !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
   line-height: 1;
+  box-shadow: 0 2px 5px rgb(15 23 42 / 3%);
+  transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
 :global(.student-blood-group-grid > button:hover) {
@@ -730,99 +675,90 @@
   box-shadow: 0 8px 18px rgb(227 6 19 / 18%);
 }
 
-:global(.student-blood-group-grid > button.is-selected strong) {
-  color: #fff;
-}
-
-:global(.student-medical-conditions-grid) {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(100px, 1fr));
-  gap: 10px;
-}
-
-:global(.student-medical-conditions-grid > button) {
-  position: relative;
-  min-width: 0;
-  min-height: 82px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  box-sizing: border-box;
-  padding: 10px 8px !important;
-  border: 1px solid #d8e0ea !important;
-  border-radius: 11px !important;
-  background: #fff !important;
-  color: #35445f !important;
-  cursor: pointer;
-  box-shadow: 0 3px 9px rgb(15 23 42 / 4%);
-  transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
-}
-
-:global(.student-medical-conditions-grid > button:hover) {
-  border-color: #f08b92 !important;
-  background: #fffafa !important;
-  transform: translateY(-1px);
-}
-
-:global(.student-medical-conditions-grid > button:focus-visible) {
-  outline: 3px solid rgb(227 6 19 / 12%);
-  outline-offset: 2px;
-}
-
-:global(.student-medical-conditions-grid > button.is-selected) {
-  border-color: #ef5962 !important;
-  background: #fff4f4 !important;
-  color: var(--student-red) !important;
-  box-shadow: 0 6px 14px rgb(227 6 19 / 9%);
-}
-
-:global(.student-condition-icon) {
-  min-height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-:global(.student-medical-conditions-grid > button strong) {
-  color: var(--student-ink);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.25;
-  text-align: center;
-}
-
-:global(.student-medical-conditions-grid > button.is-selected strong) {
-  color: #8f0a11;
-}
-
-:global(.student-condition-check) {
-  position: absolute;
-  top: 7px;
-  right: 7px;
-  width: 18px;
-  height: 18px;
+:global(.student-selector-check) {
+  width: 19px;
+  height: 19px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
+  background: #fff;
+  color: var(--student-red);
+}
+
+:global(.student-medical-selector--conditions) {
+  padding-bottom: 16px;
+}
+
+:global(.student-medical-conditions-grid) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+:global(.student-medical-conditions-grid > label) {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  border: 1px solid #d8e0ea;
+  border-radius: 10px;
+  background: #fff;
+  color: #26344d;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgb(15 23 42 / 3%);
+  transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+:global(.student-medical-conditions-grid > label:hover) {
+  border-color: #f08b92;
+  background: #fffafa;
+  transform: translateY(-1px);
+}
+
+:global(.student-medical-conditions-grid > label:focus-within) {
+  outline: 3px solid rgb(227 6 19 / 12%);
+  outline-offset: 2px;
+}
+
+:global(.student-medical-conditions-grid > label.is-selected) {
+  border-color: #ef5962;
+  background: #fff4f4;
+  color: #8f0a11;
+  box-shadow: 0 6px 14px rgb(227 6 19 / 9%);
+}
+
+:global(.student-medical-conditions-grid input) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+:global(.student-condition-check) {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1.5px solid #aeb9c7;
+  border-radius: 50%;
+  background: #fff;
   color: #fff;
+}
+
+:global(.student-medical-conditions-grid > label.is-selected .student-condition-check) {
+  border-color: var(--student-red);
   background: var(--student-red);
-  box-shadow: 0 3px 8px rgb(227 6 19 / 20%);
-}
-
-:global(.student-other-condition) {
-  display: grid;
-  gap: 7px;
-  color: var(--student-ink);
-  font-size: 12px;
-  font-weight: 750;
-}
-
-:global(.student-other-condition input) {
-  min-height: 44px !important;
-  background: #fff !important;
 }
 
 :global(.student-medical-notes) {
@@ -832,11 +768,6 @@
 
 :global(.student-medical-notes textarea) {
   min-height: 84px;
-}
-
-@media (max-width: 1200px) {
-  :global(.student-blood-group-grid) { grid-template-columns: repeat(4, minmax(72px, 1fr)); }
-  :global(.student-medical-conditions-grid) { grid-template-columns: repeat(4, minmax(100px, 1fr)); }
 }
 
 @media (max-width: 1080px) {
@@ -884,9 +815,6 @@
   :global(.student-form-actions .btn) { flex: 1 1 140px; }
   :global(.student-demographics-row) { grid-template-columns: 1fr; }
   :global(.student-medical-measurements) { grid-template-columns: 1fr; }
-  :global(.student-medical-panel) { padding: 14px; }
-  :global(.student-blood-group-grid),
-  :global(.student-medical-conditions-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 560px) {

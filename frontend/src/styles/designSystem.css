@@ -69,12 +69,6 @@
     opacity: 1;
   }
 
-  :where(button, a, input, select, textarea, [role="button"]):focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-    box-shadow: var(--shadow-focus);
-  }
-
   .btn {
     min-height: var(--control-height);
     gap: var(--control-gap);
