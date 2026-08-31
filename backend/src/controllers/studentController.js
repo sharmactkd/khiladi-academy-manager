@@ -387,6 +387,58 @@ const buildBatchLookup = async (academyId) => {
   }, {});
 };
 
+const buildUniqueImportCode = async ({ Model, academyId, field, name, prefix }) => {
+  const base = cleanString(name)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 20) || prefix;
+
+  for (let counter = 0; counter < 100; counter += 1) {
+    const suffix = counter ? `-${counter + 1}` : "";
+    const code = `${prefix}-${base}${suffix}`.slice(0, field === "branchCode" ? 30 : 40);
+    const exists = await Model.exists({ academy: academyId, [field]: code });
+    if (!exists) return code;
+  }
+
+  return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
+};
+
+const resolveImportDestination = async ({ academyId, userId, destination = {} }) => {
+  const branchMode = destination.branchMode === "new" ? "new" : "existing";
+  const batchMode = destination.batchMode === "new" ? "new" : "existing";
+  let branch = null;
+  let batch = null;
+
+  if (branchMode === "new") {
+    const branchName = cleanString(destination.newBranchName, 120);
+    if (!branchName) throw new Error("New branch name is required");
+    const duplicate = await Branch.findOne({ academy: academyId, branchName }).select("_id branchName");
+    if (duplicate) throw new Error("A branch with this name already exists");
+    const branchCode = await buildUniqueImportCode({ Model: Branch, academyId, field: "branchCode", name: branchName, prefix: "IMP" });
+    branch = await Branch.create({ academy: academyId, branchName, branchCode, isActive: true, createdBy: userId, updatedBy: userId });
+  } else {
+    if (!mongoose.Types.ObjectId.isValid(destination.branchId)) throw new Error("Please select a valid branch");
+    branch = await Branch.findOne({ _id: destination.branchId, academy: academyId, isActive: true }).select("_id branchName");
+    if (!branch) throw new Error("Selected branch was not found or is inactive");
+  }
+
+  if (batchMode === "new") {
+    const batchName = cleanString(destination.newBatchName, 120);
+    if (!batchName) throw new Error("New batch name is required");
+    const duplicate = await Batch.findOne({ academy: academyId, branch: branch._id, batchName }).select("_id batchName");
+    if (duplicate) throw new Error("A batch with this name already exists in the selected branch");
+    const batchCode = await buildUniqueImportCode({ Model: Batch, academyId, field: "batchCode", name: batchName, prefix: "IMP" });
+    batch = await Batch.create({ academy: academyId, branch: branch._id, batchName, batchCode, martialArt: "Taekwondo", isActive: true, createdBy: userId, updatedBy: userId });
+  } else {
+    if (!mongoose.Types.ObjectId.isValid(destination.batchId)) throw new Error("Please select a valid batch");
+    batch = await Batch.findOne({ _id: destination.batchId, academy: academyId, branch: branch._id, isActive: true }).select("_id batchName branch martialArt");
+    if (!batch) throw new Error("Selected batch does not belong to the selected branch or is inactive");
+  }
+
+  return { branch, batch };
+};
+
 const buildAdmissionNumber = async ({
   academyId,
   row,
@@ -426,12 +478,13 @@ const normalizeImportRow = async ({
   batchLookup,
   usedAdmissionNumbers,
   allowProvisional,
+  destinationBatch,
 }) => {
   const { firstName, lastName } = splitName(row);
   const batchName = cleanString(row.batchName);
-  const matchedBatch = batchName
+  const matchedBatch = destinationBatch || (batchName
     ? batchLookup[batchName.toLowerCase()] || null
-    : null;
+    : null);
 
   const admissionNumber = await buildAdmissionNumber({
     academyId,
@@ -550,6 +603,7 @@ export const importStudents = asyncHandler(async (req, res) => {
   const students = Array.isArray(req.body?.students) ? req.body.students : [];
   const duplicateMode = req.body?.duplicateMode || "skip";
   const allowProvisional = req.body?.allowProvisional === true;
+  const destination = req.body?.destination || {};
 
   const summary = {
     totalRows: students.length,
@@ -563,6 +617,8 @@ export const importStudents = asyncHandler(async (req, res) => {
   if (!students.length) {
     return successResponse(res, "Student import completed", summary);
   }
+
+  const resolvedDestination = await resolveImportDestination({ academyId, userId, destination });
 
   let remainingCapacity = Number.POSITIVE_INFINITY;
   if (req.user?.role !== "super_admin") {
@@ -595,6 +651,7 @@ export const importStudents = asyncHandler(async (req, res) => {
         batchLookup,
         usedAdmissionNumbers,
         allowProvisional,
+        destinationBatch: resolvedDestination.batch,
       });
 
       const admissionKey = studentPayload.admissionNumber.toLowerCase();
@@ -673,6 +730,13 @@ export const importStudents = asyncHandler(async (req, res) => {
       });
     }
   }
+
+  summary.destination = {
+    branchId: resolvedDestination.branch._id,
+    branchName: resolvedDestination.branch.branchName,
+    batchId: resolvedDestination.batch._id,
+    batchName: resolvedDestination.batch.batchName,
+  };
 
   return successResponse(res, "Student import completed", summary);
 });
