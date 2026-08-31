@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import DateInput from "../../components/common/DateInput.jsx";
 import toast from "react-hot-toast";
 import { studentApi } from "../../api/studentApi.js";
 import { tournamentSyncApi } from "../../api/tournamentSyncApi.js";
@@ -170,8 +171,7 @@ const ImportTournamentResults = () => {
 
           <label>
             Date
-            <input
-              type="date"
+            <DateInput
               name="date"
               value={form.date}
               onChange={handleChange}

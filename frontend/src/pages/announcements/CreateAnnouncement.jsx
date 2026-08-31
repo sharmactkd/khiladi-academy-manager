@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { announcementApi } from "../../api/announcementApi.js";
 import { studentApi } from "../../api/studentApi.js";
 import api from "../../api/api.js";
+import DateInput from "../../components/common/DateInput.jsx";
 
 const initialForm = {
   title: "",
@@ -254,7 +255,7 @@ const CreateAnnouncement = () => {
 
         <label>
           Publish At
-          <input
+          <DateInput
             type="datetime-local"
             name="publishAt"
             value={form.publishAt}
@@ -264,7 +265,7 @@ const CreateAnnouncement = () => {
 
         <label>
           Expires At
-          <input
+          <DateInput
             type="datetime-local"
             name="expiresAt"
             value={form.expiresAt}

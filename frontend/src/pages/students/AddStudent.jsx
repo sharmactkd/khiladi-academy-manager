@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import DateInput from "../../components/common/DateInput.jsx";
 import { Link, useNavigate } from "react-router-dom";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -251,8 +252,8 @@ const AddStudent = () => {
           <label><span>Aadhaar Number</span><Controller name="aadhaarNumber" control={control} rules={{ validate: (value) => !value || /^\d{4}-\d{4}-\d{4}$/.test(value) || "Enter a valid 12 digit Aadhaar number" }} render={({ field }) => <input {...field} maxLength={14} inputMode="numeric" autoComplete="off" placeholder="0000-0000-0000" onChange={(event) => field.onChange(formatAadhaar(event.target.value))} />} />{errorFor("aadhaarNumber")}</label>
           <div className="student-chip-field student-gender-field"><OptionChipsField label="Gender" multiple={false} options={["Male", "Female"]} value={gender === "female" ? "Female" : "Male"} onChange={(value) => setValue("gender", value.toLowerCase())} /></div>
           <div className="student-demographics-row">
-            <label><span>Joining Date</span><input type="date" {...register("joiningDate")} /></label>
-            <label><span>Date of Birth</span><input type="date" max={new Date().toISOString().split("T")[0]} {...register("dob")} />{errorFor("dob")}</label>
+            <label><span>Joining Date</span><DateInput {...register("joiningDate")} /></label>
+            <label><span>Date of Birth</span><DateInput max={new Date().toISOString().split("T")[0]} {...register("dob")} />{errorFor("dob")}</label>
             <label><span>Age</span><input value={age === "" ? "" : `${age} Years`} readOnly /></label>
             <label><span>Age Category</span><input value={ageCategoryLabel} placeholder="Calculated from date of birth" readOnly /></label>
 

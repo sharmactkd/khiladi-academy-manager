@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import DateInput from "../../components/common/DateInput.jsx";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -240,8 +241,8 @@ const AcademyEventStudio = ({ mode }) => {
           <label className={styles.full}><span>{title} Name *</span><input value={form.name} onChange={(eventObject) => updateForm("name", eventObject.target.value)} placeholder={`Official ${title.toLowerCase()} name`}/></label>
           <label><span>Branch</span><select value={form.branch} onChange={(eventObject) => updateForm("branch", eventObject.target.value)}>{branches.map((branch) => <option key={branch._id} value={branch._id}>{branch.branchName}</option>)}</select></label>
           <label><span>Sport / Martial Art</span><input value={form.sport} onChange={(eventObject) => updateForm("sport", eventObject.target.value)}/></label>
-          <label><span>{mode === "belt" ? "Test Date" : "Start Date"} *</span><input type="date" value={form.startDate} onChange={(eventObject) => { updateForm("startDate", eventObject.target.value); if (mode === "belt") updateForm("endDate", eventObject.target.value); }}/></label>
-          {mode === "championship" ? <label><span>End Date</span><input type="date" value={form.endDate} min={form.startDate} onChange={(eventObject) => updateForm("endDate", eventObject.target.value)}/></label> : null}
+          <label><span>{mode === "belt" ? "Test Date" : "Start Date"} *</span><DateInput value={form.startDate} onChange={(eventObject) => { updateForm("startDate", eventObject.target.value); if (mode === "belt") updateForm("endDate", eventObject.target.value); }}/></label>
+          {mode === "championship" ? <label><span>End Date</span><DateInput value={form.endDate} min={form.startDate} onChange={(eventObject) => updateForm("endDate", eventObject.target.value)}/></label> : null}
           {mode === "championship" ? <label><span>Competition Level</span><select value={form.level} onChange={(eventObject) => updateForm("level", eventObject.target.value)}>{LEVELS.map((level) => <option key={level}>{level}</option>)}</select></label> : <label><span>Examiner</span><input value={form.examinerName} onChange={(eventObject) => updateForm("examinerName", eventObject.target.value)} placeholder="Examiner's full name"/></label>}
           <label><span>Venue</span><input value={form.venue} onChange={(eventObject) => updateForm("venue", eventObject.target.value)}/></label>
           <label><span>{mode === "belt" ? "Authority / Organizer" : "Organizer"}</span><input value={form.organizer} onChange={(eventObject) => updateForm("organizer", eventObject.target.value)}/></label>
@@ -250,7 +251,7 @@ const AcademyEventStudio = ({ mode }) => {
         <section className={styles.card}><header><span>02</span><div><small>Default with exceptions</small><h2>Fee Configuration</h2><p>Default fee applies automatically; individual overrides remain independent.</p></div></header><div className={styles.feeGrid}>
           <label><span>Default Fee</span><div><b>{currency.symbol}</b><input type="number" min="0" step="0.01" value={form.defaultFee} onChange={(eventObject) => updateForm("defaultFee", eventObject.target.value)}/></div></label>
           {mode === "championship" ? <label><span>Additional Entry Fee</span><div><b>{currency.symbol}</b><input type="number" min="0" step="0.01" value={form.additionalEntryFee} onChange={(eventObject) => updateForm("additionalEntryFee", eventObject.target.value)}/></div></label> : null}
-          <label><span>Payment Deadline</span><input type="date" value={form.paymentDeadline} onChange={(eventObject) => updateForm("paymentDeadline", eventObject.target.value)}/></label>
+          <label><span>Payment Deadline</span><DateInput value={form.paymentDeadline} onChange={(eventObject) => updateForm("paymentDeadline", eventObject.target.value)}/></label>
           <article><CircleDollarSign size={20}/><div><small>Currency from branch</small><strong>{currency.code} · {currency.symbol}</strong></div></article>
         </div></section>
 

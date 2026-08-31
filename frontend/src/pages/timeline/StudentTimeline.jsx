@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import DateInput from "../../components/common/DateInput.jsx";
 import { Link, useParams } from "react-router-dom";
 import { studentTimelineApi } from "../../api/studentTimelineApi.js";
 import TimelineList from "../../components/timeline/TimelineList.jsx";
@@ -98,8 +99,7 @@ const StudentTimeline = () => {
 
         <label>
           Date
-          <input
-            type="date"
+          <DateInput
             name="date"
             value={note.date}
             onChange={handleNoteChange}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import DateInput from "../common/DateInput.jsx";
 import toast from "react-hot-toast";
 import {
   CalendarClock,
@@ -196,10 +197,10 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
               <label className="membership-field membership-field--wide"><span>Adjustment Type</span><select value={form.type} onChange={(event) => updateForm("type", event.target.value)}>{ACTIONS.map((action) => <option key={action.value} value={action.value}>{action.label}</option>)}</select></label>
 
               {["extend_days", "reduce_days"].includes(form.type) && <label className="membership-field"><span>Number of Days</span><input type="number" min="1" max="3650" value={form.days} onChange={(event) => updateForm("days", event.target.value)} required /></label>}
-              {form.type === "set_due_date" && <label className="membership-field"><span>Custom Due Date</span><input type="date" value={form.dueDate} onChange={(event) => updateForm("dueDate", event.target.value)} required /></label>}
+              {form.type === "set_due_date" && <label className="membership-field"><span>Custom Due Date</span><DateInput value={form.dueDate} onChange={(event) => updateForm("dueDate", event.target.value)} required /></label>}
               {form.type === "set_remaining_days" && <label className="membership-field"><span>Remaining Training Days</span><input type="number" min="0" max="3650" value={form.remainingTrainingDays} onChange={(event) => updateForm("remainingTrainingDays", event.target.value)} required /></label>}
               {form.type === "change_unpaid_months" && <label className="membership-field"><span>Month Adjustment</span><input type="number" min="-120" max="120" value={form.months} onChange={(event) => updateForm("months", event.target.value)} required /><small>Use positive to add and negative to reduce.</small></label>}
-              {form.type === "resume" && <label className="membership-field"><span>Resume Date</span><input type="date" value={form.resumeDate} onChange={(event) => updateForm("resumeDate", event.target.value)} /></label>}
+              {form.type === "resume" && <label className="membership-field"><span>Resume Date</span><DateInput value={form.resumeDate} onChange={(event) => updateForm("resumeDate", event.target.value)} /></label>}
               {form.type === "set_fee_status" && <label className="membership-field"><span>Fee Status</span><select value={form.feeStatus} onChange={(event) => updateForm("feeStatus", event.target.value)}><option value="paid">Paid</option><option value="due">Due</option><option value="partial">Partial</option><option value="overdue">Overdue</option><option value="waived">Waived</option><option value="complimentary">Complimentary</option></select></label>}
 
               <label className="membership-field membership-field--wide"><span>Reason *</span><input value={form.reason} onChange={(event) => updateForm("reason", event.target.value)} maxLength="300" placeholder="Example: Approved holiday adjustment" required /></label>

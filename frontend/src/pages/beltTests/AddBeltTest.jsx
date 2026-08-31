@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import DateInput from "../../components/common/DateInput.jsx";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -592,8 +593,7 @@ const AddBeltTest = () => {
                 <span>Test Date *</span>
                 <div className={styles.iconInput}>
                   <CalendarDays size={15} />
-                  <input
-                    type="date"
+                  <DateInput
                     name="testDate"
                     value={form.testDate}
                     onChange={handleChange}

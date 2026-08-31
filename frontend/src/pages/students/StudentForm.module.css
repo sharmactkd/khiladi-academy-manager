@@ -40,6 +40,13 @@
   grid-column: 1 / -1;
 }
 
+/* Keep the searchable country menu above the following form cards. */
+:global(.student-contact-card) {
+  position: relative;
+  z-index: 5;
+  overflow: visible;
+}
+
 :global(.student-contact-email) {
   min-width: 0;
   display: grid;

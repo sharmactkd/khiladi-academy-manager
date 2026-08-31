@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import DateInput from "../../components/common/DateInput.jsx";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -379,7 +380,7 @@ const CollectFee = () => {
               <label><span>Final Payable</span><div className={`${styles.readOnlyField} ${styles.emphasisField}`}>{currency(finalPayable)}</div></label>
               <label><span>Amount Paid *</span><div className={`${styles.moneyInput} ${paymentMode === "cash_online" ? styles.calculatedInput : ""}`}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0" readOnly={paymentMode === "cash_online"} {...register("amountPaid", { required: "Amount paid required", min: { value: 0, message: "Paid amount cannot be negative" } })} /></div>{paymentMode === "cash_online" ? <small className={styles.helperText}>Automatically calculated from cash and online amounts.</small> : null}{errors.amountPaid ? <small className={styles.errorText}>{errors.amountPaid.message}</small> : null}</label>
               <label><span>Pending Amount</span><div className={`${styles.readOnlyField} ${pendingAmount > 0 ? styles.pendingField : styles.successField}`}>{currency(pendingAmount)}</div></label>
-              <label><span>Payment Date *</span><div className={styles.dateInput}><CalendarDays size={15} /><input type="date" {...register("paymentDate", { required: "Payment date required" })} /></div>{errors.paymentDate ? <small className={styles.errorText}>{errors.paymentDate.message}</small> : null}</label>
+              <label><span>Payment Date *</span><div className={styles.dateInput}><CalendarDays size={15} /><DateInput {...register("paymentDate", { required: "Payment date required" })} /></div>{errors.paymentDate ? <small className={styles.errorText}>{errors.paymentDate.message}</small> : null}</label>
             </div>
 
             <fieldset className={styles.paymentModes}>

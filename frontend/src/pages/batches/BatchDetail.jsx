@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CircleDollarSign as BadgeIndianRupee, CalendarDays, CheckCircle2, Clock3, Dumbbell, Edit3, ExternalLink, FileText, GraduationCap, Hash, Languages, MapPin, MessageCircleMore, Plus, ShieldCheck, Target, UserRound, UsersRound, Video, WalletCards, XCircle } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
@@ -52,6 +52,7 @@ const listLabel = (...values) => {
 
 const BatchDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [batch, setBatch] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -92,6 +93,7 @@ const BatchDetail = () => {
   const mode = formatBatchLabel(firstValue(batch.mode, batch.modes));
   const slot = formatBatchLabel(firstValue(batch.sessionSlot, batch.sessionSlots));
   const branchName = batch.branch?.branchName || batch.branch?.branchCode || "Not assigned";
+  const openStudent = (studentId) => navigate(`/students/${studentId}`);
 
   return (
     <div className="page batch-detail-page">
@@ -166,7 +168,7 @@ const BatchDetail = () => {
       <section className="batch-detail-card"><BatchDetailSectionHeader icon={MessageCircleMore} eyebrow="08 · Online" title="Links & Communication" description="Read-only WhatsApp and Google Meet resources." /><div className="batch-detail-links batch-detail-links--section"><ResourceLink href={batch.whatsappGroupLink} label="Open WhatsApp Group" icon={MessageCircleMore} /><ResourceLink href={batch.googleMeetLink} label="Open Google Meet" icon={Video} /></div></section>
 
       <section className="batch-detail-card batch-detail-students"><div className="batch-detail-students__header"><div><span><UsersRound size={19} /></span><div><small>Students</small><h2>Students in this Batch</h2><p>Active students currently assigned to this batch.</p></div></div><Link to={`/attendance/batch/${batch._id}`}>Attendance History <ExternalLink size={14} /></Link></div>
-        {!students.length ? <div className="batch-detail-students__empty"><UsersRound size={30} /><strong>No active students</strong><p>Add students to begin managing this batch.</p><Link className="btn btn-primary" to="/students/new"><Plus size={15} /> Add Student</Link></div> : <div className="batch-detail-table-wrap"><table className="batch-detail-table"><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Belt</th><th>Monthly Fee</th></tr></thead><tbody>{students.map((student) => <tr key={student._id}><td><code>{student.studentCode || student.admissionNumber || "-"}</code></td><td><Link to={`/students/${student._id}`}>{getStudentName(student)}</Link></td><td>{student.phone || "-"}</td><td>{student.beltRank || "-"}</td><td><strong>{currency(batch.monthlyFee, batch.branch)}</strong></td></tr>)}</tbody></table></div>}
+        {!students.length ? <div className="batch-detail-students__empty"><UsersRound size={30} /><strong>No active students</strong><p>Add students to begin managing this batch.</p><Link className="btn btn-primary" to="/students/new"><Plus size={15} /> Add Student</Link></div> : <div className="batch-detail-table-wrap"><table className="batch-detail-table"><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Belt</th><th>Monthly Fee</th></tr></thead><tbody>{students.map((student) => <tr key={student._id} className="batch-detail-student-row" role="link" tabIndex={0} aria-label={`View ${getStudentName(student)} details`} title={`View ${getStudentName(student)} details`} onClick={() => openStudent(student._id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openStudent(student._id); } }}><td><code>{student.studentCode || student.admissionNumber || "-"}</code></td><td><Link to={`/students/${student._id}`}>{getStudentName(student)}</Link></td><td>{student.phone || "-"}</td><td>{student.beltRank || "-"}</td><td><strong>{currency(batch.monthlyFee, batch.branch)}</strong></td></tr>)}</tbody></table></div>}
       </section>
     </div>
   );

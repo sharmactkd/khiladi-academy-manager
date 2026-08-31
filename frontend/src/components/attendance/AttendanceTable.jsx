@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import DateInput from "../common/DateInput.jsx";
 import { useNavigate } from "react-router-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import AttendanceCell from "./AttendanceCell.jsx";
@@ -154,9 +155,8 @@ const DateMetaInput = ({
         autoComplete="off"
       />
 
-      <input
+      <DateInput
         ref={pickerRef}
-        type="date"
         className="monthly-register__native-date"
         value={toDateInputValue(value)}
         onChange={(event) =>

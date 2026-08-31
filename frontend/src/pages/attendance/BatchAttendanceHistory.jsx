@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import DateInput from "../../components/common/DateInput.jsx";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { attendanceApi } from "../../api/attendanceApi.js";
@@ -34,15 +35,13 @@ const BatchAttendanceHistory = () => {
 
       <div className="card">
         <div className="grid grid-3">
-          <input
-            type="date"
+          <DateInput
             value={filters.from}
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, from: e.target.value }))
             }
           />
-          <input
-            type="date"
+          <DateInput
             value={filters.to}
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, to: e.target.value }))
