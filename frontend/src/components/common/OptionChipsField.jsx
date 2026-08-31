@@ -26,7 +26,7 @@ const uniqueOptions = (options) => {
   });
 };
 
-const OptionChipsField = ({ allowCustom = false, className = "", customInput = "", customPlaceholder = "Add custom option", customValues = [], label, multiple = true, onAddCustom, onCustomInputChange, onChange, options = [], value = [] }) => {
+const OptionChipsField = ({ allowCustom = false, className = "", customInput = "", customPlaceholder = "Add custom option", customValues = [], label, multiple = true, onAddCustom, onCustomInputChange, onChange, options = [], showStateIcon = true, value = [] }) => {
   const selected = multiple ? (Array.isArray(value) ? value : []) : value;
   const allOptions = uniqueOptions([...options, ...customValues]);
   const toggle = (option) => {
@@ -62,7 +62,7 @@ const OptionChipsField = ({ allowCustom = false, className = "", customInput = "
               aria-pressed={active}
               onClick={() => toggle(option)}
             >
-              {active ? <Check size={13} /> : <Plus size={13} />}
+              {showStateIcon ? (active ? <Check size={13} /> : <Plus size={13} />) : null}
               {String(currentLabel ?? "")}
             </button>
           );

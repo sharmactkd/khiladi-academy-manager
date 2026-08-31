@@ -6,6 +6,7 @@ import { batchApi } from "../../api/batchApi.js";
 import { studentApi } from "../../api/studentApi.js";
 import MetricGrid from "../../components/common/MetricGrid.jsx";
 import PageState from "../../components/common/PageState.jsx";
+import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
 import BatchAcademyHeader from "./components/BatchAcademyHeader.jsx";
 import BatchDetailSectionHeader from "./components/BatchDetailSectionHeader.jsx";
 import { currency, displayValue, formatBatchLabel, formatBatchTime, formatGenderGroup, normalizeList } from "./batch.utils.js";
@@ -81,6 +82,10 @@ const BatchDetail = () => {
   const capacity = Number(batch.capacity || batch.maxStudents || 0);
   const seats = availableSeats(capacity, count);
   const firstSchedule = schedules[0] || {};
+  const summerStartTime = firstSchedule.summerStartTime || firstSchedule.startTime;
+  const summerEndTime = firstSchedule.summerEndTime || firstSchedule.endTime;
+  const winterStartTime = firstSchedule.winterStartTime || firstSchedule.startTime;
+  const winterEndTime = firstSchedule.winterEndTime || firstSchedule.endTime;
   const type = formatBatchLabel(firstValue(batch.batchType, batch.batchTypes));
   const level = formatBatchLabel(firstValue(batch.skillLevel, batch.skillLevels));
   const sport = firstValue(batch.martialArt, batch.martialArts);
@@ -108,7 +113,7 @@ const BatchDetail = () => {
       <MetricGrid className="batch-detail-metrics" items={[
         { id: "students", icon: UsersRound, label: "Active Students", value: count },
         { id: "seats", className: "is-green", icon: CheckCircle2, label: "Available Seats", value: seats },
-        { id: "time", className: "is-blue", icon: Clock3, label: "Training Time", value: `${formatBatchTime(firstSchedule.startTime)} – ${formatBatchTime(firstSchedule.endTime)}` },
+        { id: "time", className: "is-blue", icon: Clock3, label: "Summer / Winter Time", value: `${formatBatchTime(summerStartTime)} – ${formatBatchTime(summerEndTime)} / ${formatBatchTime(winterStartTime)} – ${formatBatchTime(winterEndTime)}` },
         { id: "fee", className: "is-orange", icon: BadgeIndianRupee, label: "Monthly Fee", value: currency(batch.monthlyFee, batch.branch) },
         { id: "level", className: "is-purple", icon: GraduationCap, label: "Skill Level", value: level },
       ]} getCardProps={() => ({ iconSize: 21 })} />
@@ -132,10 +137,10 @@ const BatchDetail = () => {
         <DetailItem icon={Target} label="Martial Arts / Sports" wide>{listLabel(batch.martialArts, batch.martialArt)}</DetailItem>
       </div></section>
 
-      <section className="batch-detail-card"><BatchDetailSectionHeader icon={CalendarDays} eyebrow="03 · Timing" title="Training Schedule" description="Weekly training days, session slot and training mode." /><div className="batch-detail-schedule-summary">
+      <section className="batch-detail-card"><BatchDetailSectionHeader icon={CalendarDays} eyebrow="03 · Timing" title="Training Schedule" description="Weekly training days with separate Summer and Winter timings." /><div className="batch-detail-schedule-summary">
         <DetailItem icon={Clock3} label="Session Slot">{slot}</DetailItem><DetailItem icon={ShieldCheck} label="Mode">{mode}</DetailItem>
       </div><div className="batch-detail-schedule">
-          {schedules.length ? schedules.map((item, index) => <div key={`${item.day}-${index}`}><span><CalendarDays size={16} /></span><strong>{formatBatchLabel(item.day)}</strong><time><Clock3 size={14} />{formatBatchTime(item.startTime)} – {formatBatchTime(item.endTime)}</time></div>) : <p>No training schedule added.</p>}
+          {schedules.length ? schedules.map((item, index) => <div key={`${item.day}-${index}`}><span><CalendarDays size={16} /></span><strong>{formatBatchLabel(item.day)}</strong><div className="batch-detail-season-times"><time><b>Summer</b><Clock3 size={14} />{formatBatchTime(item.summerStartTime || item.startTime)} – {formatBatchTime(item.summerEndTime || item.endTime)}</time><time><b>Winter</b><Clock3 size={14} />{formatBatchTime(item.winterStartTime || item.startTime)} – {formatBatchTime(item.winterEndTime || item.endTime)}</time></div></div>) : <p>No training schedule added.</p>}
         </div></section>
 
       <div className="batch-detail-secondary-grid">
@@ -156,7 +161,7 @@ const BatchDetail = () => {
         {extraCoaches.map((coach, index) => <CoachCard key={`coach-${index}`} title={`Additional Coach ${index + 1}`} {...coach} />)}
       </div>{!extraCoaches.length ? <p className="batch-detail-empty-note">No additional coaches added.</p> : null}</section>
 
-      <section className="batch-detail-card"><BatchDetailSectionHeader icon={Languages} eyebrow="07 · Communication" title="Languages Spoken" description="Languages supported by the batch coaching team." /><div className="batch-detail-language-tags batch-detail-language-tags--section">{languages.length ? languages.map((item) => <span key={item}><Languages size={13} />{item}</span>) : <em>No languages added.</em>}</div></section>
+      <section className="batch-detail-card"><BatchDetailSectionHeader icon={Languages} eyebrow="07 · Communication" title="Languages Spoken" description="Languages supported by the batch coaching team." /><div className="batch-detail-language-tiles">{languages.length ? <IconOptionGrid kind="language" options={languages} selected={languages} interactive={false} compact /> : <em>No languages added.</em>}</div></section>
 
       <section className="batch-detail-card"><BatchDetailSectionHeader icon={MessageCircleMore} eyebrow="08 · Online" title="Links & Communication" description="Read-only WhatsApp and Google Meet resources." /><div className="batch-detail-links batch-detail-links--section"><ResourceLink href={batch.whatsappGroupLink} label="Open WhatsApp Group" icon={MessageCircleMore} /><ResourceLink href={batch.googleMeetLink} label="Open Google Meet" icon={Video} /></div></section>
 

@@ -59,6 +59,11 @@ const common = [
   body("schedule.*.endTime")
     .optional({ checkFalsy: true })
     .matches(/^([01]\d|2[0-3]):([0-5]\d)$/),
+  ...["summerStartTime", "summerEndTime", "winterStartTime", "winterEndTime"].map((field) =>
+    body(`schedule.*.${field}`)
+      .optional({ checkFalsy: true })
+      .matches(/^([01]\d|2[0-3]):([0-5]\d)$/),
+  ),
   body("capacity").optional().isInt({ min: 0 }),
   body("minAge")
     .optional({ nullable: true, checkFalsy: true })

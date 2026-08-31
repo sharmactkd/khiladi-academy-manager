@@ -129,6 +129,7 @@ const TagField = ({
   onRemoveCustom={onRemoveCustom}
   options={options}
   selected={selected}
+  showStateIcon={false}
   trailingContent={trailingContent}
   value={selected}
 />;
@@ -139,6 +140,7 @@ const SingleTagField = ({ label, options, selected, onSelect }) => <OptionChipsF
   multiple={false}
   onChange={onSelect}
   options={options}
+  showStateIcon={false}
   value={selected}
 />;
 
@@ -282,8 +284,10 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
       assistantCoachCountryCode: "+91",
       assistantCoachPhone: "",
       assistantCoachAchievements: "",
-      startTime: "",
-      endTime: "",
+      summerStartTime: "",
+      summerEndTime: "",
+      winterStartTime: "",
+      winterEndTime: "",
       days: [],
       maxStudents: "",
       minAge: "",
@@ -429,8 +433,10 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
         modes: modes.map(formatBatchLabel),
         sessionSlots: slots.map(formatBatchLabel),
         days: schedules.map((item) => item.day).filter(Boolean),
-        startTime: schedules[0]?.startTime || "",
-        endTime: schedules[0]?.endTime || "",
+        summerStartTime: schedules[0]?.summerStartTime || schedules[0]?.startTime || "",
+        summerEndTime: schedules[0]?.summerEndTime || schedules[0]?.endTime || "",
+        winterStartTime: schedules[0]?.winterStartTime || schedules[0]?.startTime || "",
+        winterEndTime: schedules[0]?.winterEndTime || schedules[0]?.endTime || "",
         maxStudents: batch.maxStudents || batch.capacity || "",
         noCapacityLimit: !Number(batch.maxStudents || batch.capacity || 0),
         noMinAgeLimit: batch.minAge === null || batch.minAge === undefined,
@@ -461,6 +467,13 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
   const onSubmit = async (data) => {
     if (!data.martialArts?.length)
       return toast.error("At least one Martial Art / Sport select karein");
+    if (
+      !data.summerStartTime ||
+      !data.summerEndTime ||
+      !data.winterStartTime ||
+      !data.winterEndTime
+    )
+      return toast.error("Summer aur Winter dono timings complete karein");
     try {
       setSaving(true);
       const payload = {
@@ -497,8 +510,12 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
         isActive: Boolean(data.isActive),
         schedule: (data.days || []).map((day) => ({
           day,
-          startTime: data.startTime,
-          endTime: data.endTime,
+          startTime: data.summerStartTime,
+          endTime: data.summerEndTime,
+          summerStartTime: data.summerStartTime,
+          summerEndTime: data.summerEndTime,
+          winterStartTime: data.winterStartTime,
+          winterEndTime: data.winterEndTime,
         })),
       };
       if (isEdit) {
@@ -799,13 +816,16 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
               </label>
             ))}
           </div>
-          <div className="grid grid-2 batch-schedule-times">
-            <PremiumTimePicker
-              name="startTime"
+          <div className="batch-season-timings">
+            <div className="batch-season-timing">
+              <strong>Summer Timing</strong>
+              <div className="grid grid-2 batch-schedule-times">
+              <PremiumTimePicker
+              name="summerStartTime"
               label="Start Time"
-              value={values.startTime}
+              value={values.summerStartTime}
               onChange={(time) =>
-                setValue("startTime", time, {
+                setValue("summerStartTime", time, {
                   shouldDirty: true,
                   shouldValidate: true,
                 })
@@ -815,11 +835,11 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
             />
 
             <PremiumTimePicker
-              name="endTime"
+              name="summerEndTime"
               label="End Time"
-              value={values.endTime}
+              value={values.summerEndTime}
               onChange={(time) =>
-                setValue("endTime", time, {
+                setValue("summerEndTime", time, {
                   shouldDirty: true,
                   shouldValidate: true,
                 })
@@ -827,6 +847,29 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
               placeholder="Select end time"
               minuteStep={5}
             />
+              </div>
+            </div>
+            <div className="batch-season-timing">
+              <strong>Winter Timing</strong>
+              <div className="grid grid-2 batch-schedule-times">
+                <PremiumTimePicker
+                  name="winterStartTime"
+                  label="Start Time"
+                  value={values.winterStartTime}
+                  onChange={(time) => setValue("winterStartTime", time, { shouldDirty: true, shouldValidate: true })}
+                  placeholder="Select start time"
+                  minuteStep={5}
+                />
+                <PremiumTimePicker
+                  name="winterEndTime"
+                  label="End Time"
+                  value={values.winterEndTime}
+                  onChange={(time) => setValue("winterEndTime", time, { shouldDirty: true, shouldValidate: true })}
+                  placeholder="Select end time"
+                  minuteStep={5}
+                />
+              </div>
+            </div>
           </div>
           <div className="batch-schedule-options">
             <SingleTagField
@@ -865,6 +908,7 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
                 noLimit={values.noMinBeltLimit}
                 onChange={(item) => setValue("minBelt", item)}
                 onNoLimitChange={(value) => setValue("noMinBeltLimit", value)}
+                showStateIcon={false}
               />
             </div>
             <div className="batch-limit-field batch-limit-field--belt">
@@ -875,6 +919,7 @@ const AddBatch = ({ mode = "create", batchId = "" }) => {
                 noLimit={values.noMaxBeltLimit}
                 onChange={(item) => setValue("maxBelt", item)}
                 onNoLimitChange={(value) => setValue("noMaxBeltLimit", value)}
+                showStateIcon={false}
               />
             </div>
           </div>

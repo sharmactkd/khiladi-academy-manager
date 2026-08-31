@@ -26,9 +26,8 @@ import { beltTestApi } from "../../api/beltTestApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { studentApi } from "../../api/studentApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
-import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
+import BeltTileSelector from "../../components/taekwondoBelts/BeltTileSelector.jsx";
 import {
-  TAEKWONDO_BELTS,
   TAEKWONDO_BELT_ORDER,
   TAEKWONDO_DAN_RANKS,
 } from "../../components/taekwondoBelts/taekwondoBelts.js";
@@ -306,21 +305,20 @@ const AddBeltTest = () => {
             </button>
           ) : null}
         </div>
-        <IconOptionGrid
+        <BeltTileSelector
           className={styles.beltTags}
           compact
-          kind="belt"
-          options={TAEKWONDO_BELTS.map((belt) => {
+          value={value}
+          getOptionDisabled={(belt) => {
             const lockedBySelection = Boolean(value && value !== belt);
             const beltOrder = TAEKWONDO_BELT_ORDER[belt];
             const belowCurrent = Boolean(
               isPromoted && currentOrder !== undefined &&
               (beltOrder < currentOrder || (beltOrder === currentOrder && belt !== "Black")),
             );
-            return { value: belt, label: belt, disabled: lockedBySelection || belowCurrent };
-          })}
-          selected={value ? [value] : []}
-          onToggle={(belt) => update(name, value === belt ? "" : belt)}
+            return lockedBySelection || belowCurrent;
+          }}
+          onChange={(belt) => update(name, belt)}
         />
         <p>
           {value
@@ -357,7 +355,7 @@ const AddBeltTest = () => {
           {
             key: "belts",
             icon: Award,
-            value: TAEKWONDO_BELTS.length,
+            value: Object.keys(TAEKWONDO_BELT_ORDER).length,
             label: "Taekwondo Ranks",
           },
         ]}

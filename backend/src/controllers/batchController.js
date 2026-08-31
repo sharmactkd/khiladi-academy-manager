@@ -91,6 +91,10 @@ const normalizeSchedule = (value) => {
       day: String(item?.day || "").trim().toLowerCase(),
       startTime: String(item?.startTime || "").trim(),
       endTime: String(item?.endTime || "").trim(),
+      summerStartTime: String(item?.summerStartTime || item?.startTime || "").trim(),
+      summerEndTime: String(item?.summerEndTime || item?.endTime || "").trim(),
+      winterStartTime: String(item?.winterStartTime || "").trim(),
+      winterEndTime: String(item?.winterEndTime || "").trim(),
     }))
     .filter((item) => item.day && item.startTime && item.endTime);
 };

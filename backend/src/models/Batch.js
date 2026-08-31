@@ -25,6 +25,11 @@ const batchScheduleSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
+    summerStartTime: { type: String, default: "" },
+    summerEndTime: { type: String, default: "" },
+    winterStartTime: { type: String, default: "" },
+    winterEndTime: { type: String, default: "" },
   },
   { _id: false }
 );

@@ -11,7 +11,7 @@ import {
 
 import PhoneLocationFields from "./PhoneLocationFields.jsx";
 import IconOptionGrid from "./iconOptions/IconOptionGrid.jsx";
-import { TAEKWONDO_BELTS } from "../taekwondoBelts/taekwondoBelts.js";
+import BeltTileSelector from "../taekwondoBelts/BeltTileSelector.jsx";
 
 export const MARTIAL_ART_OPTIONS = [
   "Taekwondo",
@@ -278,8 +278,15 @@ export const LanguagesSpokenField = ({
           <span className="operations-field-label">Languages Spoken</span>
         ) : null}
         <TagSelector
+          iconTiles
+          kind="language"
           options={allOptions}
           selected={selected}
+          customOptions={customOptions}
+          onRemoveCustom={(item) => {
+            onCustomOptionsChange?.(customOptions.filter((value) => value !== item));
+            onChange?.(selected.filter((value) => value !== item));
+          }}
           onToggle={toggle}
           trailingContent={
             <CustomTagInput
@@ -455,15 +462,6 @@ export const CoachesInChargeSection = ({
   );
 };
 
-const beltTone = (belt) => {
-  const value = String(belt || "").toLowerCase();
-  return (
-    ["white", "yellow", "green", "blue", "red", "black"].find((color) =>
-      value.includes(color),
-    ) || "mixed"
-  );
-};
-
 export const BeltTagsField = ({
   label,
   description = "",
@@ -472,36 +470,20 @@ export const BeltTagsField = ({
   onChange,
   onNoLimitChange,
   includeNoLimit = true,
+  showStateIcon = true,
 }) => (
   <div className="operations-belt-field">
     <span className="operations-field-label">{label}</span>
     {description ? (
       <small className="operations-belt-description">{description}</small>
     ) : null}
-    <div className="operations-belt-tags">
-      {TAEKWONDO_BELTS.map((belt) => (
-        <button
-          key={belt}
-          type="button"
-          data-belt-tone={beltTone(belt)}
-          className={!noLimit && value === belt ? "is-selected" : ""}
-          onClick={() => {
-            onNoLimitChange?.(false);
-            onChange?.(belt);
-          }}
-        >
-          {belt}
-        </button>
-      ))}
-      {includeNoLimit ? (
-        <button
-          type="button"
-          className={`operations-belt-no-limit${noLimit ? " is-selected" : ""}`}
-          onClick={() => onNoLimitChange?.(!noLimit)}
-        >
-          {noLimit ? <Check size={13} aria-hidden="true" /> : null}No Limit
-        </button>
-      ) : null}
-    </div>
+    <BeltTileSelector
+      className="operations-belt-tile-selector"
+      value={value}
+      noLimit={noLimit}
+      includeNoLimit={includeNoLimit}
+      onChange={onChange}
+      onNoLimitChange={onNoLimitChange}
+    />
   </div>
 );

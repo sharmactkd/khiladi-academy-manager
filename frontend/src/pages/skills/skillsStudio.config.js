@@ -1,4 +1,5 @@
 import { Activity, Award, Blocks, Brain, Dumbbell, Footprints, Gauge, Hand, HeartPulse, Move, PersonStanding, Shield, Sparkles, Swords, Target, Timer, Trophy } from "lucide-react";
+import { TAEKWONDO_BELTS, TAEKWONDO_DAN_RANKS } from "../../components/taekwondoBelts/taekwondoBelts.js";
 
 export const SKILL_CATEGORIES = [
   { value: "kicks", label: "Kicks", icon: Footprints, tone: "red" },
@@ -27,8 +28,8 @@ export const LEVELS = [
   { value: "black_belt", label: "Black Belt" },
 ];
 
-export const BELTS = ["White", "Yellow", "Green", "Blue", "Red", "Black"];
-export const DANS = ["1st Dan", "2nd Dan", "3rd Dan", "4th Dan", "5th Dan", "6th Dan", "7th Dan", "8th Dan", "9th Dan", "10th Dan"];
+export const BELTS = TAEKWONDO_BELTS;
+export const DANS = TAEKWONDO_DAN_RANKS;
 export const DEFAULT_RUBRIC = [{ criterion: "Technique", weight: 35 }, { criterion: "Accuracy", weight: 25 }, { criterion: "Balance", weight: 20 }, { criterion: "Speed", weight: 10 }, { criterion: "Control", weight: 10 }];
 export const categoryMeta = (value) => SKILL_CATEGORIES.find((item) => item.value === value) || SKILL_CATEGORIES.at(-1);
 export const pretty = (value) => String(value || "").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
