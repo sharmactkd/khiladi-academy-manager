@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import toast from "react-hot-toast";
 import { studentApi } from "../../api/studentApi.js";
 import {
@@ -175,12 +176,16 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
       return;
     }
 
-    setBusy(true);
-    reset();
-    setFileName(file.name);
+    flushSync(() => {
+      reset();
+      setBusy(true);
+      setFileName(file.name);
+    });
     try {
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
       const nextWorkbook = await readAttendanceWorkbook(file);
       const names = getAttendanceSheetNames(nextWorkbook);
+      if (!names.length) throw new Error("Workbook me koi worksheet nahi mili.");
       const detected = classifyHistoricalSheets(names);
       setWorkbook(nextWorkbook);
       setClassification(detected);

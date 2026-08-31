@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Country from "country-state-city/lib/country.js";
 import State from "country-state-city/lib/state.js";
 import ReactCountryFlag from "react-country-flag";
@@ -79,6 +80,58 @@ const PhoneLocationFields = ({
   const [codeSearch, setCodeSearch] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
   const [districts, setDistricts] = useState([]);
+  const [countryMenuPosition, setCountryMenuPosition] = useState(null);
+  const countryButtonRef = useRef(null);
+  const countryMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showCountryDropdown) return undefined;
+
+    const updateCountryMenuPosition = () => {
+      const button = countryButtonRef.current;
+      if (!button) return;
+
+      const rect = button.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - rect.bottom - 12;
+      const spaceAbove = rect.top - 12;
+      const openAbove = spaceBelow < 260 && spaceAbove > spaceBelow;
+      const availableHeight = Math.max(
+        180,
+        Math.min(340, openAbove ? spaceAbove : spaceBelow),
+      );
+
+      setCountryMenuPosition({
+        left: Math.max(8, rect.left),
+        top: openAbove
+          ? Math.max(8, rect.top - availableHeight - 6)
+          : rect.bottom + 6,
+        width: Math.min(rect.width, window.innerWidth - 16),
+        maxHeight: availableHeight,
+      });
+    };
+
+    const closeOnOutsideClick = (event) => {
+      if (
+        !countryButtonRef.current?.contains(event.target) &&
+        !countryMenuRef.current?.contains(event.target)
+      ) {
+        setShowCountryDropdown(false);
+        setCountrySearch("");
+      }
+    };
+
+    updateCountryMenuPosition();
+    window.addEventListener("resize", updateCountryMenuPosition);
+    window.addEventListener("scroll", updateCountryMenuPosition, true);
+    document.addEventListener("mousedown", closeOnOutsideClick);
+
+    return () => {
+      window.removeEventListener("resize", updateCountryMenuPosition);
+      window.removeEventListener("scroll", updateCountryMenuPosition, true);
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+    };
+  }, [showCountryDropdown]);
 
   useEffect(() => {
     const nextCountry =
@@ -279,6 +332,7 @@ const PhoneLocationFields = ({
         >
           <div className="phone-location-code-picker">
             <button
+              ref={countryButtonRef}
               type="button"
               className="phone-location-code-button"
               aria-label="Choose country code for primary phone"
@@ -513,14 +567,16 @@ const PhoneLocationFields = ({
               <span>▾</span>
             </button>
 
-            {showCountryDropdown && (
+            {showCountryDropdown && countryMenuPosition && typeof document !== "undefined" ? createPortal(
               <div
+                ref={countryMenuRef}
                 style={{
-                  position: "absolute",
-                  top: 70,
-                  left: 0,
-                  right: 0,
-                  zIndex: 70,
+                  position: "fixed",
+                  top: countryMenuPosition.top,
+                  left: countryMenuPosition.left,
+                  width: countryMenuPosition.width,
+                  maxHeight: countryMenuPosition.maxHeight,
+                  zIndex: 10000,
                   background: "#fff",
                   border: "1px solid #e5e7eb",
                   borderRadius: 12,
@@ -536,7 +592,7 @@ const PhoneLocationFields = ({
                   />
                 </div>
 
-                <div style={{ maxHeight: 260, overflowY: "auto" }}>
+                <div style={{ maxHeight: Math.max(120, countryMenuPosition.maxHeight - 64), overflowY: "auto" }}>
                   {filteredCountries.map((item) => (
                     <button
                       type="button"
@@ -565,8 +621,9 @@ const PhoneLocationFields = ({
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
+              </div>,
+              document.body,
+            ) : null}
           </div>
 
           <div className="form-group">

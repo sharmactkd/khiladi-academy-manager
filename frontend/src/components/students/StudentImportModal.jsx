@@ -192,21 +192,26 @@ const StudentImportModal = ({
     }
 
     try {
-      setLoadingFile(true);
-      setFileName(file.name);
-      setWorkbook(null);
-      setSheetNames([]);
-      setSelectedSheet("");
-      setParsed({
-        headers: [],
-        rows: [],
-        mappedRows: [],
-        mapping: {},
-        warnings: [],
+      flushSync(() => {
+        setLoadingFile(true);
+        setFileName(file.name);
+        setWorkbook(null);
+        setSheetNames([]);
+        setSelectedSheet("");
+        setParsed({
+          headers: [],
+          rows: [],
+          mappedRows: [],
+          mapping: {},
+          warnings: [],
+        });
       });
+
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
 
       const nextWorkbook = await readStudentWorkbook(file);
       const names = getWorkbookSheetNames(nextWorkbook);
+      if (!names.length) throw new Error("Workbook me koi worksheet nahi mili.");
       const firstSheet = names[0] || "";
 
       setWorkbook(nextWorkbook);

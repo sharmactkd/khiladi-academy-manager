@@ -86,11 +86,13 @@ const cleanCell = (value) => {
 export const readStudentWorkbook = async (file) => {
   const buffer = await file.arrayBuffer();
 
-  return XLSX.read(buffer, {
+  const metadata = XLSX.read(buffer, {
     type: "array",
-    cellDates: true,
-    raw: false,
+    bookSheets: true,
+    bookProps: true,
   });
+
+  return { SheetNames: metadata.SheetNames || [], __buffer: buffer, __lazy: true };
 };
 
 export const getWorkbookSheetNames = (workbook) => workbook?.SheetNames || [];
@@ -141,7 +143,15 @@ export const buildMappedRows = (dataRows = [], mapping = {}) => {
 };
 
 export const parseStudentSheet = (workbook, sheetName, customMapping = null) => {
-  const worksheet = workbook?.Sheets?.[sheetName];
+  const loadedWorkbook = workbook?.__lazy
+    ? XLSX.read(workbook.__buffer, {
+        type: "array",
+        cellDates: true,
+        raw: false,
+        sheets: [sheetName],
+      })
+    : workbook;
+  const worksheet = loadedWorkbook?.Sheets?.[sheetName];
 
   if (!worksheet) {
     return {
