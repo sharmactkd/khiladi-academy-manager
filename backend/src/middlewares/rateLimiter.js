@@ -25,6 +25,14 @@ export const expensiveOperationRateLimiter = buildRateLimiter({
   message: "Too many bulk operations. Please try again later.",
 });
 
+// Large Excel imports are intentionally sent in JSON chunks so that they stay
+// below the global request-size limit. Allow enough requests for one workbook.
+export const studentImportRateLimiter = buildRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many student import requests. Please try again later.",
+});
+
 export const authRateLimiter = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 20,

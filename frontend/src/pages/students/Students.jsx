@@ -494,6 +494,15 @@ const Students = () => {
       const response = await studentApi.importBulk(payload);
       const summary = response?.data || response || {};
 
+      if (!summary.imported && summary.failed) {
+        const firstError = summary.errors?.[0]?.message;
+        throw new Error(
+          firstError
+            ? `No student imported: ${firstError}`
+            : "No student could be imported. Please check the mapped columns."
+        );
+      }
+
       toast.success(
         `Import complete: ${summary.imported || 0} imported, ${
           summary.skipped || 0
@@ -501,8 +510,8 @@ const Students = () => {
       );
 
       await Promise.all([fetchBranches(), fetchBatches(), fetchStudents()]);
+      return summary;
     } catch (error) {
-      toast.error(error.response?.data?.message || "Student import failed");
       throw error;
     }
   };

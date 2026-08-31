@@ -284,7 +284,11 @@ const StudentImportModal = ({
     if (!validateDestination()) return;
     try {
       setImporting(true);
-      await onImport?.({ students: parsed.mappedRows, destination });
+      await onImport?.({
+        students: parsed.mappedRows,
+        destination,
+        allowProvisional: true,
+      });
       resetState();
       onClose?.();
     } catch (error) {

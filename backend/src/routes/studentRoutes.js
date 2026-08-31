@@ -19,7 +19,10 @@ import {
 import validateRequest from "../middlewares/validateRequest.js";
 import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
 import { uploadImage } from "../middlewares/uploadMiddleware.js";
-import { expensiveOperationRateLimiter } from "../middlewares/rateLimiter.js";
+import {
+  expensiveOperationRateLimiter,
+  studentImportRateLimiter,
+} from "../middlewares/rateLimiter.js";
 
 import {
   studentIdValidator,
@@ -37,7 +40,7 @@ router.use(requireResolvedAcademy);
 
 router.post(
   "/import",
-  expensiveOperationRateLimiter,
+  studentImportRateLimiter,
   (req, res, next) => {
     const rows = req.body?.students;
     if (!Array.isArray(rows)) {

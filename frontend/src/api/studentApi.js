@@ -6,6 +6,33 @@ const multipartConfig = {
   },
 };
 
+const IMPORT_CHUNK_MAX_ROWS = 500;
+const IMPORT_CHUNK_MAX_BYTES = 900 * 1024;
+
+const splitImportRows = (students) => {
+  const chunks = [];
+  let chunk = [];
+  let chunkBytes = 0;
+
+  students.forEach((student) => {
+    const rowBytes = new Blob([JSON.stringify(student)]).size;
+    if (
+      chunk.length &&
+      (chunk.length >= IMPORT_CHUNK_MAX_ROWS ||
+        chunkBytes + rowBytes > IMPORT_CHUNK_MAX_BYTES)
+    ) {
+      chunks.push(chunk);
+      chunk = [];
+      chunkBytes = 0;
+    }
+    chunk.push(student);
+    chunkBytes += rowBytes;
+  });
+
+  if (chunk.length) chunks.push(chunk);
+  return chunks;
+};
+
 export const studentApi = {
   getAll: async (params = {}) => {
     const res = await api.get("/students", { params });
@@ -42,17 +69,52 @@ export const studentApi = {
 
   importBulk: async (payload = {}) => {
     const students = Array.isArray(payload) ? payload : payload.students || [];
-    const destination = Array.isArray(payload) ? {} : payload.destination || {};
+    let destination = Array.isArray(payload) ? {} : payload.destination || {};
     const duplicateMode = Array.isArray(payload) ? "skip" : payload.duplicateMode || "skip";
+    const allowProvisional =
+      !Array.isArray(payload) && payload.allowProvisional === true;
+    const chunks = splitImportRows(students);
+    const combined = {
+      totalRows: students.length,
+      imported: 0,
+      skipped: 0,
+      failed: 0,
+      warnings: [],
+      errors: [],
+      destination: null,
+    };
 
-    const res = await api.post("/students/import", {
-      students,
-      destination,
-      duplicateMode,
-      allowProvisional: !Array.isArray(payload) && payload.allowProvisional === true,
-    });
+    for (const chunk of chunks) {
+      const res = await api.post("/students/import", {
+        students: chunk,
+        destination,
+        duplicateMode,
+        allowProvisional,
+      });
+      const summary = res.data?.data || {};
 
-    return res.data;
+      combined.imported += Number(summary.imported || 0);
+      combined.skipped += Number(summary.skipped || 0);
+      combined.failed += Number(summary.failed || 0);
+      combined.warnings.push(...(summary.warnings || []));
+      combined.errors.push(...(summary.errors || []));
+
+      if (summary.destination) {
+        combined.destination = summary.destination;
+        destination = {
+          branchMode: "existing",
+          branchId: summary.destination.branchId,
+          batchMode: "existing",
+          batchId: summary.destination.batchId,
+        };
+      }
+    }
+
+    return {
+      success: true,
+      message: "Student import completed",
+      data: combined,
+    };
   },
 
   remove: async (id) => {

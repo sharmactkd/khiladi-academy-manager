@@ -602,7 +602,9 @@ export const importStudents = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const students = Array.isArray(req.body?.students) ? req.body.students : [];
   const duplicateMode = req.body?.duplicateMode || "skip";
-  const allowProvisional = req.body?.allowProvisional === true;
+  // Excel imports may legitimately omit DOB/gender. Keep those records as
+  // incomplete profiles instead of silently rejecting every imported row.
+  const allowProvisional = req.body?.allowProvisional !== false;
   const destination = req.body?.destination || {};
 
   const summary = {
