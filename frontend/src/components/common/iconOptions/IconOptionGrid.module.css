@@ -87,6 +87,19 @@
   opacity: 0.48;
 }
 
+.grid .item .option.readOnly {
+  cursor: default;
+  user-select: text;
+}
+
+.grid .item .option.readOnly:hover {
+  border-color: #dbe3ed !important;
+  background: #ffffff !important;
+  color: #17233b !important;
+  box-shadow: none !important;
+  transform: none;
+}
+
 .grid .item .option.selected,
 .grid .item .option.selected:hover:not(:disabled) {
   border-color: #cf0006 !important;

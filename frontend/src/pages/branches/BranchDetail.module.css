@@ -64,6 +64,8 @@
 :global(.branch-detail-tags){min-height:94px;display:flex;align-content:flex-start;flex-wrap:wrap;gap:7px;padding:14px 16px 17px}
 :global(.branch-detail-tags span){display:inline-flex;align-items:center;gap:5px;min-height:31px;padding:6px 10px;border:1px solid #f0a9ad;border-radius:9px;background:#fff8f8;color:#a90005;font-size:12px;font-weight:750}
 :global(.branch-detail-tags p){width:100%;margin:auto;color:var(--branch-muted);font-size:12px;text-align:center}
+:global(.branch-detail-tiles){min-height:118px;padding:16px}
+:global(.branch-detail-tiles>p){width:100%;margin:29px auto;color:var(--branch-muted);font-size:12px;text-align:center}
 @media (max-width:1280px){:global(.branch-detail-metrics){grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:980px){:global(.branch-detail-primary-grid),
 :global(.branch-detail-secondary-grid){grid-template-columns:1fr}}

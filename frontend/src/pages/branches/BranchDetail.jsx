@@ -10,6 +10,7 @@ import {
 import { academyApi } from "../../api/academyApi.js";
 import { getBranchById } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import BranchDetailSectionHeader from "./components/BranchDetailSectionHeader.jsx";
@@ -194,12 +195,11 @@ const BranchDetail = () => {
           <BranchDetailSectionHeader icon={Building2} eyebrow="Identity" title="Branch Information" description="Core identity and operating status." />
           <div className="branch-detail-items">
             <DetailItem icon={UserRound} label="Director Name">{displayValue(branch.directorName)}</DetailItem>
-            <DetailItem icon={Building2} label="Branch Code">{displayValue(branch.branchCode)}</DetailItem>
-            <DetailItem icon={branch.isMainBranch ? Crown : ShieldCheck} label="Branch Type">{branch.isMainBranch ? "Main Branch" : "Academy Branch"}</DetailItem>
-            <DetailItem icon={CalendarDays} label="Branch Since">{displayValue(branch.branchSince)}</DetailItem>
-          
             <DetailItem icon={WalletCards} label="Currency">{`${currencyMeta(branch).code} (${currencyMeta(branch).symbol})`}</DetailItem>
-           </div>
+            <DetailItem icon={Building2} label="Branch Code">{displayValue(branch.branchCode)}</DetailItem>
+            <DetailItem icon={CalendarDays} label="Branch Since">{displayValue(branch.branchSince)}</DetailItem>
+            <DetailItem icon={branch.isMainBranch ? Crown : ShieldCheck} label="Branch Type">{branch.isMainBranch ? "Main Branch" : "Academy Branch"}</DetailItem>
+          </div>
         </section>
         <section className="branch-detail-card">
           <BranchDetailSectionHeader icon={MapPin} eyebrow="Contact" title="Phone & Location" description="Official communication and complete address." />
@@ -226,15 +226,21 @@ const BranchDetail = () => {
       <div className="branch-detail-secondary-grid">
         <section className="branch-detail-card branch-detail-tags-card">
           <BranchDetailSectionHeader icon={Dumbbell} eyebrow="Training" title="Sports / Martial Arts" description="Training disciplines available at this branch." />
-          <div className="branch-detail-tags">{martialArts.length ? martialArts.map((item) => <span key={item}>{item}</span>) : <p>No sports or martial arts added.</p>}</div>
+          <div className="branch-detail-tiles">
+            {martialArts.length ? <IconOptionGrid kind="sport" options={martialArts} interactive={false} /> : <p>No sports or martial arts added.</p>}
+          </div>
         </section>
         <section className="branch-detail-card branch-detail-tags-card">
           <BranchDetailSectionHeader icon={Warehouse} eyebrow="Infrastructure" title="Facilities" description="Infrastructure available at this branch." />
-          <div className="branch-detail-tags">{facilities.length ? facilities.map((item) => <span key={item}>{item}</span>) : <p>No facilities added.</p>}</div>
+          <div className="branch-detail-tiles">
+            {facilities.length ? <IconOptionGrid kind="facility" options={facilities} interactive={false} /> : <p>No facilities added.</p>}
+          </div>
         </section>
         <section className="branch-detail-card branch-detail-tags-card">
           <BranchDetailSectionHeader icon={Languages} eyebrow="Communication" title="Languages Spoken" description="Languages supported by the branch team." />
-          <div className="branch-detail-tags">{languages.length ? languages.map((item) => <span key={item}><Languages size={13} />{item}</span>) : <p>No languages added.</p>}</div>
+          <div className="branch-detail-tiles">
+            {languages.length ? <IconOptionGrid kind="language" options={languages} interactive={false} /> : <p>No languages added.</p>}
+          </div>
         </section>
       </div>
     </div>

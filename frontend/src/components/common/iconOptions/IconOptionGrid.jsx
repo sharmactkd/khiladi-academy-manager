@@ -12,6 +12,7 @@ const IconOptionGrid = ({
   className = "",
   compact = false,
   customOptions = [],
+  interactive = true,
   kind = "generic",
   onRemoveCustom,
   onToggle,
@@ -27,20 +28,32 @@ const IconOptionGrid = ({
       {options.map(asOption).filter((item) => item.value).map((item) => {
         const active = selectedValues.includes(item.value);
         const custom = customSet.has(String(item.value).toLowerCase());
+        const Root = interactive ? "button" : "div";
         return (
           <div className={clsx(styles.item, "ui-choice-wrap", custom && styles.custom, custom && "is-custom")} key={item.value}>
-            <button
-              type="button"
-              className={clsx(styles.option, "ui-choice ui-choice--tile", active && styles.selected, active && "is-selected")}
-              aria-pressed={active}
-              disabled={item.disabled}
-              onClick={() => onToggle?.(item.value)}
-              title={`${active ? "Clear" : "Select"} ${item.label}`}
+            <Root
+              {...(interactive
+                ? {
+                    type: "button",
+                    "aria-pressed": active,
+                    disabled: item.disabled,
+                    onClick: () => onToggle?.(item.value),
+                    title: `${active ? "Clear" : "Select"} ${item.label}`,
+                  }
+                : {})}
+              className={clsx(
+                styles.option,
+                "ui-choice ui-choice--tile",
+                !interactive && styles.readOnly,
+                !interactive && "is-read-only",
+                active && styles.selected,
+                active && "is-selected",
+              )}
             >
               <span className={clsx(styles.icon, "ui-choice-icon")}><OptionIcon kind={kind} value={item.value} /></span>
               <span className={clsx(styles.label, "ui-choice-text")}>{item.label}</span>
-            </button>
-            {custom && onRemoveCustom ? (
+            </Root>
+            {interactive && custom && onRemoveCustom ? (
               <button
                 type="button"
                 className={clsx(styles.remove, "ui-choice-remove")}
