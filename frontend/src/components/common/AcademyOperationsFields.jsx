@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import PhoneLocationFields from "./PhoneLocationFields.jsx";
+import IconOptionGrid from "./iconOptions/IconOptionGrid.jsx";
 import { TAEKWONDO_BELTS } from "../taekwondoBelts/taekwondoBelts.js";
 
 export const MARTIAL_ART_OPTIONS = [
@@ -103,12 +104,38 @@ const CustomTagInput = ({
 };
 
 const TagSelector = ({
+  customOptions = [],
+  iconTiles = false,
+  kind = "generic",
+  onRemoveCustom,
   options,
   selected,
   onToggle,
   trailingContent = null,
 }) => {
   const normalizedOptions = uniqueValues(options);
+
+  if (iconTiles) {
+    return (
+      <div
+        className={`operations-tag-grid operations-tag-grid--tiles${
+          normalizedOptions.length === 1 && !trailingContent
+            ? " operations-tag-grid--single"
+            : ""
+        }`}
+      >
+        <IconOptionGrid
+          kind={kind}
+          options={normalizedOptions}
+          selected={selected}
+          customOptions={customOptions}
+          onToggle={onToggle}
+          onRemoveCustom={onRemoveCustom}
+          trailingContent={trailingContent}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -166,6 +193,10 @@ export const SportsMartialArtsField = ({
     if (!selected.includes(existing)) onChange?.([...selected, existing]);
     setCustomValue("");
   };
+  const removeCustom = (item) => {
+    onCustomOptionsChange?.(customOptions.filter((value) => value !== item));
+    onChange?.(selected.filter((value) => value !== item));
+  };
 
   return (
     <section className={`operations-selection-section ${className}`.trim()}>
@@ -183,8 +214,12 @@ export const SportsMartialArtsField = ({
           </span>
         ) : null}
         <TagSelector
+          iconTiles
+          kind="sport"
           options={allOptions}
           selected={selected}
+          customOptions={customOptions}
+          onRemoveCustom={onCustomOptionsChange ? removeCustom : undefined}
           onToggle={toggle}
           trailingContent={allowCustom ? (
             <CustomTagInput
