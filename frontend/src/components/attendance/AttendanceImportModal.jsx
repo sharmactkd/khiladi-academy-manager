@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle2, ChevronRight, FileSpreadsheet, Link2, Sear
 import { attendanceApi } from "../../api/attendanceApi.js";
 import { classifyHistoricalSheets, getAttendanceSheetNames, parseHistoricalAttendanceSheet, readAttendanceWorkbook } from "../../utils/attendanceExcelImport.js";
 import styles from "./AttendanceImportModal.module.css";
+import { prepareMatchPreview, yieldToBrowser } from "../../utils/attendanceMatchPreview.js";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const MAX_WORKBOOK_SIZE_BYTES = 60 * 1024 * 1024;
@@ -42,6 +43,20 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
   const [availableStudents, setAvailableStudents] = useState([]);
   const [resolutions, setResolutions] = useState({});
   const [result, setResult] = useState(null);
+  const [reviewPage, setReviewPage] = useState(0);
+  const [reviewSearch, setReviewSearch] = useState("");
+  const [onlyUnresolved, setOnlyUnresolved] = useState(false);
+  const [studentSearch, setStudentSearch] = useState("");
+  const filteredMatches = useMemo(() => matches.filter((match) =>
+    (!onlyUnresolved || (!["matched", "excluded"].includes(match.status) && !resolutions[match.rowKey])) &&
+    `${match.name} ${match.phone} ${match.sourceSheet}`.toLowerCase().includes(reviewSearch.toLowerCase())
+  ), [matches, resolutions, onlyUnresolved, reviewSearch]);
+  const pageCount = Math.max(1, Math.ceil(filteredMatches.length / 25));
+  const currentPage = Math.min(reviewPage, pageCount - 1);
+  const visibleMatches = filteredMatches.slice(currentPage * 25, (currentPage + 1) * 25);
+  const studentOptions = useMemo(() => availableStudents.filter((student) =>
+    `${student.name} ${student.phone} ${student.admissionNumber}`.toLowerCase().includes(studentSearch.toLowerCase())
+  ).slice(0, 50), [availableStudents, studentSearch]);
 
   const sheetNames = useMemo(() => getAttendanceSheetNames(workbook), [workbook]);
   const selectedBlocks = useMemo(() => selectedSheets.flatMap((sheetName) => {
@@ -59,6 +74,7 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
     setSelectMonths(false); setSelectedBlockIds([]); setDuplicateMode("skip");
     setBusy(false); setProgress(""); setMatches([]); setAvailableStudents([]);
     setResolutions({}); setResult(null);
+    setReviewPage(0); setReviewSearch(""); setOnlyUnresolved(false); setStudentSearch("");
   };
 
   const close = () => { if (!busy) { reset(); onClose?.(); } };
@@ -96,17 +112,24 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
     setMatches([]); setAvailableStudents([]); setResolutions({});
     try {
       const matchMap = new Map(); const studentMap = new Map();
-      const previewChunks = splitRowsForTransport(selectedBlocks.flatMap((block) => block.rows || []));
+      await yieldToBrowser();
+      const entries = await prepareMatchPreview(selectedBlocks, (count) => setProgress(`Preparing identities: ${count} rows…`));
+      if (!entries.length) throw new Error("No student rows found in the selected attendance months.");
+      const previewChunks = [];
+      for (let offset = 0; offset < entries.length; offset += 350) previewChunks.push(entries.slice(offset, offset + 350));
       for (let index = 0; index < previewChunks.length; index += 1) {
         setProgress(`Matching student group ${index + 1} of ${previewChunks.length}…`);
-        const data = unwrap(await attendanceApi.previewImport({ fallbackBatch, rows: previewChunks[index] }));
+        const data = unwrap(await attendanceApi.previewImport({ fallbackBatch, rows: previewChunks[index].map((entry) => entry.row) }));
+        if (!Array.isArray(data.matches) || data.matches.length !== previewChunks[index].length) throw new Error("Incomplete matching response. Please retry review.");
         (data.availableStudents || []).forEach((student) => studentMap.set(student._id, student));
-        (data.matches || []).forEach((match) => {
+        data.matches.forEach((received, rowIndex) => {
+          const match = { ...received, attendanceCells: previewChunks[index][rowIndex].cells };
           const current = matchMap.get(match.rowKey);
           matchMap.set(match.rowKey, current ? { ...current, attendanceCells: Number(current.attendanceCells || 0) + Number(match.attendanceCells || 0) } : match);
         });
       }
       setMatches(Array.from(matchMap.values())); setAvailableStudents(Array.from(studentMap.values()));
+      setReviewPage(0);
       setStep(3); setProgress("");
     } catch (error) { toast.error(error.response?.data?.message || error.message || "Matching failed"); setProgress(""); }
     finally { setBusy(false); }
@@ -154,7 +177,18 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
         {step === 3 && <>
           <div className={styles.summaryGrid}><article><CheckCircle2 /><span><small>Ready</small><strong>{resolvedCount}</strong></span></article><article><AlertTriangle /><span><small>Needs review</small><strong>{unresolvedCount}</strong></span></article><article><UsersRound /><span><small>Total Excel rows</small><strong>{matches.length}</strong></span></article><article><Link2 /><span><small>Attendance cells</small><strong>{matches.reduce((sum, item) => sum + Number(item.attendanceCells || 0), 0)}</strong></span></article></div>
           <div className={styles.reviewNotice}><SearchCheck /><div><strong>Safe student matching</strong><span>Phone, admission/code, exact name + selected batch, then unique exact name. No fuzzy match is imported automatically.</span></div></div>
-          <div className={styles.reviewTableWrap}><table className={styles.reviewTable}><thead><tr><th>Excel student</th><th>Detected identity</th><th>Match result</th><th>Confirm student</th></tr></thead><tbody>{matches.map((match) => { const selected = resolutions[match.rowKey] || ""; const resolved = match.status === "matched" || Boolean(selected); const options = match.candidates?.length ? match.candidates : availableStudents; return <tr key={match.rowKey} className={resolved ? "" : styles.unresolvedRow}><td><strong>{match.name || "Unnamed row"}</strong><small>Row {match.rowNumber} · {match.attendanceCells} cells</small></td><td><span>{match.phone || "No phone"}</span><small>{match.admissionNumber || "No admission/code"}</small></td><td>{match.status === "matched" && !selected ? <span className={styles.matchOk}>✓ {match.student?.name}</span> : selected === "__skip__" ? <span className={styles.excluded}>Excluded</span> : selected ? <span className={styles.matchOk}>✓ Manually confirmed</span> : <span className={styles.matchError}>Review · {match.reason}</span>}<small>{match.status === "matched" && !selected ? match.reason : ""}</small></td><td><select value={selected} onChange={(event) => setResolution(match.rowKey, event.target.value)} className={!resolved ? styles.invalidSelect : ""} disabled={match.status === "matched" && !selected}><option value="">{match.status === "matched" ? `${match.student?.name} (auto matched)` : "Select existing student"}</option>{options.map((student) => <option key={student._id} value={student._id}>{student.name} · {student.phone || student.admissionNumber || "No identifier"}</option>)}<option value="__skip__">Exclude this Excel row</option></select></td></tr>; })}</tbody></table></div>
+          <div className={styles.reviewControls}>
+            <label>Find Excel row <input value={reviewSearch} onChange={(event) => { setReviewSearch(event.target.value); setReviewPage(0); }} placeholder="Name, phone or sheet" /></label>
+            <label><input type="checkbox" checked={onlyUnresolved} onChange={(event) => { setOnlyUnresolved(event.target.checked); setReviewPage(0); }} /> Only needs review</label>
+            <label>Find existing student <input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} placeholder="Search name, phone or admission" /></label>
+            <small>Student choices show up to 50 search results plus suggested matches. Search to find another student.</small>
+          </div>
+          <div className={styles.reviewTableWrap}><table className={styles.reviewTable}><thead><tr><th>Excel student</th><th>Detected identity</th><th>Match result</th><th>Confirm student</th></tr></thead><tbody>{visibleMatches.map((match) => { const selected = resolutions[match.rowKey] || ""; const resolved = match.status === "matched" || Boolean(selected); const selectedStudent = availableStudents.find((student) => student._id === selected); const options = [...new Map([...(selectedStudent ? [selectedStudent] : []), ...(studentSearch ? studentOptions : [...(match.candidates || []), ...studentOptions])].map((student) => [student._id, student])).values()].slice(0, 60); return <tr key={match.rowKey} className={resolved ? "" : styles.unresolvedRow}><td><strong>{match.name || "Unnamed row"}</strong><small>Row {match.rowNumber} · {match.attendanceCells} cells</small></td><td><span>{match.phone || "No phone"}</span><small>{match.admissionNumber || "No admission/code"}</small></td><td>{match.status === "matched" && !selected ? <span className={styles.matchOk}>✓ {match.student?.name}</span> : selected === "__skip__" ? <span className={styles.excluded}>Excluded</span> : selected ? <span className={styles.matchOk}>✓ Manually confirmed</span> : <span className={styles.matchError}>Review · {match.reason}</span>}<small>{match.status === "matched" && !selected ? match.reason : ""}</small></td><td>{match.status === "matched" && !selected ? <span>{match.student?.name} (auto matched)</span> : <select aria-label={`Confirm student for ${match.name}`} value={selected} onChange={(event) => setResolution(match.rowKey, event.target.value)} className={!resolved ? styles.invalidSelect : ""} disabled={match.status === "matched" && !selected}><option value="">{match.status === "matched" ? `${match.student?.name} (auto matched)` : "Select existing student"}</option>{options.map((student) => <option key={student._id} value={student._id}>{student.name} · {student.phone || student.admissionNumber || "No identifier"}</option>)}<option value="__skip__">Exclude this Excel row</option></select>}</td></tr>; })}</tbody></table></div>
+          <div className={styles.reviewControls}>
+            <button type="button" disabled={currentPage === 0 || busy} onClick={() => setReviewPage(currentPage - 1)}>Previous</button>
+            <span>Page {currentPage + 1} of {pageCount} · {filteredMatches.length} rows · 25 per page</span>
+            <button type="button" disabled={currentPage + 1 >= pageCount || busy} onClick={() => setReviewPage(currentPage + 1)}>Next</button>
+          </div>
         </>}
 
         {step === 4 && result && <div className={styles.complete}><CheckCircle2 /><span>IMPORT COMPLETE</span><h3>Attendance imported successfully</h3><p>All imported attendance is linked to confirmed Student Records.</p><div><article><small>Months</small><strong>{result.months}</strong></article><article><small>Imported</small><strong>{result.imported}</strong></article><article><small>Skipped</small><strong>{result.skipped}</strong></article><article><small>Failed</small><strong>{result.failed}</strong></article></div></div>}

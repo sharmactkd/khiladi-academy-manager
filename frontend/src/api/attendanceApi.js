@@ -18,6 +18,6 @@ export const attendanceApi = {
   saveDayNote: (payload) => api.put("/attendance/day-note", payload),
   removeDayNote: (payload) =>
     api.delete("/attendance/day-note", { data: payload }),
-  previewImport: (payload) => api.post("/attendance/import/preview", payload),
+  previewImport: (payload) => api.post("/attendance/import/preview", payload, { timeout: 120000 }),
   importOldAttendance: (payload) => api.post("/attendance/import", payload),
 };
