@@ -1,490 +1,168 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import toast from "react-hot-toast";
-import { studentApi } from "../../api/studentApi.js";
-import {
-  buildProvisionalStudentsFromAttendance,
-  classifyHistoricalSheets,
-  getAttendanceSheetNames,
-  isHistoricalAttendanceSheet,
-  isStudentRecordSheet,
-  parseHistoricalAttendanceSheet,
-  parseStudentRecordSheet,
-  readAttendanceWorkbook,
-} from "../../utils/attendanceExcelImport.js";
+import { AlertTriangle, CheckCircle2, ChevronRight, FileSpreadsheet, Link2, SearchCheck, UploadCloud, UsersRound, X } from "lucide-react";
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+import { attendanceApi } from "../../api/attendanceApi.js";
+import { classifyHistoricalSheets, getAttendanceSheetNames, parseHistoricalAttendanceSheet, readAttendanceWorkbook } from "../../utils/attendanceExcelImport.js";
+import styles from "./AttendanceImportModal.module.css";
 
-const MAX_ATTENDANCE_WORKBOOK_SIZE_BYTES = 60 * 1024 * 1024;
-
-const emptyPreview = {
-  rows: [],
-  blocks: [],
-  summary: {
-    sheetName: "",
-    detectedStudentRows: 0,
-    detectedDateColumns: 0,
-    estimatedAttendanceRecords: 0,
-  },
-  warnings: [],
-};
-
-const chunk = (items, size) => {
-  const batches = [];
-  for (let index = 0; index < items.length; index += size) {
-    batches.push(items.slice(index, index + size));
-  }
-  return batches;
-};
-
-const uniqueByIdentity = (rows = []) => {
-  const map = new Map();
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MAX_WORKBOOK_SIZE_BYTES = 60 * 1024 * 1024;
+const emptyPreview = { rows: [], blocks: [], summary: {}, warnings: [] };
+const unwrap = (response) => response?.data?.data || response?.data || {};
+const splitRowsForTransport = (rows = [], maxRows = 350, maxBytes = 1200 * 1024) => {
+  const chunks = []; let current = []; let bytes = 0;
   rows.forEach((row) => {
-    const phone = String(row.phone || "").replace(/\D/g, "");
-    const name = String(row.name || `${row.firstName || ""} ${row.lastName || ""}`)
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, " ");
-    const admission = String(row.admissionNumber || row.studentCode || "").trim().toLowerCase();
-    const key = admission ? `admission:${admission}` : phone ? `name-phone:${name}:${phone}` : `name:${name}`;
-    if (!map.has(key)) map.set(key, row);
+    const rowBytes = new Blob([JSON.stringify(row)]).size;
+    if (current.length && (current.length >= maxRows || bytes + rowBytes > maxBytes)) {
+      chunks.push(current); current = []; bytes = 0;
+    }
+    current.push(row); bytes += rowBytes;
   });
-  return Array.from(map.values());
-};
-
-const SheetTypeBadge = ({ sheetName }) => {
-  const type = isStudentRecordSheet(sheetName)
-    ? "Student Record"
-    : isHistoricalAttendanceSheet(sheetName)
-      ? "Attendance"
-      : "Ignored / Unsupported";
-  const color = type === "Student Record" ? "#166534" : type === "Attendance" ? "#1d4ed8" : "#64748b";
-  const background = type === "Student Record" ? "#dcfce7" : type === "Attendance" ? "#dbeafe" : "#f1f5f9";
-  return (
-    <span style={{ padding: "3px 8px", borderRadius: 999, color, background, fontSize: 12, fontWeight: 700 }}>
-      {type}
-    </span>
-  );
-};
-
-const ResultSummary = ({ studentSummary, attendanceResults }) => {
-  if (!studentSummary && !attendanceResults.length) return null;
-  return (
-    <div className="card" style={{ marginTop: 14 }}>
-      <h3>Import Result</h3>
-      {studentSummary && (
-        <p className="muted">
-          Students — Imported: {studentSummary.imported || 0} | Skipped: {studentSummary.skipped || 0} |
-          Failed: {studentSummary.failed || 0} | Provisional detected: {studentSummary.incomplete || 0}
-        </p>
-      )}
-      {attendanceResults.length > 0 && (
-        <div className="table-wrap">
-          <table className="table">
-            <thead><tr><th>Sheet / Month</th><th>Imported</th><th>Skipped</th><th>Failed</th></tr></thead>
-            <tbody>
-              {attendanceResults.map((result) => (
-                <tr key={result.key}>
-                  <td>{result.label}</td>
-                  <td>{result.imported || 0}</td>
-                  <td>{result.skipped || 0}</td>
-                  <td>{result.failed || 0}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
+  if (current.length) chunks.push(current);
+  return chunks;
 };
 
 const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selectedBatch = null }) => {
+  const fileInputRef = useRef(null);
+  const [step, setStep] = useState(1);
   const [fileName, setFileName] = useState("");
+  const [fileSize, setFileSize] = useState(0);
   const [workbook, setWorkbook] = useState(null);
-  const [classification, setClassification] = useState({ recordSheet: "", attendanceSheets: [], ignoredSheets: [] });
-  const [studentSheets, setStudentSheets] = useState([]);
-  const [attendanceSheets, setAttendanceSheets] = useState([]);
-  const [attendanceMode, setAttendanceMode] = useState("complete");
-  const [monthSheet, setMonthSheet] = useState("");
-  const [selectedBlockIds, setSelectedBlockIds] = useState([]);
+  const [classification, setClassification] = useState({ attendanceSheets: [] });
+  const [selectedSheets, setSelectedSheets] = useState([]);
   const [parsedSheets, setParsedSheets] = useState({});
+  const [selectMonths, setSelectMonths] = useState(false);
+  const [selectedBlockIds, setSelectedBlockIds] = useState([]);
   const [duplicateMode, setDuplicateMode] = useState("skip");
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState(null);
-  const [studentSummary, setStudentSummary] = useState(null);
-  const [attendanceResults, setAttendanceResults] = useState([]);
+  const [progress, setProgress] = useState("");
+  const [matches, setMatches] = useState([]);
+  const [availableStudents, setAvailableStudents] = useState([]);
+  const [resolutions, setResolutions] = useState({});
+  const [result, setResult] = useState(null);
 
-  const allSheets = useMemo(() => getAttendanceSheetNames(workbook), [workbook]);
-  const selectedMonthSheetData = parsedSheets[monthSheet] || emptyPreview;
-  const selectableStudentSheets = useMemo(
-    () => allSheets.filter((name) => isStudentRecordSheet(name) || isHistoricalAttendanceSheet(name)),
-    [allSheets]
-  );
-  const selectedMonthsCount = selectedBlockIds.length;
-  const canStart = Boolean(
-    workbook &&
-    (studentSheets.length || attendanceSheets.length) &&
-    (!attendanceSheets.length || fallbackBatch) &&
-    (attendanceMode !== "months" || !attendanceSheets.length || selectedBlockIds.length)
-  );
+  const sheetNames = useMemo(() => getAttendanceSheetNames(workbook), [workbook]);
+  const selectedBlocks = useMemo(() => selectedSheets.flatMap((sheetName) => {
+    const blocks = (parsedSheets[sheetName] || emptyPreview).blocks || [];
+    return selectMonths ? blocks.filter((block) => selectedBlockIds.includes(block.blockId)) : blocks;
+  }), [parsedSheets, selectMonths, selectedBlockIds, selectedSheets]);
+  const unresolvedCount = matches.filter((match) => !["matched", "excluded"].includes(match.status) && !resolutions[match.rowKey]).length;
+  const resolvedCount = matches.filter((match) => match.status === "matched" || Boolean(resolutions[match.rowKey])).length;
 
   if (!open) return null;
 
   const reset = () => {
-    setFileName("");
-    setWorkbook(null);
-    setClassification({ recordSheet: "", attendanceSheets: [], ignoredSheets: [] });
-    setStudentSheets([]);
-    setAttendanceSheets([]);
-    setAttendanceMode("complete");
-    setMonthSheet("");
-    setSelectedBlockIds([]);
-    setParsedSheets({});
-    setDuplicateMode("skip");
-    setProgress(null);
-    setStudentSummary(null);
-    setAttendanceResults([]);
+    setStep(1); setFileName(""); setFileSize(0); setWorkbook(null);
+    setClassification({ attendanceSheets: [] }); setSelectedSheets([]); setParsedSheets({});
+    setSelectMonths(false); setSelectedBlockIds([]); setDuplicateMode("skip");
+    setBusy(false); setProgress(""); setMatches([]); setAvailableStudents([]);
+    setResolutions({}); setResult(null);
   };
 
-  const close = () => {
-    if (busy) return;
-    reset();
-    onClose?.();
-  };
+  const close = () => { if (!busy) { reset(); onClose?.(); } };
 
-  const parseAndCache = async (sheetName) => {
-    if (!sheetName) return emptyPreview;
-    if (parsedSheets[sheetName]) return parsedSheets[sheetName];
-    await new Promise((resolve) => window.setTimeout(resolve, 20));
-    const parsed = parseHistoricalAttendanceSheet(workbook, sheetName);
-    setParsedSheets((current) => ({ ...current, [sheetName]: parsed }));
-    return parsed;
-  };
-
-  const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+  const loadFile = async (file) => {
     if (!file) return;
-    if (!/\.(xlsx|xls)$/i.test(file.name)) {
-      toast.error("Please select an .xlsx or .xls workbook");
-      return;
-    }
-    if (file.size > MAX_ATTENDANCE_WORKBOOK_SIZE_BYTES) {
-      toast.error("Workbook cannot exceed 60 MB");
-      return;
-    }
-
-    flushSync(() => {
-      reset();
-      setBusy(true);
-      setFileName(file.name);
-    });
+    if (!/\.(xlsx|xls)$/i.test(file.name)) return toast.error("Please select an .xlsx or .xls workbook");
+    if (file.size > MAX_WORKBOOK_SIZE_BYTES) return toast.error("Workbook cannot exceed 60 MB");
+    flushSync(() => { reset(); setBusy(true); setFileName(file.name); setFileSize(file.size); setProgress("Reading workbook safely…"); });
     try {
       await new Promise((resolve) => window.requestAnimationFrame(resolve));
       const nextWorkbook = await readAttendanceWorkbook(file);
-      const names = getAttendanceSheetNames(nextWorkbook);
-      if (!names.length) throw new Error("Workbook me koi worksheet nahi mili.");
-      const detected = classifyHistoricalSheets(names);
-      setWorkbook(nextWorkbook);
-      setClassification(detected);
-      setStudentSheets(detected.recordSheet ? [detected.recordSheet] : []);
-      setAttendanceSheets([]);
-      toast.success(`${names.length} worksheets found. Select what you want to import.`);
-    } catch (error) {
-      toast.error(error.message || "Workbook could not be read");
-    } finally {
-      setBusy(false);
-    }
+      const detected = classifyHistoricalSheets(getAttendanceSheetNames(nextWorkbook));
+      if (!detected.attendanceSheets.length) throw new Error("No supported attendance worksheet was detected");
+      const cache = {};
+      detected.attendanceSheets.forEach((sheetName) => { cache[sheetName] = parseHistoricalAttendanceSheet(nextWorkbook, sheetName); });
+      setWorkbook(nextWorkbook); setClassification(detected); setParsedSheets(cache);
+      setSelectedSheets(detected.attendanceSheets);
+      setSelectedBlockIds(detected.attendanceSheets.flatMap((name) => (cache[name]?.blocks || []).map((block) => block.blockId)));
+      setStep(2); setProgress("");
+      toast.success(`${detected.attendanceSheets.length} attendance sheet(s) detected`);
+    } catch (error) { setProgress(""); toast.error(error.message || "Workbook could not be read"); }
+    finally { setBusy(false); }
   };
 
-  const toggleStudentSheet = (sheetName) => {
-    setStudentSheets((current) => current.includes(sheetName)
-      ? current.filter((name) => name !== sheetName)
-      : [...current, sheetName]);
-  };
+  const handleFileChange = (event) => { const file = event.target.files?.[0]; event.target.value = ""; loadFile(file); };
+  const handleDrop = (event) => { event.preventDefault(); if (!busy) loadFile(event.dataTransfer.files?.[0]); };
+  const toggleSheet = (sheetName) => setSelectedSheets((current) => current.includes(sheetName) ? current.filter((name) => name !== sheetName) : [...current, sheetName]);
+  const toggleBlock = (blockId) => setSelectedBlockIds((current) => current.includes(blockId) ? current.filter((id) => id !== blockId) : [...current, blockId]);
 
-  const toggleAttendanceSheet = async (sheetName) => {
-    const removing = attendanceSheets.includes(sheetName);
-    if (removing) {
-      const blockIds = (parsedSheets[sheetName]?.blocks || []).map((block) => block.blockId);
-      setAttendanceSheets((current) => current.filter((name) => name !== sheetName));
-      setSelectedBlockIds((current) => current.filter((id) => !blockIds.includes(id)));
-      if (monthSheet === sheetName) setMonthSheet("");
-      return;
-    }
-
-    setBusy(true);
+  const analyzeMatches = async () => {
+    if (!fallbackBatch) return toast.error("Select a destination batch first");
+    if (!selectedBlocks.length) return toast.error("Select at least one attendance month");
+    setBusy(true); setProgress("Matching workbook students with Student Records…");
+    setMatches([]); setAvailableStudents([]); setResolutions({});
     try {
-      const parsed = await parseAndCache(sheetName);
-      setAttendanceSheets((current) => [...current, sheetName]);
-      if (!monthSheet) setMonthSheet(sheetName);
-      if (attendanceMode === "months") {
-        setSelectedBlockIds((current) => [...new Set([
-          ...current,
-          ...(parsed.blocks || []).map((block) => block.blockId),
-        ])]);
-      }
-    } catch (error) {
-      toast.error(`${sheetName} could not be parsed`);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const selectMonthSheet = async (sheetName) => {
-    setMonthSheet(sheetName);
-    if (!sheetName) return;
-    setBusy(true);
-    try {
-      await parseAndCache(sheetName);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const toggleBlock = (blockId) => {
-    setSelectedBlockIds((current) => current.includes(blockId)
-      ? current.filter((id) => id !== blockId)
-      : [...current, blockId]);
-  };
-
-  const importStudents = async () => {
-    if (!studentSheets.length) return null;
-    setProgress({ stage: "students", label: "Preparing selected student sources..." });
-
-    const recordRows = [];
-    const attendanceSources = [];
-    const warnings = [];
-
-    for (const sheetName of studentSheets) {
-      if (isStudentRecordSheet(sheetName)) {
-        const parsed = parseStudentRecordSheet(workbook, sheetName);
-        recordRows.push(...parsed.rows);
-        warnings.push(...(parsed.warnings || []));
-      } else if (isHistoricalAttendanceSheet(sheetName)) {
-        attendanceSources.push(await parseAndCache(sheetName));
-      }
-    }
-
-    const provisionalRows = buildProvisionalStudentsFromAttendance(attendanceSources);
-    const rows = uniqueByIdentity([...recordRows, ...provisionalRows]);
-    const aggregate = {
-      imported: 0,
-      skipped: 0,
-      failed: 0,
-      incomplete: rows.filter((row) => row.profileStatus === "incomplete").length,
-      warnings,
-      errors: [],
-    };
-
-    const batches = chunk(rows, 100);
-    for (let index = 0; index < batches.length; index += 1) {
-      setProgress({ stage: "students", label: `Student batch ${index + 1} of ${batches.length}` });
-      const response = await studentApi.importBulk({
-        students: batches[index],
-        duplicateMode: "skip",
-        allowProvisional: true,
-      });
-      const result = response?.data || {};
-      aggregate.imported += result.imported || 0;
-      aggregate.skipped += result.skipped || 0;
-      aggregate.failed += result.failed || 0;
-      aggregate.warnings.push(...(result.warnings || []));
-      aggregate.errors.push(...(result.errors || []));
-    }
-    setStudentSummary(aggregate);
-    return aggregate;
-  };
-
-  const importAttendance = async () => {
-    const results = [];
-    for (let sheetIndex = 0; sheetIndex < attendanceSheets.length; sheetIndex += 1) {
-      const sheetName = attendanceSheets[sheetIndex];
-      const parsed = await parseAndCache(sheetName);
-      const allBlocks = parsed.blocks?.length ? parsed.blocks : [];
-      const blocks = attendanceMode === "months"
-        ? allBlocks.filter((block) => selectedBlockIds.includes(block.blockId))
-        : allBlocks;
-
-      for (let blockIndex = 0; blockIndex < blocks.length; blockIndex += 1) {
-        const block = blocks[blockIndex];
-        if (!block.rows?.length || !block.estimatedAttendanceRecords) continue;
-        const label = `${sheetName} — ${MONTHS[(block.month || 1) - 1]} ${block.year}`;
-        setProgress({ stage: "attendance", label: `Importing ${label}...` });
-        const result = await onImport?.({
-          sheetName,
-          blockId: block.blockId,
-          sourceWorkbook: fileName,
-          duplicateMode,
-          fallbackBatch,
-          strictMatching: true,
-          rows: block.rows,
+      const matchMap = new Map(); const studentMap = new Map();
+      const previewChunks = splitRowsForTransport(selectedBlocks.flatMap((block) => block.rows || []));
+      for (let index = 0; index < previewChunks.length; index += 1) {
+        setProgress(`Matching student group ${index + 1} of ${previewChunks.length}…`);
+        const data = unwrap(await attendanceApi.previewImport({ fallbackBatch, rows: previewChunks[index] }));
+        (data.availableStudents || []).forEach((student) => studentMap.set(student._id, student));
+        (data.matches || []).forEach((match) => {
+          const current = matchMap.get(match.rowKey);
+          matchMap.set(match.rowKey, current ? { ...current, attendanceCells: Number(current.attendanceCells || 0) + Number(match.attendanceCells || 0) } : match);
         });
-        results.push({
-          key: block.blockId,
-          label,
-          imported: result?.imported || 0,
-          skipped: result?.skipped || 0,
-          failed: result?.failed || 0,
-        });
-        setAttendanceResults([...results]);
       }
-    }
-    return results;
+      setMatches(Array.from(matchMap.values())); setAvailableStudents(Array.from(studentMap.values()));
+      setStep(3); setProgress("");
+    } catch (error) { toast.error(error.response?.data?.message || error.message || "Matching failed"); setProgress(""); }
+    finally { setBusy(false); }
   };
 
-  const handleImport = async () => {
-    if (!canStart) {
-      toast.error("Select at least one valid student sheet or attendance sheet/month");
-      return;
-    }
+  const setResolution = (rowKey, studentId) => setResolutions((current) => ({ ...current, [rowKey]: studentId }));
+
+  const startImport = async () => {
+    if (unresolvedCount) return toast.error(`Resolve or exclude ${unresolvedCount} student row(s)`);
     setBusy(true);
-    setStudentSummary(null);
-    setAttendanceResults([]);
+    const totals = { imported: 0, skipped: 0, failed: 0, cells: 0, months: 0 };
     try {
-      await importStudents();
-      await importAttendance();
-      setProgress({ stage: "completed", label: "Selected data imported successfully" });
-      toast.success("Import completed successfully", { duration: 7000 });
-      window.setTimeout(() => {
-        reset();
-        onClose?.();
-      }, 900);
-    } catch (error) {
-      const message = error.response?.data?.message || error.message || "Import failed";
-      setProgress({ stage: "failed", label: message });
-      toast.error(message);
-    } finally {
-      setBusy(false);
-    }
+      const importTasks = selectedBlocks.flatMap((block) =>
+        splitRowsForTransport(block.rows || []).map((rows) => ({ block, rows }))
+      );
+      for (let index = 0; index < importTasks.length; index += 1) {
+        const { block, rows } = importTasks[index];
+        setProgress(`Importing ${MONTHS[(block.month || 1) - 1]} ${block.year} (${index + 1}/${importTasks.length})…`);
+        const summary = await onImport?.({ sheetName: block.sheetName, blockId: block.blockId, sourceWorkbook: fileName, duplicateMode, fallbackBatch, resolutions, deferRefresh: index < importTasks.length - 1, rows });
+        totals.imported += Number(summary?.imported || 0); totals.skipped += Number(summary?.skipped || 0);
+        totals.failed += Number(summary?.failed || 0); totals.cells += Number(summary?.totalAttendanceCells || 0);
+      }
+      totals.months = selectedBlocks.length;
+      setResult(totals); setStep(4); setProgress(""); toast.success("Attendance import completed successfully");
+    } catch (error) { toast.error(error.response?.data?.message || error.message || "Import failed"); setProgress(""); }
+    finally { setBusy(false); }
   };
 
-  const sectionStyle = { marginTop: 14, border: "1px solid #e2e8f0", borderRadius: 14 };
-  const sheetGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10, marginTop: 10 };
-  const sheetRowStyle = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: 10, border: "1px solid #e2e8f0", borderRadius: 10 };
+  return <div className={styles.backdrop} role="dialog" aria-modal="true" aria-labelledby="attendance-import-title">
+    <section className={styles.modal}>
+      <header className={styles.header}><div className={styles.headingIcon}><FileSpreadsheet /></div><div><span>ATTENDANCE DATA</span><h2 id="attendance-import-title">Import Attendance from Excel</h2><p>Attendance only—existing Student Records are matched before import.</p></div><button type="button" className={styles.close} onClick={close} disabled={busy} aria-label="Close"><X /></button></header>
+      <nav className={styles.steps} aria-label="Import progress">{["Workbook", "Months", "Student matching", "Result"].map((label, index) => { const number = index + 1; return <div key={label} className={step >= number ? styles.stepActive : ""}><b>{step > number ? "✓" : number}</b><span>{label}</span></div>; })}</nav>
+      <div className={styles.body}>
+        {step === 1 && <button type="button" className={styles.dropzone} onClick={() => fileInputRef.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={handleDrop} disabled={busy}><UploadCloud /><strong>Drop Excel attendance file here or browse</strong><span>.xlsx, .xls · Maximum 60 MB</span></button>}
+        <input ref={fileInputRef} className={styles.hiddenInput} type="file" accept=".xlsx,.xls" onChange={handleFileChange} />
 
-  return (
-    <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: "rgba(15, 23, 42, 0.68)" }}>
-      <div style={{ width: "min(1100px, 96vw)", maxHeight: "92vh", overflow: "auto", borderRadius: 16, padding: 20, background: "#fff", boxShadow: "0 24px 80px rgba(15,23,42,.35)" }}>
-        <div className="page-header" style={{ marginBottom: 16 }}>
-          <div>
-            <h2>Excel Student & Attendance Import</h2>
-            <p className="muted">First choose the workbook, then independently select student and attendance sources.</p>
-          </div>
-          <button type="button" className="btn" onClick={close} disabled={busy}>Close</button>
-        </div>
+        {step === 2 && <>
+          <div className={styles.fileBar}><FileSpreadsheet /><div><strong>{fileName}</strong><span>{(fileSize / 1024 / 1024).toFixed(2)} MB · {sheetNames.length} worksheets</span></div><button type="button" onClick={() => fileInputRef.current?.click()} disabled={busy}>Change file</button></div>
+          <div className={`${styles.destination} ${fallbackBatch ? styles.ready : styles.missing}`}><UsersRound /><div><strong>Attendance destination</strong><span>{selectedBatch?.batchName || "No batch selected"}</span><small>Only students from this batch (or without an assigned batch) can be matched.</small></div></div>
+          <section className={styles.panel}><div className={styles.panelHeading}><div><b>01</b><span><strong>Attendance worksheets</strong><small>Student Record sheets are intentionally not imported here.</small></span></div></div><div className={styles.sheetGrid}>{(classification.attendanceSheets || []).map((sheetName) => <button type="button" key={sheetName} className={selectedSheets.includes(sheetName) ? styles.selectedTile : styles.tile} onClick={() => toggleSheet(sheetName)} disabled={busy}><FileSpreadsheet /><span><strong>{sheetName}</strong><small>{parsedSheets[sheetName]?.blocks?.length || 0} month blocks</small></span><b>{selectedSheets.includes(sheetName) ? "✓" : "+"}</b></button>)}</div></section>
+          <section className={styles.panel}><div className={styles.panelHeading}><div><b>02</b><span><strong>Select period</strong><small>Import complete sheets or selected month blocks.</small></span></div><label><input type="checkbox" checked={selectMonths} onChange={(event) => setSelectMonths(event.target.checked)} /> Select months manually</label></div>{selectMonths ? <div className={styles.monthGrid}>{selectedSheets.flatMap((sheetName) => (parsedSheets[sheetName]?.blocks || []).map((block) => <label key={block.blockId} className={selectedBlockIds.includes(block.blockId) ? styles.monthSelected : styles.monthTile}><input type="checkbox" checked={selectedBlockIds.includes(block.blockId)} onChange={() => toggleBlock(block.blockId)} /><span><strong>{MONTHS[(block.month || 1) - 1]} {block.year}</strong><small>{block.rows?.length || 0} students · {block.estimatedAttendanceRecords || 0} cells</small></span></label>))}</div> : <p className={styles.selectionNote}>{selectedBlocks.length} month blocks selected from {selectedSheets.length} worksheets.</p>}</section>
+          <section className={styles.panel}><div className={styles.panelHeading}><div><b>03</b><span><strong>Existing attendance</strong><small>Choose how already-saved student/date cells should be handled.</small></span></div></div><div className={styles.strategy}><label className={duplicateMode === "skip" ? styles.strategyActive : ""}><input type="radio" name="duplicate" checked={duplicateMode === "skip"} onChange={() => setDuplicateMode("skip")} /><span><strong>Skip existing</strong><small>Recommended · keeps current attendance unchanged.</small></span></label><label className={duplicateMode === "overwrite" ? styles.strategyActive : ""}><input type="radio" name="duplicate" checked={duplicateMode === "overwrite"} onChange={() => setDuplicateMode("overwrite")} /><span><strong>Update existing</strong><small>Workbook status replaces existing student/date status.</small></span></label></div></section>
+        </>}
 
-        <div className="card">
-          <label>Excel Workbook<input type="file" accept=".xlsx,.xls" onChange={handleFileChange} disabled={busy} /></label>
-          <small className="muted">Supported: .xlsx and .xls · Maximum size: 60 MB</small>
-          {fileName && <p className="muted">Selected: {fileName}</p>}
-        </div>
+        {step === 3 && <>
+          <div className={styles.summaryGrid}><article><CheckCircle2 /><span><small>Ready</small><strong>{resolvedCount}</strong></span></article><article><AlertTriangle /><span><small>Needs review</small><strong>{unresolvedCount}</strong></span></article><article><UsersRound /><span><small>Total Excel rows</small><strong>{matches.length}</strong></span></article><article><Link2 /><span><small>Attendance cells</small><strong>{matches.reduce((sum, item) => sum + Number(item.attendanceCells || 0), 0)}</strong></span></article></div>
+          <div className={styles.reviewNotice}><SearchCheck /><div><strong>Safe student matching</strong><span>Phone, admission/code, exact name + selected batch, then unique exact name. No fuzzy match is imported automatically.</span></div></div>
+          <div className={styles.reviewTableWrap}><table className={styles.reviewTable}><thead><tr><th>Excel student</th><th>Detected identity</th><th>Match result</th><th>Confirm student</th></tr></thead><tbody>{matches.map((match) => { const selected = resolutions[match.rowKey] || ""; const resolved = match.status === "matched" || Boolean(selected); const options = match.candidates?.length ? match.candidates : availableStudents; return <tr key={match.rowKey} className={resolved ? "" : styles.unresolvedRow}><td><strong>{match.name || "Unnamed row"}</strong><small>Row {match.rowNumber} · {match.attendanceCells} cells</small></td><td><span>{match.phone || "No phone"}</span><small>{match.admissionNumber || "No admission/code"}</small></td><td>{match.status === "matched" && !selected ? <span className={styles.matchOk}>✓ {match.student?.name}</span> : selected === "__skip__" ? <span className={styles.excluded}>Excluded</span> : selected ? <span className={styles.matchOk}>✓ Manually confirmed</span> : <span className={styles.matchError}>Review · {match.reason}</span>}<small>{match.status === "matched" && !selected ? match.reason : ""}</small></td><td><select value={selected} onChange={(event) => setResolution(match.rowKey, event.target.value)} className={!resolved ? styles.invalidSelect : ""} disabled={match.status === "matched" && !selected}><option value="">{match.status === "matched" ? `${match.student?.name} (auto matched)` : "Select existing student"}</option>{options.map((student) => <option key={student._id} value={student._id}>{student.name} · {student.phone || student.admissionNumber || "No identifier"}</option>)}<option value="__skip__">Exclude this Excel row</option></select></td></tr>; })}</tbody></table></div>
+        </>}
 
-        {workbook && (
-          <>
-            <div className="card" style={sectionStyle}>
-              <h3>All Worksheets ({allSheets.length})</h3>
-              <p className="muted">The workbook contains the following sheets. Unsupported Balance/Report sheets are shown but will not be imported.</p>
-              <div style={sheetGridStyle}>
-                {allSheets.map((sheetName) => (
-                  <div key={sheetName} style={sheetRowStyle}>
-                    <strong>{sheetName}</strong><SheetTypeBadge sheetName={sheetName} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="card" style={sectionStyle}>
-              <h3>1. Import Student Record</h3>
-              <p className="muted">Choose one or more sheets. Attendance sheets can create provisional profiles without fake DOB.</p>
-              <div style={sheetGridStyle}>
-                {allSheets.map((sheetName) => {
-                  const supported = selectableStudentSheets.includes(sheetName);
-                  return (
-                    <label key={sheetName} style={{ ...sheetRowStyle, opacity: supported ? 1 : 0.55 }}>
-                      <span><input type="checkbox" checked={studentSheets.includes(sheetName)} disabled={!supported || busy} onChange={() => toggleStudentSheet(sheetName)} /> {sheetName}</span>
-                      <SheetTypeBadge sheetName={sheetName} />
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="muted">Selected student sources: {studentSheets.join(", ") || "None"}</p>
-            </div>
-
-            <div className="card" style={sectionStyle}>
-              <h3>2. Import Attendance</h3>
-              <div className={`attendance-import-destination ${fallbackBatch ? "is-ready" : "is-missing"}`}>
-                <strong>Import destination</strong>
-                <span>{selectedBatch?.batchName || "No batch selected"}</span>
-                <small>{fallbackBatch ? "Selected attendance will be imported into this batch." : "Close this dialog and select a batch before importing attendance."}</small>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 18, marginBottom: 12 }}>
-                <label><input type="radio" name="attendanceMode" value="complete" checked={attendanceMode === "complete"} onChange={() => setAttendanceMode("complete")} disabled={busy} /> Complete selected sheets</label>
-                <label><input type="radio" name="attendanceMode" value="months" checked={attendanceMode === "months"} onChange={() => setAttendanceMode("months")} disabled={busy} /> Select months manually</label>
-              </div>
-
-              <div style={sheetGridStyle}>
-                {classification.attendanceSheets.map((sheetName) => (
-                  <label key={sheetName} style={sheetRowStyle}>
-                    <span><input type="checkbox" checked={attendanceSheets.includes(sheetName)} disabled={busy} onChange={() => toggleAttendanceSheet(sheetName)} /> {sheetName}</span>
-                    <SheetTypeBadge sheetName={sheetName} />
-                  </label>
-                ))}
-              </div>
-
-              {attendanceMode === "months" && attendanceSheets.length > 0 && (
-                <div style={{ marginTop: 16, padding: 14, border: "1px solid #cbd5e1", borderRadius: 12, background: "#f8fafc" }}>
-                  <label>Choose attendance sheet
-                    <select value={monthSheet} disabled={busy} onChange={(event) => selectMonthSheet(event.target.value)}>
-                      <option value="">Select sheet</option>
-                      {attendanceSheets.map((sheetName) => <option key={sheetName} value={sheetName}>{sheetName}</option>)}
-                    </select>
-                  </label>
-                  {monthSheet && (
-                    <div style={sheetGridStyle}>
-                      {(selectedMonthSheetData.blocks || []).map((block) => (
-                        <label key={block.blockId} style={sheetRowStyle}>
-                          <span><input type="checkbox" checked={selectedBlockIds.includes(block.blockId)} onChange={() => toggleBlock(block.blockId)} disabled={busy} /> {MONTHS[(block.month || 1) - 1]} {block.year}</span>
-                          <small>{block.rows?.length || 0} students · {block.estimatedAttendanceRecords || 0} cells</small>
-                        </label>
-                      ))}
-                      {!selectedMonthSheetData.blocks?.length && <p className="muted">No month blocks detected in this sheet.</p>}
-                    </div>
-                  )}
-                  <p className="muted">Selected months: {selectedMonthsCount}</p>
-                </div>
-              )}
-
-              <div className="grid grid-2" style={{ marginTop: 14 }}>
-                <label>Existing attendance
-                  <select value={duplicateMode} onChange={(event) => setDuplicateMode(event.target.value)} disabled={busy}>
-                    <option value="skip">Skip existing (Recommended)</option>
-                    <option value="overwrite">Overwrite existing</option>
-                  </select>
-                </label>
-                <div><strong>Selected attendance sheets</strong><p className="muted">{attendanceSheets.join(", ") || "None"}</p></div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {progress && <div className="card" style={{ marginTop: 14 }}><strong>{progress.label}</strong></div>}
-        <ResultSummary studentSummary={studentSummary} attendanceResults={attendanceResults} />
-
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
-          {workbook && attendanceSheets.length > 0 && !fallbackBatch ? <p className="attendance-import-error">Select a batch before starting attendance import.</p> : null}
-          <button type="button" className="btn" onClick={close} disabled={busy}>Cancel</button>
-          <button type="button" className="btn btn-primary" onClick={handleImport} disabled={busy || !canStart}>
-            {busy ? "Processing..." : "Start Safe Import"}
-          </button>
-        </div>
+        {step === 4 && result && <div className={styles.complete}><CheckCircle2 /><span>IMPORT COMPLETE</span><h3>Attendance imported successfully</h3><p>All imported attendance is linked to confirmed Student Records.</p><div><article><small>Months</small><strong>{result.months}</strong></article><article><small>Imported</small><strong>{result.imported}</strong></article><article><small>Skipped</small><strong>{result.skipped}</strong></article><article><small>Failed</small><strong>{result.failed}</strong></article></div></div>}
+        {progress && <div className={styles.progress}><span /><strong>{progress}</strong></div>}
       </div>
-    </div>
-  );
+      <footer className={styles.footer}><button type="button" className={styles.secondary} onClick={step === 4 ? close : step > 1 ? () => setStep(step - 1) : close} disabled={busy}>{step === 4 ? "Close" : step > 1 ? "Back" : "Cancel"}</button>{step === 2 && <button type="button" className={styles.primary} onClick={analyzeMatches} disabled={busy || !fallbackBatch || !selectedBlocks.length}>Review student matches <ChevronRight /></button>}{step === 3 && <button type="button" className={styles.primary} onClick={startImport} disabled={busy || unresolvedCount > 0}>Import verified attendance <ChevronRight /></button>}</footer>
+    </section>
+  </div>;
 };
 
 export default AttendanceImportModal;

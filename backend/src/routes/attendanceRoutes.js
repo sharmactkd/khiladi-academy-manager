@@ -9,6 +9,7 @@ import {
   getMonthlyRegister,
   getYearlyRegister,
   saveMonthlyRegister,
+  previewAttendanceImport,
   importOldAttendance,
   upsertAttendanceDayNote,
   removeAttendanceDayNote,
@@ -43,10 +44,7 @@ router.post("/monthly-register", saveMonthlyRegister);
 router.put("/day-note", upsertAttendanceDayNote);
 router.delete("/day-note", removeAttendanceDayNote);
 
-router.post(
-  "/import",
-  attendanceImportRateLimiter,
-  (req, res, next) => {
+const validateAttendanceImportRows = (req, res, next) => {
     const rows = req.body?.rows;
     if (!Array.isArray(rows)) {
       return res.status(400).json({ success: false, message: "rows must be an array" });
@@ -55,7 +53,19 @@ router.post(
       return res.status(413).json({ success: false, message: "A maximum of 5,000 attendance rows can be imported at once" });
     }
     return next();
-  },
+};
+
+router.post(
+  "/import/preview",
+  attendanceImportRateLimiter,
+  validateAttendanceImportRows,
+  previewAttendanceImport
+);
+
+router.post(
+  "/import",
+  attendanceImportRateLimiter,
+  validateAttendanceImportRows,
   importOldAttendance
 );
 

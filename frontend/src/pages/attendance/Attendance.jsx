@@ -485,27 +485,28 @@ const Attendance = () => {
     }
 
     try {
+      const { deferRefresh = false, ...importPayload } = payload;
       const response = await attendanceApi.importOldAttendance({
-        ...payload,
+        ...importPayload,
         fallbackBatch: batch,
         assignMissingBatch: true,
       });
 
       const summary = response?.data?.data || {};
 
-      toast.success(
-        `Cells: ${summary.totalAttendanceCells || 0}, Imported: ${
-          summary.imported || 0
-        }, Skipped: ${summary.skipped || 0}, Failed: ${
-          summary.failed || 0
-        }, Raw: ${summary.rawImportedStudents || 0}`
-      );
+      if (!deferRefresh) {
+        toast.success(
+          `Cells: ${summary.totalAttendanceCells || 0}, Imported: ${
+            summary.imported || 0
+          }, Skipped: ${summary.skipped || 0}, Failed: ${summary.failed || 0}`
+        );
+      }
 
       if (summary.errors?.length) {
         console.warn("IMPORT ERRORS:", summary.errors);
       }
 
-      await loadMonthlyRegister(batch, month, year);
+      if (!deferRefresh) await loadMonthlyRegister(batch, month, year);
       return summary;
     } catch (error) {
       console.error("ATTENDANCE IMPORT ERROR:", error);

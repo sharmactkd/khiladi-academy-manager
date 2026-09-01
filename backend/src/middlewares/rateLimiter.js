@@ -37,7 +37,10 @@ export const studentImportRateLimiter = buildRateLimiter({
 // historical workbook can legitimately contain many months in one operation.
 export const attendanceImportRateLimiter = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  // A large historical workbook is deliberately sent in authenticated,
+  // sub-2 MB preview/import chunks. Allow enough requests for multi-year
+  // workbooks without weakening the stricter global/auth limiters.
+  max: 500,
   message: "Too many attendance import requests. Please try again later.",
 });
 
