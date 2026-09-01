@@ -124,6 +124,13 @@ const getAllowedMonthLimit = () => {
 
 const Attendance = () => {
   const printRef = useRef(null);
+  const rowsRef = useRef([]);
+  const editVersionRef = useRef(0);
+  const saveInFlightRef = useRef(false);
+  const pendingSaveRef = useRef(false);
+  const autoSaveTimerRef = useRef(null);
+  const saveRegisterRef = useRef(null);
+  const registerContextRef = useRef("");
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -150,9 +157,11 @@ const Attendance = () => {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [autoSaveError, setAutoSaveError] = useState("");
   const [membershipStudent, setMembershipStudent] = useState(null);
 
   const allowedLimit = useMemo(() => getAllowedMonthLimit(), []);
+  registerContextRef.current = `${batch}:${month}:${year}`;
 
   const yearOptions = useMemo(() => {
     const startYear = allowedLimit.currentYear - 30;
@@ -275,10 +284,14 @@ const Attendance = () => {
         const data = normalizeResponseData(response);
 
         setDays(Array.isArray(data.days) ? data.days : []);
-        setRows(Array.isArray(data.rows) ? data.rows : []);
+        const loadedRows = Array.isArray(data.rows) ? data.rows : [];
+        rowsRef.current = loadedRows;
+        editVersionRef.current = 0;
+        setRows(loadedRows);
         setSelectedBatch(data.batch || null);
         setDayNotes(data.dayNotes || {});
         setHasUnsavedChanges(false);
+        setAutoSaveError("");
       } catch (error) {
         if (error?.response?.status === 401) {
           toast.error("Session expired. Please login again.");
@@ -289,6 +302,7 @@ const Attendance = () => {
         }
 
         setDays([]);
+        rowsRef.current = [];
         setRows([]);
         setSelectedBatch(null);
         setDayNotes({});
@@ -299,44 +313,84 @@ const Attendance = () => {
     [batch, month, year]
   );
 
-  const saveRegister = async () => {
+  const saveRegister = useCallback(async ({ silent = false } = {}) => {
     if (!batch) {
-      toast.error("Batch select karein");
+      if (!silent) toast.error("Batch select karein");
       return;
     }
 
+    if (saveInFlightRef.current) {
+      pendingSaveRef.current = true;
+      return;
+    }
+
+    const rowsSnapshot = rowsRef.current;
+    if (!rowsSnapshot.length) return;
+    const savingVersion = editVersionRef.current;
+    const savingContext = `${batch}:${month}:${year}`;
+
     try {
+      saveInFlightRef.current = true;
       setSaving(true);
+      setAutoSaveError("");
 
       const response = await attendanceApi.saveMonthlyRegister({
         batch,
         month,
         year,
-        rows,
+        rows: rowsSnapshot,
       });
 
       const data = normalizeResponseData(response);
+      const hasNewerChanges = editVersionRef.current !== savingVersion;
 
-      setDays(Array.isArray(data.days) ? data.days : []);
-      setRows(Array.isArray(data.rows) ? data.rows : []);
-      setSelectedBatch(data.batch || null);
-      setDayNotes(data.dayNotes || {});
-      setHasUnsavedChanges(false);
-      setLastSavedAt(new Date());
+      if (registerContextRef.current === savingContext) {
+        setDays(Array.isArray(data.days) ? data.days : []);
+        setSelectedBatch(data.batch || null);
+        setDayNotes(data.dayNotes || {});
+        setLastSavedAt(new Date());
 
-      toast.success("Attendance saved successfully");
+        if (hasNewerChanges) {
+          pendingSaveRef.current = true;
+        } else {
+          // Keep the exact snapshot the user marked. The API rebuilds the
+          // monthly register after saving and that reconstructed response can
+          // briefly omit freshly-written cells, which made the UI look reset.
+          // The persisted register will still be loaded normally on refresh.
+          rowsRef.current = rowsSnapshot;
+          setHasUnsavedChanges(false);
+        }
+      }
+
+      if (!silent) toast.success("Attendance saved successfully");
     } catch (error) {
+      setAutoSaveError(
+        error?.response?.data?.message || "Attendance save nahi hui",
+      );
       if (error?.response?.status === 401) {
-        toast.error("Session expired. Please login again.");
-      } else {
+        if (!silent) toast.error("Session expired. Please login again.");
+      } else if (!silent) {
         toast.error(
           error?.response?.data?.message || "Attendance save nahi hui"
         );
       }
     } finally {
+      saveInFlightRef.current = false;
       setSaving(false);
+
+      if (pendingSaveRef.current) {
+        pendingSaveRef.current = false;
+        window.clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = window.setTimeout(() => {
+          saveRegisterRef.current?.({ silent: true });
+        }, 250);
+      }
     }
-  };
+  }, [batch, month, year]);
+
+  useEffect(() => {
+    saveRegisterRef.current = saveRegister;
+  }, [saveRegister]);
 
   const saveDayNote = async (note) => {
     try {
@@ -394,8 +448,11 @@ const Attendance = () => {
     });
     if (!copied) return toast.error("Next date ke liye copy karne layak attendance nahi mili");
     setRows(next);
+    rowsRef.current = next;
+    editVersionRef.current += 1;
     setHasUnsavedChanges(true);
-    toast.success(`${source.dateKey} se ${target.dateKey} tak ${copied} attendance copied. Save dabayein.`);
+    setAutoSaveError("");
+    toast.success(`${source.dateKey} se ${target.dateKey} tak ${copied} attendance copied. Auto-save scheduled.`);
   };
 
   const handleImportAttendance = async (payload) => {
@@ -483,8 +540,11 @@ const Attendance = () => {
   };
 
   const handleRowsChange = (nextRows) => {
+    rowsRef.current = nextRows;
+    editVersionRef.current += 1;
     setRows(nextRows);
     setHasUnsavedChanges(true);
+    setAutoSaveError("");
   };
 
   const handleMembershipUpdated = (studentId, membership) => {
@@ -556,6 +616,27 @@ const Attendance = () => {
     loadMonthlyRegister(batch, month, year);
   }, [batch, month, year, loadMonthlyRegister]);
 
+  useEffect(() => {
+    window.clearTimeout(autoSaveTimerRef.current);
+    if (!hasUnsavedChanges || loading || !batch || !rows.length) return undefined;
+
+    autoSaveTimerRef.current = window.setTimeout(() => {
+      saveRegisterRef.current?.({ silent: true });
+    }, 900);
+
+    return () => window.clearTimeout(autoSaveTimerRef.current);
+  }, [batch, hasUnsavedChanges, loading, month, rows, year]);
+
+  useEffect(() => {
+    const warnBeforeLeaving = (event) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [hasUnsavedChanges]);
+
   const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0];
   const academyAddress = [
     mainBranch?.address || academy?.address,
@@ -607,7 +688,7 @@ const Attendance = () => {
           <button type="button" className="attendance-action" onClick={openAttendanceImport} disabled={!batch}><Upload size={16} /> Import Attendance</button>
           <button type="button" className="attendance-action" onClick={printRegister} disabled={!formattedRows.length}><Printer size={16} /> Print</button>
           <button type="button" className="attendance-action" onClick={exportExcel} disabled={!formattedRows.length}><FileSpreadsheet size={16} /> Export Excel</button>
-          <button type="button" className="attendance-action attendance-action--primary" onClick={saveRegister} disabled={saving || loading || !rows.length}><Save size={16} /> {saving ? "Saving…" : "Save Attendance"}</button>
+          <button type="button" className="attendance-action attendance-action--primary" onClick={() => saveRegister({ silent: false })} disabled={saving || loading || !rows.length}><Save size={16} /> {saving ? "Saving…" : "Save Attendance"}</button>
         </div>
       </header>
 
@@ -620,11 +701,11 @@ const Attendance = () => {
 
       <section className="attendance-controls">
         <div className="attendance-controls__top">
-          <div className="attendance-batches"><small>Select Batch</small><div>{batches.map((item) => <button key={item._id} type="button" className={batch === item._id ? "is-active" : ""} onClick={() => setBatch(item._id)} disabled={loading}>{item.batchName}<span>{item.martialArt || "Martial Art"}</span></button>)}</div>{!batches.length ? <p>No active batches available.</p> : null}</div>
-          <label className="attendance-year"><span>Year</span><select value={year} onChange={(event) => setYear(Number(event.target.value))}>{yearOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <div className="attendance-batches"><small>Select Batch</small><div>{batches.map((item) => <button key={item._id} type="button" className={batch === item._id ? "is-active" : ""} onClick={() => setBatch(item._id)} disabled={loading || saving || hasUnsavedChanges}>{item.batchName}<span>{item.martialArt || "Martial Art"}</span></button>)}</div>{!batches.length ? <p>No active batches available.</p> : null}</div>
+          <label className="attendance-year"><span>Year</span><select value={year} onChange={(event) => setYear(Number(event.target.value))} disabled={loading || saving || hasUnsavedChanges}>{yearOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
           <button type="button" className="attendance-repeat" onClick={repeatAttendance} disabled={loading || !rows.length}><span><RefreshCcw size={16} /></span><span>Repeat Previous Day<small>Copy the latest marked attendance</small></span></button>
         </div>
-        <div className="attendance-months" aria-label="Select month">{visibleMonths.map((item) => <button key={item.value} type="button" className={month === item.value ? "is-active" : ""} onClick={() => handleMonthClick(item.value)} disabled={loading}>{item.label}{item.value === now.getMonth() + 1 && year === now.getFullYear() ? <i /> : null}</button>)}</div>
+        <div className="attendance-months" aria-label="Select month">{visibleMonths.map((item) => <button key={item.value} type="button" className={month === item.value ? "is-active" : ""} onClick={() => handleMonthClick(item.value)} disabled={loading || saving || hasUnsavedChanges}>{item.label}{item.value === now.getMonth() + 1 && year === now.getFullYear() ? <i /> : null}</button>)}</div>
       </section>
 
       <section className="attendance-register-card">
@@ -647,8 +728,8 @@ const Attendance = () => {
 
         <footer className="attendance-save-bar">
           <span className={hasUnsavedChanges ? "is-pending" : "is-saved"}><i />{hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}</span>
-          <span>{lastSavedAt ? `Last saved ${lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Changes are saved when you press Save Attendance"}</span>
-          <div><span>{formattedRows.length} students · {attendanceStats.totalCells} attendance cells</span><button type="button" onClick={saveRegister} disabled={saving || loading || !rows.length}><Save size={15} /> {saving ? "Saving…" : "Save Now"}</button></div>
+          <span>{autoSaveError ? `Auto-save failed: ${autoSaveError}` : lastSavedAt ? `Last auto-saved ${lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Changes auto-save after editing"}</span>
+          <div><span>{formattedRows.length} students · {attendanceStats.totalCells} attendance cells</span><button type="button" onClick={() => saveRegister({ silent: false })} disabled={saving || loading || !rows.length}><Save size={15} /> {saving ? "Saving…" : "Save Now"}</button></div>
         </footer>
       </section>
     </div>

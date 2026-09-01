@@ -18,6 +18,8 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+const MAX_ATTENDANCE_WORKBOOK_SIZE_BYTES = 60 * 1024 * 1024;
+
 const emptyPreview = {
   rows: [],
   blocks: [],
@@ -171,8 +173,8 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
       toast.error("Please select an .xlsx or .xls workbook");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Workbook cannot exceed 10 MB");
+    if (file.size > MAX_ATTENDANCE_WORKBOOK_SIZE_BYTES) {
+      toast.error("Workbook cannot exceed 60 MB");
       return;
     }
 
@@ -378,6 +380,7 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
 
         <div className="card">
           <label>Excel Workbook<input type="file" accept=".xlsx,.xls" onChange={handleFileChange} disabled={busy} /></label>
+          <small className="muted">Supported: .xlsx and .xls · Maximum size: 60 MB</small>
           {fileName && <p className="muted">Selected: {fileName}</p>}
         </div>
 

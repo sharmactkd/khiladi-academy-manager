@@ -21,7 +21,7 @@ import {
   requireResolvedAcademy,
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
-import { expensiveOperationRateLimiter } from "../middlewares/rateLimiter.js";
+import { attendanceImportRateLimiter } from "../middlewares/rateLimiter.js";
 
 import {
   markAttendanceValidator,
@@ -45,7 +45,7 @@ router.delete("/day-note", removeAttendanceDayNote);
 
 router.post(
   "/import",
-  expensiveOperationRateLimiter,
+  attendanceImportRateLimiter,
   (req, res, next) => {
     const rows = req.body?.rows;
     if (!Array.isArray(rows)) {

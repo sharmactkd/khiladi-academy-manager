@@ -33,6 +33,14 @@ export const studentImportRateLimiter = buildRateLimiter({
   message: "Too many student import requests. Please try again later.",
 });
 
+// Attendance workbooks are imported one detected month block at a time. A
+// historical workbook can legitimately contain many months in one operation.
+export const attendanceImportRateLimiter = buildRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: "Too many attendance import requests. Please try again later.",
+});
+
 export const authRateLimiter = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 20,
