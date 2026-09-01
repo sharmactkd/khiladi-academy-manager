@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DateInput from "../../components/common/DateInput.jsx";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
 import {
   ArrowLeft,
@@ -36,6 +36,11 @@ import {
 } from "../../components/taekwondoBelts/taekwondoBelts.js";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import {
+  calculateStudentAge,
+  getStudentAgeCategory,
+  getStudentAgeCategoryLabel,
+} from "../../utils/studentAgeCategory.js";
 import StudentFormSection from "./components/StudentFormSection.jsx";
 import MedicalSelectors, {
   buildMedicalConditionsPayload,
@@ -50,6 +55,11 @@ const toDateInput = (value) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 };
+const formatAadhaar = (value = "") =>
+  String(value)
+    .replace(/\D/g, "")
+    .slice(0, 12)
+    .replace(/(\d{4})(?=\d)/g, "$1-");
 const normalizePersonContacts = (value, legacy = {}) => {
   const list = Array.isArray(value) ? value : [];
   const source = list.length
@@ -66,29 +76,6 @@ const normalizePersonContacts = (value, legacy = {}) => {
     customRelation: contact.customRelation || "",
   }));
 };
-const calculateAge = (dob) => {
-  if (!dob) return "";
-  const birth = new Date(dob);
-  if (Number.isNaN(birth.getTime())) return "";
-  const today = new Date();
-  let result = today.getFullYear() - birth.getFullYear();
-  if (
-    today.getMonth() < birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
-  )
-    result -= 1;
-  return result >= 0 ? result : "";
-};
-const ageCategoryFor = (age) =>
-  age === ""
-    ? ""
-    : age <= 11
-      ? "Sub-Junior"
-      : age <= 14
-        ? "Cadet"
-        : age <= 17
-          ? "Junior"
-          : "Senior";
 const appendValue = (body, key, value) =>
   body.append(
     key,
@@ -196,8 +183,12 @@ const EditStudent = () => {
   const gender = useWatch({ control, name: "gender" });
   const status = useWatch({ control, name: "status" });
   const bloodGroup = useWatch({ control, name: "bloodGroup" });
-  const age = useMemo(() => calculateAge(dob), [dob]);
-  const ageCategory = useMemo(() => ageCategoryFor(age), [age]);
+  const age = useMemo(() => calculateStudentAge(dob), [dob]);
+  const detectedAgeCategory = useMemo(() => getStudentAgeCategory(age), [age]);
+  const ageCategoryLabel = useMemo(
+    () => getStudentAgeCategoryLabel(age),
+    [age],
+  );
   const academyMartialArts = useMemo(
     () => normalizeOptions(academy?.martialArts),
     [academy?.martialArts],
@@ -251,7 +242,7 @@ const EditStudent = () => {
             studentData?.medicalInfo?.bloodGroup ||
             "",
           admissionNumber: studentData?.admissionNumber || "",
-          aadhaarNumber: studentData?.aadhaarNumber || "",
+          aadhaarNumber: formatAadhaar(studentData?.aadhaarNumber),
           name: [studentData?.firstName, studentData?.lastName]
             .filter(Boolean)
             .join(" "),
@@ -279,6 +270,9 @@ const EditStudent = () => {
         setStudentContact({
           countryCode: studentData?.countryCode || "+91",
           phone: studentData?.phone || "",
+          phoneNumbers: Array.isArray(studentData?.phoneNumbers)
+            ? studentData.phoneNumbers
+            : [],
           country: studentData?.country || "India",
           state: studentData?.state || "",
           city: studentData?.city || "",
@@ -406,11 +400,12 @@ const EditStudent = () => {
         .split(/\s+/);
       const payload = {
         admissionNumber: values.admissionNumber,
-        aadhaarNumber: values.aadhaarNumber || "",
+        aadhaarNumber: String(values.aadhaarNumber || "").replace(/\D/g, ""),
         firstName: names[0] || "",
         lastName: names.slice(1).join(" "),
         gender: values.gender,
         dateOfBirth: values.dob,
+        ageCategory: detectedAgeCategory,
         branch: normalizeEntityId(values.branch),
         batch: normalizeEntityId(values.batch),
         ...studentContact,
@@ -627,16 +622,27 @@ const EditStudent = () => {
               </label>
               <label>
                 <span>Aadhaar Number</span>
-                <input
-                  maxLength={12}
-                  inputMode="numeric"
-                  placeholder="12 digit Aadhaar number"
-                  {...register("aadhaarNumber", {
-                    pattern: {
-                      value: /^\d{12}$/,
-                      message: "Enter a valid 12 digit Aadhaar number",
-                    },
-                  })}
+                <Controller
+                  name="aadhaarNumber"
+                  control={control}
+                  rules={{
+                    validate: (value) =>
+                      !value ||
+                      /^\d{4}-\d{4}-\d{4}$/.test(value) ||
+                      "Enter a valid 12 digit Aadhaar number",
+                  }}
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      maxLength={14}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="0000-0000-0000"
+                      onChange={(event) =>
+                        field.onChange(formatAadhaar(event.target.value))
+                      }
+                    />
+                  )}
                 />
                 {errorFor("aadhaarNumber")}
               </label>
@@ -668,7 +674,11 @@ const EditStudent = () => {
                 </label>
                 <label>
                   <span>Age Category</span>
-                  <input value={ageCategory} readOnly />
+                  <input
+                    value={ageCategoryLabel}
+                    placeholder="Calculated from date of birth"
+                    readOnly
+                  />
                 </label>
 
                 <label>

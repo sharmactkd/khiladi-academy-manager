@@ -19,6 +19,33 @@ const formatPhone = (digits, dialCode = DEFAULT_DIAL_CODE) => {
   return `${clean.slice(0, 4)}-${clean.slice(4, 6)}-${clean.slice(6, 10)}`;
 };
 
+const getFloatingMenuPosition = (button, preferredWidth) => {
+  if (!button) return null;
+  const rect = button.getBoundingClientRect();
+  const viewportHeight = window.innerHeight;
+  const viewportWidth = window.innerWidth;
+  const spaceBelow = viewportHeight - rect.bottom - 12;
+  const spaceAbove = rect.top - 12;
+  const openAbove = spaceBelow < 260 && spaceAbove > spaceBelow;
+  const maxHeight = Math.max(
+    180,
+    Math.min(340, openAbove ? spaceAbove : spaceBelow),
+  );
+  const width = Math.min(preferredWidth, viewportWidth - 16);
+
+  return {
+    left: Math.min(
+      Math.max(8, rect.left),
+      Math.max(8, viewportWidth - width - 8),
+    ),
+    top: openAbove
+      ? Math.max(8, rect.top - maxHeight - 6)
+      : rect.bottom + 6,
+    width,
+    maxHeight,
+  };
+};
+
 const PhoneLocationFields = ({
   afterPhone = null,
   phoneTrailingContent = null,
@@ -41,17 +68,30 @@ const PhoneLocationFields = ({
   const normalizedPhones = useMemo(() => {
     const source = Array.isArray(phoneNumbers) ? phoneNumbers : [];
     const rows = source
-      .map((item, index) => ({
-        countryCode: String(item?.countryCode || DEFAULT_DIAL_CODE),
-        phone: String(item?.phone || ""),
-        isPrimary: index === 0,
-      }))
+      .map((item, index) => {
+        const itemCountryCode = String(
+          item?.countryCode || DEFAULT_DIAL_CODE,
+        );
+        return {
+          countryCode: itemCountryCode,
+          phone: formatPhone(onlyDigits(item?.phone), itemCountryCode),
+          isPrimary: index === 0,
+        };
+      })
       .slice(0, maxPhones);
 
     if (!rows.length) {
-      rows.push({ countryCode, phone, isPrimary: true });
+      rows.push({
+        countryCode,
+        phone: formatPhone(onlyDigits(phone), countryCode),
+        isPrimary: true,
+      });
     } else {
-      rows[0] = { countryCode, phone, isPrimary: true };
+      rows[0] = {
+        countryCode,
+        phone: formatPhone(onlyDigits(phone), countryCode),
+        isPrimary: true,
+      };
     }
 
     return rows;
@@ -81,8 +121,11 @@ const PhoneLocationFields = ({
   const [countrySearch, setCountrySearch] = useState("");
   const [districts, setDistricts] = useState([]);
   const [countryMenuPosition, setCountryMenuPosition] = useState(null);
+  const [codeMenuPosition, setCodeMenuPosition] = useState(null);
+  const [codeMenuAnchor, setCodeMenuAnchor] = useState(null);
   const countryButtonRef = useRef(null);
   const countryMenuRef = useRef(null);
+  const codeMenuRef = useRef(null);
 
   useEffect(() => {
     if (!showCountryDropdown) return undefined;
@@ -91,24 +134,9 @@ const PhoneLocationFields = ({
       const button = countryButtonRef.current;
       if (!button) return;
 
-      const rect = button.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const spaceBelow = viewportHeight - rect.bottom - 12;
-      const spaceAbove = rect.top - 12;
-      const openAbove = spaceBelow < 260 && spaceAbove > spaceBelow;
-      const availableHeight = Math.max(
-        180,
-        Math.min(340, openAbove ? spaceAbove : spaceBelow),
+      setCountryMenuPosition(
+        getFloatingMenuPosition(button, button.getBoundingClientRect().width),
       );
-
-      setCountryMenuPosition({
-        left: Math.max(8, rect.left),
-        top: openAbove
-          ? Math.max(8, rect.top - availableHeight - 6)
-          : rect.bottom + 6,
-        width: Math.min(rect.width, window.innerWidth - 16),
-        maxHeight: availableHeight,
-      });
     };
 
     const closeOnOutsideClick = (event) => {
@@ -132,6 +160,39 @@ const PhoneLocationFields = ({
       document.removeEventListener("mousedown", closeOnOutsideClick);
     };
   }, [showCountryDropdown]);
+
+  useEffect(() => {
+    const menuOpen = showCodeDropdown || openAdditionalCodeIndex !== null;
+    if (!menuOpen || !codeMenuAnchor) {
+      setCodeMenuPosition(null);
+      return undefined;
+    }
+
+    const updateCodeMenuPosition = () =>
+      setCodeMenuPosition(getFloatingMenuPosition(codeMenuAnchor, 310));
+    const closeOnOutsideClick = (event) => {
+      if (
+        !codeMenuAnchor.contains(event.target) &&
+        !codeMenuRef.current?.contains(event.target)
+      ) {
+        setShowCodeDropdown(false);
+        setOpenAdditionalCodeIndex(null);
+        setCodeSearch("");
+        setAdditionalCodeSearch("");
+      }
+    };
+
+    updateCodeMenuPosition();
+    window.addEventListener("resize", updateCodeMenuPosition);
+    window.addEventListener("scroll", updateCodeMenuPosition, true);
+    document.addEventListener("mousedown", closeOnOutsideClick);
+
+    return () => {
+      window.removeEventListener("resize", updateCodeMenuPosition);
+      window.removeEventListener("scroll", updateCodeMenuPosition, true);
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+    };
+  }, [codeMenuAnchor, openAdditionalCodeIndex, showCodeDropdown]);
 
   useEffect(() => {
     const nextCountry =
@@ -332,13 +393,13 @@ const PhoneLocationFields = ({
         >
           <div className="phone-location-code-picker">
             <button
-              ref={countryButtonRef}
               type="button"
               className="phone-location-code-button"
               aria-label="Choose country code for primary phone"
               aria-expanded={showCodeDropdown}
-              onClick={() => {
+              onClick={(event) => {
                 setShowCodeDropdown((prev) => !prev);
+                setCodeMenuAnchor(event.currentTarget);
                 setShowCountryDropdown(false);
                 setOpenAdditionalCodeIndex(null);
                 setCodeSearch("");
@@ -357,8 +418,12 @@ const PhoneLocationFields = ({
               <span aria-hidden="true">▾</span>
             </button>
 
-            {showCodeDropdown && (
-              <div className="phone-location-code-menu">
+            {showCodeDropdown && codeMenuPosition && typeof document !== "undefined" ? createPortal(
+              <div
+                ref={codeMenuRef}
+                className="phone-location-code-menu phone-location-code-menu--portal"
+                style={codeMenuPosition}
+              >
                 <div className="phone-location-code-search">
                   <input
                     autoFocus
@@ -389,12 +454,13 @@ const PhoneLocationFields = ({
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
+              </div>,
+              document.body,
+            ) : null}
           </div>
 
           <input
-            value={phone || ""}
+            value={normalizedPhones[0]?.phone || ""}
             onChange={handlePhoneChange}
             inputMode="numeric"
             placeholder="9876-54-3210"
@@ -438,10 +504,11 @@ const PhoneLocationFields = ({
                   className="phone-location-code-button"
                   aria-label={`Choose country code for phone ${index + 1}`}
                   aria-expanded={openAdditionalCodeIndex === index}
-                  onClick={() => {
+                  onClick={(event) => {
                     setOpenAdditionalCodeIndex((current) =>
                       current === index ? null : index
                     );
+                    setCodeMenuAnchor(event.currentTarget);
                     setAdditionalCodeSearch("");
                     setShowCodeDropdown(false);
                     setShowCountryDropdown(false);
@@ -460,8 +527,12 @@ const PhoneLocationFields = ({
                   <span aria-hidden="true">▾</span>
                 </button>
 
-                {openAdditionalCodeIndex === index ? (
-                  <div className="phone-location-code-menu">
+                {openAdditionalCodeIndex === index && codeMenuPosition && typeof document !== "undefined" ? createPortal(
+                  <div
+                    ref={codeMenuRef}
+                    className="phone-location-code-menu phone-location-code-menu--portal"
+                    style={codeMenuPosition}
+                  >
                     <div className="phone-location-code-search">
                       <input
                         autoFocus
@@ -504,7 +575,8 @@ const PhoneLocationFields = ({
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </div>,
+                  document.body,
                 ) : null}
               </div>
 
@@ -540,20 +612,15 @@ const PhoneLocationFields = ({
             <label>Country</label>
 
             <button
+              ref={countryButtonRef}
               type="button"
-              onClick={() => setShowCountryDropdown((prev) => !prev)}
-              style={{
-                width: "100%",
-                minHeight: "42px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                border: "1px solid #d1d5db",
-                borderRadius: "10px",
-                background: "#fff",
-                color: "#111827",
-                padding: "10px 12px",
-                cursor: "pointer",
+              className="phone-location-country-button"
+              aria-label="Choose country"
+              aria-expanded={showCountryDropdown}
+              onClick={() => {
+                setShowCountryDropdown((prev) => !prev);
+                setShowCodeDropdown(false);
+                setOpenAdditionalCodeIndex(null);
               }}
             >
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -570,21 +637,15 @@ const PhoneLocationFields = ({
             {showCountryDropdown && countryMenuPosition && typeof document !== "undefined" ? createPortal(
               <div
                 ref={countryMenuRef}
+                className="phone-location-country-menu"
                 style={{
-                  position: "fixed",
                   top: countryMenuPosition.top,
                   left: countryMenuPosition.left,
                   width: countryMenuPosition.width,
                   maxHeight: countryMenuPosition.maxHeight,
-                  zIndex: 10000,
-                  background: "#fff",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 12,
-                  boxShadow: "0 18px 40px rgba(15, 23, 42, 0.16)",
-                  overflow: "hidden",
                 }}
               >
-                <div style={{ padding: 10 }}>
+                <div className="phone-location-country-search">
                   <input
                     value={countrySearch}
                     onChange={(e) => setCountrySearch(e.target.value)}
@@ -592,25 +653,13 @@ const PhoneLocationFields = ({
                   />
                 </div>
 
-                <div style={{ maxHeight: Math.max(120, countryMenuPosition.maxHeight - 64), overflowY: "auto" }}>
+                <div className="phone-location-country-options" style={{ maxHeight: Math.max(120, countryMenuPosition.maxHeight - 64) }}>
                   {filteredCountries.map((item) => (
                     <button
                       type="button"
                       key={item.isoCode}
                       onClick={() => handleCountrySelect(item)}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        gap: 10,
-                        alignItems: "center",
-                        border: 0,
-                        background:
-                          item.isoCode === selectedCountryIso
-                            ? "#eff6ff"
-                            : "#fff",
-                        padding: "10px 12px",
-                        cursor: "pointer",
-                      }}
+                      className={item.isoCode === selectedCountryIso ? "is-selected" : ""}
                     >
                       <ReactCountryFlag
                         countryCode={item.isoCode}

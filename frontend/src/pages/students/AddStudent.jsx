@@ -18,28 +18,17 @@ import ProfilePhotoField from "../../components/common/ProfilePhotoField.jsx";
 import { TAEKWONDO_DAN_RANKS, isTaekwondoSport } from "../../components/taekwondoBelts/taekwondoBelts.js";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import {
+  calculateStudentAge,
+  getStudentAgeCategory,
+  getStudentAgeCategoryLabel,
+} from "../../utils/studentAgeCategory.js";
 import StudentFormSection from "./components/StudentFormSection.jsx";
 import MedicalSelectors, { buildMedicalConditionsPayload } from "./components/MedicalSelectors.jsx";
 import "../branches/BranchForm.module.css";
 import "../batches/BatchForm.module.css";
 import "./StudentForm.module.css";
 
-const calculateAge = (dob) => {
-  if (!dob) return "";
-  const birth = new Date(dob);
-  if (Number.isNaN(birth.getTime())) return "";
-  const today = new Date();
-  let result = today.getFullYear() - birth.getFullYear();
-  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) result -= 1;
-  return result >= 0 ? result : "";
-};
-const ageCategoryFor = (age) => age === "" ? "" : age <= 11 ? "Sub-Junior" : age <= 14 ? "Cadet" : age <= 17 ? "Junior" : "Senior";
-const ageCategoryLabelFor = (age) => {
-  if (age === "") return "";
-  const primaryCategory = ageCategoryFor(age);
-  const underCategory = age <= 13 ? "Under-14" : age <= 16 ? "Under-17" : age <= 18 ? "Under-19" : "";
-  return [primaryCategory, underCategory].filter(Boolean).join(" / ");
-};
 const formatAadhaar = (value = "") => String(value).replace(/\D/g, "").slice(0, 12).replace(/(\d{4})(?=\d)/g, "$1-");
 const appendValue = (body, key, value) => body.append(key, typeof value === "object" && !(value instanceof File) ? JSON.stringify(value) : value ?? "");
 const getRequestErrorMessage = (error) => {
@@ -100,9 +89,12 @@ const AddStudent = () => {
   const gender = useWatch({ control, name: "gender" });
   const status = useWatch({ control, name: "status" });
   const bloodGroup = useWatch({ control, name: "bloodGroup" });
-  const age = useMemo(() => calculateAge(dob), [dob]);
-  const detectedAgeCategory = useMemo(() => ageCategoryFor(age), [age]);
-  const ageCategoryLabel = useMemo(() => ageCategoryLabelFor(age), [age]);
+  const age = useMemo(() => calculateStudentAge(dob), [dob]);
+  const detectedAgeCategory = useMemo(() => getStudentAgeCategory(age), [age]);
+  const ageCategoryLabel = useMemo(
+    () => getStudentAgeCategoryLabel(age),
+    [age],
+  );
   const academyMartialArts = useMemo(() => normalizeOptions(academy?.martialArts), [academy?.martialArts]);
   const showBeltSelect = isTaekwondoSport(martialArt);
 
