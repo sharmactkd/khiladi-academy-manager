@@ -9,11 +9,32 @@
 .matchTabs button { padding: 12px 20px; border: 1px solid #dce3ee; border-radius: 10px; background: white; color: #17243d; font: inherit; font-weight: 700; cursor: pointer; }
 .matchTabs button[aria-pressed="true"] { background: #d90008; color: white; border-color: #d90008; }
 .createRecordButton { margin-top: 8px; padding: 8px 12px; color: #c8000a; background: white; border: 1px solid #f2b7bc; border-radius: 8px; cursor: pointer; font: inherit; }
-.createRecordPanel { padding: 18px; margin-bottom: 16px; border: 1px solid #dce3ee; border-radius: 12px; background: #f8fafc; }
-.createRecordPanel h3 { margin: 0 0 10px; }
-.createRecordPanel p { line-height: 1.5; }
-.createRecordPanel select { padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; }
+.createRecordPanel { margin-bottom: 18px; border: 1px solid #dce3ee; border-radius: 16px; background: #fff; overflow: hidden; box-shadow: 0 8px 24px rgba(15,34,62,.04); }
+.createRecordHeader { display: flex; gap: 12px; align-items: center; padding: 20px; border-bottom: 1px solid #edf0f5; }
+.createRecordIcon { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; color: #d4000a; background: #fff0f1; }
+.createRecordEyebrow { font-size: 10px; font-weight: 800; letter-spacing: .14em; color: #c60009; }
+.createRecordHeader h3 { margin: 4px 0; font-size: 16px; color: #142943; }
+.createRecordHeader p { margin: 0; font-size: 12px; line-height: 1.5; color: #64748b; }
+.createRecordCount { margin-left: auto; flex-shrink: 0; padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #53667e; font-size: 11px; }
+.createRecordFields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; padding: 20px; }
+.createRecordFields label { display: flex; flex-direction: column; min-width: 0; gap: 8px; color: #20334e; font-size: 12px; font-weight: 700; }
+.createRecordFields label>span { display: flex; align-items: center; gap: 5px; }
+.createRecordFields b { color: #d4000a; }
+.createRecordFields small { margin-left: auto; color: #8593a6; font-size: 10px; font-weight: 400; }
+.createRecordFields input,.createRecordFields select { box-sizing: border-box; width: 100%; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid #cfd9e6; border-radius: 9px; background: white; color: #20334e; font: inherit; font-weight: 400; }
+.createRecordFields input:focus,.createRecordFields select:focus { outline: 2px solid #f5b9bf; outline-offset: 1px; border-color: #cf0010; }
+.createRecordInfo { display: flex; align-items: flex-start; gap: 10px; margin: 0 20px 20px; padding: 12px; border-radius: 10px; background: #f4f8fc; color: #52667e; }
+.createRecordInfo svg { flex-shrink: 0; margin-top: 1px; color: #6484a5; }
+.createRecordInfo p { margin: 0; font-size: 11px; line-height: 1.6; }
+.createRecordError { margin: 0 20px 16px; padding: 12px; border-radius: 8px; background: #fff1f2; color: #b8000a; font-size: 12px; }
+.createRecordFooter { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 16px 20px; border-top: 1px solid #edf0f5; background: #fafbfc; }
+.createRecordFooter>small { max-width: 400px; color: #75869b; font-size: 10px; line-height: 1.6; }
+.createRecordActions { display: flex; gap: 10px; flex-shrink: 0; }
+.createRecordActions button { min-height: 40px; }
+@media(max-width:700px) { .createRecordHeader { flex-wrap: wrap; } .createRecordCount { margin-left: 56px; } .createRecordFields { grid-template-columns: 1fr; } .createRecordFooter { flex-direction: column; align-items: stretch; } .createRecordActions { justify-content: flex-end; } }
 .matchedShadowRow { background: #f5f8f6; opacity: .58; }
 .matchedShadowRow:hover { opacity: .78; }
 .matchedShadowRow td { color: #66778a; }
 .shadowMatchLabel { padding: 9px 10px; border: 1px solid #bdddc9; border-radius: 8px; background: #eff9f2; color: #147443; font-weight: 800; }
+.editableMatch { cursor: pointer; }
+.editableMatch:focus-visible { outline: 2px solid #16834c; outline-offset: 2px; }

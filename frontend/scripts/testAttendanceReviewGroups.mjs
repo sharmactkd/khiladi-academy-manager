@@ -124,3 +124,15 @@ test("source identities retain separate shadows when mapped to one existing stud
   assert.equal(history.reduce((sum, group) => sum + group.attendanceCells, 0), 46);
   assert.deepEqual(history.flatMap((group) => group.rowKeys), ["5", "55"]);
 });
+
+test("correcting a shadow match updates its source rows only", () => {
+  const matches = [row("5"), row("55"), row("99", { name: "Another Student" })];
+  const original = { "5": "wrong", "55": "wrong", "99": "wrong" };
+  const history = buildAttendanceUnmatchedHistory(matches, original);
+  const prachi = history.find((group) => group.name === "Prachi Wo");
+  const corrected = resolveAttendanceGroup(original, prachi, "correct");
+  assert.deepEqual(corrected, { "5": "correct", "55": "correct", "99": "wrong" });
+  const nextHistory = buildAttendanceUnmatchedHistory(matches, corrected);
+  assert.equal(nextHistory.find((group) => group.name === "Prachi Wo").studentId, "correct");
+  assert.equal(nextHistory.reduce((sum, group) => sum + group.attendanceCells, 0), 69);
+});

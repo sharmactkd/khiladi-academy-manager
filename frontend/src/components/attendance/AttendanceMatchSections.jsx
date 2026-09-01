@@ -1,9 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import { UserPlus, Info, ArrowRight } from "lucide-react";
 import { getAttendanceUnmatchedHistory } from "../../utils/attendanceReviewGroups.js";
 import styles from "./AttendanceImportModal.module.css";
 
 function MatchSection({ title, groups, students, options, onResolve, onCreate, busy, historyMode = false }) {
   const [page, setPage] = useState(0);
+  const [editingKey, setEditingKey] = useState(null);
+  const editingSelectRef = useRef(null);
+  const editMatch = (group) => {
+    if (busy || !historyMode) return;
+    flushSync(() => setEditingKey(group.groupKey));
+    editingSelectRef.current?.focus();
+    // Open supported native pickers within the user's double-click gesture.
+    try { editingSelectRef.current?.showPicker?.(); } catch { /* Focused select remains usable. */ }
+  };
+  const editWithKeyboard = (event, group) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      editMatch(group);
+    }
+  };
   const pages = Math.max(1, Math.ceil(groups.length / 25));
   const current = Math.min(page, pages - 1);
   return <section className={styles.panel}>
@@ -23,16 +40,28 @@ function MatchSection({ title, groups, students, options, onResolve, onCreate, b
               <small title={group.sources.map((source) => `${source.sheet}: row ${source.row}`).join(", ")}>Repeated entries grouped; original attendance retained.</small>
             </td>
             <td>{group.phone || "No phone"}<small>{group.admissionNumber || "No admission/code"}</small></td>
-            <td>{group.studentId ? <><span className={styles.matchOk}>{historyMode ? "Matched with " : ""}{student?.name || "Confirmed student"}</span>{historyMode && <small>Moved to Matched students</small>}</> : group.excluded ? <span className={styles.excluded}>Excluded</span> : <span className={styles.matchError}>Review · {group.reason}</span>}</td>
-            <td>{historyMode && group.isMatchHistory ? <span className={styles.shadowMatchLabel}>{group.excluded ? "Excluded from import" : `${student?.name || "Confirmed student"} · ${student?.phone || student?.admissionNumber || "No identifier"}`}</span> : <><select aria-label={`Confirm student for ${group.name}`} disabled={busy}
+            <td>{group.studentId ? <><span className={styles.matchOk} onDoubleClick={() => editMatch(group)} title={historyMode ? "Double-click the green name to change this match" : undefined}>{historyMode ? "Matched with " : ""}{student?.name || "Confirmed student"}</span>{historyMode && <small>Moved to Matched students · double-click to change</small>}</> : group.excluded ? <span className={styles.excluded}>Excluded</span> : <span className={styles.matchError}>Review · {group.reason}</span>}</td>
+            <td>{historyMode && group.isMatchHistory && editingKey !== group.groupKey ? <span className={`${styles.shadowMatchLabel} ${styles.editableMatch}`} role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} aria-label={`Change match for ${group.name}`} title="Double-click to change match (keyboard: Enter)" onDoubleClick={() => editMatch(group)} onKeyDown={(event) => editWithKeyboard(event, group)}>{group.excluded ? "Excluded from import" : `${student?.name || "Confirmed student"} · ${student?.phone || student?.admissionNumber || "No identifier"}`}</span> : <><select aria-label={`Confirm student for ${group.name}`} disabled={busy}
+              ref={editingKey === group.groupKey ? editingSelectRef : undefined}
               value={currentValue}
               className={!group.studentId && !group.excluded ? styles.invalidSelect : ""}
-              onChange={(event) => onResolve(group, event.target.value)}>
-              <option value="" disabled>Select existing student</option>
+              onChange={(event) => {
+                const value = event.target.value;
+                if (value === "__create__") {
+                  event.target.value = currentValue;
+                  onCreate(group);
+                } else {
+                  onResolve(group, value);
+                }
+                setEditingKey(null);
+              }}
+              onBlur={() => { if (editingKey === group.groupKey) setEditingKey(null); }}
+              onKeyDown={(event) => { if (event.key === "Escape") setEditingKey(null); }}>
+              <option value="__create__">Create student record</option>
+              <option value="" disabled hidden>Select existing student</option>
               {choices.map((item) => <option key={item._id} value={item._id}>{item.name} · {item.phone || item.admissionNumber || "No identifier"}</option>)}
               <option value="__skip__">Exclude these Excel rows</option>
             </select>
-              {!group.studentId && <button type="button" className={styles.createRecordButton} disabled={busy} onClick={() => onCreate(group)}>Create student record</button>}
             </>}</td>
           </tr>;
         })}</tbody>
@@ -64,7 +93,6 @@ export default function AttendanceMatchSections({ groups, historyGroups, availab
   const [activeTab, setActiveTab] = useState("matched");
   const [creatingGroup, setCreatingGroup] = useState(null);
   const [draft, setDraft] = useState({ firstName: "", lastName: "", status: "inactive" });
-  const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState("");
   const inFlight = useRef(false);
   const createPanelRef = useRef(null);
@@ -77,10 +105,10 @@ export default function AttendanceMatchSections({ groups, historyGroups, availab
   const openCreate = (group) => {
     const [firstName = "", ...rest] = String(group.sources[0]?.name || group.name || "").trim().split(/\s+/);
     setDraft({ firstName, lastName: rest.join(" "), status: "inactive" });
-    setConfirmed(false); setError(""); setCreatingGroup(group);
+    setError(""); setCreatingGroup(group);
   };
   const saveRecord = async () => {
-    if (inFlight.current || busy || !confirmed || !draft.firstName.trim()) return;
+    if (inFlight.current || busy || !draft.firstName.trim()) return;
     inFlight.current = true; setError("");
     try {
       await onCreate(creatingGroup, draft);
@@ -121,21 +149,25 @@ export default function AttendanceMatchSections({ groups, historyGroups, availab
       </span><button type="button" onClick={() => setActiveTab("matched")}>Review created matches</button>
     </div>}
     {creatingGroup && <section ref={createPanelRef} className={styles.createRecordPanel} aria-label="Create student record">
-      <h3>Create student record</h3>
-      <p>This creates a real Student Record in the selected batch and links all {creatingGroup.rowKeys.length} grouped Excel rows. It does not import attendance yet.</p>
-      <div className={styles.reviewControls}>
-        <label>First name * <input maxLength={100} value={draft.firstName} disabled={busy} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></label>
-        <label>Last name <input maxLength={100} value={draft.lastName} disabled={busy} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></label>
-        <label>Status <select value={draft.status} disabled={busy} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="inactive">Inactive (historical student)</option><option value="active">Active</option></select></label>
+      <header className={styles.createRecordHeader}>
+        <span className={styles.createRecordIcon}><UserPlus size={22} aria-hidden="true" /></span>
+        <div><span className={styles.createRecordEyebrow}>NEW STUDENT</span><h3>Create student record</h3><p>Add the student to this batch and link their Excel entries.</p></div>
+        <span className={styles.createRecordCount}>{creatingGroup.rowKeys.length} Excel rows</span>
+      </header>
+      <div className={styles.createRecordFields}>
+        <label><span>First name <b>*</b></span><input required maxLength={100} autoComplete="off" value={draft.firstName} placeholder="Enter first name" disabled={busy} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></label>
+        <label><span>Last name <small>Optional</small></span><input maxLength={100} autoComplete="off" value={draft.lastName} placeholder="Enter last name" disabled={busy} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></label>
+        <label><span>Student status</span><select value={draft.status} disabled={busy} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="inactive">Inactive (historical student)</option><option value="active">Active</option></select></label>
       </div>
-      <p>Admission number will be generated automatically. Missing DOB/contact details can be completed later from Edit Student; no details are invented.</p>
-      <label><input type="checkbox" checked={confirmed} disabled={busy} onChange={(event) => setConfirmed(event.target.checked)} /> I checked existing records; this is a new student and all grouped rows belong to them.</label>
-      {error && <p role="alert" className={styles.matchError}>{error}</p>}
-      <div className={styles.reviewControls}>
-        <button type="button" disabled={busy} onClick={() => setCreatingGroup(null)}>Cancel</button>
-        <button type="button" disabled={busy || !confirmed || !draft.firstName.trim()} onClick={saveRecord}>{busy ? "Creating…" : "Create & link student"}</button>
-      </div>
-      <small>The new Student Record remains saved even if you cancel the attendance import later.</small>
+      <div className={styles.createRecordInfo}><Info size={18} aria-hidden="true" /><p>Admission number is generated automatically. Add DOB and contact details later from Edit Student. Attendance is saved only when you import.</p></div>
+      {error && <p role="alert" className={styles.createRecordError}>{error}</p>}
+      <footer className={styles.createRecordFooter}>
+        <small>The student record stays saved even if you cancel this import.</small>
+        <div className={styles.createRecordActions}>
+          <button type="button" className={styles.secondary} disabled={busy} onClick={() => setCreatingGroup(null)}>Cancel</button>
+          <button type="button" className={styles.primary} disabled={busy || !draft.firstName.trim()} onClick={saveRecord}>{busy ? "Creating…" : "Create & link student"}<ArrowRight size={16} aria-hidden="true" /></button>
+        </div>
+      </footer>
     </section>}
     <div className={styles.reviewControls}>
       <label>Find Excel student <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, phone or sheet" /></label>
