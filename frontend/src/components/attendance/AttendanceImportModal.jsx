@@ -8,7 +8,8 @@ import { classifyHistoricalSheets, getAttendanceSheetNames, parseHistoricalAtten
 import styles from "./AttendanceImportModal.module.css";
 import AttendanceMatchSections from "./AttendanceMatchSections.jsx";
 import { studentApi } from "../../api/studentApi.js";
-import { groupAttendanceReview, resolveAttendanceGroup } from "../../utils/attendanceReviewGroups.js";
+import { buildAttendanceImportResolutions, chunkAttendanceResolutions, provisionalStudentValues } from "../../utils/attendanceImportActions.js";
+import { buildAttendanceUnmatchedHistory, groupAttendanceReview, resolveAttendanceGroup } from "../../utils/attendanceReviewGroups.js";
 import { prepareMatchPreview, yieldToBrowser } from "../../utils/attendanceMatchPreview.js";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -30,6 +31,7 @@ const splitRowsForTransport = (rows = [], maxRows = 350, maxBytes = 1200 * 1024)
 
 const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selectedBatch = null }) => {
   const fileInputRef = useRef(null);
+  const bulkCreatingRef = useRef(false);
   const [step, setStep] = useState(1);
   const [fileName, setFileName] = useState("");
   const [fileSize, setFileSize] = useState(0);
@@ -47,6 +49,7 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
   const [resolutions, setResolutions] = useState({});
   const [result, setResult] = useState(null);
   const reviewGroups = useMemo(() => groupAttendanceReview(matches, resolutions), [matches, resolutions]);
+  const historyGroups = useMemo(() => buildAttendanceUnmatchedHistory(matches, resolutions), [matches, resolutions]);
 
   const sheetNames = useMemo(() => getAttendanceSheetNames(workbook), [workbook]);
   const selectedBlocks = useMemo(() => selectedSheets.flatMap((sheetName) => {
@@ -125,15 +128,16 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
 
   const setResolution = (group, studentId) => setResolutions((current) => resolveAttendanceGroup(current, group, studentId));
 
-  const createAttendanceStudent = async (group, values) => {
+  const createAttendanceStudent = async (group, values, manageBusy = true) => {
     if (!fallbackBatch) throw new Error("Select a destination batch first");
-    setBusy(true);
+    if (manageBusy) setBusy(true);
     try {
       const branch = selectedBatch?.branch?._id || selectedBatch?.branch;
       const response = await studentApi.create({
         firstName: values.firstName.trim(), lastName: values.lastName.trim(),
         batch: fallbackBatch, ...(branch ? { branch } : {}),
         status: values.status,
+        importSource: "excel-attendance",
       });
       const student = response?.data?.student || response?.data || response?.student;
       if (!student?._id) throw new Error("Student may have been created, but confirmation was not received. Check Student Records before trying again.");
@@ -144,12 +148,35 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
       };
       setAvailableStudents((current) => [...current.filter((item) => item._id !== candidate._id), candidate]);
       setResolution(group, candidate._id);
-      toast.success("Student record created and linked. Attendance will save when you click Import.");
-    } finally { setBusy(false); }
+      if (manageBusy) toast.success("Student record created and linked. Attendance will save when you click Import.");
+    } finally { if (manageBusy) setBusy(false); }
   };
 
-  const startImport = async () => {
-    if (unresolvedCount) return toast.error(`Resolve or exclude ${unresolvedCount} student row(s)`);
+  const createAllUnmatched = async () => {
+    if (bulkCreatingRef.current || busy) return null;
+    const pending = reviewGroups.filter((group) => !group.studentId && !group.excluded);
+    bulkCreatingRef.current = true;
+    setBusy(true);
+    let created = 0;
+    let error = "";
+    try {
+      for (const group of pending) {
+        setProgress(`Creating student records: ${created + 1} / ${pending.length}…`);
+        await createAttendanceStudent(group, provisionalStudentValues(group), false);
+        created += 1;
+      }
+    } catch (failure) {
+      error = failure.response?.data?.message || failure.message || "Creation could not be confirmed.";
+    } finally {
+      bulkCreatingRef.current = false; setBusy(false); setProgress("");
+    }
+    return { created, remaining: pending.length - created, error };
+  };
+
+  const startImport = async (matchedOnly = false) => {
+    if (!resolvedCount) return toast.error("Confirm at least one student first.");
+    if (!matchedOnly && unresolvedCount) return toast.error(`Resolve or exclude ${unresolvedCount} student group(s), or choose Import matched only.`);
+    const importResolutions = buildAttendanceImportResolutions(reviewGroups, matchedOnly);
     setBusy(true);
     const totals = { imported: 0, skipped: 0, failed: 0, cells: 0, months: 0 };
     try {
@@ -159,12 +186,15 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
       for (let index = 0; index < importTasks.length; index += 1) {
         const { block, rows } = importTasks[index];
         setProgress(`Importing ${MONTHS[(block.month || 1) - 1]} ${block.year} (${index + 1}/${importTasks.length})…`);
-        const summary = await onImport?.({ sheetName: block.sheetName, blockId: block.blockId, sourceWorkbook: fileName, duplicateMode, fallbackBatch, resolutions, deferRefresh: index < importTasks.length - 1, rows });
+        const summary = await onImport?.({ sheetName: block.sheetName, blockId: block.blockId, sourceWorkbook: fileName, duplicateMode, fallbackBatch, resolutions: chunkAttendanceResolutions(rows, importResolutions), deferRefresh: index < importTasks.length - 1, rows });
         totals.imported += Number(summary?.imported || 0); totals.skipped += Number(summary?.skipped || 0);
         totals.failed += Number(summary?.failed || 0); totals.cells += Number(summary?.totalAttendanceCells || 0);
       }
       totals.months = selectedBlocks.length;
-      setResult(totals); setStep(4); setProgress(""); toast.success("Attendance import completed successfully");
+      totals.unmatchedDeferred = matchedOnly ? unresolvedCount : 0;
+      setResult(totals); setStep(4); setProgress("");
+      if (totals.failed) toast.error("Import finished with failures. Review the result.");
+      else toast.success("Attendance import completed successfully");
     } catch (error) { toast.error(error.response?.data?.message || error.message || "Import failed"); setProgress(""); }
     finally { setBusy(false); }
   };
@@ -188,13 +218,13 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
         {step === 3 && <>
           <div className={styles.summaryGrid}><article><CheckCircle2 /><span><small>Ready</small><strong>{resolvedCount}</strong></span></article><article><AlertTriangle /><span><small>Needs review</small><strong>{unresolvedCount}</strong></span></article><article><UsersRound /><span><small>Student groups</small><strong>{reviewGroups.length}</strong></span></article><article><Link2 /><span><small>Attendance cells</small><strong>{matches.reduce((sum, item) => sum + Number(item.attendanceCells || 0), 0)}</strong></span></article></div>
           <div className={styles.reviewNotice}><SearchCheck /><div><strong>Safe student matching</strong><span>Phone, admission/code, exact name + selected batch, then unique exact name. No fuzzy match is imported automatically.</span></div></div>
-          <AttendanceMatchSections groups={reviewGroups} availableStudents={availableStudents} onResolve={setResolution} onCreate={createAttendanceStudent} busy={busy} />
+          <AttendanceMatchSections groups={reviewGroups} historyGroups={historyGroups} availableStudents={availableStudents} onResolve={setResolution} onCreate={createAttendanceStudent} onCreateAll={createAllUnmatched} busy={busy} />
         </>}
 
-        {step === 4 && result && <div className={styles.complete}><CheckCircle2 /><span>IMPORT COMPLETE</span><h3>Attendance imported successfully</h3><p>All imported attendance is linked to confirmed Student Records.</p><div><article><small>Months</small><strong>{result.months}</strong></article><article><small>Imported</small><strong>{result.imported}</strong></article><article><small>Skipped</small><strong>{result.skipped}</strong></article><article><small>Failed</small><strong>{result.failed}</strong></article></div></div>}
+        {step === 4 && result && <div className={styles.complete}><CheckCircle2 /><span>IMPORT COMPLETE</span><h3>{result.failed ? "Import finished with failures" : "Attendance import completed"}</h3><p>All imported attendance is linked to confirmed Student Records.</p>{result.unmatchedDeferred > 0 && <p>{result.unmatchedDeferred} unmatched groups were left unimported. Use Back to review and import them later.</p>}<div><article><small>Months</small><strong>{result.months}</strong></article><article><small>Imported</small><strong>{result.imported}</strong></article><article><small>Skipped</small><strong>{result.skipped}</strong></article><article><small>Failed</small><strong>{result.failed}</strong></article></div></div>}
         {progress && <div className={styles.progress}><span /><strong>{progress}</strong></div>}
       </div>
-      <footer className={styles.footer}><button type="button" className={styles.secondary} onClick={step === 4 ? close : step > 1 ? () => setStep(step - 1) : close} disabled={busy}>{step === 4 ? "Close" : step > 1 ? "Back" : "Cancel"}</button>{step === 2 && <button type="button" className={styles.primary} onClick={analyzeMatches} disabled={busy || !fallbackBatch || !selectedBlocks.length}>Review student matches <ChevronRight /></button>}{step === 3 && <button type="button" className={styles.primary} onClick={startImport} disabled={busy || unresolvedCount > 0}>Import verified attendance <ChevronRight /></button>}</footer>
+      <footer className={styles.footer}><button type="button" className={styles.secondary} onClick={step === 4 ? close : step > 1 ? () => setStep(step - 1) : close} disabled={busy}>{step === 4 ? "Close" : step > 1 ? "Back" : "Cancel"}</button>{step === 2 && <button type="button" className={styles.primary} onClick={analyzeMatches} disabled={busy || !fallbackBatch || !selectedBlocks.length}>Review student matches <ChevronRight /></button>}{step === 3 && <button type="button" className={styles.primary} onClick={() => startImport(false)} disabled={busy || unresolvedCount > 0 || !resolvedCount}>Import verified attendance <ChevronRight /></button>}{step === 3 && <button type="button" className={styles.primary} onClick={() => startImport(true)} disabled={busy || !resolvedCount}>Import matched only ({resolvedCount}) <ChevronRight /></button>}{step === 4 && <button type="button" className={styles.secondary} onClick={() => setStep(3)} disabled={busy}>Back to student matching</button>}</footer>
     </section>
   </div>;
 };

@@ -13,3 +13,7 @@
 .createRecordPanel h3 { margin: 0 0 10px; }
 .createRecordPanel p { line-height: 1.5; }
 .createRecordPanel select { padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; }
+.matchedShadowRow { background: #f5f8f6; opacity: .58; }
+.matchedShadowRow:hover { opacity: .78; }
+.matchedShadowRow td { color: #66778a; }
+.shadowMatchLabel { padding: 9px 10px; border: 1px solid #bdddc9; border-radius: 8px; background: #eff9f2; color: #147443; font-weight: 800; }

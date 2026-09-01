@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { groupAttendanceReview, resolveAttendanceGroup } from "../src/utils/attendanceReviewGroups.js";
+import { buildAttendanceUnmatchedHistory, getAttendanceUnmatchedHistory, groupAttendanceReview, resolveAttendanceGroup } from "../src/utils/attendanceReviewGroups.js";
 
 const row = (key, overrides = {}) => ({
   rowKey: key, rowNumber: Number(key) || 5, sourceSheet: "2025 Attendance",
@@ -72,4 +72,55 @@ test("large repeated history preserves cell totals with bounded group count", ()
   assert.equal(groups.length, 1500);
   assert.equal(groups.reduce((sum, group) => sum + group.attendanceCells, 0), 36000 * 23);
   assert.equal(groups.reduce((sum, group) => sum + group.rowKeys.length, 0), 36000);
+});
+
+test("an unmatched group remains in faded history after it is mapped", () => {
+  const matches = [row("5"), row("55")];
+  const before = getAttendanceUnmatchedHistory(groupAttendanceReview(matches));
+  assert.equal(before.length, 1);
+  assert.equal(before[0].isMatchHistory, false);
+
+  const resolutions = resolveAttendanceGroup({}, before[0], "student1");
+  const reviewed = groupAttendanceReview(matches, resolutions);
+  const history = getAttendanceUnmatchedHistory(reviewed);
+  assert.equal(reviewed.filter((group) => group.studentId).length, 1);
+  assert.equal(history.length, 1);
+  assert.equal(history[0].studentId, "student1");
+  assert.equal(history[0].isMatchHistory, true);
+  assert.deepEqual(history[0].rowKeys, ["5", "55"]);
+  assert.equal(history[0].attendanceCells, 46);
+});
+
+test("automatic matches are not incorrectly added to unmatched history", () => {
+  const student = { _id: "student1", name: "Prachi" };
+  const reviewed = groupAttendanceReview([row("5", { status: "matched", student })]);
+  assert.equal(getAttendanceUnmatchedHistory(reviewed).length, 0);
+});
+
+test("239 pending students remain visible beside 321 automatic matches", () => {
+  const matched = Array.from({ length: 321 }, (_, i) => row(`m${i}`, {
+    name: `Matched ${i}`, status: "matched", student: { _id: `s${i}` },
+  }));
+  const pending = Array.from({ length: 239 }, (_, i) => row(`p${i}`, { name: `Pending ${i}` }));
+  const matches = [...matched, ...pending];
+  assert.equal(buildAttendanceUnmatchedHistory(matches).length, 239);
+  const history = buildAttendanceUnmatchedHistory(matches, { p0: "s0" });
+  assert.equal(history.length, 239);
+  assert.equal(history.filter((group) => !group.studentId).length, 238);
+  assert.equal(history.filter((group) => group.isMatchHistory).length, 1);
+});
+
+test("legacy groups with absent/empty history metadata retain pending rows", () => {
+  const groups = groupAttendanceReview([row("5"), row("55")]);
+  const withoutMetadata = groups.map(({ historyItems, ...group }) => group);
+  assert.equal(getAttendanceUnmatchedHistory(withoutMetadata).length, 1);
+  assert.equal(getAttendanceUnmatchedHistory(groups.map((group) => ({ ...group, historyItems: [] }))).length, 1);
+});
+
+test("source identities retain separate shadows when mapped to one existing student", () => {
+  const matches = [row("5"), row("55", { name: "Prachi Other" })];
+  const history = buildAttendanceUnmatchedHistory(matches, { "5": "s1", "55": "s1" });
+  assert.equal(history.length, 2);
+  assert.equal(history.reduce((sum, group) => sum + group.attendanceCells, 0), 46);
+  assert.deepEqual(history.flatMap((group) => group.rowKeys), ["5", "55"]);
 });
