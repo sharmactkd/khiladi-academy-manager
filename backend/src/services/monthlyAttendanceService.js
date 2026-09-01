@@ -279,7 +279,7 @@ export const mergeMonthlyRecordIdentity = (existing = {}, incoming = {}) => {
   return merged;
 };
 
-const buildRowFromRecord = ({ identity, attendance, index, fee, membership }) => {
+export const buildRowFromRecord = ({ identity, attendance, index, fee, membership }) => {
   const student = identity.student;
   const counts = calculateCounts(attendance);
 
@@ -330,16 +330,14 @@ const buildRowFromRecord = ({ identity, attendance, index, fee, membership }) =>
       membership?.effectiveDueDate ||
       normalizedDueDate ||
       fee?.dueDate ||
-      student?.joiningDate ||
-      student?.createdAt ||
       null,
     feePaidDate: isLinkedStudent
       ? fee?.paidDate || fee?.paymentDate || formatDisplayDate(normalizedPaidDate) || null
       : formatDisplayDate(normalizedPaidDate) || fee?.paidDate || fee?.paymentDate || null,
     feePaid: formatDisplayDate(identity.importedFeePaid) || fee?.amountPaid || fee?.amount || "",
     feeStatus: isLinkedStudent
-      ? specialMembershipFeeStatus || fee?.status || identity.importedFeeStatus || "due"
-      : identity.importedFeeStatus || fee?.status || membership?.feeStatus || "due",
+      ? specialMembershipFeeStatus || fee?.status || identity.importedFeeStatus || ""
+      : identity.importedFeeStatus || fee?.status || membership?.feeStatus || "",
     membership,
     attendance,
     ...counts,

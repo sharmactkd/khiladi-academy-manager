@@ -625,29 +625,19 @@
   box-shadow: 0 4px 9px rgba(15, 23, 42, 0.1);
 }
 :global(.attendance-page .attendance-cell--P) {
-  border-color: #a6e4bb;
   color: #13773b;
-  background: #ebfbf1;
 }
 :global(.attendance-page .attendance-cell--A) {
-  border-color: #ffb9bd;
   color: #c50d17;
-  background: #fff0f1;
 }
 :global(.attendance-page .attendance-cell--L) {
-  border-color: #ffd38a;
   color: #a35e00;
-  background: #fff7e7;
 }
 :global(.attendance-page .attendance-cell--LT) {
-  border-color: #a9d5ff;
   color: #1265ad;
-  background: #edf7ff;
 }
 :global(.attendance-page .attendance-cell--blank) {
-  border-color: #e2e7ee;
   color: #93a0b1;
-  background: #f8fafc;
 }
 :global(.attendance-page .fee-status) {
   font-size: 13px;

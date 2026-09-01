@@ -1,8 +1,28 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { mergeMonthlyRecordIdentity } from "../src/services/monthlyAttendanceService.js";
+import { buildRowFromRecord, mergeMonthlyRecordIdentity } from "../src/services/monthlyAttendanceService.js";
 import { backfillImportedAttendanceMetadata } from "../src/controllers/attendanceController.js";
+
+test("student dates do not fabricate missing fee data", () => {
+  const row = buildRowFromRecord({
+    identity: { rowType: "student", studentId: "student-1", student: {
+      firstName: "Test", joiningDate: "2026-09-01", createdAt: "2026-09-01",
+    } }, attendance: {}, index: 0,
+  });
+  assert.equal(row.feeDueDate, null);
+  assert.equal(row.feeStatus, "");
+});
+
+test("real imported fee data remains visible", () => {
+  const row = buildRowFromRecord({
+    identity: { rowType: "student", studentId: "student-1",
+      importedDueDate: "10-09-2026", importedFeeStatus: "due" },
+    attendance: {}, index: 0,
+  });
+  assert.equal(row.feeDueDate, "10-09-2026");
+  assert.equal(row.feeStatus, "due");
+});
 
 test("linked Excel metadata enriches a pre-seeded student roster row", () => {
   const roster = {

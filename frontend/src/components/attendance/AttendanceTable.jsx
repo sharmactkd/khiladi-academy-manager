@@ -180,8 +180,8 @@ const getPaidDateValue = (row) =>
 
 const getFeeStatusValue = (row) =>
   row.rowType === "student" && row.studentId
-    ? row.feeStatus || row.importedFeeStatus || "due"
-    : row.importedFeeStatus || row.feeStatus || "due";
+    ? row.feeStatus || row.importedFeeStatus || "-"
+    : row.importedFeeStatus || row.feeStatus || "-";
 
 const isFutureDay = (day) => {
   const today = new Date();

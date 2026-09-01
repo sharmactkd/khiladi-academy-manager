@@ -1580,27 +1580,22 @@ button:disabled,
 }
 
 .attendance-cell--P {
-  background: #dcfce7;
   color: #166534;
 }
 
 .attendance-cell--A {
-  background: #fee2e2;
   color: #991b1b;
 }
 
 .attendance-cell--L {
-  background: #fef3c7;
   color: #92400e;
 }
 
 .attendance-cell--LT {
-  background: #ffe4e6;
   color: var(--color-primary);
 }
 
 .attendance-cell--blank {
-  background: #f8fafc;
   color: #94a3b8;
 }
 
