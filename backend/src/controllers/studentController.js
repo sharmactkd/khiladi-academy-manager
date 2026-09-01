@@ -809,9 +809,10 @@ export const getStudents = asyncHandler(async (req, res) => {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const [students, total, active, incomplete, newThisMonth] = await Promise.all([
+    const [students, total, allTotal, active, incomplete, newThisMonth] = await Promise.all([
       buildStudentsQuery().skip((page - 1) * limit).limit(limit),
       Student.countDocuments(query),
+      Student.countDocuments(summaryFilter),
       Student.countDocuments({ ...summaryFilter, status: "active" }),
       Student.countDocuments({ ...summaryFilter, profileStatus: "incomplete" }),
       Student.countDocuments({ ...summaryFilter, createdAt: { $gte: startOfMonth } }),
@@ -827,7 +828,7 @@ export const getStudents = asyncHandler(async (req, res) => {
         pages,
         hasNextPage: page < pages,
       },
-      summary: { total, active, incomplete, newThisMonth },
+      summary: { total, allTotal, active, incomplete, newThisMonth },
     });
   }
 
@@ -928,6 +929,45 @@ export const updateStudentStatus = asyncHandler(async (req, res) => {
     _id: student._id,
     status: student.status,
     statusUpdatedAt: student.statusUpdatedAt,
+  });
+});
+
+export const updateAllStudentsStatus = asyncHandler(async (req, res) => {
+  const nextStatus = cleanString(req.body?.status).toLowerCase();
+
+  if (!["active", "inactive"].includes(nextStatus)) {
+    return errorResponse(res, "Status must be either active or inactive", 400);
+  }
+
+  const result = await Student.updateMany(
+    {
+      academy: req.academyId,
+      ...buildBranchAccessFilter(req.user),
+    },
+    {
+      $set: {
+        status: nextStatus,
+        statusUpdatedAt: new Date(),
+        updatedBy: req.user._id,
+      },
+    }
+  );
+
+  return successResponse(res, `All students marked ${nextStatus}`, {
+    status: nextStatus,
+    matched: result.matchedCount,
+    updated: result.modifiedCount,
+  });
+});
+
+export const deleteAllStudents = asyncHandler(async (req, res) => {
+  const result = await Student.deleteMany({
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  });
+
+  return successResponse(res, "All student records deleted successfully", {
+    deleted: result.deletedCount,
   });
 });
 

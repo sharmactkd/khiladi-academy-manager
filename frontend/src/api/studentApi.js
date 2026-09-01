@@ -67,6 +67,16 @@ export const studentApi = {
     return res.data;
   },
 
+  updateAllStatus: async (status) => {
+    const res = await api.patch("/students/bulk/status", { status });
+    return res.data;
+  },
+
+  removeAll: async () => {
+    const res = await api.delete("/students/bulk/all");
+    return res.data;
+  },
+
   importBulk: async (payload = {}) => {
     const students = Array.isArray(payload) ? payload : payload.students || [];
     let destination = Array.isArray(payload) ? {} : payload.destination || {};

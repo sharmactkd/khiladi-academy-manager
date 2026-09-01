@@ -6,6 +6,8 @@ import {
   getStudentById,
   updateStudent,
   updateStudentStatus,
+  updateAllStudentsStatus,
+  deleteAllStudents,
   deleteStudent,
   importStudents,
 } from "../controllers/studentController.js";
@@ -52,6 +54,18 @@ router.post(
     return next();
   },
   importStudents
+);
+
+router.patch(
+  "/bulk/status",
+  expensiveOperationRateLimiter,
+  updateAllStudentsStatus
+);
+
+router.delete(
+  "/bulk/all",
+  expensiveOperationRateLimiter,
+  deleteAllStudents
 );
 
 router.patch(

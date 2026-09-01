@@ -65,12 +65,14 @@ const Students = () => {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkActionWorking, setBulkActionWorking] = useState(false);
+  const [bulkStatusMenuOpen, setBulkStatusMenuOpen] = useState(false);
   const [statusUpdatingIds, setStatusUpdatingIds] = useState([]);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, total: 0, pages: 1, hasNextPage: false });
-  const [summary, setSummary] = useState({ total: 0, active: 0, incomplete: 0, newThisMonth: 0 });
+  const [summary, setSummary] = useState({ total: 0, allTotal: 0, active: 0, incomplete: 0, newThisMonth: 0 });
   const PAGE_SIZE = 30;
 
   const [filters, setFilters] = useState({
@@ -101,6 +103,7 @@ const Students = () => {
   const visibleStudents = students;
 
   const activeCount = summary.active;
+  const allStudentsCount = summary.allTotal ?? summary.total;
   const incompleteCount = summary.incomplete;
   const newThisMonthCount = summary.newThisMonth;
 
@@ -130,7 +133,7 @@ const Students = () => {
 
       setStudents((current) => append ? [...current, ...list] : list);
       setPagination(payload.pagination || { page, total: list.length, pages: 1, hasNextPage: false });
-      setSummary(payload.summary || { total: list.length, active: 0, incomplete: 0, newThisMonth: 0 });
+      setSummary(payload.summary || { total: list.length, allTotal: list.length, active: 0, incomplete: 0, newThisMonth: 0 });
       if (!append) setSelectedIds([]);
     } catch (error) {
       toast.error(error.response?.data?.message || "Students load nahi hue");
@@ -497,6 +500,60 @@ const Students = () => {
     }
   };
 
+  const handleDeleteAllStudents = async () => {
+    if (!allStudentsCount || bulkActionWorking) {
+      if (!allStudentsCount) toast.error("Delete karne ke liye koi student nahi hai");
+      return;
+    }
+
+    const confirmation = window.prompt(
+      `Is academy ke sabhi ${allStudentsCount} student records permanently delete ho jayenge. Confirm karne ke liye DELETE ALL type karein.`
+    );
+    if (confirmation !== "DELETE ALL") {
+      if (confirmation !== null) toast.error("Confirmation match nahi hua");
+      return;
+    }
+
+    try {
+      setBulkActionWorking(true);
+      setBulkStatusMenuOpen(false);
+      const response = await studentApi.removeAll();
+      const deleted = Number(response?.data?.deleted ?? allStudentsCount);
+      toast.success(`${deleted} student records delete ho gaye`);
+      setStudents([]);
+      setSelectedIds([]);
+      await fetchStudents({ page: 1, append: false });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "All students delete nahi hue");
+    } finally {
+      setBulkActionWorking(false);
+    }
+  };
+
+  const handleUpdateAllStatus = async (nextStatus) => {
+    setBulkStatusMenuOpen(false);
+    if (!allStudentsCount || bulkActionWorking) {
+      if (!allStudentsCount) toast.error("Update karne ke liye koi student nahi hai");
+      return;
+    }
+
+    const label = nextStatus === "active" ? "Active" : "Inactive";
+    if (!window.confirm(`Kya aap sabhi ${allStudentsCount} students ko ${label} karna chahte hain?`)) return;
+
+    try {
+      setBulkActionWorking(true);
+      const response = await studentApi.updateAllStatus(nextStatus);
+      const matched = Number(response?.data?.matched ?? allStudentsCount);
+      toast.success(`${matched} students ${label} kar diye gaye`);
+      setSelectedIds([]);
+      await fetchStudents({ page: 1, append: false });
+    } catch (error) {
+      toast.error(error.response?.data?.message || `Students ${label} nahi hue`);
+    } finally {
+      setBulkActionWorking(false);
+    }
+  };
+
   const handleImportStudents = async (payload) => {
     try {
       const response = await studentApi.importBulk(payload);
@@ -618,7 +675,7 @@ const Students = () => {
       </header>
 
       <section className="students-metrics" aria-label="Student overview">
-        <article className="students-metric students-metric--red"><span><UsersRound /></span><div><small>Total Students</small><strong>{summary.total}</strong></div></article>
+        <article className="students-metric students-metric--red"><span><UsersRound /></span><div><small>Total Students</small><strong>{allStudentsCount}</strong></div></article>
         <article className="students-metric students-metric--green"><span><UserCheck /></span><div><small>Active</small><strong>{activeCount}</strong></div></article>
         <article className="students-metric students-metric--amber"><span><UserX /></span><div><small>Profile Incomplete</small><strong>{incompleteCount}</strong></div></article>
         <article className="students-metric students-metric--blue"><span><UserPlus /></span><div><small>New This Month</small><strong>{newThisMonthCount}</strong></div></article>
@@ -630,6 +687,14 @@ const Students = () => {
           <select aria-label="Status" value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="">All Status</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="left">Left</option></select>
           <select aria-label="Batch" value={filters.batch} onChange={(event) => setFilters((current) => ({ ...current, batch: event.target.value }))}><option value="">All Batches</option>{batches.map((batch) => <option key={batch._id} value={batch._id}>{batch.batchName}</option>)}</select>
           <button type="button" className="students-more-filter" onClick={() => setMoreFiltersOpen((open) => !open)}><Filter size={16} /> More Filters {activeFilterCount > 0 ? <b>{activeFilterCount}</b> : null}</button>
+          <div className="students-bulk-status">
+            <button type="button" className="students-bulk-action" onClick={() => setBulkStatusMenuOpen((open) => !open)} disabled={bulkActionWorking || !allStudentsCount} aria-haspopup="menu" aria-expanded={bulkStatusMenuOpen}><UserCheck size={16} /> Active All / Inactive All <ChevronDown size={14} /></button>
+            {bulkStatusMenuOpen ? <div className="students-bulk-status__menu" role="menu">
+              <button type="button" role="menuitem" onClick={() => handleUpdateAllStatus("active")}><UserCheck size={15} /> Active All</button>
+              <button type="button" role="menuitem" onClick={() => handleUpdateAllStatus("inactive")}><UserX size={15} /> Inactive All</button>
+            </div> : null}
+          </div>
+          <button type="button" className="students-bulk-action students-bulk-action--danger" onClick={handleDeleteAllStudents} disabled={bulkActionWorking || !allStudentsCount}><Trash2 size={16} /> {bulkActionWorking ? "Please wait…" : "Delete All"}</button>
         </div>
         {moreFiltersOpen ? <div className="students-filters__more">
           <input placeholder="Martial Art" value={filters.martialArt} onChange={(event) => setFilters((current) => ({ ...current, martialArt: event.target.value }))} />
