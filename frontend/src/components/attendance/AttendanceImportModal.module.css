@@ -5,3 +5,11 @@
 .reviewControls small { flex-basis: 100%; color: #64748b; }
 .reviewControls button { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
 .reviewControls button:disabled { opacity: .45; cursor: default; }
+.matchTabs { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 16px; }
+.matchTabs button { padding: 12px 20px; border: 1px solid #dce3ee; border-radius: 10px; background: white; color: #17243d; font: inherit; font-weight: 700; cursor: pointer; }
+.matchTabs button[aria-pressed="true"] { background: #d90008; color: white; border-color: #d90008; }
+.createRecordButton { margin-top: 8px; padding: 8px 12px; color: #c8000a; background: white; border: 1px solid #f2b7bc; border-radius: 8px; cursor: pointer; font: inherit; }
+.createRecordPanel { padding: 18px; margin-bottom: 16px; border: 1px solid #dce3ee; border-radius: 12px; background: #f8fafc; }
+.createRecordPanel h3 { margin: 0 0 10px; }
+.createRecordPanel p { line-height: 1.5; }
+.createRecordPanel select { padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; }

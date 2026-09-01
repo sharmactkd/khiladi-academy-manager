@@ -6,6 +6,9 @@ import { AlertTriangle, CheckCircle2, ChevronRight, FileSpreadsheet, Link2, Sear
 import { attendanceApi } from "../../api/attendanceApi.js";
 import { classifyHistoricalSheets, getAttendanceSheetNames, parseHistoricalAttendanceSheet, readAttendanceWorkbook } from "../../utils/attendanceExcelImport.js";
 import styles from "./AttendanceImportModal.module.css";
+import AttendanceMatchSections from "./AttendanceMatchSections.jsx";
+import { studentApi } from "../../api/studentApi.js";
+import { groupAttendanceReview, resolveAttendanceGroup } from "../../utils/attendanceReviewGroups.js";
 import { prepareMatchPreview, yieldToBrowser } from "../../utils/attendanceMatchPreview.js";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -43,28 +46,15 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
   const [availableStudents, setAvailableStudents] = useState([]);
   const [resolutions, setResolutions] = useState({});
   const [result, setResult] = useState(null);
-  const [reviewPage, setReviewPage] = useState(0);
-  const [reviewSearch, setReviewSearch] = useState("");
-  const [onlyUnresolved, setOnlyUnresolved] = useState(false);
-  const [studentSearch, setStudentSearch] = useState("");
-  const filteredMatches = useMemo(() => matches.filter((match) =>
-    (!onlyUnresolved || (!["matched", "excluded"].includes(match.status) && !resolutions[match.rowKey])) &&
-    `${match.name} ${match.phone} ${match.sourceSheet}`.toLowerCase().includes(reviewSearch.toLowerCase())
-  ), [matches, resolutions, onlyUnresolved, reviewSearch]);
-  const pageCount = Math.max(1, Math.ceil(filteredMatches.length / 25));
-  const currentPage = Math.min(reviewPage, pageCount - 1);
-  const visibleMatches = filteredMatches.slice(currentPage * 25, (currentPage + 1) * 25);
-  const studentOptions = useMemo(() => availableStudents.filter((student) =>
-    `${student.name} ${student.phone} ${student.admissionNumber}`.toLowerCase().includes(studentSearch.toLowerCase())
-  ).slice(0, 50), [availableStudents, studentSearch]);
+  const reviewGroups = useMemo(() => groupAttendanceReview(matches, resolutions), [matches, resolutions]);
 
   const sheetNames = useMemo(() => getAttendanceSheetNames(workbook), [workbook]);
   const selectedBlocks = useMemo(() => selectedSheets.flatMap((sheetName) => {
     const blocks = (parsedSheets[sheetName] || emptyPreview).blocks || [];
     return selectMonths ? blocks.filter((block) => selectedBlockIds.includes(block.blockId)) : blocks;
   }), [parsedSheets, selectMonths, selectedBlockIds, selectedSheets]);
-  const unresolvedCount = matches.filter((match) => !["matched", "excluded"].includes(match.status) && !resolutions[match.rowKey]).length;
-  const resolvedCount = matches.filter((match) => match.status === "matched" || Boolean(resolutions[match.rowKey])).length;
+  const unresolvedCount = reviewGroups.filter((group) => !group.studentId && !group.excluded).length;
+  const resolvedCount = reviewGroups.filter((group) => group.studentId).length;
 
   if (!open) return null;
 
@@ -74,7 +64,6 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
     setSelectMonths(false); setSelectedBlockIds([]); setDuplicateMode("skip");
     setBusy(false); setProgress(""); setMatches([]); setAvailableStudents([]);
     setResolutions({}); setResult(null);
-    setReviewPage(0); setReviewSearch(""); setOnlyUnresolved(false); setStudentSearch("");
   };
 
   const close = () => { if (!busy) { reset(); onClose?.(); } };
@@ -129,13 +118,35 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
         });
       }
       setMatches(Array.from(matchMap.values())); setAvailableStudents(Array.from(studentMap.values()));
-      setReviewPage(0);
       setStep(3); setProgress("");
     } catch (error) { toast.error(error.response?.data?.message || error.message || "Matching failed"); setProgress(""); }
     finally { setBusy(false); }
   };
 
-  const setResolution = (rowKey, studentId) => setResolutions((current) => ({ ...current, [rowKey]: studentId }));
+  const setResolution = (group, studentId) => setResolutions((current) => resolveAttendanceGroup(current, group, studentId));
+
+  const createAttendanceStudent = async (group, values) => {
+    if (!fallbackBatch) throw new Error("Select a destination batch first");
+    setBusy(true);
+    try {
+      const branch = selectedBatch?.branch?._id || selectedBatch?.branch;
+      const response = await studentApi.create({
+        firstName: values.firstName.trim(), lastName: values.lastName.trim(),
+        batch: fallbackBatch, ...(branch ? { branch } : {}),
+        status: values.status,
+      });
+      const student = response?.data?.student || response?.data || response?.student;
+      if (!student?._id) throw new Error("Student may have been created, but confirmation was not received. Check Student Records before trying again.");
+      const candidate = {
+        ...student,
+        name: [student.firstName, student.lastName].filter(Boolean).join(" "),
+        batch: student.batch?._id || student.batch,
+      };
+      setAvailableStudents((current) => [...current.filter((item) => item._id !== candidate._id), candidate]);
+      setResolution(group, candidate._id);
+      toast.success("Student record created and linked. Attendance will save when you click Import.");
+    } finally { setBusy(false); }
+  };
 
   const startImport = async () => {
     if (unresolvedCount) return toast.error(`Resolve or exclude ${unresolvedCount} student row(s)`);
@@ -175,20 +186,9 @@ const AttendanceImportModal = ({ open, onClose, onImport, fallbackBatch, selecte
         </>}
 
         {step === 3 && <>
-          <div className={styles.summaryGrid}><article><CheckCircle2 /><span><small>Ready</small><strong>{resolvedCount}</strong></span></article><article><AlertTriangle /><span><small>Needs review</small><strong>{unresolvedCount}</strong></span></article><article><UsersRound /><span><small>Total Excel rows</small><strong>{matches.length}</strong></span></article><article><Link2 /><span><small>Attendance cells</small><strong>{matches.reduce((sum, item) => sum + Number(item.attendanceCells || 0), 0)}</strong></span></article></div>
+          <div className={styles.summaryGrid}><article><CheckCircle2 /><span><small>Ready</small><strong>{resolvedCount}</strong></span></article><article><AlertTriangle /><span><small>Needs review</small><strong>{unresolvedCount}</strong></span></article><article><UsersRound /><span><small>Student groups</small><strong>{reviewGroups.length}</strong></span></article><article><Link2 /><span><small>Attendance cells</small><strong>{matches.reduce((sum, item) => sum + Number(item.attendanceCells || 0), 0)}</strong></span></article></div>
           <div className={styles.reviewNotice}><SearchCheck /><div><strong>Safe student matching</strong><span>Phone, admission/code, exact name + selected batch, then unique exact name. No fuzzy match is imported automatically.</span></div></div>
-          <div className={styles.reviewControls}>
-            <label>Find Excel row <input value={reviewSearch} onChange={(event) => { setReviewSearch(event.target.value); setReviewPage(0); }} placeholder="Name, phone or sheet" /></label>
-            <label><input type="checkbox" checked={onlyUnresolved} onChange={(event) => { setOnlyUnresolved(event.target.checked); setReviewPage(0); }} /> Only needs review</label>
-            <label>Find existing student <input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} placeholder="Search name, phone or admission" /></label>
-            <small>Student choices show up to 50 search results plus suggested matches. Search to find another student.</small>
-          </div>
-          <div className={styles.reviewTableWrap}><table className={styles.reviewTable}><thead><tr><th>Excel student</th><th>Detected identity</th><th>Match result</th><th>Confirm student</th></tr></thead><tbody>{visibleMatches.map((match) => { const selected = resolutions[match.rowKey] || ""; const resolved = match.status === "matched" || Boolean(selected); const selectedStudent = availableStudents.find((student) => student._id === selected); const options = [...new Map([...(selectedStudent ? [selectedStudent] : []), ...(studentSearch ? studentOptions : [...(match.candidates || []), ...studentOptions])].map((student) => [student._id, student])).values()].slice(0, 60); return <tr key={match.rowKey} className={resolved ? "" : styles.unresolvedRow}><td><strong>{match.name || "Unnamed row"}</strong><small>Row {match.rowNumber} · {match.attendanceCells} cells</small></td><td><span>{match.phone || "No phone"}</span><small>{match.admissionNumber || "No admission/code"}</small></td><td>{match.status === "matched" && !selected ? <span className={styles.matchOk}>✓ {match.student?.name}</span> : selected === "__skip__" ? <span className={styles.excluded}>Excluded</span> : selected ? <span className={styles.matchOk}>✓ Manually confirmed</span> : <span className={styles.matchError}>Review · {match.reason}</span>}<small>{match.status === "matched" && !selected ? match.reason : ""}</small></td><td>{match.status === "matched" && !selected ? <span>{match.student?.name} (auto matched)</span> : <select aria-label={`Confirm student for ${match.name}`} value={selected} onChange={(event) => setResolution(match.rowKey, event.target.value)} className={!resolved ? styles.invalidSelect : ""} disabled={match.status === "matched" && !selected}><option value="">{match.status === "matched" ? `${match.student?.name} (auto matched)` : "Select existing student"}</option>{options.map((student) => <option key={student._id} value={student._id}>{student.name} · {student.phone || student.admissionNumber || "No identifier"}</option>)}<option value="__skip__">Exclude this Excel row</option></select>}</td></tr>; })}</tbody></table></div>
-          <div className={styles.reviewControls}>
-            <button type="button" disabled={currentPage === 0 || busy} onClick={() => setReviewPage(currentPage - 1)}>Previous</button>
-            <span>Page {currentPage + 1} of {pageCount} · {filteredMatches.length} rows · 25 per page</span>
-            <button type="button" disabled={currentPage + 1 >= pageCount || busy} onClick={() => setReviewPage(currentPage + 1)}>Next</button>
-          </div>
+          <AttendanceMatchSections groups={reviewGroups} availableStudents={availableStudents} onResolve={setResolution} onCreate={createAttendanceStudent} busy={busy} />
         </>}
 
         {step === 4 && result && <div className={styles.complete}><CheckCircle2 /><span>IMPORT COMPLETE</span><h3>Attendance imported successfully</h3><p>All imported attendance is linked to confirmed Student Records.</p><div><article><small>Months</small><strong>{result.months}</strong></article><article><small>Imported</small><strong>{result.imported}</strong></article><article><small>Skipped</small><strong>{result.skipped}</strong></article><article><small>Failed</small><strong>{result.failed}</strong></article></div></div>}
