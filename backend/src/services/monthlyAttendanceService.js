@@ -49,8 +49,13 @@ const clean = (value) =>
 
 const normalizePhone = (value) => clean(value).replace(/\D/g, "").slice(-10);
 
+// Attendance dates are stored as UTC-midnight values. Always derive register
+// keys and ranges in UTC as well; using the server's local timezone can move a
+// saved mark to the previous day (or even the previous month) after reload.
 const formatDateKey = (date) =>
-  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(
+    date.getUTCDate()
+  )}`;
 
 const getLocalDateKey = (value) => {
   const date = new Date(value);
@@ -90,11 +95,8 @@ const getMonthRange = ({ year, month }) => {
   const numericYear = Number(year);
   const numericMonth = Number(month);
 
-  const start = new Date(numericYear, numericMonth - 1, 1);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(numericYear, numericMonth, 0);
-  end.setHours(23, 59, 59, 999);
+  const start = new Date(Date.UTC(numericYear, numericMonth - 1, 1));
+  const end = new Date(Date.UTC(numericYear, numericMonth, 1));
 
   return { start, end };
 };
@@ -102,19 +104,22 @@ const getMonthRange = ({ year, month }) => {
 const buildDays = ({ year, month }) => {
   const numericYear = Number(year);
   const numericMonth = Number(month);
-  const lastDay = new Date(numericYear, numericMonth, 0).getDate();
+  const lastDay = new Date(Date.UTC(numericYear, numericMonth, 0)).getUTCDate();
 
   return Array.from({ length: lastDay }, (_, index) => {
     const day = index + 1;
-    const date = new Date(numericYear, numericMonth - 1, day);
+    const date = new Date(Date.UTC(numericYear, numericMonth - 1, day));
     const dateKey = `${numericYear}-${pad(numericMonth)}-${pad(day)}`;
 
     return {
       day,
       dateKey,
-      weekday: date.toLocaleDateString("en-US", { weekday: "short" }),
-      isSunday: date.getDay() === 0,
-      isSaturday: date.getDay() === 6,
+      weekday: date.toLocaleDateString("en-US", {
+        weekday: "short",
+        timeZone: "UTC",
+      }),
+      isSunday: date.getUTCDay() === 0,
+      isSaturday: date.getUTCDay() === 6,
       isToday: new Date().toISOString().slice(0, 10) === dateKey,
     };
   });
@@ -488,13 +493,13 @@ export const getMonthlyAttendanceRegister = async ({
   const attendanceDocs = await Attendance.find({
     academy: academyObjectId,
     batch: batchObjectId,
-    date: { $gte: start, $lte: end },
+    date: { $gte: start, $lt: end },
   }).lean();
 
   const dayNoteDocs = await AttendanceDayNote.find({
     academy: academyObjectId,
     batch: batchObjectId,
-    date: { $gte: start, $lte: end },
+    date: { $gte: start, $lt: end },
   }).lean();
 
   const dayNotes = dayNoteDocs.reduce((map, note) => {
@@ -856,10 +861,43 @@ export const saveMonthlyAttendanceRegister = async ({
 
   await Promise.all(operations);
 
-  return getMonthlyAttendanceRegister({
+  const savedRegister = await getMonthlyAttendanceRegister({
     academyId: academyObjectId,
     batchId: batchObjectId,
     month: numericMonth,
     year: numericYear,
   });
+
+  const submittedMarks = rows.reduce((total, row) => {
+    if (
+      row.rowType !== "raw-import" &&
+      !validStudentIds.has(String(row.studentId || ""))
+    ) {
+      return total;
+    }
+    return (
+      total +
+      days.filter((day) =>
+        Boolean(toLongStatus(normalizeShortStatus(row.attendance?.[day.dateKey])))
+      ).length
+    );
+  }, 0);
+  const persistedMarks = savedRegister.rows.reduce(
+    (total, row) =>
+      total +
+      days.filter((day) =>
+        Boolean(toLongStatus(normalizeShortStatus(row.attendance?.[day.dateKey])))
+      ).length,
+    0
+  );
+
+  if (persistedMarks !== submittedMarks) {
+    const error = new Error(
+      `Attendance save verification failed (${persistedMarks}/${submittedMarks} marks persisted)`
+    );
+    error.statusCode = 500;
+    throw error;
+  }
+
+  return savedRegister;
 };
