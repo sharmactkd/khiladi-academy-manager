@@ -239,6 +239,46 @@ const getRecordDisplayIdentity = (record = {}, studentMap = new Map()) => {
   };
 };
 
+const IMPORTED_IDENTITY_FIELDS = [
+  "importedSourceSheet",
+  "importedSerialNo",
+  "importedName",
+  "importedPhone",
+  "importedAdmissionNumber",
+  "importedDueDate",
+  "importedPaidDate",
+  "importedFeePaid",
+  "importedFeeStatus",
+  "importedExtraNote",
+];
+
+// Student roster rows are inserted before attendance records. Enrich that
+// existing identity instead of discarding metadata from linked Excel records.
+export const mergeMonthlyRecordIdentity = (existing = {}, incoming = {}) => {
+  const merged = { ...existing };
+
+  if (!merged.student && incoming.student) merged.student = incoming.student;
+  if (!merged.studentId && incoming.studentId) merged.studentId = incoming.studentId;
+  if (incoming.rowType === "student") merged.rowType = "student";
+  if (incoming.source === "excel-import") merged.source = "excel-import";
+
+  if (
+    incoming.importedRowNumber &&
+    (!merged.importedRowNumber ||
+      Number(incoming.importedRowNumber) < Number(merged.importedRowNumber))
+  ) {
+    merged.importedRowNumber = incoming.importedRowNumber;
+  }
+
+  IMPORTED_IDENTITY_FIELDS.forEach((field) => {
+    if (!clean(merged[field]) && clean(incoming[field])) {
+      merged[field] = incoming[field];
+    }
+  });
+
+  return merged;
+};
+
 const buildRowFromRecord = ({ identity, attendance, index, fee, membership }) => {
   const student = identity.student;
   const counts = calculateCounts(attendance);
@@ -416,15 +456,20 @@ const buildMonthlyRows = async ({
 
       if (!rowKey) return;
 
-      if (!rowIdentityMap.has(String(rowKey))) {
-        rowIdentityMap.set(String(rowKey), identity);
+      const normalizedRowKey = String(rowKey);
+
+      rowIdentityMap.set(
+        normalizedRowKey,
+        rowIdentityMap.has(normalizedRowKey)
+          ? mergeMonthlyRecordIdentity(rowIdentityMap.get(normalizedRowKey), identity)
+          : identity
+      );
+
+      if (!attendanceByRow.has(normalizedRowKey)) {
+        attendanceByRow.set(normalizedRowKey, buildBlankAttendance(days));
       }
 
-      if (!attendanceByRow.has(String(rowKey))) {
-        attendanceByRow.set(String(rowKey), buildBlankAttendance(days));
-      }
-
-      const rowAttendance = attendanceByRow.get(String(rowKey));
+      const rowAttendance = attendanceByRow.get(normalizedRowKey);
       if (rowAttendance && dateKey) {
         rowAttendance[dateKey] = toShortStatus(record.status);
       }

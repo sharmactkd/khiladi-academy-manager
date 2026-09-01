@@ -299,6 +299,46 @@ const getRecordIdentityKey = (record) => {
 
 const getGroupKey = ({ batchId, date }) => `${batchId}::${date}`;
 
+const IMPORTED_RECORD_METADATA_FIELDS = [
+  "importedRowNumber",
+  "importedSourceSheet",
+  "importedSerialNo",
+  "importedName",
+  "importedPhone",
+  "importedAdmissionNumber",
+  "importedDueDate",
+  "importedPaidDate",
+  "importedFeePaid",
+  "importedFeeStatus",
+  "importedExtraNote",
+];
+
+// Skip-existing keeps the saved status, but completes blank Excel metadata.
+export const backfillImportedAttendanceMetadata = (existing, incoming) => {
+  let changed = false;
+
+  IMPORTED_RECORD_METADATA_FIELDS.forEach((field) => {
+    if (
+      (existing[field] === undefined ||
+        existing[field] === null ||
+        clean(existing[field]) === "") &&
+      incoming[field] !== undefined &&
+      incoming[field] !== null &&
+      clean(incoming[field]) !== ""
+    ) {
+      existing[field] = incoming[field];
+      changed = true;
+    }
+  });
+
+  if (incoming.source === "excel-import" && existing.source !== "excel-import") {
+    existing.source = "excel-import";
+    changed = true;
+  }
+
+  return changed;
+};
+
 const buildImportGroups = ({
   rows,
   studentLookups,
@@ -490,9 +530,14 @@ const saveImportGroup = async ({
         : null;
 
     if (existingIndex !== null) {
+      const existingRecord = attendance.records[existingIndex];
+      const metadataBackfilled = backfillImportedAttendanceMetadata(
+        existingRecord,
+        record
+      );
       const linkedLegacyRecord =
         Boolean(record.student) &&
-        !attendance.records[existingIndex].student;
+        !existingRecord.student;
 
       if (linkedLegacyRecord) {
         attendance.records[existingIndex].student = record.student;
@@ -532,6 +577,7 @@ const saveImportGroup = async ({
         summary.imported += 1;
       } else {
         summary.skipped += 1;
+        if (metadataBackfilled) summary.metadataUpdated += 1;
       }
 
       return;
@@ -713,6 +759,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
     imported: 0,
     skipped: 0,
     failed: 0,
+    metadataUpdated: 0,
     rawImportedStudents: 0,
     unresolvedStudents: 0,
     unmatchedStudents: [],
