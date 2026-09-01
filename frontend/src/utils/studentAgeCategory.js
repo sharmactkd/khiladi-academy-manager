@@ -34,3 +34,15 @@ export const getStudentAgeCategoryLabel = (age) =>
   [getStudentAgeCategory(age), getStudentUnderCategory(age)]
     .filter(Boolean)
     .join(" / ");
+
+export const getStudentAgeCategoryDisplay = (student = {}) => {
+  const numericAge = Number(student.age);
+  const age = Number.isFinite(numericAge)
+    ? numericAge
+    : calculateStudentAge(student.dateOfBirth || student.dob);
+
+  return (
+    getStudentAgeCategoryLabel(age) ||
+    String(student.ageCategory || "").trim()
+  );
+};

@@ -17,6 +17,8 @@ import BeltTileSelector from "../../components/taekwondoBelts/BeltTileSelector.j
 import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
 import useAuth from "../../hooks/useAuth.js";
 import { formatMoney } from "../../utils/currency.js";
+import { getStudentAgeCategoryDisplay } from "../../utils/studentAgeCategory.js";
+import { formatStudentPhoneWithCode } from "../../utils/studentPhone.js";
 import "./StudentProfile.module.css";
 
 const text = (value, fallback = "Not added") => String(value ?? "").trim() || fallback;
@@ -32,7 +34,7 @@ const formatDate = (value) => {
     : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 };
 const formatPhone = (countryCode, phone) =>
-  String(phone || "").trim() ? `${countryCode || "+91"} ${phone}` : "Not added";
+  formatStudentPhoneWithCode(phone, countryCode) || "Not added";
 const currency = (value, source) => formatMoney(value, source);
 const calculateAge = (value) => {
   const birth = value ? new Date(value) : null;
@@ -216,7 +218,7 @@ const StudentProfile = () => {
             <DetailItem icon={CalendarCheck2} label="Joining Date">{formatDate(student.joiningDate)}</DetailItem>
             <DetailItem icon={CalendarDays} label="Date of Birth">{formatDate(student.dateOfBirth || student.dob)}</DetailItem>
             <DetailItem icon={CalendarDays} label="Age">{age === null ? "Not added" : `${age} Years`}</DetailItem>
-            <DetailItem icon={GraduationCap} label="Age Category">{text(student.ageCategory)}</DetailItem>
+            <DetailItem icon={GraduationCap} label="Age Category">{text(getStudentAgeCategoryDisplay(student))}</DetailItem>
             <DetailItem icon={BookOpen} label="School Name">{text(student.schoolName || student.education?.schoolName)}</DetailItem>
             <DetailItem icon={GraduationCap} label="Class">{text(student.className || student.education?.className)}</DetailItem>
             <DetailItem icon={GraduationCap} label="Company / Firm Name">{text(student.collegeName || student.education?.collegeName)}</DetailItem>

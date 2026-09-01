@@ -15,6 +15,8 @@ import StudentImportModal from "../../components/students/StudentImportModal.jsx
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import { printDataTable } from "../../utils/securePrint.js";
+import { getStudentAgeCategoryDisplay } from "../../utils/studentAgeCategory.js";
+import { formatStudentPhone } from "../../utils/studentPhone.js";
 import "./Students.module.css";
 
 const BLOOD_GROUPS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -248,8 +250,8 @@ const Students = () => {
       Gender: student.gender || "",
       DOB: formatDate(student.dateOfBirth),
       Age: student.age ?? "",
-      "Age Category": student.ageCategory || "",
-      Phone: student.phone || "",
+      "Age Category": getStudentAgeCategoryDisplay(student),
+      Phone: formatStudentPhone(student.phone, student.countryCode),
       Email: student.email || "",
       "Blood Group": student.bloodGroup || "",
       School: student.schoolName || student.education?.schoolName || "",
@@ -258,7 +260,10 @@ const Students = () => {
       College: student.collegeName || student.education?.collegeName || "",
       Occupation: student.occupation || student.education?.occupation || "",
       "Parent Name": student.parentName || "",
-      "Parent Phone": student.parentPhone || "",
+      "Parent Phone": formatStudentPhone(
+        student.parentPhone,
+        student.parentCountryCode,
+      ),
       Branch: student.branch?.branchName || "",
       Batch: student.batch?.batchName || "",
       "Martial Art": student.martialArt || "",
@@ -270,7 +275,10 @@ const Students = () => {
       State: student.state || "",
       Address: student.address || "",
       "Emergency Contact Name": student.emergencyContact?.name || "",
-      "Emergency Contact Phone": student.emergencyContact?.phone || "",
+      "Emergency Contact Phone": formatStudentPhone(
+        student.emergencyContact?.phone,
+        student.emergencyContact?.countryCode,
+      ),
       Notes: student.notes || "",
     }));
   };
@@ -281,8 +289,8 @@ const Students = () => {
       student.studentCode || student.admissionNumber || "",
       getStudentFullName(student),
       student.age ?? "",
-      student.ageCategory || "",
-      student.phone || "",
+      getStudentAgeCategoryDisplay(student),
+      formatStudentPhone(student.phone, student.countryCode),
       student.batch?.batchName || "",
       student.martialArt || "",
       displayBelt(student),
@@ -446,8 +454,8 @@ const Students = () => {
         student.studentCode || student.admissionNumber || "",
         getStudentFullName(student),
         student.age ?? "",
-        student.ageCategory || "",
-        student.phone || "",
+        getStudentAgeCategoryDisplay(student),
+        formatStudentPhone(student.phone, student.countryCode),
         student.batch?.batchName || "",
         student.martialArt || "",
         displayBelt(student),
@@ -643,8 +651,8 @@ const Students = () => {
             return <tr key={student._id} className={selected ? "is-selected" : ""} onClick={() => navigate(`/students/${student._id}`)}>
               <td onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected} onChange={() => toggleSelectOne(student._id)} /></td>
               <td><div className="students-person"><strong>{fullName || "Unnamed Student"}</strong></div></td>
-              <td><strong>{student.age ?? "—"}</strong><small>{student.ageCategory || "Not added"}</small></td>
-              <td><strong>{student.phone || "—"}</strong><small>{student.email || "Not added"}</small></td>
+              <td><strong>{student.age ?? "—"}</strong><small>{getStudentAgeCategoryDisplay(student) || "Not added"}</small></td>
+              <td><strong>{formatStudentPhone(student.phone, student.countryCode) || "—"}</strong><small>{student.email || "Not added"}</small></td>
               <td><strong>{student.schoolName || student.education?.schoolName || "—"}</strong><small>{[student.className, student.section].filter(Boolean).join(" - ") || "Not added"}</small></td>
               <td><strong>{student.batch?.batchName || "—"}</strong></td><td><strong>{student.martialArt || "—"}</strong></td><td><strong>{displayBelt(student)}</strong></td>
               <td onClick={(event) => event.stopPropagation()}>{["active", "inactive"].includes(student.status) ? <button type="button" className={`students-status is-${student.status}`} onClick={() => handleStatusToggle(student)} disabled={statusUpdatingIds.includes(student._id)}><i><span /></i>{statusUpdatingIds.includes(student._id) ? "Saving…" : student.status}</button> : <span className="students-left-status">{student.status || "—"}</span>}</td>
@@ -903,8 +911,8 @@ const Students = () => {
                         )}
                       </td>
                       <td>{student.age ?? "-"}</td>
-                      <td>{student.ageCategory || "-"}</td>
-                      <td>{student.phone || "-"}</td>
+                      <td>{getStudentAgeCategoryDisplay(student) || "-"}</td>
+                      <td>{formatStudentPhone(student.phone, student.countryCode) || "-"}</td>
                       <td>
                         {student.schoolName ||
                           student.education?.schoolName ||

@@ -4,20 +4,17 @@ import Country from "country-state-city/lib/country.js";
 import State from "country-state-city/lib/state.js";
 import ReactCountryFlag from "react-country-flag";
 import { Plus, Trash2 } from "lucide-react";
+import {
+  formatStudentPhone,
+  getPhoneDigits,
+} from "../../utils/studentPhone.js";
 import "./PhoneLocationFields.module.css";
 
 const DEFAULT_COUNTRY_ISO = "IN";
 const DEFAULT_DIAL_CODE = "+91";
 
-const onlyDigits = (value) => String(value || "").replace(/\D/g, "");
-
-const formatPhone = (digits, dialCode = DEFAULT_DIAL_CODE) => {
-  const clean = onlyDigits(digits).slice(0, dialCode === "+91" ? 10 : 15);
-  if (dialCode !== "+91") return clean;
-  if (clean.length <= 4) return clean;
-  if (clean.length <= 6) return `${clean.slice(0, 4)}-${clean.slice(4)}`;
-  return `${clean.slice(0, 4)}-${clean.slice(4, 6)}-${clean.slice(6, 10)}`;
-};
+const onlyDigits = getPhoneDigits;
+const formatPhone = formatStudentPhone;
 
 const getFloatingMenuPosition = (button, preferredWidth) => {
   if (!button) return null;
