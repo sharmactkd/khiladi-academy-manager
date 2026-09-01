@@ -12,8 +12,11 @@ import {
 } from "../services/monthlyAttendanceService.js";
 
 const startOfDay = (value) => {
-  const date = new Date(value);
-  date.setHours(0, 0, 0, 0);
+  const raw = clean(value);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? new Date(`${raw}T00:00:00.000Z`)
+    : new Date(value);
+  date.setUTCHours(0, 0, 0, 0);
   return date;
 };
 
@@ -25,7 +28,7 @@ const buildDateFilter = (query) => {
 
     if (query.to) {
       const to = startOfDay(query.to);
-      to.setHours(23, 59, 59, 999);
+      to.setUTCHours(23, 59, 59, 999);
       filter.$lte = to;
     }
   }

@@ -49,6 +49,31 @@ const clean = (value) =>
 
 const normalizePhone = (value) => clean(value).replace(/\D/g, "").slice(-10);
 
+const normalizeIdentityPart = (value) => clean(value).toLowerCase();
+
+export const getAttendanceRegisterRowKey = (value = {}) => {
+  const linkedStudentId =
+    value.student || (value.rowType !== "raw-import" ? value.studentId : "");
+
+  if (linkedStudentId) return `student:${String(linkedStudentId)}`;
+
+  const sourceSheet = normalizeIdentityPart(value.importedSourceSheet);
+  const rowNumber = Number(value.importedRowNumber || 0);
+  if (rowNumber > 0) {
+    return `import:${sourceSheet || "sheet"}:row:${rowNumber}`;
+  }
+
+  const admissionNumber = normalizeIdentityPart(value.importedAdmissionNumber);
+  if (admissionNumber) {
+    return `import:${sourceSheet}:admission:${admissionNumber}`;
+  }
+
+  const serialNo = normalizeIdentityPart(value.importedSerialNo || value.no);
+  const phone = normalizePhone(value.importedPhone || value.contact);
+  const name = normalizeIdentityPart(value.importedName || value.name);
+  return `import:${sourceSheet}:identity:${serialNo}:${phone}:${name}`;
+};
+
 // Attendance dates are stored as UTC-midnight values. Always derive register
 // keys and ranges in UTC as well; using the server's local timezone can move a
 // saved mark to the previous day (or even the previous month) after reload.
@@ -195,16 +220,12 @@ const getRecordDisplayIdentity = (record = {}, studentMap = new Map()) => {
   const student = record.student ? studentMap.get(String(record.student)) : null;
 
   return {
-    rowId:
-      record.importedRowNumber ||
-      record.importedPhone ||
-      record.importedName ||
-      record.student ||
-      `${Date.now()}-${Math.random()}`,
+    rowId: getAttendanceRegisterRowKey(record),
     student,
     studentId: record.student ? String(record.student) : "",
     rowType: record.student ? "student" : "raw-import",
     importedRowNumber: record.importedRowNumber || null,
+    importedSourceSheet: record.importedSourceSheet || "",
     importedSerialNo: record.importedSerialNo || "",
     importedName: record.importedName || "",
     importedPhone: record.importedPhone || "",
@@ -246,6 +267,7 @@ const buildRowFromRecord = ({ identity, attendance, index, fee, membership }) =>
     source: identity.source,
 
     importedRowNumber: identity.importedRowNumber,
+    importedSourceSheet: identity.importedSourceSheet || "",
     importedSerialNo: identity.importedSerialNo,
     importedName,
     importedPhone,
@@ -353,43 +375,44 @@ const buildMonthlyRows = async ({
   const attendanceByRow = new Map();
 
   students.forEach((student) => {
-  const key = String(student._id);
+    const studentId = String(student._id);
+    const key = getAttendanceRegisterRowKey({ student: studentId });
 
-  if (!rowIdentityMap.has(key)) {
-    rowIdentityMap.set(key, {
-      rowId: key,
-      student,
-      studentId: key,
-      rowType: "student",
-      importedRowNumber: null,
-      importedSerialNo: "",
-      importedName: "",
-      importedPhone: "",
-      importedAdmissionNumber: "",
-      importedDueDate: "",
-      importedPaidDate: "",
-      importedFeePaid: "",
-      importedFeeStatus: "",
-      importedExtraNote: "",
-      source: "manual",
-    });
-  }
+    if (!rowIdentityMap.has(key)) {
+      rowIdentityMap.set(key, {
+        rowId: key,
+        student,
+        studentId,
+        rowType: "student",
+        importedRowNumber: null,
+        importedSourceSheet: "",
+        importedSerialNo: "",
+        importedName: "",
+        importedPhone: "",
+        importedAdmissionNumber: "",
+        importedDueDate: "",
+        importedPaidDate: "",
+        importedFeePaid: "",
+        importedFeeStatus: "",
+        importedExtraNote: "",
+        source: "manual",
+      });
+    }
 
-  if (!attendanceByRow.has(key)) {
-    attendanceByRow.set(key, buildBlankAttendance(days));
-  }
-});
+    if (!attendanceByRow.has(key)) {
+      attendanceByRow.set(key, buildBlankAttendance(days));
+    }
+  });
 
   attendanceDocs.forEach((doc) => {
     const dateKey = getLocalDateKey(doc.date);
 
     (doc.records || []).forEach((record) => {
       const identity = getRecordDisplayIdentity(record, studentMap);
-      const rowKey =
-        identity.importedRowNumber ||
-        identity.importedPhone ||
-        identity.importedName ||
-        identity.studentId;
+      const rowKey = getAttendanceRegisterRowKey({
+        ...identity,
+        student: identity.studentId,
+      });
 
       if (!rowKey) return;
 
@@ -621,15 +644,12 @@ export const getStudentYearlyAttendanceProfile = async ({
     throw error;
   }
 
-  const yearStart = new Date(numericYear, 0, 1);
-  yearStart.setHours(0, 0, 0, 0);
-
-  const yearEnd = new Date(numericYear, 11, 31);
-  yearEnd.setHours(23, 59, 59, 999);
+  const yearStart = new Date(Date.UTC(numericYear, 0, 1));
+  const yearEnd = new Date(Date.UTC(numericYear + 1, 0, 1));
 
   const attendanceDocs = await Attendance.find({
     academy: academyObjectId,
-    date: { $gte: yearStart, $lte: yearEnd },
+    date: { $gte: yearStart, $lt: yearEnd },
     "records.student": studentObjectId,
   })
     .populate("batch", "batchName martialArt")
@@ -651,7 +671,7 @@ export const getStudentYearlyAttendanceProfile = async ({
 
     const monthDocs = attendanceDocs.filter((doc) => {
       const date = new Date(doc.date);
-      return date.getMonth() + 1 === monthInfo.value;
+      return date.getUTCMonth() + 1 === monthInfo.value;
     });
 
     let importedPaidDate = "";
@@ -787,9 +807,10 @@ export const saveMonthlyAttendanceRegister = async ({
   const validStudentIds = new Set(validStudents.map((item) => String(item._id)));
 
   const recordsByDate = new Map();
+  const expectedCells = new Map();
 
   days.forEach((day) => {
-    recordsByDate.set(day.dateKey, []);
+    recordsByDate.set(day.dateKey, new Map());
   });
 
   rows.forEach((row) => {
@@ -797,6 +818,10 @@ export const saveMonthlyAttendanceRegister = async ({
     const studentId = String(row.studentId || "");
 
     if (!isRawImport && !validStudentIds.has(studentId)) return;
+    const rowKey = getAttendanceRegisterRowKey({
+      ...row,
+      student: isRawImport ? null : studentId,
+    });
 
     days.forEach((day) => {
       const shortStatus = normalizeShortStatus(row.attendance?.[day.dateKey]);
@@ -804,9 +829,10 @@ export const saveMonthlyAttendanceRegister = async ({
 
       if (!longStatus) return;
 
-      recordsByDate.get(day.dateKey).push({
+      const record = {
         student: isRawImport ? null : studentId,
         importedRowNumber: row.importedRowNumber || null,
+        importedSourceSheet: clean(row.importedSourceSheet),
         importedSerialNo: clean(row.importedSerialNo || row.no),
         importedName: clean(row.importedName || row.name),
         importedPhone: normalizePhone(row.importedPhone || row.contact),
@@ -822,14 +848,21 @@ export const saveMonthlyAttendanceRegister = async ({
           row.source === "excel-import"
             ? "Saved from monthly register imported row"
             : "",
-      });
+      };
+
+      // A register cell is uniquely identified by row + date. Imported data
+      // can contain duplicate rows; persisting a Map prevents duplicate
+      // records from being reconstructed as missing/merged attendance later.
+      recordsByDate.get(day.dateKey).set(rowKey, record);
+      expectedCells.set(`${day.dateKey}::${rowKey}`, shortStatus);
     });
   });
 
   const operations = [];
 
-  for (const [dateKey, records] of recordsByDate.entries()) {
+  for (const [dateKey, recordsMap] of recordsByDate.entries()) {
     const date = new Date(`${dateKey}T00:00:00.000Z`);
+    const records = Array.from(recordsMap.values());
 
     operations.push(
       Attendance.findOneAndUpdate(
@@ -868,36 +901,35 @@ export const saveMonthlyAttendanceRegister = async ({
     year: numericYear,
   });
 
-  const submittedMarks = rows.reduce((total, row) => {
-    if (
-      row.rowType !== "raw-import" &&
-      !validStudentIds.has(String(row.studentId || ""))
-    ) {
-      return total;
-    }
-    return (
-      total +
-      days.filter((day) =>
-        Boolean(toLongStatus(normalizeShortStatus(row.attendance?.[day.dateKey])))
-      ).length
-    );
-  }, 0);
-  const persistedMarks = savedRegister.rows.reduce(
-    (total, row) =>
-      total +
-      days.filter((day) =>
-        Boolean(toLongStatus(normalizeShortStatus(row.attendance?.[day.dateKey])))
-      ).length,
-    0
+  const persistedCells = new Map();
+  savedRegister.rows.forEach((row) => {
+    const rowKey = getAttendanceRegisterRowKey(row);
+    days.forEach((day) => {
+      const status = normalizeShortStatus(row.attendance?.[day.dateKey]);
+      if (status) persistedCells.set(`${day.dateKey}::${rowKey}`, status);
+    });
+  });
+
+  const failedCells = Array.from(expectedCells.entries()).filter(
+    ([cellKey, status]) => persistedCells.get(cellKey) !== status
+  );
+  const unexpectedCells = Array.from(persistedCells.keys()).filter(
+    (cellKey) => !expectedCells.has(cellKey)
   );
 
-  if (persistedMarks !== submittedMarks) {
+  if (failedCells.length || unexpectedCells.length) {
     const error = new Error(
-      `Attendance save verification failed (${persistedMarks}/${submittedMarks} marks persisted)`
+      `Attendance save verification failed (${expectedCells.size - failedCells.length}/${expectedCells.size} marks persisted)`
     );
     error.statusCode = 500;
     throw error;
   }
 
-  return savedRegister;
+  return {
+    ...savedRegister,
+    saveVerification: {
+      verified: true,
+      persistedMarks: expectedCells.size,
+    },
+  };
 };

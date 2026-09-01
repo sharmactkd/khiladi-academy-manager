@@ -129,6 +129,8 @@ const Attendance = () => {
   const saveInFlightRef = useRef(false);
   const pendingSaveRef = useRef(false);
   const autoSaveTimerRef = useRef(null);
+  const saveRetryTimerRef = useRef(null);
+  const saveRetryCountRef = useRef(0);
   const saveRegisterRef = useRef(null);
   const registerContextRef = useRef("");
   const { user } = useAuth();
@@ -342,6 +344,11 @@ const Attendance = () => {
       });
 
       const data = normalizeResponseData(response);
+      if (data.saveVerification?.verified !== true) {
+        throw new Error("Server could not verify the saved attendance");
+      }
+      window.clearTimeout(saveRetryTimerRef.current);
+      saveRetryCountRef.current = 0;
       const hasNewerChanges = editVersionRef.current !== savingVersion;
 
       if (registerContextRef.current === savingContext) {
@@ -353,11 +360,9 @@ const Attendance = () => {
         if (hasNewerChanges) {
           pendingSaveRef.current = true;
         } else {
-          // Keep the exact snapshot the user marked. The API rebuilds the
-          // monthly register after saving and that reconstructed response can
-          // briefly omit freshly-written cells, which made the UI look reset.
-          // The persisted register will still be loaded normally on refresh.
-          rowsRef.current = rowsSnapshot;
+          const persistedRows = Array.isArray(data.rows) ? data.rows : rowsSnapshot;
+          rowsRef.current = persistedRows;
+          setRows(persistedRows);
           setHasUnsavedChanges(false);
         }
       }
@@ -365,14 +370,26 @@ const Attendance = () => {
       if (!silent) toast.success("Attendance saved successfully");
     } catch (error) {
       setAutoSaveError(
-        error?.response?.data?.message || "Attendance save nahi hui",
+        error?.response?.data?.message || error?.message || "Attendance save nahi hui",
       );
       if (error?.response?.status === 401) {
         if (!silent) toast.error("Session expired. Please login again.");
       } else if (!silent) {
         toast.error(
-          error?.response?.data?.message || "Attendance save nahi hui"
+          error?.response?.data?.message || error?.message || "Attendance save nahi hui"
         );
+      }
+
+      if (
+        registerContextRef.current === savingContext &&
+        saveRetryCountRef.current < 3
+      ) {
+        const retryDelay = 1500 * (2 ** saveRetryCountRef.current);
+        saveRetryCountRef.current += 1;
+        window.clearTimeout(saveRetryTimerRef.current);
+        saveRetryTimerRef.current = window.setTimeout(() => {
+          saveRegisterRef.current?.({ silent: true });
+        }, retryDelay);
       }
     } finally {
       saveInFlightRef.current = false;
@@ -380,6 +397,7 @@ const Attendance = () => {
 
       if (pendingSaveRef.current) {
         pendingSaveRef.current = false;
+        window.clearTimeout(saveRetryTimerRef.current);
         window.clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = window.setTimeout(() => {
           saveRegisterRef.current?.({ silent: true });
@@ -391,6 +409,11 @@ const Attendance = () => {
   useEffect(() => {
     saveRegisterRef.current = saveRegister;
   }, [saveRegister]);
+
+  useEffect(() => {
+    window.clearTimeout(saveRetryTimerRef.current);
+    saveRetryCountRef.current = 0;
+  }, [batch, month, year]);
 
   const saveDayNote = async (note) => {
     try {
@@ -540,6 +563,8 @@ const Attendance = () => {
   };
 
   const handleRowsChange = (nextRows) => {
+    window.clearTimeout(saveRetryTimerRef.current);
+    saveRetryCountRef.current = 0;
     rowsRef.current = nextRows;
     editVersionRef.current += 1;
     setRows(nextRows);
@@ -626,6 +651,11 @@ const Attendance = () => {
 
     return () => window.clearTimeout(autoSaveTimerRef.current);
   }, [batch, hasUnsavedChanges, loading, month, rows, year]);
+
+  useEffect(() => () => {
+    window.clearTimeout(autoSaveTimerRef.current);
+    window.clearTimeout(saveRetryTimerRef.current);
+  }, []);
 
   useEffect(() => {
     const warnBeforeLeaving = (event) => {
