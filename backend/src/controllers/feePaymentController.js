@@ -192,6 +192,8 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
       branch: currentBranch,
       amountPaid: payment.amountPaid,
       paymentDate: payment.paymentDate,
+      dueDate: payment.dueDate || null,
+      paidDate: payment.paidDate || (Number(payment.amountPaid) > 0 ? payment.paymentDate : null),
       paymentMode: payment.paymentMode,
       cashAmount: payment.cashAmount || 0,
       onlineAmount: payment.onlineAmount || 0,

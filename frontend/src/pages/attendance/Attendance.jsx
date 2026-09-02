@@ -13,6 +13,7 @@ import { attendanceApi } from "../../api/attendanceApi.js";
 import { studentApi } from "../../api/studentApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import AttendanceControls from "../../components/attendance/AttendanceControls.jsx";
 import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
 import AttendanceImportModal from "../../components/attendance/AttendanceImportModal.jsx";
 import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
@@ -730,14 +731,13 @@ const Attendance = () => {
         <article className="attendance-metric attendance-metric--blue"><span><TrendingUp /></span><div><small>Attendance Rate</small><strong>{attendanceStats.rate}%</strong></div></article>
       </section>
 
-      <section className="attendance-controls">
-        <div className="attendance-controls__top">
-          <div className="attendance-batches"><small>Select Batch</small><div>{batches.map((item) => <button key={item._id} type="button" className={batch === item._id ? "is-active" : ""} onClick={() => setBatch(item._id)} disabled={loading || saving || hasUnsavedChanges}>{item.batchName}<span>{item.martialArt || "Martial Art"}</span></button>)}</div>{!batches.length ? <p>No active batches available.</p> : null}</div>
-          <label className="attendance-year"><span>Year</span><select value={year} onChange={(event) => setYear(Number(event.target.value))} disabled={loading || saving || hasUnsavedChanges}>{yearOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-          <button type="button" className="attendance-repeat" onClick={repeatAttendance} disabled={loading || !rows.length}><span><RefreshCcw size={16} /></span><span>Repeat Previous Day<small>Copy the latest marked attendance</small></span></button>
-        </div>
-        <div className="attendance-months" aria-label="Select month">{visibleMonths.map((item) => <button key={item.value} type="button" className={month === item.value ? "is-active" : ""} onClick={() => handleMonthClick(item.value)} disabled={loading || saving || hasUnsavedChanges}>{item.label}{item.value === now.getMonth() + 1 && year === now.getFullYear() ? <i /> : null}</button>)}</div>
-      </section>
+      <AttendanceControls
+        batches={batches} batch={batch} onBatchChange={setBatch}
+        year={year} yearOptions={yearOptions} onYearChange={setYear}
+        month={month} months={visibleMonths} onMonthChange={handleMonthClick}
+        disabled={loading || saving || hasUnsavedChanges}
+        repeatDisabled={loading || !rows.length} onRepeat={repeatAttendance}
+      />
 
       <section className="attendance-register-card">
         <div ref={printRef} className="monthly-register-print-area attendance-register-body">
