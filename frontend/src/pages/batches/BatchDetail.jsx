@@ -75,6 +75,7 @@ const BatchDetail = () => {
   const schedules = useMemo(() => Array.isArray(batch?.schedule) ? batch.schedule : [], [batch?.schedule]);
   const extraCoaches = useMemo(() => Array.isArray(batch?.additionalCoaches) ? batch.additionalCoaches.filter((item) => item?.name || item?.phone || item?.achievements) : [], [batch?.additionalCoaches]);
   const languages = useMemo(() => [...new Set([batch?.batchLanguages, batch?.batchLanguage].flatMap((value) => normalizeList(value)))], [batch?.batchLanguages, batch?.batchLanguage]);
+  const martialArts = useMemo(() => [...new Set([batch?.martialArts, batch?.martialArt].flatMap((value) => normalizeList(value)))], [batch?.martialArts, batch?.martialArt]);
 
   if (loading) return <PageState className="batch-detail-state" loading title="Loading batch profile…" />;
   if (error || !batch) return <PageState className="batch-detail-state batch-detail-state--error" icon={XCircle} title={error || "Batch not found."} action={<button className="btn btn-primary" type="button" onClick={loadPage}>Try Again</button>} />;
@@ -136,7 +137,6 @@ const BatchDetail = () => {
         <DetailItem icon={UsersRound} label="Maximum Students">{capacity || "No limit"}</DetailItem>
         <DetailItem icon={GraduationCap} label="Skill Levels">{listLabel(batch.skillLevels, batch.skillLevel)}</DetailItem>
         <DetailItem icon={Dumbbell} label="Batch Types">{listLabel(batch.batchTypes, batch.batchType)}</DetailItem>
-        <DetailItem icon={Target} label="Martial Arts / Sports" wide>{listLabel(batch.martialArts, batch.martialArt)}</DetailItem>
       </div></section>
 
       <section className="batch-detail-card"><BatchDetailSectionHeader icon={CalendarDays} eyebrow="03 · Timing" title="Training Schedule" description="Weekly training days with separate Summer and Winter timings." /><div className="batch-detail-schedule-summary">
@@ -163,9 +163,12 @@ const BatchDetail = () => {
         {extraCoaches.map((coach, index) => <CoachCard key={`coach-${index}`} title={`Additional Coach ${index + 1}`} {...coach} />)}
       </div>{!extraCoaches.length ? <p className="batch-detail-empty-note">No additional coaches added.</p> : null}</section>
 
-      <section className="batch-detail-card"><BatchDetailSectionHeader icon={Languages} eyebrow="07 · Communication" title="Languages Spoken" description="Languages supported by the batch coaching team." /><div className="batch-detail-language-tiles">{languages.length ? <IconOptionGrid kind="language" options={languages} selected={languages} interactive={false} compact /> : <em>No languages added.</em>}</div></section>
+      <div className="batch-detail-secondary-grid">
+        <section className="batch-detail-card"><BatchDetailSectionHeader icon={Dumbbell} eyebrow="07 · Training" title="Sports / Martial Arts" description="Training disciplines configured for this batch." /><div className="batch-detail-option-tiles">{martialArts.length ? <IconOptionGrid kind="sport" options={martialArts} interactive={false} /> : <p>No sports or martial arts added.</p>}</div></section>
+        <section className="batch-detail-card"><BatchDetailSectionHeader icon={Languages} eyebrow="08 · Communication" title="Languages Spoken" description="Languages supported by the batch coaching team." /><div className="batch-detail-option-tiles">{languages.length ? <IconOptionGrid kind="language" options={languages} interactive={false} /> : <p>No languages added.</p>}</div></section>
+      </div>
 
-      <section className="batch-detail-card"><BatchDetailSectionHeader icon={MessageCircleMore} eyebrow="08 · Online" title="Links & Communication" description="Read-only WhatsApp and Google Meet resources." /><div className="batch-detail-links batch-detail-links--section"><ResourceLink href={batch.whatsappGroupLink} label="Open WhatsApp Group" icon={MessageCircleMore} /><ResourceLink href={batch.googleMeetLink} label="Open Google Meet" icon={Video} /></div></section>
+      <section className="batch-detail-card"><BatchDetailSectionHeader icon={MessageCircleMore} eyebrow="09 · Online" title="Links & Communication" description="Read-only WhatsApp and Google Meet resources." /><div className="batch-detail-links batch-detail-links--section"><ResourceLink href={batch.whatsappGroupLink} label="Open WhatsApp Group" icon={MessageCircleMore} /><ResourceLink href={batch.googleMeetLink} label="Open Google Meet" icon={Video} /></div></section>
 
       <section className="batch-detail-card batch-detail-students"><div className="batch-detail-students__header"><div><span><UsersRound size={19} /></span><div><small>Students</small><h2>Students in this Batch</h2><p>Active students currently assigned to this batch.</p></div></div><Link to={`/attendance/batch/${batch._id}`}>Attendance History <ExternalLink size={14} /></Link></div>
         {!students.length ? <div className="batch-detail-students__empty"><UsersRound size={30} /><strong>No active students</strong><p>Add students to begin managing this batch.</p><Link className="btn btn-primary" to="/students/new"><Plus size={15} /> Add Student</Link></div> : <div className="batch-detail-table-wrap"><table className="batch-detail-table"><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Belt</th><th>Monthly Fee</th></tr></thead><tbody>{students.map((student) => <tr key={student._id} className="batch-detail-student-row" role="link" tabIndex={0} aria-label={`View ${getStudentName(student)} details`} title={`View ${getStudentName(student)} details`} onClick={() => openStudent(student._id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openStudent(student._id); } }}><td><code>{student.studentCode || student.admissionNumber || "-"}</code></td><td><Link to={`/students/${student._id}`}>{getStudentName(student)}</Link></td><td>{student.phone || "-"}</td><td>{student.beltRank || "-"}</td><td><strong>{currency(batch.monthlyFee, batch.branch)}</strong></td></tr>)}</tbody></table></div>}
