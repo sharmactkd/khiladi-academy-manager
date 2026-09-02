@@ -479,6 +479,7 @@ const normalizeImportRow = async ({
   usedAdmissionNumbers,
   allowProvisional,
   destinationBatch,
+  preserveMissingDates = false,
 }) => {
   const { firstName, lastName } = splitName(row);
   const batchName = cleanString(row.batchName);
@@ -494,7 +495,7 @@ const normalizeImportRow = async ({
   });
 
   const dateOfBirth = parseDateSafely(row.dateOfBirth, null);
-  const joiningDate = parseDateSafely(row.joiningDate, new Date());
+  const joiningDate = parseDateSafely(row.joiningDate, preserveMissingDates ? null : new Date());
   const martialArt =
     cleanString(row.martialArt, 80) || matchedBatch?.martialArt || "Taekwondo";
   const beltRank = normalizeBeltRank({ martialArt, beltRank: row.beltRank });
@@ -523,6 +524,7 @@ const normalizeImportRow = async ({
     importSource: row.importSource === "excel-attendance" ? "excel-attendance" : "excel-record",
     legacySourceSheets: normalizeStringArray(row.legacySourceSheets || row.sourceSheet),
     phone: cleanPhone(row.phone),
+    countryCode: cleanString(row.countryCode, 8) || "+91",
     email: cleanString(row.email, 120).toLowerCase(),
     schoolName: cleanString(row.schoolName, 200),
     className: cleanString(row.className, 80),
@@ -531,9 +533,11 @@ const normalizeImportRow = async ({
     occupation: cleanString(row.occupation, 150),
     parentName: cleanString(row.parentName, 150),
     parentPhone: cleanPhone(row.parentPhone),
+    parentCountryCode: cleanString(row.parentCountryCode, 8) || "+91",
     address: cleanString(row.address, 500),
     city: cleanString(row.city, 100),
     state: cleanString(row.state, 100),
+    country: cleanString(row.country, 100) || "India",
     martialArt,
     beltRank,
     danRank: normalizeDanRank({ beltRank, danRank: row.danRank }),
@@ -545,8 +549,8 @@ const normalizeImportRow = async ({
     status: normalizeStatus(row.status),
     emergencyContact: {
       name: cleanString(row.emergencyContactName, 150),
-      relation: "",
-      countryCode: "+91",
+      relation: cleanString(row.emergencyContactRelation, 80),
+      countryCode: cleanString(row.emergencyContactCountryCode, 8) || "+91",
       phone: cleanPhone(row.emergencyContactPhone),
     },
     notes: cleanString(row.notes, 1000),
@@ -606,6 +610,7 @@ export const importStudents = asyncHandler(async (req, res) => {
   // incomplete profiles instead of silently rejecting every imported row.
   const allowProvisional = req.body?.allowProvisional !== false;
   const destination = req.body?.destination || {};
+  const includeImportedStudents = req.body?.includeImportedStudents === true;
 
   const summary = {
     totalRows: students.length,
@@ -614,6 +619,7 @@ export const importStudents = asyncHandler(async (req, res) => {
     failed: 0,
     warnings: [],
     errors: [],
+    ...(includeImportedStudents ? { importedStudents: [] } : {}),
   };
 
   if (!students.length) {
@@ -654,6 +660,7 @@ export const importStudents = asyncHandler(async (req, res) => {
         usedAdmissionNumbers,
         allowProvisional,
         destinationBatch: resolvedDestination.batch,
+        preserveMissingDates: req.body?.preserveMissingDates === true,
       });
 
       const admissionKey = studentPayload.admissionNumber.toLowerCase();
@@ -679,18 +686,24 @@ export const importStudents = asyncHandler(async (req, res) => {
         });
       }
       let existing = await Student.findOne({ academy: academyId, $or: identityFilters })
-        .select("_id admissionNumber phone profileStatus profileIncompleteFields legacySourceSheets");
+        .select("_id firstName lastName batch admissionNumber phone profileStatus profileIncompleteFields legacySourceSheets");
 
       if (!existing && !studentPayload.phone) {
         const sameName = await Student.find({
           academy: academyId,
           firstName: studentPayload.firstName,
           lastName: studentPayload.lastName,
-        }).select("_id admissionNumber profileStatus profileIncompleteFields legacySourceSheets").limit(2);
+        }).select("_id firstName lastName batch phone admissionNumber profileStatus profileIncompleteFields legacySourceSheets").limit(2);
         if (sameName.length === 1) existing = sameName[0];
       }
 
       if (existing && duplicateMode === "skip") {
+        if (includeImportedStudents) summary.importedStudents.push({
+          sourceRowKey: cleanString(row.sourceRowKey, 300), rowNumber,
+          studentId: String(existing._id), name: [existing.firstName, existing.lastName].filter(Boolean).join(" "),
+          phone: existing.phone || "", admissionNumber: existing.admissionNumber,
+          batch: existing.batch ? String(existing.batch) : "", outcome: "existing",
+        });
         const mergedSheets = [...new Set([
           ...(existing.legacySourceSheets || []),
           ...(studentPayload.legacySourceSheets || []),
@@ -719,7 +732,13 @@ export const importStudents = asyncHandler(async (req, res) => {
         continue;
       }
 
-      await Student.create(studentPayload);
+      const createdStudent = await Student.create(studentPayload);
+      if (includeImportedStudents) summary.importedStudents.push({
+        sourceRowKey: cleanString(row.sourceRowKey, 300), rowNumber,
+        studentId: String(createdStudent._id), name: [createdStudent.firstName, createdStudent.lastName].filter(Boolean).join(" "),
+        phone: createdStudent.phone || "", admissionNumber: createdStudent.admissionNumber,
+        batch: createdStudent.batch ? String(createdStudent.batch) : "", outcome: "created",
+      });
       if (!existing && Number.isFinite(remainingCapacity)) {
         remainingCapacity -= 1;
       }

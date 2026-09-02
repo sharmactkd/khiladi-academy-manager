@@ -18,11 +18,13 @@ import {
 } from "lucide-react";
 import {
   getWorkbookSheetNames,
+  getDefaultStudentSheet,
   parseStudentSheet,
   readStudentWorkbook,
   STUDENT_IMPORT_FIELDS,
 } from "../../utils/studentExcelImport.js";
 import styles from "./StudentImportModal.module.css";
+import SelectiveStudentImport from "../attendance/SelectiveStudentImport.jsx";
 
 const EMPTY_PARSED = {
   headers: [],
@@ -212,7 +214,7 @@ const StudentImportModal = ({
       const names = getWorkbookSheetNames(nextWorkbook);
       if (!names.length)
         throw new Error("Workbook me koi worksheet nahi mili.");
-      const firstSheet = names[0];
+      const firstSheet = getDefaultStudentSheet(names);
       setWorkbook(nextWorkbook);
       setSheetNames(names);
       setSelectedSheet(firstSheet);
@@ -624,7 +626,23 @@ const StudentImportModal = ({
               </div>
             ) : null}
           </section>
-          {parsed.headers.length ? (
+          {workbook && selectedSheet && !loadingFile ? (
+            <SelectiveStudentImport
+              key={`${fileName}:${selectedSheet}`}
+              embedded
+              initialWorkbook={workbook}
+              initialSheet={selectedSheet}
+              initialFileName={fileName}
+              fallbackBatch={destination.batchId}
+              selectedBatch={batches.find(batch => entityId(batch) === destination.batchId)}
+              destination={destination}
+              destinationReady={Boolean(destinationReady)}
+              onRecordImport={onImport}
+              onBusyChange={setImporting}
+              onClose={handleClose}
+            />
+          ) : null}
+          {!workbook && parsed.headers.length ? (
             <section className={styles.step}>
               <div className={styles.mappingHeader}>
                 <div className={styles.stepTitle}>
@@ -697,7 +715,7 @@ const StudentImportModal = ({
             </section>
           ) : null}
         </div>
-        <footer className={styles.footer}>
+        {!workbook && <footer className={styles.footer}>
           <button
             type="button"
             className={styles.cancel}
@@ -717,7 +735,7 @@ const StudentImportModal = ({
               ? "Importing…"
               : `Import ${parsed.mappedRows.length || ""} Student${parsed.mappedRows.length === 1 ? "" : "s"}`}
           </button>
-        </footer>
+        </footer>}
       </section>
     </div>
   );

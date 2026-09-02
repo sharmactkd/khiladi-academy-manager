@@ -5,6 +5,19 @@
 .reviewControls small { flex-basis: 100%; color: #64748b; }
 .reviewControls button { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
 .reviewControls button:disabled { opacity: .45; cursor: default; }
+.createQueue { margin: 14px 0; overflow: hidden; border: 1px solid #dce5ef; border-radius: 14px; background: #fff; box-shadow: 0 7px 20px rgba(15,34,62,.04); }
+.createQueue>header { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 11px; align-items: center; padding: 14px 16px; border-bottom: 1px solid #e8edf3; }
+.createQueue>header>span { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; color: #d00009; background: #fff0f1; }
+.createQueue>header strong,.createQueue>header small { display: block; }
+.createQueue>header strong { color: #172b49; font-size: 13px; }
+.createQueue>header small { margin-top: 3px; color: #718298; font-size: 10px; line-height: 1.45; }
+.createQueue>header>b { padding: 7px 10px; border-radius: 8px; color: #b80008; background: #fff0f1; font-size: 11px; }
+.createQueueNames { display: flex; flex-wrap: wrap; gap: 7px; padding: 12px 16px; }
+.createQueueNames span { padding: 6px 9px; border: 1px solid #dce4ed; border-radius: 8px; color: #344a64; background: #f8fafc; font-size: 10px; font-weight: 800; }
+.createQueue>footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; border-top: 1px solid #e8edf3; background: #fafbfc; }
+.createQueue>footer>small { color: #718298; font-size: 10px; }
+.createQueue>footer>button { flex-shrink: 0; }
+@media(max-width:700px) { .createQueue>header { grid-template-columns: auto 1fr; } .createQueue>header>b { grid-column: 2; justify-self: start; } .createQueue>footer { align-items: stretch; flex-direction: column; } }
 .matchTabs { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 16px; }
 .matchTabs button { padding: 12px 20px; border: 1px solid #dce3ee; border-radius: 10px; background: white; color: #17243d; font: inherit; font-weight: 700; cursor: pointer; }
 .matchTabs button[aria-pressed="true"] { background: #d90008; color: white; border-color: #d90008; }

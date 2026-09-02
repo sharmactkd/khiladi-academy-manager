@@ -92,6 +92,7 @@ export const studentApi = {
       warnings: [],
       errors: [],
       destination: null,
+      importedStudents: [],
     };
 
     for (const chunk of chunks) {
@@ -100,6 +101,8 @@ export const studentApi = {
         destination,
         duplicateMode,
         allowProvisional,
+        includeImportedStudents: payload.includeImportedStudents === true,
+        preserveMissingDates: payload.preserveMissingDates === true,
       });
       const summary = res.data?.data || {};
 
@@ -108,6 +111,7 @@ export const studentApi = {
       combined.failed += Number(summary.failed || 0);
       combined.warnings.push(...(summary.warnings || []));
       combined.errors.push(...(summary.errors || []));
+      combined.importedStudents.push(...(summary.importedStudents || []));
 
       if (summary.destination) {
         combined.destination = summary.destination;

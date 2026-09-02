@@ -1,6 +1,11 @@
 import * as XLSX from "xlsx";
 
 const FIELD_ALIASES = {
+  country: ["country", "country name"],
+  countryCode: ["country code", "student country code", "student phone country code"],
+  parentCountryCode: ["parent country code", "parent phone country code"],
+  emergencyContactCountryCode: ["emergency country code", "emergency phone country code"],
+  emergencyContactRelation: ["emergency relation", "emergency contact relation"],
   studentCode: ["student code", "studentcode", "code", "id", "student id"],
   admissionNumber: [
     "admission number",
@@ -17,8 +22,8 @@ const FIELD_ALIASES = {
   dateOfBirth: ["dob", "date of birth", "birth date"],
   phone: ["phone", "mobile", "mobile number", "contact", "contact number"],
   email: ["email", "email id"],
-  schoolName: ["school", "school name", "school/college", "college"],
-  parentName: ["parent name", "father name", "mother name", "guardian name"],
+  schoolName: ["school", "school name", "school/college", "school / college", "college"],
+  parentName: ["parent name", "father name", "father's name", "father’s name", "mother name", "mother's name", "guardian name"],
   parentPhone: [
     "parent phone",
     "guardian phone",
@@ -36,9 +41,24 @@ const FIELD_ALIASES = {
   emergencyContactName: ["emergency contact name", "emergency name"],
   emergencyContactPhone: ["emergency contact phone", "emergency phone"],
   status: ["status"],
+  aadhaarNumber: ["aadhaar", "aadhaar number", "aadhar", "aadhar number"],
+  className: ["school class", "class standard", "standard"],
+  section: ["section", "school section"],
+  collegeName: ["college name", "company", "company name", "firm name"],
+  occupation: ["occupation", "profession"],
+  danRank: ["dan", "dan rank"],
+  heightCm: ["height", "height cm"],
+  weightKg: ["weight", "weight kg"],
+  bloodGroup: ["blood group"],
+  medicalConditions: ["medical conditions", "medical condition"],
 };
 
 export const STUDENT_IMPORT_FIELDS = [
+  { key: "country", label: "Country" },
+  { key: "countryCode", label: "Student Phone Country Code" },
+  { key: "parentCountryCode", label: "Parent Phone Country Code" },
+  { key: "emergencyContactCountryCode", label: "Emergency Phone Country Code" },
+  { key: "emergencyContactRelation", label: "Emergency Contact Relation" },
   { key: "studentCode", label: "Student Code" },
   { key: "admissionNumber", label: "Admission Number" },
   { key: "name", label: "Name" },
@@ -62,6 +82,16 @@ export const STUDENT_IMPORT_FIELDS = [
   { key: "emergencyContactName", label: "Emergency Contact Name" },
   { key: "emergencyContactPhone", label: "Emergency Contact Phone" },
   { key: "status", label: "Status" },
+  { key: "aadhaarNumber", label: "Aadhaar Number" },
+  { key: "className", label: "School Class" },
+  { key: "section", label: "School Section" },
+  { key: "collegeName", label: "College / Company" },
+  { key: "occupation", label: "Occupation" },
+  { key: "danRank", label: "Dan Rank" },
+  { key: "heightCm", label: "Height (cm)" },
+  { key: "weightKg", label: "Weight (kg)" },
+  { key: "bloodGroup", label: "Blood Group" },
+  { key: "medicalConditions", label: "Medical Conditions" },
 ];
 
 const normalizeKey = (value) =>
@@ -96,6 +126,23 @@ export const readStudentWorkbook = async (file) => {
 };
 
 export const getWorkbookSheetNames = (workbook) => workbook?.SheetNames || [];
+
+export const getDefaultStudentSheet = (names = []) =>
+  names.find(name => /^record$/i.test(String(name).trim())) ||
+  names.find(name => /^(student[\s_-]*)?records?$/i.test(String(name).trim())) ||
+  names.find(name => !/att(?:e|a)ndance|balance|report/i.test(name)) || names[0] || "";
+
+// Ignore Excel's formatting-only used range (e.g. A1:XFD483).
+export const getStudentDataRange = (worksheet) => {
+  const end = { r: 0, c: 0 };
+  for (const [address, cell] of Object.entries(worksheet || {})) {
+    if (address.startsWith("!") || cell?.v === undefined || cell?.v === null || String(cell.v).trim() === "") continue;
+    const point = XLSX.utils.decode_cell(address);
+    end.r = Math.max(end.r, point.r);
+    end.c = Math.max(end.c, point.c);
+  }
+  return { s: { r: 0, c: 0 }, e: end };
+};
 
 export const buildAutoMapping = (headers = []) => {
   const mapping = {};
@@ -164,6 +211,7 @@ export const parseStudentSheet = (workbook, sheetName, customMapping = null) => 
   }
 
   const rawRows = XLSX.utils.sheet_to_json(worksheet, {
+    range: getStudentDataRange(worksheet),
     header: 1,
     defval: "",
     raw: false,
