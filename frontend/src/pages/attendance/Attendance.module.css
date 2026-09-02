@@ -606,8 +606,36 @@
 :global(.attendance-page .day-heading--today),
 :global(.attendance-page .day-number--today),
 :global(.attendance-page .attendance-day-cell--today) {
-  outline: 1px solid var(--at-red);
-  outline-offset: -1px;
+  outline: none;
+}
+:global(.attendance-page .monthly-register-table thead .day-heading--today),
+:global(.attendance-page .monthly-register-table thead .day-number--today) {
+  color: #fff !important;
+  background: var(--at-red) !important;
+  border-color: var(--at-red);
+  font-style: normal;
+}
+:global(.attendance-page .monthly-register-table thead .day-number--today) {
+  padding-block: 4px;
+  line-height: 14px;
+}
+:global(.attendance-page .attendance-today-label) {
+  display: block;
+  width: 32px;
+  margin: 2px auto 0;
+  border-radius: 3px;
+  padding: 1px 0;
+  color: var(--at-red);
+  background: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  font-style: normal;
+  line-height: 10px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+:global(.attendance-page .monthly-register-table tbody td.attendance-day-cell--today) {
+  background: #fff4f5 !important;
 }
 :global(.attendance-page .attendance-cell) {
   width: 32px;

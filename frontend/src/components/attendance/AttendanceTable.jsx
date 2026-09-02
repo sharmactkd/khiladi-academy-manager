@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import AttendanceCell from "./AttendanceCell.jsx";
 import AttendanceSummary from "./AttendanceSummary.jsx";
+import { localDateKey, millisecondsUntilLocalMidnight } from "../../utils/localCalendarDate.js";
 import MembershipBadge from "./MembershipBadge.jsx";
 import AttendanceDayNoteDialog, {
   DAY_NOTE_OPTIONS,
@@ -213,7 +214,7 @@ const getDayStyle = (note) =>
     : undefined;
 
 const AttendanceTable = ({
-  days = [],
+  days: suppliedDays = [],
   rows = [],
   dayNotes = {},
   onRowsChange,
@@ -227,6 +228,28 @@ const AttendanceTable = ({
   loading = false,
 }) => {
   const navigate = useNavigate();
+  const [todayKey, setTodayKey] = useState(() => localDateKey());
+  useEffect(() => {
+    let midnightTimer;
+    const refreshToday = () => {
+      window.clearTimeout(midnightTimer);
+      setTodayKey(localDateKey());
+      midnightTimer = window.setTimeout(refreshToday, millisecondsUntilLocalMidnight() + 50);
+    };
+    refreshToday();
+    window.addEventListener("focus", refreshToday);
+    document.addEventListener("visibilitychange", refreshToday);
+    return () => {
+      window.clearTimeout(midnightTimer);
+      window.removeEventListener("focus", refreshToday);
+      document.removeEventListener("visibilitychange", refreshToday);
+    };
+  }, []);
+  // The API's isToday is UTC-based and may also be stale after midnight.
+  const days = useMemo(
+    () => suppliedDays.map((day) => ({ ...day, isToday: day.dateKey === todayKey })),
+    [suppliedDays, todayKey]
+  );
   const safeRows = useMemo(
     () => (Array.isArray(rows) ? rows : []),
     [rows]
@@ -520,6 +543,7 @@ const AttendanceTable = ({
                     title="Right click to add or edit a date note"
                   >
                     {String(day.day).padStart(2, "0")}
+                    {day.isToday && <span className="attendance-today-label">Today</span>}
                   </th>
                 );
               })}
