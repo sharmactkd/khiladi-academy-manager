@@ -1,4 +1,5 @@
 import express from "express";
+import { importJournal } from "../middlewares/importJournal.js";
 
 import {
   markAttendance,
@@ -66,6 +67,7 @@ router.post(
   "/import",
   attendanceImportRateLimiter,
   validateAttendanceImportRows,
+  importJournal,
   importOldAttendance
 );
 

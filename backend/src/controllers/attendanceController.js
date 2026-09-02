@@ -512,6 +512,7 @@ const saveImportGroup = async ({
     return;
   }
 
+  const totalsBeforeSave = { imported: summary.imported, skipped: summary.skipped, metadataUpdated: summary.metadataUpdated };
   const existingMap = new Map();
 
   attendance.records.forEach((record, index) => {
@@ -589,7 +590,8 @@ const saveImportGroup = async ({
   });
 
   attendance.updatedBy = userId;
-  await attendance.save();
+  try { await attendance.save(); }
+  catch (error) { Object.assign(summary, totalsBeforeSave); throw error; }
 };
 
 export const markAttendance = asyncHandler(async (req, res) => {

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { fillImportedStudentFields, replaceReviewedStudentFields } from "../utils/fillImportedStudentFields.js";
 
 import Student from "../models/Student.js";
 import Branch from "../models/Branch.js";
@@ -615,6 +616,7 @@ export const importStudents = asyncHandler(async (req, res) => {
   const summary = {
     totalRows: students.length,
     imported: 0,
+    updated: 0,
     skipped: 0,
     failed: 0,
     warnings: [],
@@ -695,6 +697,24 @@ export const importStudents = asyncHandler(async (req, res) => {
           lastName: studentPayload.lastName,
         }).select("_id firstName lastName batch phone admissionNumber profileStatus profileIncompleteFields legacySourceSheets").limit(2);
         if (sameName.length === 1) existing = sameName[0];
+      }
+
+      if (req.body.importSessionId) {
+        // Central Imports requires an explicit reviewed identity for every row.
+        if (!row.confirmedStudentId) throw new Error("Review the student identity before importing");
+        if (row.confirmedStudentId === "__new__") {
+          const admissionExists = await Student.exists({ academy: academyId, admissionNumber: studentPayload.admissionNumber });
+          if (admissionExists) throw new Error("Admission number already exists. Match the existing student.");
+          existing = null;
+        } else {
+          existing = await Student.findOne({ _id: row.confirmedStudentId, academy: academyId });
+          if (!existing) throw new Error("Confirmed student no longer exists in this academy");
+          if (existing.batch && String(existing.batch) !== String(resolvedDestination.batch._id)) throw new Error("Confirmed student belongs to another batch");
+        }
+        if (existing && ["fill-empty", "review"].includes(req.body.existingPolicy)) {
+          const changed = req.body.existingPolicy === "review" ? replaceReviewedStudentFields(existing, studentPayload, row) : fillImportedStudentFields(existing, studentPayload, row);
+          if (changed.length) { existing.updatedBy = userId; await existing.save(); summary.updated += 1; }
+        }
       }
 
       if (existing && duplicateMode === "skip") {

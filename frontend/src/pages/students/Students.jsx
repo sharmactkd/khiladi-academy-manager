@@ -658,7 +658,7 @@ const Students = () => {
           <p>Manage academy students, profiles and enrollment records.</p>
         </div>
         <div className="students-heading-card__actions">
-          <button type="button" className="students-button" onClick={() => setImportModalOpen(true)}>
+          <button type="button" className="students-button" onClick={() => navigate("/imports?type=students")}>
             <Upload size={17} /> Import Excel
           </button>
           <div className="students-export">
@@ -781,7 +781,7 @@ const Students = () => {
           <button
             type="button"
             className="btn"
-            onClick={() => setImportModalOpen(true)}
+            onClick={() => navigate("/imports?type=students")}
           >
             <Upload size={16} /> Import Excel
           </button>

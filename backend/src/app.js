@@ -12,6 +12,7 @@ import academyRoutes from "./routes/academyRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
 import studentRoutes from "./routes/studentRoutes.js";
+import importSessionRoutes from "./routes/importSessionRoutes.js";
 import batchRoutes from "./routes/batchRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import feePlanRoutes from "./routes/feePlanRoutes.js";
@@ -153,6 +154,7 @@ app.use("/api/performance", performanceRoutes);
 app.use("/api/smart-timeline", smartTimelineRoutes);
 
 app.use("/api/students", studentRoutes);
+app.use("/api/import-sessions", importSessionRoutes);
 app.use("/api/batches", batchRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/fee-plans", feePlanRoutes);

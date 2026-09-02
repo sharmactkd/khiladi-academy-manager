@@ -56,6 +56,7 @@ export const ownerNavigation = [
     children: [
       { id: "students", label: "Students", to: "/students", icon: GraduationCap },
       { id: "attendance", label: "Attendance", to: "/attendance", icon: CalendarCheck2 },
+      { id: "imports", label: "Imports", to: "/imports", icon: FileStack },
       {
         id: "fees",
         label: "Fees",

@@ -597,7 +597,8 @@ const Attendance = () => {
       toast.error("Attendance import karne se pehle batch select karein");
       return;
     }
-    setImportModalOpen(true);
+    if (hasUnsavedChanges) return toast.error("Please wait for attendance auto-save before opening Imports.");
+    navigate(`/imports?type=attendance&batch=${batch}`);
   };
 
   useEffect(() => {

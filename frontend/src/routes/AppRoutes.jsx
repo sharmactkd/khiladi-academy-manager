@@ -14,6 +14,7 @@ const Unauthorized = lazy(() => import("../pages/errors/Unauthorized.jsx"));
 const NotFound = lazy(() => import("../pages/errors/NotFound.jsx"));
 const AcademyProfile = lazy(() => import("../pages/academy/AcademyProfile.jsx"));
 const Students = lazy(() => import("../pages/students/Students.jsx"));
+const Imports = lazy(() => import("../pages/imports/Imports.jsx"));
 const AddStudent = lazy(() => import("../pages/students/AddStudent.jsx"));
 const EditStudent = lazy(() => import("../pages/students/EditStudent.jsx"));
 const StudentProfile = lazy(() => import("../pages/students/StudentProfile.jsx"));
@@ -351,6 +352,7 @@ const AppRoutes = () => {
             />
 
             {/* STUDENTS */}
+            <Route path="/imports" element={<Imports />} />
 
             <Route
               path="/students"

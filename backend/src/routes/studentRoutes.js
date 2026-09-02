@@ -1,4 +1,5 @@
 import express from "express";
+import { importJournal } from "../middlewares/importJournal.js";
 
 import {
   createStudent,
@@ -53,6 +54,7 @@ router.post(
     }
     return next();
   },
+  importJournal,
   importStudents
 );
 
