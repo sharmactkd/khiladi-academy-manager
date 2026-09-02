@@ -1,0 +1,281 @@
+:global(.shared-students-table) {
+  --students-red: #cf0006;
+  --students-navy: #0b1830;
+  --students-border: #dce4ef;
+  border: 1px solid var(--students-border);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(15,23,42,.045);
+}
+:global(.students-table-card) {
+  min-width: 0;
+  overflow: hidden;
+}
+:global(.students-table-toolbar) {
+  min-height: 47px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--students-border);
+}
+:global(.students-table-toolbar > div) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #536177;
+  font-size: 13px;
+  font-weight: 800;
+}
+:global(.students-table-toolbar button) {
+  min-height: 31px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid #f06d74;
+  border-radius: 7px;
+  color: #d40812;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+:global(.students-table-wrap) {
+  width: 100%;
+  max-height: 62vh;
+  min-height: 430px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+:global(.students-table) {
+  width: 100%;
+  min-width: 1020px;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+:global(.students-table th) {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  padding: 9px 10px;
+  border-bottom: 1px solid #dbe3ed;
+  color: #4e5e76;
+  background: #fbfcfe;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.045em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+:global(.students-table td) {
+  padding: 9px 10px;
+  border-top: 1px solid #e5eaf1;
+  color: #223149;
+  font-size: 12px;
+  vertical-align: middle;
+}
+:global(.students-table tbody tr) {
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+:global(.students-table tbody tr:hover),
+:global(.students-table tbody tr.is-selected) {
+  background: #fff7f7;
+}
+:global(.students-table td > strong),
+:global(.students-table td > small) {
+  display: block;
+  max-width: 155px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:global(.students-table td > strong) {
+  font-size: 12px;
+}
+:global(.students-table td > small) {
+  margin-top: 3px;
+  color: #728096;
+  font-size: 11px;
+}
+:global(.students-table code) {
+  color: #293952;
+  font: 800 9px/1.25 inherit;
+  white-space: nowrap;
+}
+:global(.students-person) {
+  min-width: 145px;
+  display: flex;
+  align-items: center;
+}
+:global(.students-person strong),
+:global(.students-person small) {
+  min-width: 0;
+  display: block;
+}
+:global(.students-person strong) {
+  max-width: 155px;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:global(.students-person small) {
+  margin-top: 3px;
+  color: #718097;
+  font-size: 11px;
+}
+:global(.students-person em) {
+  display: inline-block;
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: #b46a00;
+  background: #fff0ce;
+  font-style: normal;
+  font-weight: 850;
+}
+:global(.students-blood) {
+  display: inline-grid;
+  min-width: 28px;
+  height: 26px;
+  place-items: center;
+  border-radius: 7px;
+  color: #b00b14;
+  background: #ffedef;
+}
+:global(.students-status) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  color: #6b778b;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+:global(.students-status i) {
+  width: 30px;
+  height: 17px;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 999px;
+  background: #cbd3df;
+  transition: 0.18s;
+}
+:global(.students-status i span) {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
+  transition: 0.18s;
+}
+:global(.students-status.is-active) {
+  color: #0d954c;
+}
+:global(.students-status.is-active i) {
+  background: #10a653;
+}
+:global(.students-status.is-active i span) {
+  transform: translateX(13px);
+}
+:global(.students-left-status) {
+  padding: 4px 7px;
+  border-radius: 6px;
+  color: #7a3e07;
+  background: #fff0dd;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: capitalize;
+}
+:global(.students-row-actions) {
+  display: flex;
+  gap: 6px;
+}
+:global(.students-row-actions a),
+:global(.students-row-actions button) {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d6dfeb;
+  border-radius: 7px;
+  color: #34435b;
+  background: #fff;
+  cursor: pointer;
+}
+:global(.students-row-actions a:hover),
+:global(.students-row-actions button:hover) {
+  border-color: #ef6068;
+  color: var(--students-red);
+  background: #fff6f6;
+}
+:global(.students-row-actions .students-row-actions__delete) {
+  border-color: #f4c9cc;
+  color: #d60b15;
+   padding: 0;
+  background: #fff8f8;
+}
+:global(.students-row-actions .students-row-actions__delete:hover) {
+  border-color: #cf0006;
+  color: #fff;
+  background: #cf0006;
+}
+:global(.students-state) {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #68778d;
+  font-size: 12px;
+}
+:global(.students-state > span) {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #fde0e2;
+  border-top-color: var(--students-red);
+  border-radius: 50%;
+  animation: students-spin 0.7s linear infinite;
+}
+:global(.students-state p) {
+  margin: 0;
+}
+:global(.students-list-footer) {
+  min-height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--students-border);
+  color: #64748b;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 750;
+}
+:global(.students-list-footer strong) {
+  color: #138146;
+}
+
+@keyframes students-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  :global(.shared-students-table .students-table-toolbar),
+  :global(.shared-students-table .students-list-footer) { align-items: flex-start; flex-direction: column; }
+  :global(.shared-students-table .students-table-wrap) { max-height: 68vh; min-height: 360px; }
+}
+

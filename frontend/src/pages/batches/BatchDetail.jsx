@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, CircleDollarSign as BadgeIndianRupee, CalendarDays, CheckCircle2, Clock3, Dumbbell, Edit3, ExternalLink, FileText, GraduationCap, Hash, Languages, MapPin, MessageCircleMore, Plus, ShieldCheck, Target, UserRound, UsersRound, Video, WalletCards, XCircle } from "lucide-react";
 
 import { batchApi } from "../../api/batchApi.js";
+import toast from "react-hot-toast";
+import StudentsTable from "../../components/students/StudentsTable.jsx";
 import { studentApi } from "../../api/studentApi.js";
 import MetricGrid from "../../components/common/MetricGrid.jsx";
 import PageState from "../../components/common/PageState.jsx";
@@ -52,20 +54,21 @@ const listLabel = (...values) => {
 
 const BatchDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [batch, setBatch] = useState(null);
   const [students, setStudents] = useState([]);
+  const [statusUpdatingIds, setStatusUpdatingIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const loadPage = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const [batchResult, studentResult] = await Promise.allSettled([batchApi.getById(id), studentApi.getAll({ batch: id, status: "active" })]);
+      const [batchResult, studentResult] = await Promise.allSettled([batchApi.getById(id), studentApi.getAll({ batch: id })]);
       if (batchResult.status === "rejected") throw batchResult.reason;
       setBatch(batchResult.value?.data?.data || batchResult.value?.data || null);
-      const response = studentResult.status === "fulfilled" ? studentResult.value : null;
-      setStudents([response?.data?.data?.students, response?.data?.data, response?.data].find(Array.isArray) || []);
+      if (studentResult.status === "rejected") throw studentResult.reason;
+      const response = studentResult.value;
+      setStudents([response?.data?.students, response?.data?.data?.students, response?.data?.data, response?.data].find(Array.isArray) || []);
     } catch (requestError) {
       setError(requestError?.response?.data?.message || "Failed to load batch.");
     } finally { setLoading(false); }
@@ -77,10 +80,37 @@ const BatchDetail = () => {
   const languages = useMemo(() => [...new Set([batch?.batchLanguages, batch?.batchLanguage].flatMap((value) => normalizeList(value)))], [batch?.batchLanguages, batch?.batchLanguage]);
   const martialArts = useMemo(() => [...new Set([batch?.martialArts, batch?.martialArt].flatMap((value) => normalizeList(value)))], [batch?.martialArts, batch?.martialArt]);
 
+
+  const handleStatusToggle = async (student) => {
+    if (statusUpdatingIds.includes(student._id)) return;
+    const status = student.status === "active" ? "inactive" : "active";
+    setStatusUpdatingIds((ids) => [...ids, student._id]);
+    try {
+      await studentApi.updateStatus(student._id, status);
+      setStudents((items) => items.map((item) => item._id === student._id ? { ...item, status } : item));
+      toast.success(`Student marked ${status}`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Student status update failed");
+    } finally {
+      setStatusUpdatingIds((ids) => ids.filter((value) => value !== student._id));
+    }
+  };
+
+  const handleDelete = async (student) => {
+    if (!window.confirm(`Delete "${getStudentName(student)}"? This cannot be undone.`)) return;
+    try {
+      await studentApi.remove(student._id);
+      setStudents((items) => items.filter((item) => item._id !== student._id));
+      toast.success("Student deleted");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Student could not be deleted");
+    }
+  };
+
   if (loading) return <PageState className="batch-detail-state" loading title="Loading batch profile…" />;
   if (error || !batch) return <PageState className="batch-detail-state batch-detail-state--error" icon={XCircle} title={error || "Batch not found."} action={<button className="btn btn-primary" type="button" onClick={loadPage}>Try Again</button>} />;
 
-  const count = students.length || batch.students?.length || 0;
+  const count = students.filter((student) => student.status === "active").length;
   const capacity = Number(batch.capacity || batch.maxStudents || 0);
   const seats = availableSeats(capacity, count);
   const firstSchedule = schedules[0] || {};
@@ -94,7 +124,6 @@ const BatchDetail = () => {
   const mode = formatBatchLabel(firstValue(batch.mode, batch.modes));
   const slot = formatBatchLabel(firstValue(batch.sessionSlot, batch.sessionSlots));
   const branchName = batch.branch?.branchName || batch.branch?.branchCode || "Not assigned";
-  const openStudent = (studentId) => navigate(`/students/${studentId}`);
 
   return (
     <div className="page batch-detail-page">
@@ -170,8 +199,9 @@ const BatchDetail = () => {
 
       <section className="batch-detail-card"><BatchDetailSectionHeader icon={MessageCircleMore} eyebrow="09 · Online" title="Links & Communication" description="Read-only WhatsApp and Google Meet resources." /><div className="batch-detail-links batch-detail-links--section"><ResourceLink href={batch.whatsappGroupLink} label="Open WhatsApp Group" icon={MessageCircleMore} /><ResourceLink href={batch.googleMeetLink} label="Open Google Meet" icon={Video} /></div></section>
 
-      <section className="batch-detail-card batch-detail-students"><div className="batch-detail-students__header"><div><span><UsersRound size={19} /></span><div><small>Students</small><h2>Students in this Batch</h2><p>Active students currently assigned to this batch.</p></div></div><Link to={`/attendance/batch/${batch._id}`}>Attendance History <ExternalLink size={14} /></Link></div>
-        {!students.length ? <div className="batch-detail-students__empty"><UsersRound size={30} /><strong>No active students</strong><p>Add students to begin managing this batch.</p><Link className="btn btn-primary" to="/students/new"><Plus size={15} /> Add Student</Link></div> : <div className="batch-detail-table-wrap"><table className="batch-detail-table"><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Belt</th><th>Monthly Fee</th></tr></thead><tbody>{students.map((student) => <tr key={student._id} className="batch-detail-student-row" role="link" tabIndex={0} aria-label={`View ${getStudentName(student)} details`} title={`View ${getStudentName(student)} details`} onClick={() => openStudent(student._id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openStudent(student._id); } }}><td><code>{student.studentCode || student.admissionNumber || "-"}</code></td><td><Link to={`/students/${student._id}`}>{getStudentName(student)}</Link></td><td>{student.phone || "-"}</td><td>{student.beltRank || "-"}</td><td><strong>{currency(batch.monthlyFee, batch.branch)}</strong></td></tr>)}</tbody></table></div>}
+      <section className="batch-detail-card batch-detail-students"><div className="batch-detail-students__header"><div><span><UsersRound size={19} /></span><div><small>Students</small><h2>Students in this Batch</h2><p>Students currently assigned to this batch.</p></div></div><Link to={`/attendance/batch/${batch._id}`}>Attendance History <ExternalLink size={14} /></Link></div>
+        <StudentsTable students={students} handleStatusToggle={handleStatusToggle}
+          handleDelete={handleDelete} statusUpdatingIds={statusUpdatingIds} />
       </section>
     </div>
   );
