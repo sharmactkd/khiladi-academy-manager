@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { buildAttendanceRowView, cycleAttendanceSort, getDueDateValue, getFeeStatusValue, patchAttendanceRow } from "./attendanceRowView.js";
 import DateInput from "../common/DateInput.jsx";
 import { useNavigate } from "react-router-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -171,18 +173,10 @@ const DateMetaInput = ({
   );
 };
 
-const getDueDateValue = (row) =>
-  row.importedDueDate || row.feeDueDate || "-";
-
 const getPaidDateValue = (row) =>
   row.rowType === "student" && row.studentId
     ? row.feePaidDate || row.paidDate || row.importedPaidDate || "-"
     : row.importedPaidDate || row.paidDate || row.feePaidDate || "-";
-
-const getFeeStatusValue = (row) =>
-  row.rowType === "student" && row.studentId
-    ? row.feeStatus || row.importedFeeStatus || "-"
-    : row.importedFeeStatus || row.feeStatus || "-";
 
 const isFutureDay = (day) => {
   const today = new Date();
@@ -216,6 +210,9 @@ const getDayStyle = (note) =>
 const AttendanceTable = ({
   days: suppliedDays = [],
   rows = [],
+  searchQuery = "",
+  onMoveRow,
+  reorderDisabled = false,
   dayNotes = {},
   onRowsChange,
   onSaveDayNote,
@@ -258,17 +255,34 @@ const AttendanceTable = ({
   const [contextMenu, setContextMenu] = useState(null);
   const [noteEditor, setNoteEditor] = useState(null);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [sort, setSort] = useState([]);
+  const viewRows = useMemo(() => buildAttendanceRowView(safeRows, searchQuery, sort, suppliedDays[0]?.dateKey),
+    [safeRows, searchQuery, sort, suppliedDays]);
+  const toggleSort = (key, event) => setSort((current) => cycleAttendanceSort(current, key, event.ctrlKey || event.metaKey));
+  const sortIcon = (key) => {
+    const index = sort.findIndex((item) => item.key === key);
+    if (index < 0) return <ArrowUpDown size={12} aria-hidden="true" />;
+    return <>{sort[index].direction === "asc" ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />}
+      {sort.length > 1 && <sup aria-hidden="true">{index + 1}</sup>}</>;
+  };
+  const ariaSort = (key) => !sort.some((item) => item.key === key) ? "none"
+    : sort.length > 1 ? "other" : sort[0].direction === "asc" ? "ascending" : "descending";
+  const sortLabel = (key, label) => {
+    const index = sort.findIndex((item) => item.key === key);
+    return `${label}: ${index < 0 ? "not sorted" : `${sort[index].direction === "asc" ? "ascending" : "descending"}, priority ${index + 1}`}. Click to cycle ascending, descending, neutral. Ctrl+click to combine columns.`;
+  };
   const tableScrollRef = useRef(null);
 
   const rowVirtualizer = useVirtualizer({
-    count: isPrinting ? 0 : safeRows.length,
+    count: isPrinting ? 0 : viewRows.length,
+    getItemKey: (index) => viewRows[index].sourceIndex,
     getScrollElement: () => tableScrollRef.current,
     estimateSize: () => 51,
     overscan: 10,
   });
 
   const virtualRows = isPrinting
-    ? safeRows.map((_, index) => ({ index, key: index, start: 0, end: 0 }))
+    ? viewRows.map((item, index) => ({ index, key: item.sourceIndex, start: 0, end: 0 }))
     : rowVirtualizer.getVirtualItems();
   const firstVirtualRow = virtualRows[0];
   const lastVirtualRow = virtualRows[virtualRows.length - 1];
@@ -276,6 +290,10 @@ const AttendanceTable = ({
   const bottomPadding = isPrinting
     ? 0
     : Math.max(rowVirtualizer.getTotalSize() - (lastVirtualRow?.end || 0), 0);
+
+  useEffect(() => {
+    if (tableScrollRef.current) tableScrollRef.current.scrollTop = 0;
+  }, [searchQuery, sort]);
 
   useEffect(() => {
     const closeContextMenu = () => setContextMenu(null);
@@ -343,7 +361,6 @@ const AttendanceTable = ({
   const updateCell = (rowIndex, dateKey, value) => {
     if (typeof onRowsChange !== "function") return;
 
-    const nextRows = [...safeRows];
     const row = safeRows[rowIndex];
     const nextRow = {
       ...row,
@@ -352,17 +369,13 @@ const AttendanceTable = ({
         [dateKey]: value,
       },
     };
-    nextRows[rowIndex] = recalculateRow(nextRow, days);
-
-    onRowsChange(nextRows);
+    onRowsChange(patchAttendanceRow(safeRows, rowIndex, () => recalculateRow(nextRow, days)));
   };
 
   const updateRowField = (rowIndex, field, value) => {
     if (typeof onRowsChange !== "function") return;
 
-    const nextRows = [...safeRows];
-    nextRows[rowIndex] = { ...safeRows[rowIndex], [field]: value };
-    onRowsChange(nextRows);
+    onRowsChange(patchAttendanceRow(safeRows, rowIndex, (row) => ({ ...row, [field]: value })));
   };
 
   const editExistingNote = () => {
@@ -462,9 +475,13 @@ const AttendanceTable = ({
                 Contact
               </th>
 
-              <th className="sticky-col sticky-due-date" rowSpan="2">Due Date</th>
+              <th className="sticky-col sticky-due-date" rowSpan="2" aria-sort={ariaSort("dueDate")}>
+                <button type="button" className="attendance-sort-button" onClick={(event) => toggleSort("dueDate", event)} aria-label={sortLabel("dueDate", "Due Date")} title={sortLabel("dueDate", "Due Date")}>Due Date {sortIcon("dueDate")}</button>
+              </th>
               <th className="sticky-col sticky-paid-date" rowSpan="2">Paid Date</th>
-              <th className="sticky-col sticky-fee-status" rowSpan="2">Fee Status</th>
+              <th className="sticky-col sticky-fee-status" rowSpan="2" aria-sort={ariaSort("feeStatus")}>
+                <button type="button" className="attendance-sort-button" onClick={(event) => toggleSort("feeStatus", event)} aria-label={sortLabel("feeStatus", "Fee Status")} title={sortLabel("feeStatus", "Fee Status")}>Fee Status {sortIcon("feeStatus")}</button>
+              </th>
 
               {days.map((day) => {
                 const note = dayNotes[day.dateKey];
@@ -551,6 +568,7 @@ const AttendanceTable = ({
           </thead>
 
           <tbody>
+            {!viewRows.length && <tr><td colSpan={days.length + 11} className="monthly-register__empty">No students match your search. Clear search to show all students.</td></tr>}
             {topPadding > 0 && (
               <tr aria-hidden="true">
                 <td
@@ -561,24 +579,34 @@ const AttendanceTable = ({
             )}
 
             {virtualRows.map((virtualRow) => {
-              const rowIndex = virtualRow.index;
-              const row = safeRows[rowIndex];
-              const rowKey =
-                row.studentId || row.importedRowNumber || rowIndex;
+              const { row, sourceIndex: rowIndex } = viewRows[virtualRow.index];
+              const rowKey = rowIndex;
               const isInactive =
                 String(row.status).toLowerCase() === "inactive";
 
               return (
                 <tr
                   key={rowKey}
-                  data-index={rowIndex}
+                  data-index={virtualRow.index}
                   ref={isPrinting ? undefined : rowVirtualizer.measureElement}
                   className={
                     isInactive ? "monthly-register__row--inactive" : ""
                   }
                 >
                   <td className="sticky-col sticky-no">
-                    {row.importedSerialNo || row.no || rowIndex + 1}
+                    <button type="button" className="attendance-serial-button"
+                      disabled={!onMoveRow || reorderDisabled}
+                      title="Double-click to move this student to another serial number (Enter also works)"
+                      aria-label={`Serial ${rowIndex + 1}: move ${row.name || row.importedName || "student"}`}
+                      onDoubleClick={async () => { if (await onMoveRow?.(row, rowIndex + 1)) setSort([]); }}
+                      onKeyDown={async (event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          if (await onMoveRow?.(row, rowIndex + 1)) setSort([]);
+                        }
+                      }}>
+                      {rowIndex + 1}
+                    </button>
                   </td>
 
                   <td

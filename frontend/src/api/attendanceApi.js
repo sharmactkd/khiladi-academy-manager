@@ -15,6 +15,7 @@ export const attendanceApi = {
     api.get("/attendance/yearly-register", { params }),
   saveMonthlyRegister: (payload) =>
     api.post("/attendance/monthly-register", payload),
+  moveMonthlyRow: (payload) => api.patch("/attendance/monthly-register/order", payload),
   saveDayNote: (payload) => api.put("/attendance/day-note", payload),
   removeDayNote: (payload) =>
     api.delete("/attendance/day-note", { data: payload }),

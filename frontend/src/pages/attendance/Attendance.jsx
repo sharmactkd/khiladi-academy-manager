@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { saveAs } from "file-saver";
 import {
   CalendarCheck2, FileSpreadsheet, Printer, RefreshCcw, Save, TrendingUp,
-  Upload, UserCheck, UsersRound, UserX,
+  UserCheck, UsersRound, UserX,
 } from "lucide-react";
 
 import { academyApi } from "../../api/academyApi.js";
@@ -15,7 +15,6 @@ import { getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import AttendanceControls from "../../components/attendance/AttendanceControls.jsx";
 import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
-import AttendanceImportModal from "../../components/attendance/AttendanceImportModal.jsx";
 import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
@@ -65,7 +64,7 @@ const formatRows = (rows = []) =>
     contact: formatPhoneNumber(row.contact),
   }));
 
-const sortRegisterRows = (list = []) => [...list].sort((a, b) => {
+const sortRegisterRows = (list = [], preserveOrder = false) => preserveOrder ? list : [...list].sort((a, b) => {
   const rank = (row) => row.rowType === "raw-import" || row.status === "imported" ? 2 : row.status === "inactive" ? 1 : 0;
   const difference = rank(a) - rank(b);
   if (difference) return difference;
@@ -151,13 +150,15 @@ const Attendance = () => {
 
   const [days, setDays] = useState([]);
   const [rows, setRows] = useState([]);
-  const [selectedBatch, setSelectedBatch] = useState(null);
   const [dayNotes, setDayNotes] = useState({});
   const [statusUpdatingIds, setStatusUpdatingIds] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [orderRevision, setOrderRevision] = useState(0);
+  const [reordering, setReordering] = useState(false);
+  const reorderingRef = useRef(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [autoSaveError, setAutoSaveError] = useState("");
@@ -189,11 +190,6 @@ const Attendance = () => {
   }, [year, allowedLimit]);
 
   const formattedRows = useMemo(() => formatRows(rows), [rows]);
-
-  const selectedBatchOption = useMemo(
-    () => batches.find((item) => item._id === batch) || selectedBatch || null,
-    [batches, batch, selectedBatch]
-  );
 
   const openFeeCollection = useCallback(
     (row) => {
@@ -288,10 +284,10 @@ const Attendance = () => {
 
         setDays(Array.isArray(data.days) ? data.days : []);
         const loadedRows = Array.isArray(data.rows) ? data.rows : [];
+        setOrderRevision(data.orderRevision || 0);
         rowsRef.current = loadedRows;
         editVersionRef.current = 0;
         setRows(loadedRows);
-        setSelectedBatch(data.batch || null);
         setDayNotes(data.dayNotes || {});
         setHasUnsavedChanges(false);
         setAutoSaveError("");
@@ -307,7 +303,6 @@ const Attendance = () => {
         setDays([]);
         rowsRef.current = [];
         setRows([]);
-        setSelectedBatch(null);
         setDayNotes({});
       } finally {
         setLoading(false);
@@ -317,6 +312,7 @@ const Attendance = () => {
   );
 
   const saveRegister = useCallback(async ({ silent = false } = {}) => {
+    if (reorderingRef.current) return;
     if (!batch) {
       if (!silent) toast.error("Batch select karein");
       return;
@@ -354,7 +350,6 @@ const Attendance = () => {
 
       if (registerContextRef.current === savingContext) {
         setDays(Array.isArray(data.days) ? data.days : []);
-        setSelectedBatch(data.batch || null);
         setDayNotes(data.dayNotes || {});
         setLastSavedAt(new Date());
 
@@ -362,6 +357,7 @@ const Attendance = () => {
           pendingSaveRef.current = true;
         } else {
           const persistedRows = Array.isArray(data.rows) ? data.rows : rowsSnapshot;
+          setOrderRevision(data.orderRevision || 0);
           rowsRef.current = persistedRows;
           setRows(persistedRows);
           setHasUnsavedChanges(false);
@@ -441,11 +437,11 @@ const Attendance = () => {
     const changedAt = new Date().toISOString();
     const previous = rows;
     setStatusUpdatingIds((ids) => [...ids, row.studentId]);
-    setRows((current) => sortRegisterRows(current.map((item) => item.studentId === row.studentId ? { ...item, status, statusUpdatedAt: changedAt } : item)));
+    setRows((current) => sortRegisterRows(current.map((item) => item.studentId === row.studentId ? { ...item, status, statusUpdatedAt: changedAt } : item), orderRevision > 0));
     try {
       const response = await studentApi.updateStatus(row.studentId, status);
       const saved = normalizeResponseData(response);
-      setRows((current) => sortRegisterRows(current.map((item) => item.studentId === row.studentId ? { ...item, status: saved.status || status, statusUpdatedAt: saved.statusUpdatedAt || changedAt } : item)));
+      setRows((current) => sortRegisterRows(current.map((item) => item.studentId === row.studentId ? { ...item, status: saved.status || status, statusUpdatedAt: saved.statusUpdatedAt || changedAt } : item), orderRevision > 0));
       toast.success(`${row.name || "Student"} marked ${status}`);
     } catch (error) {
       setRows(previous);
@@ -479,53 +475,47 @@ const Attendance = () => {
     toast.success(`${source.dateKey} se ${target.dateKey} tak ${copied} attendance copied. Auto-save scheduled.`);
   };
 
-  const handleImportAttendance = async (payload) => {
-    if (!batch) {
-      toast.error("Pehle batch select karein");
-      return;
-    }
-
-    try {
-      const { deferRefresh = false, ...importPayload } = payload;
-      const response = await attendanceApi.importOldAttendance({
-        ...importPayload,
-        fallbackBatch: batch,
-        assignMissingBatch: true,
-      });
-
-      const summary = response?.data?.data || {};
-
-      if (!deferRefresh) {
-        toast.success(
-          `Cells: ${summary.totalAttendanceCells || 0}, Imported: ${
-            summary.imported || 0
-          }, Skipped: ${summary.skipped || 0}, Failed: ${summary.failed || 0}`
-        );
-      }
-
-      if (summary.errors?.length) {
-        console.warn("IMPORT ERRORS:", summary.errors);
-      }
-
-      if (!deferRefresh) await loadMonthlyRegister(batch, month, year);
-      return summary;
-    } catch (error) {
-      console.error("ATTENDANCE IMPORT ERROR:", error);
-
-      if (error?.response?.status === 401) {
-        toast.error("Session expired. Please login again.");
-      } else {
-        toast.error(
-          error?.response?.data?.message || "Attendance import nahi ho paya"
-        );
-      }
-
-      throw error;
-    }
-  };
-
   const printRegister = () => {
     window.print();
+  };
+
+  const moveRegisterRow = async (row, currentPosition) => {
+    if (hasUnsavedChanges || saveInFlightRef.current || reorderingRef.current || loading) {
+      toast.error("Please wait for attendance to finish saving before changing serial number.");
+      return false;
+    }
+    if (!row.registerOrderKey) {
+      toast.error("Restart the updated backend and refresh this page first.");
+      return false;
+    }
+    const input = window.prompt(`Move ${row.name || row.importedName || "student"} to position (1–${rows.length}). This saves the order for this batch and month.`, String(currentPosition));
+    if (input === null) return false;
+    const position = Number(input.trim());
+    if (!Number.isInteger(position) || position < 1 || position > rows.length) {
+      toast.error(`Enter a whole number between 1 and ${rows.length}`);
+      return false;
+    }
+    const context = registerContextRef.current;
+    reorderingRef.current = true;
+    setReordering(true);
+    try {
+      const response = await attendanceApi.moveMonthlyRow({ batch, month, year, rowKey: row.registerOrderKey, position, revision: orderRevision });
+      const data = normalizeResponseData(response);
+      if (registerContextRef.current !== context) return false;
+      if (!Array.isArray(data.rows)) throw new Error("Server did not return the saved row order");
+      rowsRef.current = data.rows;
+      setRows(data.rows);
+      setOrderRevision(data.orderRevision);
+      setStudentSearch("");
+      toast.success(`Moved to position ${position}. Order saved.`);
+      return true;
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message || "Order could not be saved");
+      return false;
+    } finally {
+      reorderingRef.current = false;
+      setReordering(false);
+    }
   };
 
   const exportExcel = async () => {
@@ -590,15 +580,6 @@ const Attendance = () => {
         ? { ...current, membership }
         : current
     );
-  };
-
-  const openAttendanceImport = () => {
-    if (!batch) {
-      toast.error("Attendance import karne se pehle batch select karein");
-      return;
-    }
-    if (hasUnsavedChanges) return toast.error("Please wait for attendance auto-save before opening Imports.");
-    navigate(`/imports?type=attendance&batch=${batch}`);
   };
 
   useEffect(() => {
@@ -680,14 +661,6 @@ const Attendance = () => {
 
   return (
     <div className="page attendance-page monthly-register-page">
-      <AttendanceImportModal
-        open={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        onImport={handleImportAttendance}
-        fallbackBatch={batch}
-        selectedBatch={selectedBatchOption}
-      />
-
       <MembershipAdjustmentDrawer
         open={Boolean(membershipStudent)}
         student={membershipStudent}
@@ -718,7 +691,6 @@ const Attendance = () => {
           <div><small>Academy Operations</small><h1>Attendance</h1><p>Manage daily attendance, monthly records and student participation.</p></div>
         </div>
         <div className="attendance-heading__actions">
-          <button type="button" className="attendance-action" onClick={openAttendanceImport} disabled={!batch}><Upload size={16} /> Import Attendance</button>
           <button type="button" className="attendance-action" onClick={printRegister} disabled={!formattedRows.length}><Printer size={16} /> Print</button>
           <button type="button" className="attendance-action" onClick={exportExcel} disabled={!formattedRows.length}><FileSpreadsheet size={16} /> Export Excel</button>
           <button type="button" className="attendance-action attendance-action--primary" onClick={() => saveRegister({ silent: false })} disabled={saving || loading || !rows.length}><Save size={16} /> {saving ? "Saving…" : "Save Attendance"}</button>
@@ -736,8 +708,9 @@ const Attendance = () => {
         batches={batches} batch={batch} onBatchChange={setBatch}
         year={year} yearOptions={yearOptions} onYearChange={setYear}
         month={month} months={visibleMonths} onMonthChange={handleMonthClick}
-        disabled={loading || saving || hasUnsavedChanges}
-        repeatDisabled={loading || !rows.length} onRepeat={repeatAttendance}
+        disabled={loading || saving || hasUnsavedChanges || reordering}
+        repeatDisabled={loading || reordering || !rows.length} onRepeat={repeatAttendance}
+        searchQuery={studentSearch} onSearchChange={setStudentSearch}
       />
 
       <section className="attendance-register-card">
@@ -745,6 +718,9 @@ const Attendance = () => {
           <AttendanceTable
             days={days}
             rows={formattedRows}
+            searchQuery={studentSearch}
+            onMoveRow={moveRegisterRow}
+            reorderDisabled={loading || saving || hasUnsavedChanges || reordering}
             dayNotes={dayNotes}
             onRowsChange={handleRowsChange}
             onSaveDayNote={saveDayNote}
@@ -754,7 +730,7 @@ const Attendance = () => {
             onOpenFeeCollection={openFeeCollection}
             canManageMembership={["academy_owner", "super_admin"].includes(user?.role)}
             statusUpdatingIds={statusUpdatingIds}
-            loading={loading}
+            loading={loading || reordering}
           />
         </div>
 

@@ -1,10 +1,11 @@
-import { CalendarDays, RefreshCcw } from "lucide-react";
+import { CalendarDays, RefreshCcw, Search, X } from "lucide-react";
 import MartialArtIcon from "../common/iconOptions/MartialArtIcon.jsx";
 import styles from "./AttendanceControls.module.css";
 
 export default function AttendanceControls({
   batches, batch, onBatchChange, year, yearOptions, onYearChange,
   month, months, onMonthChange, disabled, repeatDisabled, onRepeat,
+  searchQuery = "", onSearchChange,
 }) {
   return (
     <section className={styles.panel} aria-label="Attendance batch and period">
@@ -23,6 +24,13 @@ export default function AttendanceControls({
           </div>
           {!batches.length && <p className={styles.empty}>No active batches available.</p>}
         </div>
+        {onSearchChange && <div className={styles.search}>
+          <Search size={18} aria-hidden="true" />
+          <input type="search" aria-label="Search attendance students"
+            placeholder="Search name, phone or admission…" value={searchQuery}
+            onChange={(event) => onSearchChange(event.target.value)} />
+          {searchQuery && <button type="button" aria-label="Clear student search" onClick={() => onSearchChange("")}><X size={16} /></button>}
+        </div>}
         <label className={styles.year}>
           <CalendarDays size={20} aria-hidden="true" />
           <select aria-label="Year" value={year} onChange={(event) => onYearChange(Number(event.target.value))} disabled={disabled}>

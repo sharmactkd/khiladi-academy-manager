@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   ChevronDown, Download, Edit3,
-  FileText, Filter, Printer, Search, Trash2, Upload,
+  FileText, Filter, Printer, Search, Trash2,
   UserCheck, UserPlus, UsersRound, UserX, X,
 } from "lucide-react";
 import { studentApi } from "../../api/studentApi.js";
@@ -11,7 +11,6 @@ import { batchApi } from "../../api/batchApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { academyApi } from "../../api/academyApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
-import StudentImportModal from "../../components/students/StudentImportModal.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import { printDataTable } from "../../utils/securePrint.js";
@@ -63,7 +62,6 @@ const Students = () => {
   const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [importModalOpen, setImportModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkActionWorking, setBulkActionWorking] = useState(false);
@@ -555,33 +553,6 @@ const Students = () => {
     }
   };
 
-  const handleImportStudents = async (payload) => {
-    try {
-      const response = await studentApi.importBulk(payload);
-      const summary = response?.data || response || {};
-
-      if (!summary.imported && summary.failed) {
-        const firstError = summary.errors?.[0]?.message;
-        throw new Error(
-          firstError
-            ? `No student imported: ${firstError}`
-            : "No student could be imported. Please check the mapped columns."
-        );
-      }
-
-      toast.success(
-        `Import complete: ${summary.imported || 0} imported, ${
-          summary.skipped || 0
-        } skipped, ${summary.failed || 0} failed`
-      );
-
-      await Promise.all([fetchBranches(), fetchBatches(), fetchStudents()]);
-      return summary;
-    } catch (error) {
-      throw error;
-    }
-  };
-
   const handleDelete = async (student) => {
     const fullName = getStudentFullName(student);
 
@@ -617,14 +588,6 @@ const Students = () => {
 
   return (
     <div className="page students-page">
-      <StudentImportModal
-        open={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        onImport={handleImportStudents}
-        branches={branches}
-        batches={batches}
-      />
-
       <AcademyHeroHeader
         headingId="students-academy-name"
         academyName={academy?.academyName || "KHILADI Academy"}
@@ -658,9 +621,6 @@ const Students = () => {
           <p>Manage academy students, profiles and enrollment records.</p>
         </div>
         <div className="students-heading-card__actions">
-          <button type="button" className="students-button" onClick={() => navigate("/imports?type=students")}>
-            <Upload size={17} /> Import Excel
-          </button>
           <div className="students-export">
             <button type="button" className="students-button" onClick={() => setExportMenuOpen((open) => !open)} aria-expanded={exportMenuOpen}>
               <Download size={17} /> Export <ChevronDown size={15} />
@@ -719,14 +679,6 @@ const Students = () => {
   /* Legacy markup kept below temporarily unreachable during the scoped redesign. */
   return (
     <div className="page">
-      <StudentImportModal
-        open={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        onImport={handleImportStudents}
-        branches={branches}
-        batches={batches}
-      />
-
       <div className="page-header">
         <div>
           <h1>Students</h1>
@@ -776,14 +728,6 @@ const Students = () => {
           >
             <Printer size={16} />
             Print
-          </button>
-
-          <button
-            type="button"
-            className="btn"
-            onClick={() => navigate("/imports?type=students")}
-          >
-            <Upload size={16} /> Import Excel
           </button>
 
           <Link className="btn btn-primary" to="/students/new">

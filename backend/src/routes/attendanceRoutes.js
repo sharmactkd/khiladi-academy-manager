@@ -10,6 +10,7 @@ import {
   getMonthlyRegister,
   getYearlyRegister,
   saveMonthlyRegister,
+  moveMonthlyRegisterRow,
   previewAttendanceImport,
   importOldAttendance,
   upsertAttendanceDayNote,
@@ -42,6 +43,7 @@ router.use(requireResolvedAcademy);
 router.get("/monthly-register", getMonthlyRegister);
 router.get("/yearly-register", getYearlyRegister);
 router.post("/monthly-register", saveMonthlyRegister);
+router.patch("/monthly-register/order", moveMonthlyRegisterRow);
 router.put("/day-note", upsertAttendanceDayNote);
 router.delete("/day-note", removeAttendanceDayNote);
 

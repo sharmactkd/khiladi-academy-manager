@@ -10,6 +10,7 @@ import {
   getStudentYearlyAttendanceProfile,
   getYearlyAttendanceRegister,
   saveMonthlyAttendanceRegister,
+  moveMonthlyAttendanceRow,
 } from "../services/monthlyAttendanceService.js";
 
 const startOfDay = (value) => {
@@ -1041,6 +1042,12 @@ export const saveMonthlyRegister = asyncHandler(async (req, res) => {
   });
 
   return successResponse(res, "Monthly attendance register saved", data);
+});
+
+export const moveMonthlyRegisterRow = asyncHandler(async (req, res) => {
+  const { batch, month, year, rowKey, position, revision } = req.body;
+  const data = await moveMonthlyAttendanceRow({ academyId: req.academyId, batchId: batch, month, year, rowKey, position, revision });
+  return successResponse(res, "Attendance row order saved", data);
 });
 
 export const upsertAttendanceDayNote = asyncHandler(async (req, res) => {

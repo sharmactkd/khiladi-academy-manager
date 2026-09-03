@@ -5,6 +5,8 @@ import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import FeePayment from "../models/FeePayment.js";
 import AttendanceDayNote from "../models/AttendanceDayNote.js";
+import AttendanceRowOrder from "../models/AttendanceRowOrder.js";
+import { applyRowOrder, moveRowKeys } from "../utils/attendanceRowOrder.js";
 import { getMembershipMap } from "./membershipService.js";
 
 const STATUS_MAP = {
@@ -592,15 +594,43 @@ export const getMonthlyAttendanceRegister = async ({
     attendanceDocs,
   });
 
+  const order = await AttendanceRowOrder.findById(`${academyObjectId}:${batchObjectId}:${numericYear}:${numericMonth}`).lean();
+  const orderedRows = applyRowOrder(rows.map((row) => ({ ...row, registerOrderKey: getAttendanceRegisterRowKey(row) })), order?.keys || []);
   return {
+    orderRevision: order?.revision || 0,
     month: numericMonth,
     year: numericYear,
     batch,
     days,
     dayNotes,
     students,
-    rows,
+    rows: orderedRows,
   };
+};
+
+export const moveMonthlyAttendanceRow = async ({ academyId, batchId, month, year, rowKey, position, revision }) => {
+  if (!Number.isInteger(Number(month)) || Number(month) < 1 || Number(month) > 12 || !Number.isInteger(Number(year)) || Number(year) < 2000 || Number(year) > 2100) {
+    throw Object.assign(new Error("Valid month and year are required"), { statusCode: 400 });
+  }
+  const register = await getMonthlyAttendanceRegister({ academyId, batchId, month, year });
+  if (!Number.isInteger(revision) || revision !== register.orderRevision) {
+    const error = new Error("Order changed in another window. Refresh and try again.");
+    error.statusCode = 409;
+    throw error;
+  }
+  const keys = moveRowKeys(register.rows.map((row) => row.registerOrderKey), rowKey, position);
+  const orderId = `${academyId}:${batchId}:${Number(year)}:${Number(month)}`;
+  try {
+    const saved = await AttendanceRowOrder.findOneAndUpdate({ _id: orderId, revision }, {
+      $set: { academy: academyId, batch: batchId, month: Number(month), year: Number(year), keys },
+      $inc: { revision: 1 },
+    }, { upsert: revision === 0, new: true, runValidators: true });
+    if (!saved) throw Object.assign(new Error("Order changed. Refresh and try again."), { statusCode: 409 });
+    return { ...register, orderRevision: saved.revision, rows: applyRowOrder(register.rows, keys) };
+  } catch (error) {
+    if (error.code === 11000) throw Object.assign(new Error("Order changed. Refresh and try again."), { statusCode: 409 });
+    throw error;
+  }
 };
 
 export const getYearlyAttendanceRegister = async ({ academyId, batchId, year }) => {
