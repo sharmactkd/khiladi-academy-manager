@@ -51,7 +51,7 @@ test("search lives in batch/year controls, not a duplicate toolbar", () => {
   const controls = readFileSync(new URL("../src/components/attendance/AttendanceControls.jsx", import.meta.url), "utf8");
   assert.match(controls, /Search attendance students/);
 });
-test("only active rows sort; inactive, unknown and raw-import slots remain unchanged", () => {
+test("active rows sort first; inactive follow, then unknown/raw-import rows", () => {
   const data = [
     { status: "active", feeDueDate: "2026-09-20", feeStatus: "Paid" },
     { status: "inactive", feeDueDate: "2026-09-01", feeStatus: "Due" },
@@ -62,11 +62,11 @@ test("only active rows sort; inactive, unknown and raw-import slots remain uncha
   const before = JSON.stringify(data);
   for (const sorts of [[{ key: "dueDate" }], [{ key: "feeStatus" }, { key: "dueDate", direction: "desc" }]]) {
     const result = buildAttendanceRowView(data, "", sorts);
-    assert.deepEqual(result.map((x) => x.sourceIndex), [2, 1, 0, 3, 4]);
-    assert.equal(result[1].row, data[1]);
+    assert.deepEqual(result.map((x) => x.sourceIndex), [2, 0, 1, 3, 4]);
+    assert.equal(result[2].row, data[1]);
     assert.equal(result[3].row, data[3]);
   }
-  assert.deepEqual(buildAttendanceRowView(data, "", []).map((x) => x.sourceIndex), [0, 1, 2, 3, 4]);
+  assert.deepEqual(buildAttendanceRowView(data, "", []).map((x) => x.sourceIndex), [0, 2, 1, 3, 4]);
   assert.equal(JSON.stringify(data), before);
 });
 test("inactive-only searches preserve source order even when sorting is enabled", () => {
@@ -89,7 +89,20 @@ test("fee status sorts by displayed label, blanks last both ways", () => {
   assert.deepEqual(indices("", { key: "feeStatus", direction: "asc" }), [1, 0, 2]);
   assert.deepEqual(indices("", { key: "feeStatus", direction: "desc" }), [0, 1, 2]);
   const raw = [{ rowType: "raw-import", feeStatus: "Paid", importedFeeStatus: "Due" }, rows[0]];
-  assert.equal(buildAttendanceRowView(raw, "", { key: "feeStatus" })[0].sourceIndex, 0);
+  assert.equal(buildAttendanceRowView(raw, "", { key: "feeStatus" })[0].sourceIndex, 1);
+});
+test("newly inactive row moves directly below last active, retaining edit identity", () => {
+  const data = [
+    {studentId:'old', status:'inactive', statusUpdatedAt:'2026-01-01'},
+    {studentId:'a', status:'active'},
+    {studentId:'changed', status:'inactive', statusUpdatedAt:'2026-09-03'},
+    {studentId:'b', status:'active'},
+  ];
+  const result = buildAttendanceRowView(data);
+  assert.deepEqual(result.map(x=>x.row.studentId), ['a','b','changed','old']);
+  assert.equal(result[2].sourceIndex, 2);
+  const reactivated = data.map(r=>r.studentId === 'changed' ? {...r,status:'active'} : r);
+  assert.deepEqual(buildAttendanceRowView(reactivated).map(x=>x.row.studentId), ['a','changed','b','old']);
 });
 test("membership effective due date takes precedence; day-only legacy data uses selected month", () => {
   assert.equal(dueDateSortValue({ ...rows[0], membership: { effectiveDueDate: "2026-09-01" } }), Date.UTC(2026, 8, 1));

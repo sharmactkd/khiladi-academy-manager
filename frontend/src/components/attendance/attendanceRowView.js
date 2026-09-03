@@ -58,9 +58,12 @@ export const buildAttendanceRowView = (rows, query = "", sort = [], monthDate = 
       (phoneQuery && [row.contact, row.importedPhone].some((value) => text(value).replace(/\D/g, "").includes(digits)));
   });
   const sorts = (Array.isArray(sort) ? sort : [sort]).filter((item) => ["dueDate", "feeStatus"].includes(item.key));
-  if (!sorts.length) return view;
   const isActive = ({ row }) => text(row.status).toLowerCase() === "active" && row.rowType !== "raw-import";
   const activeRows = view.filter(isActive);
+  const inactiveRows = view.filter(({ row }) => text(row.status).toLowerCase() === "inactive" && row.rowType !== "raw-import");
+  const timestamp = row => Number.isFinite(Date.parse(row.statusUpdatedAt)) ? Date.parse(row.statusUpdatedAt) : 0;
+  inactiveRows.sort((a, b) => timestamp(b.row) - timestamp(a.row) || a.sourceIndex - b.sourceIndex);
+  const otherRows = view.filter(entry => !isActive(entry) && !(text(entry.row.status).toLowerCase() === "inactive" && entry.row.rowType !== "raw-import"));
   const sortValues = new Map(activeRows.map(({ row, sourceIndex }) => [sourceIndex, sorts.map((item) =>
     item.key === "dueDate" ? dueDateSortValue(row, monthDate)
       : missing(getFeeStatusValue(row)) ? null : text(getFeeStatusValue(row)).toLowerCase())]));
@@ -76,9 +79,9 @@ export const buildAttendanceRowView = (rows, query = "", sort = [], monthDate = 
     }
     return a.sourceIndex - b.sourceIndex;
   });
-  // Keep every non-active row in its original slot; only reorder active slots.
-  let activeIndex = 0;
-  return view.map((entry) => isActive(entry) ? activeRows[activeIndex++] : entry);
+  // Status groups take precedence over saved manual order and column sorting.
+  // Keep sourceIndex unchanged so attendance edits still target the correct row.
+  return [...activeRows, ...inactiveRows, ...otherRows];
 };
 
 // Always patch the complete register, never the filtered/sorted view.

@@ -597,15 +597,15 @@ const AttendanceTable = ({
                     <button type="button" className="attendance-serial-button"
                       disabled={!onMoveRow || reorderDisabled}
                       title="Double-click to move this student to another serial number (Enter also works)"
-                      aria-label={`Serial ${rowIndex + 1}: move ${row.name || row.importedName || "student"}`}
-                      onDoubleClick={async () => { if (await onMoveRow?.(row, rowIndex + 1)) setSort([]); }}
+                      aria-label={`Serial ${virtualRow.index + 1}: move ${row.name || row.importedName || "student"}`}
+                      onDoubleClick={async () => { if (await onMoveRow?.(row, virtualRow.index + 1)) setSort([]); }}
                       onKeyDown={async (event) => {
                         if (event.key === "Enter") {
                           event.preventDefault();
-                          if (await onMoveRow?.(row, rowIndex + 1)) setSort([]);
+                          if (await onMoveRow?.(row, virtualRow.index + 1)) setSort([]);
                         }
                       }}>
-                      {rowIndex + 1}
+                      {virtualRow.index + 1}
                     </button>
                   </td>
 
