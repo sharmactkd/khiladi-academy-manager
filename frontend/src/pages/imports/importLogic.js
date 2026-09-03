@@ -7,6 +7,10 @@ export const id = value => String(value?._id || value || "");
 export const unwrap = response => response?.data?.data ?? response?.data ?? response;
 export const list = (response, key) => { const data = unwrap(response); return Array.isArray(data) ? data : data?.[key] || []; };
 
+export function importCandidates(items, decisions, target = "all") {
+  return items.filter(item => decisions[item.key] && decisions[item.key] !== "__skip__" && (target !== "new" || decisions[item.key] === "__new__"));
+}
+
 // Called only after a successful, validated fetch of the full student list.
 // This stages choices; it never writes student records.
 export function prepareImportChoices(items, students, batch, previous = {}) {
@@ -19,6 +23,10 @@ export function prepareImportChoices(items, students, batch, previous = {}) {
     if (!students.length) { next[item.key] = "__new__"; continue; }
     const value = suggest(item, students, batch)?.value;
     if (value && !used.has(value)) { next[item.key] = value; used.add(value); }
+    else if (!value && !students.some(s => norm(studentName(s)) === norm(item.name) || (item.row.admissionNumber && norm(s.admissionNumber) === norm(item.row.admissionNumber)))) {
+      // A different name sharing a parent's phone is a new identity, not a match.
+      next[item.key] = "__new__";
+    }
   }
   return next;
 }

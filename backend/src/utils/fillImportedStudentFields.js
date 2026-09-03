@@ -22,3 +22,7 @@ export function replaceReviewedStudentFields(existing, normalized, raw) {
   }
   return changed;
 }
+
+export function overwriteImportedStudentFields(existing, normalized, raw) {
+  return replaceReviewedStudentFields(existing, normalized, { ...raw, replaceFields: IMPORT_UPDATABLE_FIELDS });
+}

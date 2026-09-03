@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { directory, suggest, prepareImportChoices, attendancePayloads, chunks, safeCsv } from '../src/pages/imports/importLogic.js';
-import { fillImportedStudentFields, replaceReviewedStudentFields } from '../../backend/src/utils/fillImportedStudentFields.js';
+import { directory, suggest, prepareImportChoices, importCandidates, attendancePayloads, chunks, safeCsv } from '../src/pages/imports/importLogic.js';
+import { fillImportedStudentFields, replaceReviewedStudentFields, overwriteImportedStudentFields } from '../../backend/src/utils/fillImportedStudentFields.js';
 const existing = [{ _id:'s1', firstName:'Adi', lastName:'Jain', phone:'9999999999', batch:'b1', dateOfBirth:'2010-01-01' }];
 const item = { name:'Adi Jain', phone:'9999999999', row:{} };
 test('wizard separates mapping, selection, matching and final save steps', () => {
@@ -24,8 +24,20 @@ test('empty app stages all selected Excel profiles without creating any records'
 test('explicit exclusion remains excluded when app is empty', () => {
  assert.deepEqual(prepareImportChoices([{...item,key:'a'}, {...item,key:'b'}], [], 'b1', { a:'__skip__' }), { a:'__skip__', b:'__new__' });
 });
-test('nonempty app does not default unmatched students to new records', () => {
- assert.deepEqual(prepareImportChoices([{ name:'Unmatched', row:{}, key:'a' }], existing, 'b1'), {});
+test('different names sharing a phone stage new; same-name ambiguity requires review', () => {
+ assert.deepEqual(prepareImportChoices([{ name:'Unmatched', phone:'9999999999', row:{}, key:'a' }], existing, 'b1'), {a:'__new__'});
+ assert.deepEqual(prepareImportChoices([{name:'Adi Jain',row:{},key:'b'}],existing,'b1'), {});
+});
+test('new-only excludes all existing students and unresolved/excluded identities', () => {
+ const items=['a','b','c','d'].map(key=>({key}));
+ const decisions={a:'__new__',b:'s1',c:'__skip__'};
+ assert.deepEqual(importCandidates(items,decisions,'new').map(i=>i.key),['a']);
+ assert.deepEqual(importCandidates(items,decisions,'all').map(i=>i.key),['a','b']);
+});
+test('overwrite changes supplied supported fields, never identity or blank data', () => {
+ const current={schoolName:'Old',phone:'111',firstName:'Kept',status:'active'};
+ overwriteImportedStudentFields(current,{schoolName:'New',phone:'',firstName:'Wrong',status:'inactive'},{schoolName:'New',phone:'',firstName:'Wrong',status:'inactive'});
+ assert.deepEqual(current,{schoolName:'New',phone:'111',firstName:'Kept',status:'active'});
 });
 test('safe matches remain unique and preserved choices are not overwritten', () => {
  const items = [{...item,key:'a'}, {...item,key:'b'}];

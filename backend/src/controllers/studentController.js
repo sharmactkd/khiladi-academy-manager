@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { fillImportedStudentFields, replaceReviewedStudentFields } from "../utils/fillImportedStudentFields.js";
+import { fillImportedStudentFields, replaceReviewedStudentFields, overwriteImportedStudentFields } from "../utils/fillImportedStudentFields.js";
 
 import Student from "../models/Student.js";
 import Branch from "../models/Branch.js";
@@ -711,8 +711,8 @@ export const importStudents = asyncHandler(async (req, res) => {
           if (!existing) throw new Error("Confirmed student no longer exists in this academy");
           if (existing.batch && String(existing.batch) !== String(resolvedDestination.batch._id)) throw new Error("Confirmed student belongs to another batch");
         }
-        if (existing && ["fill-empty", "review"].includes(req.body.existingPolicy)) {
-          const changed = req.body.existingPolicy === "review" ? replaceReviewedStudentFields(existing, studentPayload, row) : fillImportedStudentFields(existing, studentPayload, row);
+        if (existing && ["fill-empty", "review", "overwrite"].includes(req.body.existingPolicy)) {
+          const changed = req.body.existingPolicy === "overwrite" ? overwriteImportedStudentFields(existing, studentPayload, row) : req.body.existingPolicy === "review" ? replaceReviewedStudentFields(existing, studentPayload, row) : fillImportedStudentFields(existing, studentPayload, row);
           if (changed.length) { existing.updatedBy = userId; await existing.save(); summary.updated += 1; }
         }
       }
