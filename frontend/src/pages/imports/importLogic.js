@@ -7,6 +7,22 @@ export const id = value => String(value?._id || value || "");
 export const unwrap = response => response?.data?.data ?? response?.data ?? response;
 export const list = (response, key) => { const data = unwrap(response); return Array.isArray(data) ? data : data?.[key] || []; };
 
+// Called only after a successful, validated fetch of the full student list.
+// This stages choices; it never writes student records.
+export function prepareImportChoices(items, students, batch, previous = {}) {
+  const known = new Set(students.map(id));
+  const next = Object.fromEntries(Object.entries(previous).filter(([, value]) =>
+    value === "__new__" || value === "__skip__" || known.has(value)));
+  const used = new Set(Object.values(next).filter(value => value && !value.startsWith("__")));
+  for (const item of items) {
+    if (next[item.key]) continue;
+    if (!students.length) { next[item.key] = "__new__"; continue; }
+    const value = suggest(item, students, batch)?.value;
+    if (value && !used.has(value)) { next[item.key] = value; used.add(value); }
+  }
+  return next;
+}
+
 export function directory(records, blocks) {
   const items = records.map(row => ({ key: `record:${row.sourceRowKey}`, row, name: row.name, phone: row.phone || "", record: true, attendance: [], sources: [row.sourceSheet] }));
   const groups = new Map();

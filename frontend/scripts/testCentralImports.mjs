@@ -1,9 +1,40 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { directory, suggest, attendancePayloads, chunks, safeCsv } from '../src/pages/imports/importLogic.js';
+import { readFileSync } from 'node:fs';
+import { directory, suggest, prepareImportChoices, attendancePayloads, chunks, safeCsv } from '../src/pages/imports/importLogic.js';
 import { fillImportedStudentFields, replaceReviewedStudentFields } from '../../backend/src/utils/fillImportedStudentFields.js';
 const existing = [{ _id:'s1', firstName:'Adi', lastName:'Jain', phone:'9999999999', batch:'b1', dateOfBirth:'2010-01-01' }];
 const item = { name:'Adi Jain', phone:'9999999999', row:{} };
+test('wizard separates mapping, selection, matching and final save steps', () => {
+ const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
+ assert.match(source, /\["setup", "mapping", "scope", "review", "confirm", "result"\]/);
+ assert.match(source, /Details found in Excel/);
+ assert.match(source, /Only attendance found in Excel/);
+ assert.doesNotMatch(source, /Record available|Players & mapping/);
+ assert.match(source, /Array\.isArray\(savedStudents\)/);
+ const final = source.split('\n').find(line => line.includes('onClick={() => execute(false)}'));
+ assert.match(final, /phase === "confirm"/);
+});
+test('empty app stages all selected Excel profiles without creating any records', () => {
+ const input = [{ ...item, key:'a', record:true }, { name:'Prachi', row:{}, key:'b', record:false }];
+ const before = JSON.stringify(input);
+ assert.deepEqual(prepareImportChoices(input, [], 'b1'), { a:'__new__', b:'__new__' });
+ assert.equal(JSON.stringify(input), before);
+});
+test('explicit exclusion remains excluded when app is empty', () => {
+ assert.deepEqual(prepareImportChoices([{...item,key:'a'}, {...item,key:'b'}], [], 'b1', { a:'__skip__' }), { a:'__skip__', b:'__new__' });
+});
+test('nonempty app does not default unmatched students to new records', () => {
+ assert.deepEqual(prepareImportChoices([{ name:'Unmatched', row:{}, key:'a' }], existing, 'b1'), {});
+});
+test('safe matches remain unique and preserved choices are not overwritten', () => {
+ const items = [{...item,key:'a'}, {...item,key:'b'}];
+ assert.deepEqual(prepareImportChoices(items, existing, 'b1'), {a:'s1'});
+ assert.deepEqual(prepareImportChoices(items, existing, 'b1', {a:'__new__'}), {a:'__new__',b:'s1'});
+});
+test('deleted existing student choices do not survive a fresh empty-app check', () => {
+ assert.deepEqual(prepareImportChoices([{...item,key:'a'}], [], 'b1', {a:'deleted-id'}), {a:'__new__'});
+});
 test('name and phone must agree; phone-only does not auto-match', () => {
  assert.equal(suggest(item,existing,'b1').value,'s1');
  assert.equal(suggest({...item,name:'Other Student'},existing,'b1').value,'');

@@ -256,11 +256,12 @@ const mergeStudentRows = (rows = []) => {
   const map = new Map();
 
   rows.forEach((row) => {
-    const key =
-      row.phone ||
-      row.admissionNumber ||
-      normalizeKey(row.name) ||
-      `row-${row.importedRowNumber || row.rowNumber}`;
+    // A contact number may belong to a parent and be shared by siblings.
+    // Never collapse different names (or conflicting identifiers) by phone.
+    const name = normalizeKey(row.name);
+    const key = name
+      ? JSON.stringify([name, normalizePhone(row.phone), normalizeKey(row.admissionNumber)])
+      : JSON.stringify([row.sourceSheet, row.importedRowNumber || row.rowNumber]);
 
     if (!map.has(key)) {
       map.set(key, {

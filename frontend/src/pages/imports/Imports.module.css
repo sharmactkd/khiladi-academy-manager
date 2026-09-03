@@ -33,4 +33,34 @@
 .badge,.warnBadge { display:inline-block; padding:4px 8px; border-radius:6px; background:#eef8f3; color:#197149; font-size:10px; }.warnBadge { background:#fff5e6; color:#976500; }
 .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }.stats article { padding:14px; border:1px solid #dce5ee; border-radius:10px; }.stats strong { display:block; font-size:23px; }
 .page a { color:#cf0009; font-size:12px; }
+.matchingCard { min-width:0; }
+.emptyAppNotice { padding:16px; margin:0 0 18px; border:1px solid #bcdccc; border-radius:10px; background:#f1faf5; color:#215c3c; }
+.page .emptyAppNotice p { margin:6px 0 0; color:#446c56; }
+.page select.newStudentChoice { border-color:#a9d4bc; background:#f5fbf7; }
+.steps { margin-bottom:18px; }
+.steps span { line-height:1.5; }
+.matchTabs { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding-bottom:18px; margin-bottom:18px; border-bottom:1px solid #e6ecf2; }
+.page .matchTabs button { min-height:42px; gap:10px; font-weight:600; }
+.matchTabs button span { min-width:24px; padding:2px 7px; border-radius:5px; font-size:11px; line-height:18px; background:#edf1f6; color:#5d6d81; }
+.matchTabs button[aria-pressed="true"] span { background:#ffffff26; color:#fff; }
+.matchFilters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; align-items:end; }
+.page .matchingCard label { min-width:0; margin:0; gap:8px; line-height:1.4; font-weight:600; color:#45566d; }
+.page .matchFilters select { min-width:0; margin:0; font-weight:400; }
+.page .matchSearch { display:flex; align-items:center; gap:9px; width:100%; min-width:0; height:42px; box-sizing:border-box; padding:0 12px; border:1px solid #cbd7e5; border-radius:8px; background:#fff; color:#718198; }
+.matchSearch > svg { flex:0 0 17px; }
+.page .matchSearch input { flex:1; min-width:0; width:100%; height:100%; min-height:0; padding:0; margin:0; border:0; border-radius:0; outline:none; background:transparent; box-shadow:none; font-weight:400; }
+.page .matchSearch:focus-within { border-color:#d00009; box-shadow:0 0 0 3px #d000090d; }
+.page .matchHelp { padding:12px 14px; margin:16px 0 20px; border:1px solid #e2eaf3; border-radius:9px; background:#f7f9fc; color:#61738a; line-height:1.7; }
+.matchToolbar { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; margin:18px 0; }
+.page .workbookSearch { flex:1 1 260px; max-width:430px; }
+.page .stageButton { margin-left:auto; min-height:42px; color:#bd0008; border-color:#efbbc0; background:#fff8f8; }
+.page .matchingTable { margin:18px 0; }
+.page .matchingTable table { table-layout:fixed; min-width:800px; }
+.page .matchingTable th { white-space:normal; overflow-wrap:anywhere; line-height:1.5; }
+.page .matchingTable td { display:table-cell; min-width:0; white-space:normal; overflow-wrap:anywhere; line-height:1.6; padding:14px 12px; }
+.page .matchingTable td small { margin:5px 0; line-height:1.6; }
+.page .matchingTable select { width:100%; min-width:0; margin:5px 0; }
+.page .matchingCard button:focus-visible,.page .matchingCard select:focus-visible { outline:2px solid #d00009; outline-offset:2px; }
+@media(max-width:1000px) { .matchFilters { grid-template-columns:repeat(2,minmax(0,1fr)); }.matchFilters > label:last-child { grid-column:1/-1; } }
+@media(max-width:600px) { .matchFilters { grid-template-columns:1fr; }.page .workbookSearch { max-width:none; flex-basis:100%; }.page .stageButton { margin-left:0; width:100%; }.matchTabs { gap:8px; }.page .matchTabs button { padding:8px 10px; } }
 @media(max-width:800px) { .mapping,.sheetGrid { grid-template-columns:1fr; }.stats { grid-template-columns:repeat(2,1fr); }.heading { align-items:flex-start; }.card { padding:14px; } }
