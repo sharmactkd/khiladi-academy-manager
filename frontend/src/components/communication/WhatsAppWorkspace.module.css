@@ -1,0 +1,24 @@
+.workspace { display:grid; gap:18px; color:#172b4d; }
+.workspace h2,.workspace h3,.workspace h4 { margin:0 0 8px; }
+.workspace p,.workspace small { color:#61748c; line-height:1.6; }
+.notice { padding:15px 18px; border:1px solid #cddfeb; border-radius:12px; background:#f1f8fe; line-height:1.6; }
+.columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px; }
+.card { padding:22px; background:white; border:1px solid #dce4ee; border-radius:16px; min-width:0; }
+.workspace label { display:grid; gap:7px; font-size:13px; margin-bottom:12px; }
+.workspace input:not([type=checkbox]),.workspace select,.workspace textarea { box-sizing:border-box; width:100%; padding:11px 12px; border:1px solid #cad6e5; border-radius:8px; background:#fff; color:#172b4d; font:inherit; }
+.workspace input[type=checkbox] { width:17px; height:17px; flex-shrink:0; accent-color:#d9000d; margin:0; }
+.workspace button,.workspace a { padding:10px 13px; border:1px solid #cdd8e6; border-radius:8px; color:#172b4d; background:white; cursor:pointer; font-size:13px; text-decoration:none; }
+.workspace button:disabled { opacity:.5; cursor:not-allowed; }
+.workspace button[aria-pressed=true] { color:#c9000c; border-color:#c9000c; background:#fff5f5; }
+.workspace .primary { background:#d9000d; color:white; border-color:#d9000d; margin-top:18px; }
+.actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0; }
+.actions label { display:flex; align-items:center; margin:0; }
+.filters { display:grid; grid-template-columns:2fr 1fr; gap:12px; margin-top:18px; }
+.students { max-height:390px; overflow:auto; border-top:1px solid #e2e8f0; }
+.workspace .student { display:flex; align-items:center; gap:12px; padding:12px 6px; margin:0; border-bottom:1px solid #edf0f5; cursor:pointer; }
+.student span { display:grid; gap:4px; }
+.recipient { border-top:1px solid #e2e8f0; padding:18px 0; }
+.recipient summary { cursor:pointer; margin:12px 0; }
+.recipient pre { white-space:pre-wrap; overflow-wrap:anywhere; padding:14px; background:#f5f8fa; border-radius:10px; font:inherit; line-height:1.7; }
+.error { padding:12px; color:#af0715!important; background:#fff2f3; border-radius:8px; }
+@media(max-width:900px) { .columns { grid-template-columns:1fr; } }

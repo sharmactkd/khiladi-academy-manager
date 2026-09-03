@@ -74,6 +74,14 @@ export function buildWhatsAppReminder(row, status, settings, displayedDates = {}
     months: String(row.membership?.unpaidMonths || ""),
   };
   let message = settings.template.replace(/\{(name|academy|status|dueDate|months|lastPaid|period)\}/g, (_, key) => values[key]).trim();
+  const pendingMonths = Number(row.membership?.unpaidMonths || String(status).match(/^(\d+)M\s+DUE$/i)?.[1] || 0);
+  if (Number.isInteger(pendingMonths) && pendingMonths > 1) {
+    const pending = `Pending Fee - ${pendingMonths} months`;
+    const periodIndex = values.period ? message.indexOf(values.period) : -1;
+    message = periodIndex >= 0
+      ? `${message.slice(0, periodIndex).trimEnd()}\n${pending}\n\n${message.slice(periodIndex)}`
+      : `${message}\n${pending}`;
+  }
   if (settings.qrUrl) message += `\nPayment QR: ${settings.qrUrl}`;
   if (settings.upiId) message += `\nUPI ID: ${settings.upiId}`;
   if (message.length > 3500) throw new Error("Message bahut lamba hai; template short karein.");

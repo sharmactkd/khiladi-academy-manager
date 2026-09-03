@@ -44,3 +44,12 @@ test('raw rows use imported paid date before fee date',()=>{
  const message=new URL(buildWhatsAppReminder({contact:'9876543210',importedPaidDate:'4/24/26',feePaidDate:'2026-04-25'},'DUE',defaultReminderSettings)).searchParams.get('text');
  assert.match(message,/Last Paid - 24 April 2026/);
 });
+test('pending fee line is added only for more than one month',()=>{
+ for(const months of [0,1,2,24]) {
+  const message=new URL(buildWhatsAppReminder({contact:'9876543210',membership:{unpaidMonths:months},feeDueDate:'2026-09-10'},'DUE',defaultReminderSettings)).searchParams.get('text');
+  if(months>1) assert.match(message,new RegExp(`Pending Fee - ${months} months`));
+  else assert.doesNotMatch(message,/Pending Fee/);
+ }
+ const message=new URL(buildWhatsAppReminder({contact:'9876543210'},'2M DUE',defaultReminderSettings)).searchParams.get('text');
+ assert.match(message,/Pending Fee - 2 months/);
+});

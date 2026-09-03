@@ -10,8 +10,8 @@ import { localDateKey, millisecondsUntilLocalMidnight } from "../../utils/localC
 import MembershipBadge, { formatDueDate as formatMembershipDueDate } from "./MembershipBadge.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import toast from "react-hot-toast";
-import WhatsAppReminderSettings from "./WhatsAppReminderSettings.jsx";
-import { defaultReminderSettings, buildWhatsAppReminder, normalizeReminderSettings, desktopReminderUrl } from "./whatsappReminder.js";
+import useWhatsAppSettings from "../communication/useWhatsAppSettings.js";
+import { buildWhatsAppReminder, desktopReminderUrl } from "./whatsappReminder.js";
 import AttendanceDayNoteDialog, {
   DAY_NOTE_OPTIONS,
 } from "./AttendanceDayNoteDialog.jsx";
@@ -230,14 +230,8 @@ const AttendanceTable = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const reminderKey = `fee-whatsapp:${user?.academy?._id || user?.academy || "academy"}:${user?._id || "user"}`;
-  const storedReminder = useMemo(() => {
-    try { return normalizeReminderSettings(JSON.parse(localStorage.getItem(reminderKey) || "{}")); }
-    catch { return {...defaultReminderSettings}; }
-  }, [reminderKey]);
-  const [reminderOverride, setReminderOverride] = useState(null);
+  const {key: reminderKey, value: reminderSettings} = useWhatsAppSettings(user);
   const [whatsappFallback, setWhatsAppFallback] = useState(null);
-  const reminderSettings = reminderOverride?.key === reminderKey ? reminderOverride.value : storedReminder;
   const openWhatsApp = (row) => {
     try {
       const isStudent = row.rowType === "student" && row.studentId;
@@ -468,10 +462,6 @@ const AttendanceTable = ({
 
   return (
     <>
-      <WhatsAppReminderSettings key={reminderKey} value={reminderSettings} onSave={value => {
-        localStorage.setItem(reminderKey, JSON.stringify(value));
-        setReminderOverride({key:reminderKey,value});
-      }}/>
       {whatsappFallback?.key === reminderKey && <div role="status" style={{padding:10}}>WhatsApp app nahi khuli? <a href={whatsappFallback.url} target="_blank" rel="noopener noreferrer">Open browser chat for {whatsappFallback.name}</a> <button type="button" onClick={()=>setWhatsAppFallback(null)}>Dismiss</button></div>}
       <div ref={tableScrollRef} className="monthly-register-table-wrap">
         <table

@@ -12,8 +12,10 @@ import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import useCommunicationHub from "./hooks/useCommunicationHub.js";
 import { joinAddress } from "./communicationHub.utils.js";
 import styles from "./CommunicationHub.module.css";
+import WhatsAppWorkspace from "../../components/communication/WhatsAppWorkspace.jsx";
 
 const tabs = [
+  { id: "whatsapp", label: "WhatsApp", icon: MessageSquareText },
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "announcements", label: "Announcements", icon: Megaphone },
   { id: "reminders", label: "Reminders", icon: Send },
@@ -33,6 +35,7 @@ const CommunicationHub = () => {
     <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><ChevronRight size={13}/><strong>Communication Hub</strong></nav>
     <header className={styles.heading}><span><MessageSquareText size={25}/></span><div><small>Connected academy</small><h1>Communication Hub</h1><p>Announcements, reminders, family access, delivery records and notifications in one secure workspace.</p></div></header>
     <nav className={styles.tabs}>{tabs.map((tab) => { const Icon = tab.icon; return <button type="button" key={tab.id} className={active === tab.id ? styles.activeTab : ""} onClick={() => setTab(tab.id)}><Icon size={17}/><span>{tab.label}</span>{tab.id === "inbox" && state.unreadCount ? <b>{state.unreadCount}</b> : null}</button>; })}</nav>
+    {active === "whatsapp" ? <WhatsAppWorkspace user={state.user} branches={state.branches} batches={state.batches}/> : null}
     {state.error ? <div className={styles.error}>{state.error}<button type="button" onClick={state.refresh}>Retry</button></div> : null}
     {state.loading ? <div className={styles.loading}><RefreshCw size={27}/><strong>Opening communication workspace...</strong><span>Loading announcements, access controls and delivery activity.</span></div> : <main>{active === "overview" ? <CommunicationOverview state={state} styles={styles} onTab={setTab}/> : null}{active === "announcements" ? <AnnouncementsPanel announcements={state.announcements} onArchive={state.archiveAnnouncement} styles={styles}/> : null}{active === "reminders" ? <ReminderComposer batches={state.batches} canManageFees={state.canManageFees} initialType={params.get("type") || "attendance"} onAttendance={state.sendAttendanceReminder} onFee={state.sendFeeReminder} styles={styles}/> : null}{active === "parent-access" ? <ParentAccessPanel links={state.parentLinks} onDeactivate={state.deactivateParentLink} styles={styles}/> : null}{active === "logs" ? <DeliveryLogsPanel logs={state.logs} pagination={state.logPagination} styles={styles}/> : null}{active === "inbox" ? <NotificationInbox notifications={state.notifications} unreadCount={state.unreadCount} onRead={state.markRead} onReadAll={state.markAllRead} styles={styles}/> : null}</main>}
   </div>;
