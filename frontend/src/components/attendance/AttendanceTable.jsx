@@ -631,6 +631,7 @@ const AttendanceTable = ({
                   <td className="sticky-col sticky-due-date">
                     {row.rowType === "student" && row.studentId ? (
                       <MembershipBadge
+                        dateOnly
                         membership={row.membership}
                         fallbackDueDate={getDueDateValue(row)}
                         onClick={canManageMembership ? () => onOpenMembership?.(row) : undefined}

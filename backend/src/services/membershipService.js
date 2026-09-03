@@ -156,7 +156,6 @@ export const applyMembershipAdjustment = async ({
   const type = clean(payload.type).toLowerCase();
   const reason = clean(payload.reason);
   const note = clean(payload.note);
-  if (!reason) throw createError("Adjustment reason is required");
 
   const membership = await getOrCreateMembership({ academyId, studentId });
   if (payload.expectedVersion !== undefined && Number(payload.expectedVersion) !== membership.__v) {

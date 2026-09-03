@@ -2,10 +2,15 @@ const text = (value) => String(value ?? "").trim();
 const missing = (value) => !text(value) || ["-", "—"].includes(text(value));
 
 export const getDueDateValue = (row) => row.importedDueDate || row.feeDueDate || "-";
-export const getFeeStatusValue = (row) =>
-  row.rowType === "student" && row.studentId
+export const getFeeStatusValue = (row) => {
+  const unpaidMonths = Number(row.membership?.unpaidMonths || 0);
+  if (row.rowType === "student" && row.studentId && Number.isFinite(unpaidMonths) && unpaidMonths > 0) {
+    return `${unpaidMonths}M DUE`;
+  }
+  return String(row.rowType === "student" && row.studentId
     ? row.feeStatus || row.importedFeeStatus || "-"
-    : row.importedFeeStatus || row.feeStatus || "-";
+    : row.importedFeeStatus || row.feeStatus || "-").toUpperCase();
+};
 
 // Follow the register's date conventions: DD-MM-YYYY, ISO, MM/DD/YYYY.
 export const dueDateSortValue = (row, monthDate = "") => {

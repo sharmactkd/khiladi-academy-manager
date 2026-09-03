@@ -564,14 +564,16 @@ const Attendance = () => {
     setAutoSaveError("");
   };
 
-  const handleMembershipUpdated = (studentId, membership) => {
+  const handleMembershipUpdated = (studentId, membership, adjustmentType) => {
     setRows((current) => current.map((row) =>
       String(row.studentId) === String(studentId)
         ? {
             ...row,
             membership,
             feeDueDate: membership?.effectiveDueDate || row.feeDueDate,
-            feeStatus: membership?.feeStatus || row.feeStatus,
+            feeStatus: adjustmentType === "set_fee_status" || (adjustmentType === "reversal" && row.membership?.feeStatus !== membership?.feeStatus)
+              ? membership?.feeStatus || row.feeStatus
+              : row.feeStatus,
           }
         : row
     ));

@@ -1,7 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { buildAttendanceRowView, cycleAttendanceSort, dueDateSortValue, patchAttendanceRow } from "../src/components/attendance/attendanceRowView.js";
+import { buildAttendanceRowView, cycleAttendanceSort, dueDateSortValue, patchAttendanceRow, getFeeStatusValue } from "../src/components/attendance/attendanceRowView.js";
+
+test("unpaid months display in fee status while table requests date-only membership badge", () => {
+  const row = {rowType:'student', studentId:'prachi', feeStatus:'Due', membership:{unpaidMonths:24, effectiveDueDate:'2026-09-15'}};
+  assert.equal(getFeeStatusValue(row), '24M DUE');
+  assert.equal(dueDateSortValue(row), Date.UTC(2026,8,15));
+  assert.equal(getFeeStatusValue({...row,membership:{unpaidMonths:0}}), 'DUE');
+  const source = readFileSync(new URL('../src/components/attendance/AttendanceTable.jsx',import.meta.url),'utf8');
+  assert.match(source, /<MembershipBadge\s+dateOnly/);
+});
 
 const rows = [
   { studentId: "a", rowType: "student", name: "Asha", contact: "9876-54-3210", admissionNumber: "ADM-101", feeDueDate: "2026-09-20", feeStatus: "Paid", attendance: { "2026-09-01": "P" } },

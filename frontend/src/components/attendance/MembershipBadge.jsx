@@ -64,8 +64,11 @@ const MembershipBadge = ({
   onClick,
   disabled = false,
   className = "",
+  dateOnly = false,
 }) => {
-  const badge = getMembershipDisplay(membership, fallbackDueDate);
+  const badge = dateOnly
+    ? { label: formatDueDate(membership?.effectiveDueDate || fallbackDueDate || "-"), tone: "neutral" }
+    : getMembershipDisplay(membership, fallbackDueDate);
   return (
     <button
       type="button"

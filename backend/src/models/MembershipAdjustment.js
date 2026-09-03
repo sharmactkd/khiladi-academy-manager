@@ -39,7 +39,7 @@ const membershipAdjustmentSchema = new mongoose.Schema(
     },
     days: { type: Number, default: 0 },
     months: { type: Number, default: 0 },
-    reason: { type: String, required: true, trim: true, maxlength: 300 },
+    reason: { type: String, default: "", trim: true, maxlength: 300 },
     note: { type: String, trim: true, maxlength: 1000, default: "" },
     previousState: { type: mongoose.Schema.Types.Mixed, required: true },
     nextState: { type: mongoose.Schema.Types.Mixed, required: true },

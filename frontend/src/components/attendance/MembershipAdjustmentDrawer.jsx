@@ -27,7 +27,7 @@ const ACTIONS = [
 ];
 
 const initialForm = {
-  type: "extend_days",
+  type: "set_due_date",
   days: 5,
   dueDate: "",
   remainingTrainingDays: 0,
@@ -137,7 +137,6 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
 
   const submit = async (event) => {
     event.preventDefault();
-    if (!form.reason.trim()) return toast.error("Adjustment reason likhein");
     try {
       setSaving(true);
       const response = await membershipApi.createAdjustment(student.studentId, buildPayload());
@@ -146,7 +145,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
       setMembership(nextMembership);
       setAdjustments((current) => [data.adjustment, ...current]);
       setForm((current) => ({ ...current, reason: "", note: "", internalNote: nextMembership?.internalNote || "" }));
-      onUpdated?.(student.studentId, nextMembership);
+      onUpdated?.(student.studentId, nextMembership, form.type);
       toast.success("Membership adjustment saved");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Adjustment save nahi hua");
@@ -163,7 +162,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
       const response = await membershipApi.reverseAdjustment(adjustmentId, reason);
       const nextMembership = unwrap(response).membership;
       setMembership(nextMembership);
-      onUpdated?.(student.studentId, nextMembership);
+      onUpdated?.(student.studentId, nextMembership, "reversal");
       const refreshed = unwrap(await membershipApi.getStudentMembership(student.studentId));
       setAdjustments(refreshed.adjustments || []);
       toast.success("Latest adjustment reversed");
@@ -203,7 +202,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
               {form.type === "resume" && <label className="membership-field"><span>Resume Date</span><DateInput value={form.resumeDate} onChange={(event) => updateForm("resumeDate", event.target.value)} /></label>}
               {form.type === "set_fee_status" && <label className="membership-field"><span>Fee Status</span><select value={form.feeStatus} onChange={(event) => updateForm("feeStatus", event.target.value)}><option value="paid">Paid</option><option value="due">Due</option><option value="partial">Partial</option><option value="overdue">Overdue</option><option value="waived">Waived</option><option value="complimentary">Complimentary</option></select></label>}
 
-              <label className="membership-field membership-field--wide"><span>Reason *</span><input value={form.reason} onChange={(event) => updateForm("reason", event.target.value)} maxLength="300" placeholder="Example: Approved holiday adjustment" required /></label>
+              <label className="membership-field membership-field--wide"><span>Reason (optional)</span><input value={form.reason} onChange={(event) => updateForm("reason", event.target.value)} maxLength="300" placeholder="Example: Approved holiday adjustment" /></label>
               <label className="membership-field membership-field--wide"><span>Internal Note</span><textarea value={form.internalNote} onChange={(event) => updateForm("internalNote", event.target.value)} maxLength="1000" placeholder="Example: 15 days protected; apply when training resumes" /></label>
               <label className="membership-field membership-field--wide"><span>Additional Audit Note</span><input value={form.note} onChange={(event) => updateForm("note", event.target.value)} maxLength="1000" placeholder="Optional details for this adjustment" /></label>
               <button type="submit" className="membership-save" disabled={saving}><Save />{saving ? "Saving…" : "Apply Adjustment"}</button>
