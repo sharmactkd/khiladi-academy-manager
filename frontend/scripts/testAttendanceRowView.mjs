@@ -8,6 +8,8 @@ test("unpaid months display in fee status while table requests date-only members
   assert.equal(getFeeStatusValue(row), '24M DUE');
   assert.equal(dueDateSortValue(row), Date.UTC(2026,8,15));
   assert.equal(getFeeStatusValue({...row,membership:{unpaidMonths:0}}), 'DUE');
+  assert.equal(getFeeStatusValue({...row,membership:{unpaidMonths:1}}), 'DUE');
+  assert.equal(getFeeStatusValue({...row,membership:{unpaidMonths:2}}), '2M DUE');
   const source = readFileSync(new URL('../src/components/attendance/AttendanceTable.jsx',import.meta.url),'utf8');
   assert.match(source, /<MembershipBadge\s+dateOnly/);
 });

@@ -31,6 +31,7 @@ const studentMembershipSchema = new mongoose.Schema(
     effectiveDueDate: { type: Date, default: null, index: true },
     remainingTrainingDays: { type: Number, default: 0, min: 0 },
     unpaidMonths: { type: Number, default: 0, min: 0 },
+    autoMonthlyDue: { type: Boolean, default: false },
     feeRequired: { type: Boolean, default: true },
     feeStatus: {
       type: String,

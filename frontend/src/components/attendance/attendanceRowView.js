@@ -5,7 +5,7 @@ export const getDueDateValue = (row) => row.importedDueDate || row.feeDueDate ||
 export const getFeeStatusValue = (row) => {
   const unpaidMonths = Number(row.membership?.unpaidMonths || 0);
   if (row.rowType === "student" && row.studentId && Number.isFinite(unpaidMonths) && unpaidMonths > 0) {
-    return `${unpaidMonths}M DUE`;
+    return unpaidMonths === 1 ? "DUE" : `${unpaidMonths}M DUE`;
   }
   return String(row.rowType === "student" && row.studentId
     ? row.feeStatus || row.importedFeeStatus || "-"

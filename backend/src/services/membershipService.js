@@ -4,6 +4,7 @@ import FeePayment from "../models/FeePayment.js";
 import MembershipAdjustment from "../models/MembershipAdjustment.js";
 import Student from "../models/Student.js";
 import StudentMembership from "../models/StudentMembership.js";
+import { calculateAccruedUnpaidMonths } from "../utils/membershipMonthlyDue.js";
 
 const MEMBERSHIP_FIELDS = [
   "status",
@@ -12,6 +13,7 @@ const MEMBERSHIP_FIELDS = [
   "effectiveDueDate",
   "remainingTrainingDays",
   "unpaidMonths",
+  "autoMonthlyDue",
   "feeRequired",
   "feeStatus",
   "internalNote",
@@ -68,9 +70,10 @@ export const serializeMembership = (membership) => {
     originalDueDate: source.originalDueDate,
     effectiveDueDate: source.effectiveDueDate,
     remainingTrainingDays: Number(source.remainingTrainingDays || 0),
-    unpaidMonths: Number(source.unpaidMonths || 0),
+    unpaidMonths: calculateAccruedUnpaidMonths(source),
     feeRequired: source.feeRequired !== false,
-    feeStatus: source.feeStatus,
+    feeStatus: calculateAccruedUnpaidMonths(source) > 0 ? "due" : source.feeStatus,
+    autoMonthlyDue: source.autoMonthlyDue === true,
     internalNote: source.internalNote || "",
     lastAdjustedAt: source.lastAdjustedAt,
     lastAdjustedBy: source.lastAdjustedBy,
@@ -177,6 +180,7 @@ export const applyMembershipAdjustment = async ({
       break;
     case "set_due_date":
       membership.effectiveDueDate = parseDate(payload.dueDate, "Due date");
+      membership.autoMonthlyDue = true;
       break;
     case "set_remaining_days":
       membership.remainingTrainingDays = boundedInteger(payload.remainingTrainingDays, "Remaining days", 0, 3650);

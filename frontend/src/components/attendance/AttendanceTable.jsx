@@ -7,7 +7,11 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import AttendanceCell from "./AttendanceCell.jsx";
 import AttendanceSummary from "./AttendanceSummary.jsx";
 import { localDateKey, millisecondsUntilLocalMidnight } from "../../utils/localCalendarDate.js";
-import MembershipBadge from "./MembershipBadge.jsx";
+import MembershipBadge, { formatDueDate as formatMembershipDueDate } from "./MembershipBadge.jsx";
+import useAuth from "../../hooks/useAuth.js";
+import toast from "react-hot-toast";
+import WhatsAppReminderSettings from "./WhatsAppReminderSettings.jsx";
+import { defaultReminderSettings, buildWhatsAppReminder, normalizeReminderSettings, desktopReminderUrl } from "./whatsappReminder.js";
 import AttendanceDayNoteDialog, {
   DAY_NOTE_OPTIONS,
 } from "./AttendanceDayNoteDialog.jsx";
@@ -225,6 +229,28 @@ const AttendanceTable = ({
   loading = false,
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const reminderKey = `fee-whatsapp:${user?.academy?._id || user?.academy || "academy"}:${user?._id || "user"}`;
+  const storedReminder = useMemo(() => {
+    try { return normalizeReminderSettings(JSON.parse(localStorage.getItem(reminderKey) || "{}")); }
+    catch { return {...defaultReminderSettings}; }
+  }, [reminderKey]);
+  const [reminderOverride, setReminderOverride] = useState(null);
+  const [whatsappFallback, setWhatsAppFallback] = useState(null);
+  const reminderSettings = reminderOverride?.key === reminderKey ? reminderOverride.value : storedReminder;
+  const openWhatsApp = (row) => {
+    try {
+      const isStudent = row.rowType === "student" && row.studentId;
+      const url = buildWhatsAppReminder(row, getFeeStatusValue(row), reminderSettings, {
+        dueDate: isStudent
+          ? formatMembershipDueDate(row.membership?.effectiveDueDate || getDueDateValue(row))
+          : formatEditableDueValue(getDueDateValue(row)),
+        paidDate: formatDateDDMMYYYY(getPaidDateValue(row)),
+      });
+      setWhatsAppFallback({key:reminderKey,url,name:row.name || row.importedName || "Student"});
+      window.location.href = desktopReminderUrl(url);
+    } catch(error) { toast.error(error.message); }
+  };
   const [todayKey, setTodayKey] = useState(() => localDateKey());
   useEffect(() => {
     let midnightTimer;
@@ -442,6 +468,11 @@ const AttendanceTable = ({
 
   return (
     <>
+      <WhatsAppReminderSettings key={reminderKey} value={reminderSettings} onSave={value => {
+        localStorage.setItem(reminderKey, JSON.stringify(value));
+        setReminderOverride({key:reminderKey,value});
+      }}/>
+      {whatsappFallback?.key === reminderKey && <div role="status" style={{padding:10}}>WhatsApp app nahi khuli? <a href={whatsappFallback.url} target="_blank" rel="noopener noreferrer">Open browser chat for {whatsappFallback.name}</a> <button type="button" onClick={()=>setWhatsAppFallback(null)}>Dismiss</button></div>}
       <div ref={tableScrollRef} className="monthly-register-table-wrap">
         <table
           className="monthly-register-table"
@@ -694,7 +725,13 @@ const AttendanceTable = ({
                         : "fee-status fee-status--due"
                     }`}
                   >
-                    {getFeeStatusValue(row)}
+                    {/^(?:\d+M\s+)?DUE$|^OVERDUE$/i.test(getFeeStatusValue(row)) ? <button
+                      type="button"
+                      style={{border:0,background:"transparent",color:"inherit",font:"inherit",fontWeight:700,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3}}
+                      title="Open WhatsApp with fee reminder — press Send in WhatsApp"
+                      aria-label={`WhatsApp fee reminder for ${row.name || row.importedName || "student"}`}
+                      onClick={() => openWhatsApp(row)}
+                    >{getFeeStatusValue(row)}</button> : getFeeStatusValue(row)}
                   </td>
 
                   {days.map((day) => {

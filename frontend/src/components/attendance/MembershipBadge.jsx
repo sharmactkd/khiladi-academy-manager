@@ -1,4 +1,6 @@
-const formatDueDate = (value) => {
+import { remainingDaysDisplay } from "./remainingDaysDisplay.js";
+
+export const formatDueDate = (value) => {
   if (!value) return "Not set";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
@@ -67,7 +69,7 @@ const MembershipBadge = ({
   dateOnly = false,
 }) => {
   const badge = dateOnly
-    ? { label: formatDueDate(membership?.effectiveDueDate || fallbackDueDate || "-"), tone: "neutral" }
+    ? remainingDaysDisplay(membership) || { label: formatDueDate(membership?.effectiveDueDate || fallbackDueDate || "-"), tone: "neutral" }
     : getMembershipDisplay(membership, fallbackDueDate);
   return (
     <button

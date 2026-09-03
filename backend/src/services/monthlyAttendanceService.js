@@ -324,6 +324,7 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
       identity.importedAdmissionNumber || student?.admissionNumber || "",
     name: importedName || (student ? getStudentName(student) : "Unknown Student"),
     contact: importedPhone || student?.phone || "-",
+    contactCountryCode: student?.countryCode || "",
     status:
       student?.status || (identity.rowType === "raw-import" ? "imported" : "active"),
     statusUpdatedAt:
@@ -393,7 +394,7 @@ const buildMonthlyRows = async ({
     $or: studentVisibilityFilters,
   })
     .select(
-      "admissionNumber firstName lastName phone status statusUpdatedAt joiningDate createdAt updatedAt batch dob dateOfBirth fatherName schoolName address"
+      "admissionNumber firstName lastName phone countryCode status statusUpdatedAt joiningDate createdAt updatedAt batch dob dateOfBirth fatherName schoolName address"
     )
     .lean();
 
