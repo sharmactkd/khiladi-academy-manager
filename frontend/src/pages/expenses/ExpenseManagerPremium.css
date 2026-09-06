@@ -1,5 +1,5 @@
 /* =========================================================
-   TRANSACTION FORM LAYOUT
+   EXPENSE MANAGER – TRANSACTION FORM
    ========================================================= */
 
 .expense-manager-premium .transaction-form-grid {
@@ -7,12 +7,12 @@
   grid-template-columns:
     240px
     205px
-    minmax(0, 1fr)
+    300px
     220px !important;
-  width: 100% !important;
   gap: 12px !important;
   align-items: start !important;
-  justify-content: stretch !important;
+  justify-content: start !important;
+  justify-items: start !important;
 }
 
 /* Amount */
@@ -46,10 +46,9 @@
 .expense-manager-premium
 .transaction-form-grid
 > label:nth-child(4) {
-  grid-column: 1 / -1 !important;
+  grid-column: 1 / -1;
   grid-row: 2;
   width: 100% !important;
-  min-width: 0 !important;
 }
 
 /* Date */
@@ -61,10 +60,7 @@
   width: 220px !important;
 }
 
-/* =========================================================
-   INPUT SIZING
-   ========================================================= */
-
+/* Form controls */
 .expense-manager-premium
 .transaction-form-grid
 input,
@@ -75,14 +71,15 @@ textarea {
   max-width: 100% !important;
 }
 
+/* Amount input */
 .expense-manager-premium
 .transaction-form-grid
 > label:nth-child(1)
 input {
   width: 240px !important;
-  height: 46px !important;
 }
 
+/* Description */
 .expense-manager-premium
 .transaction-form-grid
 > label:nth-child(3)
@@ -94,6 +91,7 @@ textarea {
   resize: none !important;
 }
 
+/* Date input */
 .expense-manager-premium
 .transaction-form-grid
 > label:nth-child(5)
@@ -162,28 +160,27 @@ button[aria-pressed="true"],
 }
 
 /* =========================================================
-   CATEGORY SECTION – FULL WIDTH
+   CATEGORY TILES
    ========================================================= */
 
 .expense-manager-premium
 .transaction-category-tiles {
   width: 100% !important;
-  max-width: none !important;
-  min-width: 0 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 
 .expense-manager-premium
 .transaction-category-tiles
 .ui-choice-grid {
-  width: 100% !important;
-  max-width: none !important;
   display: flex !important;
-  flex-wrap: wrap !important;
-  justify-content: flex-start !important;
-  align-items: flex-start !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
   gap: 9px !important;
-  overflow: visible !important;
+  width: max-content !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  padding: 2px 2px 8px;
+  scrollbar-width: thin;
 }
 
 .expense-manager-premium
@@ -233,7 +230,6 @@ button[aria-pressed="true"],
   box-shadow: 0 8px 18px rgb(207 0 6 / 20%) !important;
 }
 
-/* Category icons */
 .expense-manager-premium
 .transaction-category-tiles
 .ui-choice-icon {
@@ -355,7 +351,7 @@ form
     grid-template-columns:
       220px
       200px
-      minmax(0, 1fr) !important;
+      minmax(220px, 1fr) !important;
   }
 
   .expense-manager-premium
@@ -374,7 +370,7 @@ form
   .transaction-form-grid
   > label:nth-child(3) {
     grid-column: 3;
-    width: 300px !important;
+    width: 100% !important;
   }
 
   .expense-manager-premium
@@ -383,6 +379,11 @@ form
     grid-column: 1;
     grid-row: 2;
     width: 220px !important;
+  }
+
+  .expense-manager-premium
+  .transaction-mode-tiles {
+    width: 200px !important;
   }
 }
 
@@ -428,12 +429,6 @@ form
   input {
     width: 100% !important;
   }
-
-  .expense-manager-premium
-  .transaction-category-tiles
-  .ui-choice-grid {
-    flex-wrap: wrap !important;
-  }
 }
 
 /* =========================================================
@@ -457,13 +452,6 @@ form
   .expense-manager-premium
   .transaction-mode-tiles {
     width: 100% !important;
-  }
-
-  .expense-manager-premium
-  .transaction-category-tiles
-  .ui-choice-wrap {
-    width: 112px !important;
-    min-width: 112px !important;
   }
 
   .expense-manager-premium
