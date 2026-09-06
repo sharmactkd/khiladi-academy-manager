@@ -1,10 +1,7 @@
 import clsx from "clsx";
-import { useState } from "react";
 import { X } from "lucide-react";
 import { OptionIcon, optionKindLabel } from "./optionIconRegistry.jsx";
 import styles from "./IconOptionGrid.module.css";
-
-const DEBUG_CATEGORY_HOVER = import.meta.env.DEV && typeof window !== "undefined";
 
 const asOption = (item) =>
   typeof item === "string"
@@ -23,17 +20,21 @@ const IconOptionGrid = ({
   selected = [],
   trailingContent = null,
 }) => {
-  const [hoveredValue, setHoveredValue] = useState("");
   const selectedValues = new Set(
-    (Array.isArray(selected) ? selected : [selected].filter(Boolean))
-      .map((value) => String(value).trim().toLowerCase()),
+    (Array.isArray(selected) ? selected : [selected].filter(Boolean)).map(
+      (value) => String(value).trim().toLowerCase(),
+    ),
   );
-  const customSet = new Set(customOptions.map((item) => String(item).toLowerCase()));
+  const customSet = new Set(
+    customOptions.map((item) => String(item).trim().toLowerCase()),
+  );
 
   return (
     <div className={clsx(styles.grid, "ui-choice-grid", compact && styles.compact, compact && "is-compact", className)}>
       {options.map(asOption).filter((item) => item.value).map((item) => {
-        const active = selectedValues.has(String(item.value).trim().toLowerCase());
+        const active = selectedValues.has(
+          String(item.value).trim().toLowerCase(),
+        );
         const custom = customSet.has(String(item.value).toLowerCase());
         const Root = interactive ? "button" : "div";
         return (
@@ -45,28 +46,6 @@ const IconOptionGrid = ({
                     "aria-pressed": active,
                     disabled: item.disabled,
                     onClick: () => onToggle?.(item.value),
-                    onMouseEnter: (event) => {
-                      setHoveredValue(String(item.value));
-                      if (!DEBUG_CATEGORY_HOVER) return;
-                      const rect = event.currentTarget.getBoundingClientRect();
-                      const tilesUnderPointer = document.elementsFromPoint(event.clientX, event.clientY)
-                        .filter((element) => element.matches?.(".transaction-category-tiles .ui-choice--tile"))
-                        .map((element) => element.textContent?.trim());
-                      console.groupCollapsed(`[Category hover] ${item.label}`);
-                      console.log({
-                        value: item.value,
-                        active,
-                        className: event.currentTarget.className,
-                        ariaPressed: event.currentTarget.getAttribute("aria-pressed"),
-                        rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height },
-                        tilesUnderPointer,
-                      });
-                      console.groupEnd();
-                    },
-                    onMouseLeave: () => {
-                      setHoveredValue((current) => current === String(item.value) ? "" : current);
-                      if (DEBUG_CATEGORY_HOVER) console.log(`[Category leave] ${item.label}`);
-                    },
                     title: `${active ? "Clear" : "Select"} ${item.label}`,
                   }
                 : {})}
@@ -77,7 +56,6 @@ const IconOptionGrid = ({
                 !interactive && "is-read-only",
                 active && styles.selected,
                 active && "is-selected",
-                hoveredValue === String(item.value) && "is-pointer-hovered",
               )}
             >
               <span className={clsx(styles.icon, "ui-choice-icon")}><OptionIcon kind={kind} value={item.value} /></span>
@@ -89,11 +67,7 @@ const IconOptionGrid = ({
                 className={clsx(styles.remove, "ui-choice-remove")}
                 aria-label={`Delete custom ${optionKindLabel(kind)} ${item.label}`}
                 title={`Delete ${item.label}`}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onRemoveCustom(item.value);
-                }}
+                onClick={() => onRemoveCustom(item.value)}
               >
                 <X aria-hidden="true" />
               </button>
