@@ -26,6 +26,7 @@ const Attendance = lazy(() => import("../pages/attendance/Attendance.jsx"));
 const StudentAttendanceHistory = lazy(() => import("../pages/attendance/StudentAttendanceHistory.jsx"));
 const BatchAttendanceHistory = lazy(() => import("../pages/attendance/BatchAttendanceHistory.jsx"));
 const FeesDashboard = lazy(() => import("../pages/fees/FeesDashboard.jsx"));
+const ExpenseManager = lazy(() => import("../pages/expenses/ExpenseManager.jsx"));
 const FeePlans = lazy(() => import("../pages/fees/FeePlans.jsx"));
 const CollectFee = lazy(() => import("../pages/fees/CollectFee.jsx"));
 const PendingFees = lazy(() => import("../pages/fees/PendingFees.jsx"));
@@ -440,11 +441,12 @@ const AppRoutes = () => {
 
             {/* FEES */}
 
-            <Route
-              element={
-                <RoleRoute allowedRoles={feeRoles} />
-              }
-            >
+          <Route
+            element={
+              <RoleRoute allowedRoles={feeRoles} />
+            }
+          >
+            <Route path="/expense-manager" element={<ExpenseManager />} />
               <Route
                 path="/fees"
                 element={<FeesDashboard />}

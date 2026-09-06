@@ -1,5 +1,6 @@
 import Student from "../models/Student.js";
 import FeePayment from "../models/FeePayment.js";
+import ExpenseTransaction from "../models/ExpenseTransaction.js";
 import mongoose from "mongoose";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
@@ -275,6 +276,26 @@ export const collectFee = asyncHandler(async (req, res) => {
       .populate("batch", "batchName martialArt")
       .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
       .populate("feePlan", "name monthlyAmount amount dueDay");
+
+    // Every successful fee collection is also an income transaction. The
+    // unique source key makes retries/imports idempotent and prevents doubles.
+    await ExpenseTransaction.updateOne(
+      { academy: req.academyId, sourceType: "fee_payment", sourceId: feePayment._id },
+      { $setOnInsert: {
+        academy: req.academyId,
+        branch: feePayment.branch || null,
+        type: "income",
+        category: "Student Fee",
+        amount: Number(feePayment.amountPaid || 0),
+        account: feePayment.paymentMode === "online" ? "upi" : "cash",
+        date: feePayment.paidDate || feePayment.paymentDate || new Date(),
+        description: `Fee payment ${feePayment.receiptNumber || ""}`.trim(),
+        sourceType: "fee_payment",
+        sourceId: feePayment._id,
+        createdBy: req.user._id,
+      } },
+      { upsert: true },
+    );
 
     return successResponse(
       res,

@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarCheck2,
   CircleDollarSign,
+  WalletCards,
   CreditCard,
   FileChartColumn,
   FileStack,
@@ -64,6 +65,7 @@ export const ownerNavigation = [
         icon: CircleDollarSign,
         roles: OWNER_ROLES,
       },
+      { id: "expense-manager", label: "Expense Manager", to: "/expense-manager", icon: WalletCards, roles: OWNER_ROLES },
     ],
   },
   {
