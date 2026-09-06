@@ -3,6 +3,8 @@ import { X } from "lucide-react";
 import { OptionIcon, optionKindLabel } from "./optionIconRegistry.jsx";
 import styles from "./IconOptionGrid.module.css";
 
+const DEBUG_CATEGORY_HOVER = import.meta.env.DEV && typeof window !== "undefined";
+
 const asOption = (item) =>
   typeof item === "string"
     ? { value: item, label: item }
@@ -41,6 +43,26 @@ const IconOptionGrid = ({
                     "aria-pressed": active,
                     disabled: item.disabled,
                     onClick: () => onToggle?.(item.value),
+                    onMouseEnter: (event) => {
+                      if (!DEBUG_CATEGORY_HOVER) return;
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      const tilesUnderPointer = document.elementsFromPoint(event.clientX, event.clientY)
+                        .filter((element) => element.matches?.(".transaction-category-tiles .ui-choice--tile"))
+                        .map((element) => element.textContent?.trim());
+                      console.groupCollapsed(`[Category hover] ${item.label}`);
+                      console.log({
+                        value: item.value,
+                        active,
+                        className: event.currentTarget.className,
+                        ariaPressed: event.currentTarget.getAttribute("aria-pressed"),
+                        rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height },
+                        tilesUnderPointer,
+                      });
+                      console.groupEnd();
+                    },
+                    onMouseLeave: () => {
+                      if (DEBUG_CATEGORY_HOVER) console.log(`[Category leave] ${item.label}`);
+                    },
                     title: `${active ? "Clear" : "Select"} ${item.label}`,
                   }
                 : {})}

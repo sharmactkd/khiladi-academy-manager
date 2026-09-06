@@ -175,6 +175,39 @@
   box-shadow: 0 4px 12px rgb(207 0 6 / 8%) !important;
 }
 
+/* Do not mix the old flex layout with IconOptionGrid's fixed tile grid.
+   The flex override created overlapping pointer hitboxes, so two sibling
+   categories could simultaneously match :hover. */
+.expense-manager-premium .transaction-category-tiles .ui-choice-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, 112px) !important;
+  grid-auto-rows: 86px !important;
+  justify-content: start !important;
+  align-items: start !important;
+  gap: 9px !important;
+  width: 100% !important;
+  overflow: visible !important;
+}
+.expense-manager-premium .transaction-category-tiles .ui-choice-wrap {
+  position: relative !important;
+  width: 112px !important;
+  min-width: 112px !important;
+  height: 86px !important;
+  min-height: 86px !important;
+}
+.expense-manager-premium .transaction-category-tiles .ui-choice--tile {
+  position: relative !important;
+  display: grid !important;
+  width: 112px !important;
+  height: 86px !important;
+  min-height: 86px !important;
+  box-sizing: border-box !important;
+  transform: none;
+}
+.expense-manager-premium .transaction-category-tiles .ui-choice--tile:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+}
+
 /* Branch-style custom category control. */
 .expense-manager-premium .transaction-category-tiles .ui-choice-trailing {
   align-self: center !important;
