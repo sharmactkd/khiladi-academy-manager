@@ -254,9 +254,9 @@ const CollectFee = () => {
         onlineAmount: Number(values.onlineAmount || 0),
         feeMonth: Number(values.feeMonth),
         feeYear: Number(values.feeYear),
-        paymentDate: values.paymentDate
-          ? new Date(`${values.paymentDate}T00:00:00`).toISOString()
-          : new Date().toISOString(),
+        // Keep the selected calendar date intact; converting local midnight
+        // to ISO shifts it to the previous date in UTC-based attendance views.
+        paymentDate: values.paymentDate || new Date().toISOString().slice(0, 10),
       });
       toast.success("Fee collected successfully");
       const payment = response?.data?.data || response?.data || null;
