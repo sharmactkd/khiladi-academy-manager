@@ -37,7 +37,7 @@ const IconOptionGrid = ({
     customOptions.map((item) => String(item).trim().toLowerCase()),
   );
 
-  const handlePointerEnter = (event, value) => {
+  const handleMouseEnter = (event, value) => {
     setHoveredValue(String(value));
 
     if (import.meta.env.DEV) {
@@ -57,6 +57,7 @@ const IconOptionGrid = ({
         }));
 
       console.groupCollapsed(`[Category hover] ${value}`);
+
       console.log({
         value,
         className: event.currentTarget.className,
@@ -71,11 +72,12 @@ const IconOptionGrid = ({
         },
         tilesUnderPointer,
       });
+
       console.groupEnd();
     }
   };
 
-  const handlePointerLeave = (value) => {
+  const handleMouseLeave = (value) => {
     setHoveredValue((current) =>
       current === String(value) ? "" : current,
     );
@@ -105,9 +107,7 @@ const IconOptionGrid = ({
 
           const active = selectedValues.has(normalizedValue);
           const custom = customSet.has(normalizedValue);
-          const hovered =
-            hoveredValue === String(item.value);
-
+          const hovered = hoveredValue === String(item.value);
           const Root = interactive ? "button" : "div";
 
           return (
@@ -130,10 +130,10 @@ const IconOptionGrid = ({
                         item.label
                       }`,
                       onClick: () => onToggle?.(item.value),
-                      onPointerEnter: (event) =>
-                        handlePointerEnter(event, item.value),
-                      onPointerLeave: () =>
-                        handlePointerLeave(item.value),
+                      onMouseEnter: (event) =>
+                        handleMouseEnter(event, item.value),
+                      onMouseLeave: () =>
+                        handleMouseLeave(item.value),
                     }
                   : {})}
                 className={clsx(
@@ -146,6 +146,18 @@ const IconOptionGrid = ({
                   active && "is-selected",
                   hovered && "is-pointer-hovered",
                 )}
+                style={
+                  hovered && !active
+                    ? {
+                        background: "#fff8f8",
+                        color: "#cf0006",
+                        borderColor: "#cf0006",
+                        boxShadow:
+                          "0 4px 12px rgb(207 0 6 / 8%)",
+                        transform: "translateY(-2px)",
+                      }
+                    : undefined
+                }
               >
                 <span
                   className={clsx(

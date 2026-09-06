@@ -240,6 +240,29 @@
 }
 .expense-manager-premium
 .transaction-category-tiles
+.ui-choice-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, 112px) !important;
+  grid-auto-rows: 86px !important;
+  justify-content: start !important;
+  align-items: start !important;
+  gap: 9px !important;
+  width: 100% !important;
+  overflow: visible !important;
+}
+
+.expense-manager-premium
+.transaction-category-tiles
+.ui-choice-wrap {
+  position: relative !important;
+  width: 112px !important;
+  height: 86px !important;
+  min-width: 112px !important;
+  min-height: 86px !important;
+}
+
+.expense-manager-premium
+.transaction-category-tiles
 .ui-choice--tile:not(.is-selected):not(.is-pointer-hovered):hover {
   background: #fff !important;
   color: #17233b !important;
