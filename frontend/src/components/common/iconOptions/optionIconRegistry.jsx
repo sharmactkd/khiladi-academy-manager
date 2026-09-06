@@ -1,6 +1,8 @@
 import {
   Armchair,
   Bath,
+  Banknote,
+  BriefcaseBusiness,
   BriefcaseMedical,
   Cctv,
   CircleEllipsis,
@@ -8,8 +10,17 @@ import {
   Droplets,
   Dumbbell,
   Grid3X3,
+  Home,
   Infinity,
+  MapPin,
+  Megaphone,
+  Package,
   Radar,
+  Smartphone,
+  Tags,
+  Trophy,
+  Wrench,
+  Zap,
   Warehouse,
 } from "lucide-react";
 import MartialArtIcon from "./MartialArtIcon.jsx";
@@ -42,6 +53,32 @@ const LANGUAGE_GLYPHS = {
   kannada: "ಅ",
   malayalam: "അ",
 };
+
+const EXPENSE_CATEGORY_ICONS = {
+  rent: Home,
+  salary: BriefcaseBusiness,
+  electricity: Zap,
+  equipment: Package,
+  championship: Trophy,
+  marketing: Megaphone,
+  travel: MapPin,
+  maintenance: Wrench,
+  "custom category": PlusIcon,
+};
+
+const INCOME_CATEGORY_ICONS = {
+  "student fee": Banknote,
+  "admission fee": BriefcaseBusiness,
+  "belt test": Trophy,
+  championship: Trophy,
+  "uniform / equipment": Package,
+  sponsorship: Tags,
+  "custom category": PlusIcon,
+};
+
+function PlusIcon(props) {
+  return <span {...props} aria-hidden="true">+</span>;
+}
 
 const BELT_COLORS = {
   white: { main: "#ffffff", stripe: "#cbd5e1", outline: "#94a3b8" },
@@ -80,6 +117,11 @@ export const OptionIcon = ({ kind = "generic", value }) => {
   }
   if (kind === "language") {
     return <span aria-hidden="true">{LANGUAGE_GLYPHS[key] || String(value || "?").charAt(0).toUpperCase()}</span>;
+  }
+  if (kind === "expenseCategory" || kind === "incomeCategory") {
+    const categoryMap = kind === "incomeCategory" ? INCOME_CATEGORY_ICONS : EXPENSE_CATEGORY_ICONS;
+    const Icon = categoryMap[key] || Tags;
+    return <Icon aria-hidden="true" />;
   }
   const map = kind === "facility" ? FACILITY_ICONS : {};
   const Icon = map[key] || (kind === "facility" ? Warehouse : CircleEllipsis);
