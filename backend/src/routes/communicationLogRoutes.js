@@ -1,5 +1,5 @@
 import express from "express";
-import { getCommunicationLogs } from "../controllers/communicationLogController.js";
+import { createManualCommunicationLog, getCommunicationLogs } from "../controllers/communicationLogController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { allowAcademyManagement } from "../middlewares/roleMiddleware.js";
 import {
@@ -17,5 +17,6 @@ router.use(resolveUserAcademy);
 router.use(requireResolvedAcademy);
 
 router.get("/", communicationLogsValidator, validateRequest, getCommunicationLogs);
+router.post("/manual", createManualCommunicationLog);
 
 export default router;

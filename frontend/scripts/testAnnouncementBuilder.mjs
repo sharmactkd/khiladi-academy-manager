@@ -15,6 +15,7 @@ test('bad and reversed dates are rejected',()=>{
 });
 test('sickness and event messages have ready text',()=>{
  assert.match(generateAnnouncement({...initialAnnouncement(),type:'sickness'}),/instructor illness/);
+ assert.match(generateAnnouncement({...initialAnnouncement(),type:'rainy'}),/Rainy Day Holiday/);
  assert.match(generateAnnouncement({...initialAnnouncement(),type:'belt',venue:'Main hall'}),/Venue: Main hall/);
  assert.match(generateAnnouncement({...initialAnnouncement(),type:'championship',event:'Open Cup'}),/Championship: Open Cup/);
 });

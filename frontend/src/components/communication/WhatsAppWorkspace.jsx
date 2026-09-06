@@ -9,6 +9,7 @@ import AnnouncementComposer from "./AnnouncementComposer.jsx";
 import { initialAnnouncement, generateAnnouncement } from "./announcementBuilder.js";
 import styles from "./WhatsAppWorkspace.module.css";
 import WhatsAppGroupAnnouncement from "./WhatsAppGroupAnnouncement.jsx";
+import { communicationApi } from "../../api/communicationApi.js";
 
 export default function WhatsAppWorkspace({user,branches=[],batches=[]}) {
   const settings = useWhatsAppSettings(user);
@@ -51,9 +52,23 @@ function Workspace({settings,branches,batches}) {
     setOpened(prev=>new Set([...prev,recipient.phone]));
     window.location.href=desktopReminderUrl(recipient.url);
   };
+  const markManualSent = async (recipient, nextDone) => {
+    setDone(nextDone);
+    if (!nextDone.has(recipient.phone)) return;
+    try {
+      await communicationApi.recordManualWhatsApp({
+        to: recipient.phone,
+        message: recipient.message,
+        type: "announcement",
+        metadata: { names: recipient.names, mode: "student", deliveryConfirmed: false },
+      });
+    } catch (error) {
+      setError(error.response?.data?.message || "Manual send could not be recorded in Delivery Logs.");
+    }
+  };
   return <section className={styles.workspace}>
     <header className={styles.hero}><span className={styles.heroIcon}><MessageCircle size={26}/></span><div><small>COMMUNICATION DESK</small><h2>One message. The right audience.</h2><p>Choose who receives it, prepare your announcement, then review before sending.</p></div></header>
-    <div className={styles.notice}>Free assisted sending: select recipients → review messages → open each chat → press Send in WhatsApp. No automatic bulk sending or delivery tracking. Send only relevant messages to contacts who expect them.</div>
+    <div className={styles.notice}><strong>Assisted WhatsApp sending</strong><span>Select recipients → review the exact message → open WhatsApp → press Send. The app never reports delivery automatically.</span></div>
     <WhatsAppReminderSettings key={JSON.stringify(settings.value)} value={settings.value} onSave={settings.save}/>
     <section className={styles.audience}><div><small>SEND MESSAGE TO</small><h3>Choose your audience</h3></div><div className={styles.segmented}>{[['individual','Student',Users],['branch','Branch',Building2],['batch','Batch',Layers]].map(([id,label,Icon])=><button key={id} aria-pressed={mode===id} onClick={()=>setMode(id)}><Icon size={18}/>{label}</button>)}</div></section>
     {mode!=="individual" ? <WhatsAppGroupAnnouncement key={mode} mode={mode} branches={branches} batches={batches} settings={settings}/> : loading ? <p role="status">Loading all accessible students…</p> : error && !students.length ? <div role="alert">{error} <button onClick={()=>setRetry(v=>v+1)}>Retry students</button></div> : <>
@@ -83,7 +98,7 @@ function Workspace({settings,branches,batches}) {
       {review.recipients.map(r=><article key={r.phone} className={styles.recipient}>
         <h4>{r.names.join(", ")}</h4><small>+{r.phone} · {done.has(r.phone)?"Manually marked done":opened.has(r.phone)?"Chat launch requested — delivery unknown":"Not opened"}</small>
         <details><summary>Preview exact message</summary><pre>{r.message}</pre></details>
-        <div className={styles.actions}><button onClick={()=>open(r)}>{opened.has(r.phone)?"Reopen WhatsApp":"Open WhatsApp"}</button><a href={r.url} target="_blank" rel="noopener noreferrer" onClick={()=>setOpened(prev=>new Set([...prev,r.phone]))}>Browser fallback</a><label><input type="checkbox" disabled={!opened.has(r.phone)} checked={done.has(r.phone)} onChange={()=>setDone(prev=>{const next=new Set(prev);next.has(r.phone)?next.delete(r.phone):next.add(r.phone);return next;})}/> I finished this chat</label></div>
+        <div className={styles.actions}><button onClick={()=>open(r)}>{opened.has(r.phone)?"Reopen WhatsApp":"Open WhatsApp"}</button><a href={r.url} target="_blank" rel="noopener noreferrer" onClick={()=>setOpened(prev=>new Set([...prev,r.phone]))}>Browser fallback</a><label><input type="checkbox" disabled={!opened.has(r.phone)} checked={done.has(r.phone)} onChange={()=>markManualSent(r, (()=>{const next=new Set(done);next.has(r.phone)?next.delete(r.phone):next.add(r.phone);return next;})())}/> I finished this chat</label></div>
       </article>)}
     </section>}
     </>}

@@ -635,6 +635,7 @@ const AddBranch = () => {
               title="Languages Spoken"
               description="Languages supported by the branch team."
             />
+            <label className="form-group" style={{margin: "0 0 16px"}}><span>WhatsApp Group Link <small>(optional)</small></span><input value={form.whatsappGroupLink} onChange={(event) => updateField("whatsappGroupLink", event.target.value)} placeholder="https://chat.whatsapp.com/..." /></label>
             <div className="add-branch-chip-grid">
               <IconOptionGrid
                 kind="language"

@@ -28,7 +28,20 @@ function GroupEditor({target,all,settings}) {
   const destination=selected || {name:name.trim()||target.name,link,source:'Other group'};
   const review=()=>{try{setPreview({message:groupAnnouncement(message,settings.value.academyName,destination.name),link:validateGroupLink(destination.link),name:destination.name});setNotice('');}catch(e){setNotice(e.message);}};
   const save=()=>{try{const clean=validateGroupLink(link); if(!name.trim()) throw new Error('Enter a group name to save.');settings.save({...settings.value,groupDestinations:{...settings.value.groupDestinations,[target.id]:{name:name.trim(),link:clean}}});setNotice('Alternative group saved on this browser. Profile link unchanged.');}catch(e){setNotice(e.message);}};
-  const copy=async()=>{try{await navigator.clipboard.writeText(preview.message);setNotice('Copied. Verify the group in WhatsApp, paste and press Send.');}catch{setNotice('Clipboard unavailable. Select and copy the preview text manually.');}};
+  const copy=async()=>{try{await navigator.clipboard.writeText(preview.message);setNotice('Message copied. Open the selected group, paste it and press Send.');}catch{setNotice('Clipboard unavailable. Select and copy the preview text manually.');}};
+  const copyAndOpen=async()=>{
+    // WhatsApp does not support a group-specific prefilled-message URL.
+    // Copy first, then open the selected invite/deep link in the same user gesture.
+    const popup = window.open("about:blank", "_blank");
+    let copied=false;
+    try { await navigator.clipboard.writeText(preview.message); copied=true; } catch { /* manual copy fallback below */ }
+    const destinationUrl=preview.link || "https://web.whatsapp.com/";
+    if (popup && !popup.closed) popup.location.href = destinationUrl;
+    else window.location.href = destinationUrl;
+    setNotice(copied
+      ? "Message copied and group opened. Paste in the verified group and press Send."
+      : "Group opened. Clipboard permission was unavailable; copy the preview manually, then paste and press Send.");
+  };
   return <div className={styles.columns} style={{marginTop:18}}>
     <section className={styles.card}><h3>2. Choose WhatsApp group</h3><p>Use the profile group or choose a different destination for this announcement.</p>
       <label>Send to group<select value={selectedId} onChange={e=>{setChoiceId(e.target.value);setPreview(null);}}>{choices.map(c=><option key={c.id} value={c.id}>{c.name} — {c.source}</option>)}<option value="other">Other group / enter link</option></select></label>
@@ -37,7 +50,7 @@ function GroupEditor({target,all,settings}) {
       <p>Group details saved here stay on this browser. An invite link may show a join/approval screen. Without a link, find the group by name inside WhatsApp.</p>
     </section>
     <section className={styles.card}><h3>3. Prepare announcement</h3><AnnouncementComposer value={message} onChange={text=>{setMessage(text);setPreview(null);}} onValidityChange={setValid}/><button className={styles.primary} disabled={!valid || (!selected && !name.trim())} onClick={review}>Review group message</button><p role="status">{notice}</p>
-    {preview&&<article className={styles.recipient}><h4>Destination: {preview.name}</h4><pre>{preview.message}</pre><div className={styles.actions}><button onClick={copy}>Copy message</button><button onClick={()=>{window.location.href='whatsapp://';}}>Open WhatsApp</button><a href="https://web.whatsapp.com/" target="_blank" rel="noopener noreferrer">WhatsApp Web</a>{preview.link&&<a href={preview.link} target="_blank" rel="noopener noreferrer">Open group invite</a>}</div><small>Verify group → paste → Send. Opening the app does not send or confirm delivery.</small></article>}
+    {preview&&<article className={styles.recipient}><h4>Destination: {preview.name}</h4><pre>{preview.message}</pre><div className={styles.actions}><button className={styles.primary} onClick={copyAndOpen}>Copy message & open group</button><button onClick={copy}>Copy message only</button><a href="https://web.whatsapp.com/" target="_blank" rel="noopener noreferrer">Open WhatsApp Web</a>{preview.link&&<a href={preview.link} target="_blank" rel="noopener noreferrer">Open group link</a>}</div><small>Group opened hone ke baad verify group name → paste → Send. WhatsApp group links message ko automatically send nahi karte.</small></article>}
     </section>
   </div>;
 }

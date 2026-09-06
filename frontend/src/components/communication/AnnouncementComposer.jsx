@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { CalendarDays, Trophy, Award, HeartPulse, Pencil } from "lucide-react";
+import { CalendarDays, Trophy, Award, HeartPulse, CloudRain, Pencil } from "lucide-react";
 import DateInput from "../common/DateInput.jsx";
 import {initialAnnouncement,generateAnnouncement,addCalendarDays,inclusiveDays} from "./announcementBuilder.js";
 import styles from "./WhatsAppWorkspace.module.css";
-const types=[['holiday','Holiday',CalendarDays],['sickness','Sickness',HeartPulse],['belt','Belt test',Award],['championship','Championship',Trophy],['custom','Custom',Pencil]];
+const types=[['holiday','Holiday',CalendarDays],['rainy','Rainy Day',CloudRain],['sickness','Sickness',HeartPulse],['belt','Belt test',Award],['championship','Championship',Trophy],['custom','Custom',Pencil]];
 export default function AnnouncementComposer({value,onChange,onValidityChange=()=>{},initialForm,onFormChange=()=>{}}) {
   const [form,setForm]=useState(()=>initialForm || initialAnnouncement()),[error,setError]=useState("");
   const update=patch=>{
@@ -16,7 +16,7 @@ export default function AnnouncementComposer({value,onChange,onValidityChange=()
       const text=generateAnnouncement(next); setForm(next);onFormChange(next);onChange(text);setError("");onValidityChange(true);
     } catch(e){setForm(next);onFormChange(next);setError(e.message);onValidityChange(false);}
   };
-  const holiday=['holiday','sickness'].includes(form.type);
+  const holiday=['holiday','rainy','sickness'].includes(form.type);
   return <div className={styles.composer}>
     <div className={styles.typeTabs} aria-label="Announcement type">{types.map(([id,name,Icon])=><button type="button" key={id} aria-pressed={form.type===id} onClick={()=>update({type:id})}><Icon size={16}/>{name}</button>)}</div>
     {form.type!=="custom"&&<div className={styles.fieldGrid}>
@@ -24,7 +24,7 @@ export default function AnnouncementComposer({value,onChange,onValidityChange=()
       {holiday&&<><label>Number of days<input type="number" min="1" max="365" value={form.days} onChange={e=>update({days:e.target.value})}/></label><label>Holiday ends (inclusive)<DateInput min={form.start} value={form.end} onChange={e=>update({end:e.target.value})}/></label></>}
       {!holiday&&<><label>Event name<input value={form.event} maxLength={150} onChange={e=>update({event:e.target.value})}/></label><label>Venue<input value={form.venue} maxLength={200} onChange={e=>update({venue:e.target.value})}/></label></>}
       <label>{holiday?'Resume time (optional)':'Reporting time (optional)'}<input type="time" value={form.time} onChange={e=>update({time:e.target.value})}/></label>
-      {holiday&&<label>Reason (optional)<input value={form.reason} maxLength={200} placeholder={form.type==='sickness'?'Optional additional information':'Festival, weather, personal work…'} onChange={e=>update({reason:e.target.value})}/></label>}
+      {holiday&&<label>Reason (optional)<input value={form.reason} maxLength={200} placeholder={form.type==='sickness'?'Optional additional information':form.type==='rainy'?'Heavy rain, waterlogging, weather alert…':'Festival, weather, personal work…'} onChange={e=>update({reason:e.target.value})}/></label>}
     </div>}
     <label>{form.type==='custom'?'Custom announcement':'Additional instructions (optional)'}<input value={form.note} maxLength={800} onChange={e=>update({note:e.target.value})}/></label>
     {error&&<p role="alert" className={styles.error}>{error}</p>}

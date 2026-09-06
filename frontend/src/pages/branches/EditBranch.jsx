@@ -373,6 +373,7 @@ const EditBranch = () => {
 
           <section className="add-branch-card add-branch-selection-card">
             <BranchFormSectionHeader icon={Languages} eyebrow="Communication" title="Languages Spoken" description="Languages supported by the branch team." />
+            <label className="form-group" style={{margin: "0 0 16px"}}><span>WhatsApp Group Link <small>(optional)</small></span><input value={form.whatsappGroupLink} onChange={(event) => updateField("whatsappGroupLink", event.target.value)} placeholder="https://chat.whatsapp.com/..." /></label>
             <div className="add-branch-chip-grid"><IconOptionGrid kind="language" options={[...new Set([...LANGUAGE_OPTIONS, ...form.customLanguages])]} selected={form.languagesSpoken} customOptions={form.customLanguages} onToggle={(language) => toggleArrayValue("languagesSpoken", language)} onRemoveCustom={(language) => removeCustomValue(language, "languagesSpoken", "customLanguages")} trailingContent={<div className="add-branch-custom-row ui-choice-custom"><input value={form.customLanguage} onChange={(event) => updateField("customLanguage", event.target.value)} onKeyDown={(event) => handleCustomKeyDown(event, "customLanguage", "languagesSpoken")} placeholder="Add custom language" /><button type="button" onClick={() => addCustomValue("customLanguage", "languagesSpoken")} disabled={!form.customLanguage.trim()}><Plus size={14} /> Add</button></div>} /></div>
           </section>
         </div>

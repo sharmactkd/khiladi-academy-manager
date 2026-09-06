@@ -1,9 +1,10 @@
 import { remainingDaysDisplay } from "./remainingDaysDisplay.js";
 
-export const formatDueDate = (value) => {
+export const formatDueDate = (value, format = "full") => {
   if (!value) return "Not set";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
+  if (format === "day") return String(date.getDate()).padStart(2, "0");
   return date.toLocaleDateString("en-GB").replaceAll("/", "-");
 };
 
@@ -67,9 +68,10 @@ const MembershipBadge = ({
   disabled = false,
   className = "",
   dateOnly = false,
+  dateFormat = "full",
 }) => {
   const badge = dateOnly
-    ? remainingDaysDisplay(membership) || { label: formatDueDate(membership?.effectiveDueDate || fallbackDueDate || "-"), tone: "neutral" }
+    ? remainingDaysDisplay(membership) || { label: formatDueDate(membership?.effectiveDueDate || fallbackDueDate || "-", dateFormat), tone: "neutral" }
     : getMembershipDisplay(membership, fallbackDueDate);
   return (
     <button

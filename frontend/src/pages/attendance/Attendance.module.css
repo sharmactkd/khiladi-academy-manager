@@ -69,6 +69,28 @@
 :global(.attendance-page .attendance-sort-button sup) { font-size: 9px; line-height: 1; }
 :global(.attendance-page .attendance-sort-button svg) { flex-shrink: 0; }
 :global(.attendance-page .attendance-sort-button:focus-visible) { outline: 2px solid var(--at-red); outline-offset: 2px; }
+:global(.attendance-page .attendance-due-header) { overflow: visible; z-index: 20; }
+:global(.attendance-page .attendance-due-header__inner) { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 1px; }
+:global(.attendance-page .attendance-date-format-button) {
+  display: inline-grid; place-items: center; width: 22px; height: 24px; padding: 0;
+  border: 0; border-radius: 5px; background: transparent; color: var(--at-muted); cursor: pointer;
+}
+:global(.attendance-page .attendance-date-format-button:hover),
+:global(.attendance-page .attendance-date-format-button[aria-expanded="true"]) { background: #cf000610; color: var(--at-red); }
+:global(.attendance-page .attendance-date-format-button:focus-visible) { outline: 2px solid var(--at-red); outline-offset: 2px; }
+:global(.attendance-page .attendance-date-format-menu) {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 80; width: 188px; padding: 10px;
+  border: 1px solid var(--at-border); border-radius: 10px; background: #fff; box-shadow: 0 12px 28px #0a183026;
+  text-align: left; color: var(--at-navy);
+}
+:global(.attendance-page .attendance-date-format-menu::before) { content: ""; position: absolute; top: -5px; right: 8px; width: 9px; height: 9px; transform: rotate(45deg); border-left: 1px solid var(--at-border); border-top: 1px solid var(--at-border); background: #fff; }
+:global(.attendance-page .attendance-date-format-menu > strong) { display: block; padding: 2px 4px 7px; color: var(--at-muted); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+:global(.attendance-page .attendance-date-format-menu > button) { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 5px; border: 0; border-radius: 7px; background: transparent; color: var(--at-navy); text-align: left; cursor: pointer; }
+:global(.attendance-page .attendance-date-format-menu > button:hover) { background: #f5f7fa; }
+:global(.attendance-page .attendance-date-format-menu > button > span:last-child) { display: grid; gap: 2px; }
+:global(.attendance-page .attendance-date-format-menu b) { font-size: 12px; }
+:global(.attendance-page .attendance-date-format-menu small) { color: var(--at-muted); font-size: 11px; }
+:global(.attendance-page .attendance-date-format-radio) { width: 16px; color: var(--at-red); font-size: 14px; }
 @media print {
   :global(.attendance-page .attendance-search-toolbar) { display: none; }
 }

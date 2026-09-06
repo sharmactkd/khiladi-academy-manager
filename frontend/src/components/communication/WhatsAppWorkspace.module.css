@@ -21,7 +21,9 @@
 .workspace input:focus-visible,.workspace select:focus-visible,.workspace textarea:focus-visible,.workspace button:focus-visible { outline:2px solid #d9000d; outline-offset:2px; }
 .workspace h2,.workspace h3,.workspace h4 { margin:0 0 8px; }
 .workspace p,.workspace small { color:#61748c; line-height:1.6; }
-.notice { padding:15px 18px; border:1px solid #cddfeb; border-radius:12px; background:#f1f8fe; line-height:1.6; }
+.notice { display:flex; gap:8px; align-items:flex-start; padding:15px 18px; border:1px solid #cddfeb; border-radius:12px; background:#f1f8fe; line-height:1.6; }
+.notice strong { color:#174d83; display:block; }
+.notice span { display:block; color:#61748c; }
 .columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px; }
 .card { padding:22px; background:white; border:1px solid #dce4ee; border-radius:16px; min-width:0; }
 .workspace label { display:grid; gap:7px; font-size:13px; margin-bottom:12px; }

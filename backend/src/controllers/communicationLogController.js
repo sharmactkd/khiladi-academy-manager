@@ -39,3 +39,24 @@ export const getCommunicationLogs = asyncHandler(async (req, res) => {
     },
   });
 });
+
+export const createManualCommunicationLog = asyncHandler(async (req, res) => {
+  const message = String(req.body.message || "").trim();
+  const to = String(req.body.to || "").trim();
+  if (!message || !to) return res.status(400).json({ success: false, message: "Recipient and message are required" });
+  const allowedTypes = new Set(["announcement", "fee_reminder", "attendance_alert", "belt_test", "championship", "system"]);
+  const type = allowedTypes.has(req.body.type) ? req.body.type : "announcement";
+  const log = await CommunicationLog.create({
+    academy: req.academyId,
+    channel: "whatsapp",
+    type,
+    to,
+    message,
+    status: "sent",
+    provider: "whatsapp_manual",
+    metadata: { ...(req.body.metadata || {}), deliveryConfirmed: false, manuallyMarked: true },
+    createdBy: req.user._id,
+    sentAt: new Date(),
+  });
+  return successResponse(res, "Manual WhatsApp send recorded", { log }, 201);
+});

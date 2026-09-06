@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown } from "lucide-react";
 import { buildAttendanceRowView, cycleAttendanceSort, getDueDateValue, getFeeStatusValue, patchAttendanceRow } from "./attendanceRowView.js";
 import DateInput from "../common/DateInput.jsx";
 import { useNavigate } from "react-router-dom";
@@ -273,6 +273,10 @@ const AttendanceTable = ({
   );
 
   const [contextMenu, setContextMenu] = useState(null);
+  const [dueDateFormat, setDueDateFormat] = useState(() => {
+    try { return localStorage.getItem("attendance.dueDateFormat") === "day" ? "day" : "full"; } catch { return "full"; }
+  });
+  const [dueFormatOpen, setDueFormatOpen] = useState(false);
   const [noteEditor, setNoteEditor] = useState(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [sort, setSort] = useState([]);
@@ -316,7 +320,10 @@ const AttendanceTable = ({
   }, [searchQuery, sort]);
 
   useEffect(() => {
-    const closeContextMenu = () => setContextMenu(null);
+    const closeContextMenu = (event) => {
+      setContextMenu(null);
+      if (!event?.target?.closest?.(".attendance-due-header")) setDueFormatOpen(false);
+    };
 
     const closeOnEscape = (event) => {
       if (event.key === "Escape") {
@@ -335,6 +342,10 @@ const AttendanceTable = ({
       window.removeEventListener("keydown", closeOnEscape);
     };
   }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem("attendance.dueDateFormat", dueDateFormat); } catch { /* storage can be unavailable */ }
+  }, [dueDateFormat]);
 
   useEffect(() => {
     const enterPrintMode = () => setIsPrinting(true);
@@ -496,8 +507,16 @@ const AttendanceTable = ({
                 Contact
               </th>
 
-              <th className="sticky-col sticky-due-date" rowSpan="2" aria-sort={ariaSort("dueDate")}>
-                <button type="button" className="attendance-sort-button" onClick={(event) => toggleSort("dueDate", event)} aria-label={sortLabel("dueDate", "Due Date")} title={sortLabel("dueDate", "Due Date")}>Due Date {sortIcon("dueDate")}</button>
+              <th className="sticky-col sticky-due-date attendance-due-header" rowSpan="2" aria-sort={ariaSort("dueDate")}>
+                <div className="attendance-due-header__inner">
+                  <button type="button" className="attendance-sort-button" onClick={(event) => toggleSort("dueDate", event)} aria-label={sortLabel("dueDate", "Due Date")} title={sortLabel("dueDate", "Due Date")}>Due Date {sortIcon("dueDate")}</button>
+                  <button type="button" className="attendance-date-format-button" aria-expanded={dueFormatOpen} aria-haspopup="menu" aria-label="Choose Due Date display format" title="Choose Due Date display format" onClick={() => setDueFormatOpen((open) => !open)}><ChevronDown size={12} /></button>
+                  {dueFormatOpen && <div className="attendance-date-format-menu" role="menu">
+                    <strong>Show due date as</strong>
+                    <button type="button" role="menuitemradio" aria-checked={dueDateFormat === "day"} onClick={() => { setDueDateFormat("day"); setDueFormatOpen(false); }}><span className="attendance-date-format-radio">{dueDateFormat === "day" ? "●" : "○"}</span><span><b>Day only</b><small>15</small></span></button>
+                    <button type="button" role="menuitemradio" aria-checked={dueDateFormat === "full"} onClick={() => { setDueDateFormat("full"); setDueFormatOpen(false); }}><span className="attendance-date-format-radio">{dueDateFormat === "full" ? "●" : "○"}</span><span><b>Full date</b><small>15-09-2026</small></span></button>
+                  </div>}
+                </div>
               </th>
               <th className="sticky-col sticky-paid-date" rowSpan="2">Paid Date</th>
               <th className="sticky-col sticky-fee-status" rowSpan="2" aria-sort={ariaSort("feeStatus")}>
@@ -655,6 +674,7 @@ const AttendanceTable = ({
                         dateOnly
                         membership={row.membership}
                         fallbackDueDate={getDueDateValue(row)}
+                        dateFormat={dueDateFormat}
                         onClick={canManageMembership ? () => onOpenMembership?.(row) : undefined}
                         disabled={!canManageMembership}
                         className="membership-due-date"

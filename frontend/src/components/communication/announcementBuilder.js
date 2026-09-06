@@ -17,10 +17,12 @@ export const initialAnnouncement = () => ({type:"holiday",start:todayDate(),end:
 export function generateAnnouncement(form) {
   const {type,start,end,reason,event,venue,time,note}=form;
   let body;
-  if(type==="holiday" || type==="sickness") {
+  if(type==="holiday" || type==="rainy" || type==="sickness") {
     const days=inclusiveDays(start,end);
     if(days<1 || days>365) throw new Error("Choose a holiday period of 1–365 days.");
-    body=`Martial Arts classes will be closed${type==="sickness" ? " due to instructor illness" : ""}${reason.trim()?` (${reason.trim()})`:""}.\n\nHoliday: ${days} ${days===1?"day":"days"}\nFrom: ${label(start)}\nTo: ${label(end)}\nClasses resume: ${label(addCalendarDays(end,1))}${time?` at ${time}`:""}.`;
+    const reasonText = type === "sickness" ? " due to instructor illness" : type === "rainy" ? " due to rainy weather" : "";
+    const heading = type === "rainy" ? "Rainy Day Holiday" : "Holiday";
+    body=`Martial Arts classes will be closed${reasonText}${reason.trim()?` (${reason.trim()})`:""}.\n\n${heading}: ${days} ${days===1?"day":"days"}\nFrom: ${label(start)}\nTo: ${label(end)}\nClasses resume: ${label(addCalendarDays(end,1))}${time?` at ${time}`:""}.`;
   } else if(type==="belt" || type==="championship") {
     body=`${type==="belt"?"Belt Test":"Championship"}${event.trim()?`: ${event.trim()}`:""}\nDate: ${label(start)}${time?`\nReporting time: ${time}`:""}${venue.trim()?`\nVenue: ${venue.trim()}`:""}\nPlease contact the academy to confirm participation.`;
   } else body=note.trim() || "Please contact the academy for the latest class updates.";
