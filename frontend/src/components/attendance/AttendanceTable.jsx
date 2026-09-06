@@ -1,17 +1,31 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown } from "lucide-react";
-import { buildAttendanceRowView, cycleAttendanceSort, getDueDateValue, getFeeStatusValue, patchAttendanceRow } from "./attendanceRowView.js";
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays } from "lucide-react";
+import {
+  buildAttendanceRowView,
+  cycleAttendanceSort,
+  getDueDateValue,
+  getFeeStatusValue,
+  patchAttendanceRow,
+} from "./attendanceRowView.js";
 import DateInput from "../common/DateInput.jsx";
 import { useNavigate } from "react-router-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import AttendanceCell from "./AttendanceCell.jsx";
 import AttendanceSummary from "./AttendanceSummary.jsx";
-import { localDateKey, millisecondsUntilLocalMidnight } from "../../utils/localCalendarDate.js";
-import MembershipBadge, { formatDueDate as formatMembershipDueDate } from "./MembershipBadge.jsx";
+import {
+  localDateKey,
+  millisecondsUntilLocalMidnight,
+} from "../../utils/localCalendarDate.js";
+import MembershipBadge, {
+  formatDueDate as formatMembershipDueDate,
+} from "./MembershipBadge.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import toast from "react-hot-toast";
 import useWhatsAppSettings from "../communication/useWhatsAppSettings.js";
-import { buildWhatsAppReminder, desktopReminderUrl } from "./whatsappReminder.js";
+import {
+  buildWhatsAppReminder,
+  desktopReminderUrl,
+} from "./whatsappReminder.js";
 import AttendanceDayNoteDialog, {
   DAY_NOTE_OPTIONS,
 } from "./AttendanceDayNoteDialog.jsx";
@@ -116,9 +130,7 @@ const toDateInputValue = (value) => {
 };
 
 const formatSelectedDate = (isoDate) => {
-  const match = String(isoDate || "").match(
-    /^(\d{4})-(\d{2})-(\d{2})$/
-  );
+  const match = String(isoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
   if (!match) return "";
   return `${match[3]}-${match[2]}-${match[1]}`;
@@ -166,9 +178,7 @@ const DateMetaInput = ({
         ref={pickerRef}
         className="monthly-register__native-date"
         value={toDateInputValue(value)}
-        onChange={(event) =>
-          onChange(formatSelectedDate(event.target.value))
-        }
+        onChange={(event) => onChange(formatSelectedDate(event.target.value))}
         disabled={disabled}
         tabIndex={-1}
         aria-hidden="true"
@@ -230,20 +240,34 @@ const AttendanceTable = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const {key: reminderKey, value: reminderSettings} = useWhatsAppSettings(user);
+  const { key: reminderKey, value: reminderSettings } =
+    useWhatsAppSettings(user);
   const [whatsappFallback, setWhatsAppFallback] = useState(null);
   const openWhatsApp = (row) => {
     try {
       const isStudent = row.rowType === "student" && row.studentId;
-      const url = buildWhatsAppReminder(row, getFeeStatusValue(row), reminderSettings, {
-        dueDate: isStudent
-          ? formatMembershipDueDate(row.membership?.effectiveDueDate || getDueDateValue(row))
-          : formatEditableDueValue(getDueDateValue(row)),
-        paidDate: formatDateDDMMYYYY(getPaidDateValue(row)),
+      const url = buildWhatsAppReminder(
+        row,
+        getFeeStatusValue(row),
+        reminderSettings,
+        {
+          dueDate: isStudent
+            ? formatMembershipDueDate(
+                row.membership?.effectiveDueDate || getDueDateValue(row),
+              )
+            : formatEditableDueValue(getDueDateValue(row)),
+          paidDate: formatDateDDMMYYYY(getPaidDateValue(row)),
+        },
+      );
+      setWhatsAppFallback({
+        key: reminderKey,
+        url,
+        name: row.name || row.importedName || "Student",
       });
-      setWhatsAppFallback({key:reminderKey,url,name:row.name || row.importedName || "Student"});
       window.location.href = desktopReminderUrl(url);
-    } catch(error) { toast.error(error.message); }
+    } catch (error) {
+      toast.error(error.message);
+    }
   };
   const [todayKey, setTodayKey] = useState(() => localDateKey());
   useEffect(() => {
@@ -251,7 +275,10 @@ const AttendanceTable = ({
     const refreshToday = () => {
       window.clearTimeout(midnightTimer);
       setTodayKey(localDateKey());
-      midnightTimer = window.setTimeout(refreshToday, millisecondsUntilLocalMidnight() + 50);
+      midnightTimer = window.setTimeout(
+        refreshToday,
+        millisecondsUntilLocalMidnight() + 50,
+      );
     };
     refreshToday();
     window.addEventListener("focus", refreshToday);
@@ -264,33 +291,64 @@ const AttendanceTable = ({
   }, []);
   // The API's isToday is UTC-based and may also be stale after midnight.
   const days = useMemo(
-    () => suppliedDays.map((day) => ({ ...day, isToday: day.dateKey === todayKey })),
-    [suppliedDays, todayKey]
+    () =>
+      suppliedDays.map((day) => ({
+        ...day,
+        isToday: day.dateKey === todayKey,
+      })),
+    [suppliedDays, todayKey],
   );
-  const safeRows = useMemo(
-    () => (Array.isArray(rows) ? rows : []),
-    [rows]
-  );
+  const safeRows = useMemo(() => (Array.isArray(rows) ? rows : []), [rows]);
 
   const [contextMenu, setContextMenu] = useState(null);
   const [dueDateFormat, setDueDateFormat] = useState(() => {
-    try { return localStorage.getItem("attendance.dueDateFormat") === "day" ? "day" : "full"; } catch { return "full"; }
+    try {
+      return localStorage.getItem("attendance.dueDateFormat") === "day"
+        ? "day"
+        : "full";
+    } catch {
+      return "full";
+    }
   });
-  const [dueFormatOpen, setDueFormatOpen] = useState(false);
   const [noteEditor, setNoteEditor] = useState(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [sort, setSort] = useState([]);
-  const viewRows = useMemo(() => buildAttendanceRowView(safeRows, searchQuery, sort, suppliedDays[0]?.dateKey),
-    [safeRows, searchQuery, sort, suppliedDays]);
-  const toggleSort = (key, event) => setSort((current) => cycleAttendanceSort(current, key, event.ctrlKey || event.metaKey));
+  const viewRows = useMemo(
+    () =>
+      buildAttendanceRowView(
+        safeRows,
+        searchQuery,
+        sort,
+        suppliedDays[0]?.dateKey,
+      ),
+    [safeRows, searchQuery, sort, suppliedDays],
+  );
+  const toggleSort = (key, event) =>
+    setSort((current) =>
+      cycleAttendanceSort(current, key, event.ctrlKey || event.metaKey),
+    );
   const sortIcon = (key) => {
     const index = sort.findIndex((item) => item.key === key);
     if (index < 0) return <ArrowUpDown size={12} aria-hidden="true" />;
-    return <>{sort[index].direction === "asc" ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />}
-      {sort.length > 1 && <sup aria-hidden="true">{index + 1}</sup>}</>;
+    return (
+      <>
+        {sort[index].direction === "asc" ? (
+          <ArrowUp size={12} aria-hidden="true" />
+        ) : (
+          <ArrowDown size={12} aria-hidden="true" />
+        )}
+        {sort.length > 1 && <sup aria-hidden="true">{index + 1}</sup>}
+      </>
+    );
   };
-  const ariaSort = (key) => !sort.some((item) => item.key === key) ? "none"
-    : sort.length > 1 ? "other" : sort[0].direction === "asc" ? "ascending" : "descending";
+  const ariaSort = (key) =>
+    !sort.some((item) => item.key === key)
+      ? "none"
+      : sort.length > 1
+        ? "other"
+        : sort[0].direction === "asc"
+          ? "ascending"
+          : "descending";
   const sortLabel = (key, label) => {
     const index = sort.findIndex((item) => item.key === key);
     return `${label}: ${index < 0 ? "not sorted" : `${sort[index].direction === "asc" ? "ascending" : "descending"}, priority ${index + 1}`}. Click to cycle ascending, descending, neutral. Ctrl+click to combine columns.`;
@@ -306,7 +364,12 @@ const AttendanceTable = ({
   });
 
   const virtualRows = isPrinting
-    ? viewRows.map((item, index) => ({ index, key: item.sourceIndex, start: 0, end: 0 }))
+    ? viewRows.map((item, index) => ({
+        index,
+        key: item.sourceIndex,
+        start: 0,
+        end: 0,
+      }))
     : rowVirtualizer.getVirtualItems();
   const firstVirtualRow = virtualRows[0];
   const lastVirtualRow = virtualRows[virtualRows.length - 1];
@@ -322,7 +385,6 @@ const AttendanceTable = ({
   useEffect(() => {
     const closeContextMenu = (event) => {
       setContextMenu(null);
-      if (!event?.target?.closest?.(".attendance-due-header")) setDueFormatOpen(false);
     };
 
     const closeOnEscape = (event) => {
@@ -344,7 +406,11 @@ const AttendanceTable = ({
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem("attendance.dueDateFormat", dueDateFormat); } catch { /* storage can be unavailable */ }
+    try {
+      localStorage.setItem("attendance.dueDateFormat", dueDateFormat);
+    } catch {
+      /* storage can be unavailable */
+    }
   }, [dueDateFormat]);
 
   useEffect(() => {
@@ -400,13 +466,22 @@ const AttendanceTable = ({
         [dateKey]: value,
       },
     };
-    onRowsChange(patchAttendanceRow(safeRows, rowIndex, () => recalculateRow(nextRow, days)));
+    onRowsChange(
+      patchAttendanceRow(safeRows, rowIndex, () =>
+        recalculateRow(nextRow, days),
+      ),
+    );
   };
 
   const updateRowField = (rowIndex, field, value) => {
     if (typeof onRowsChange !== "function") return;
 
-    onRowsChange(patchAttendanceRow(safeRows, rowIndex, (row) => ({ ...row, [field]: value })));
+    onRowsChange(
+      patchAttendanceRow(safeRows, rowIndex, (row) => ({
+        ...row,
+        [field]: value,
+      })),
+    );
   };
 
   const editExistingNote = () => {
@@ -473,7 +548,21 @@ const AttendanceTable = ({
 
   return (
     <>
-      {whatsappFallback?.key === reminderKey && <div role="status" style={{padding:10}}>WhatsApp app nahi khuli? <a href={whatsappFallback.url} target="_blank" rel="noopener noreferrer">Open browser chat for {whatsappFallback.name}</a> <button type="button" onClick={()=>setWhatsAppFallback(null)}>Dismiss</button></div>}
+      {whatsappFallback?.key === reminderKey && (
+        <div role="status" style={{ padding: 10 }}>
+          WhatsApp app nahi khuli?{" "}
+          <a
+            href={whatsappFallback.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open browser chat for {whatsappFallback.name}
+          </a>{" "}
+          <button type="button" onClick={() => setWhatsAppFallback(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
       <div ref={tableScrollRef} className="monthly-register-table-wrap">
         <table
           className="monthly-register-table"
@@ -486,7 +575,9 @@ const AttendanceTable = ({
             <col style={{ width: 156 }} />
             <col style={{ width: 112 }} />
             <col style={{ width: 108 }} />
-            {days.map((day) => <col key={`column-${day.dateKey}`} style={{ width: 42 }} />)}
+            {days.map((day) => (
+              <col key={`column-${day.dateKey}`} style={{ width: 42 }} />
+            ))}
             <col style={{ width: 54 }} />
             <col style={{ width: 54 }} />
             <col style={{ width: 54 }} />
@@ -507,20 +598,54 @@ const AttendanceTable = ({
                 Contact
               </th>
 
-              <th className="sticky-col sticky-due-date attendance-due-header" rowSpan="2" aria-sort={ariaSort("dueDate")}>
+              <th
+                className="sticky-col sticky-due-date attendance-due-header"
+                rowSpan="2"
+                aria-sort={ariaSort("dueDate")}
+              >
                 <div className="attendance-due-header__inner">
-                  <button type="button" className="attendance-sort-button" onClick={(event) => toggleSort("dueDate", event)} aria-label={sortLabel("dueDate", "Due Date")} title={sortLabel("dueDate", "Due Date")}>Due Date {sortIcon("dueDate")}</button>
-                  <button type="button" className="attendance-date-format-button" aria-expanded={dueFormatOpen} aria-haspopup="menu" aria-label="Choose Due Date display format" title="Choose Due Date display format" onClick={() => setDueFormatOpen((open) => !open)}><ChevronDown size={12} /></button>
-                  {dueFormatOpen && <div className="attendance-date-format-menu" role="menu">
-                    <strong>Show due date as</strong>
-                    <button type="button" role="menuitemradio" aria-checked={dueDateFormat === "day"} onClick={() => { setDueDateFormat("day"); setDueFormatOpen(false); }}><span className="attendance-date-format-radio">{dueDateFormat === "day" ? "●" : "○"}</span><span><b>Day only</b><small>15</small></span></button>
-                    <button type="button" role="menuitemradio" aria-checked={dueDateFormat === "full"} onClick={() => { setDueDateFormat("full"); setDueFormatOpen(false); }}><span className="attendance-date-format-radio">{dueDateFormat === "full" ? "●" : "○"}</span><span><b>Full date</b><small>15-09-2026</small></span></button>
-                  </div>}
+                  <button
+                    type="button"
+                    className="attendance-sort-button"
+                    onClick={(event) => toggleSort("dueDate", event)}
+                    aria-label={sortLabel("dueDate", "Due Date")}
+                    title={sortLabel("dueDate", "Due Date")}
+                  >
+                    Due Date {sortIcon("dueDate")}
+                  </button>
+                  <button
+                    type="button"
+                    className="attendance-date-format-cycle"
+                    onClick={() =>
+                      setDueDateFormat((format) =>
+                        format === "day" ? "full" : "day",
+                      )
+                    }
+                    aria-label={`Due Date format: ${dueDateFormat === "day" ? "day only" : "full date"}. Click to change`}
+                    title="Click to change Due Date format"
+                  >
+                    <CalendarDays size={12} aria-hidden="true" />
+                    <span>{dueDateFormat === "day" }</span>
+                  </button>
                 </div>
               </th>
-              <th className="sticky-col sticky-paid-date" rowSpan="2">Paid Date</th>
-              <th className="sticky-col sticky-fee-status" rowSpan="2" aria-sort={ariaSort("feeStatus")}>
-                <button type="button" className="attendance-sort-button" onClick={(event) => toggleSort("feeStatus", event)} aria-label={sortLabel("feeStatus", "Fee Status")} title={sortLabel("feeStatus", "Fee Status")}>Fee Status {sortIcon("feeStatus")}</button>
+              <th className="sticky-col sticky-paid-date" rowSpan="2">
+                Paid Date
+              </th>
+              <th
+                className="sticky-col sticky-fee-status"
+                rowSpan="2"
+                aria-sort={ariaSort("feeStatus")}
+              >
+                <button
+                  type="button"
+                  className="attendance-sort-button"
+                  onClick={(event) => toggleSort("feeStatus", event)}
+                  aria-label={sortLabel("feeStatus", "Fee Status")}
+                  title={sortLabel("feeStatus", "Fee Status")}
+                >
+                  Fee Status {sortIcon("feeStatus")}
+                </button>
               </th>
 
               {days.map((day) => {
@@ -532,7 +657,7 @@ const AttendanceTable = ({
                     className={getDayClassName(
                       "day-heading",
                       day,
-                      Boolean(note)
+                      Boolean(note),
                     )}
                     style={getDayStyle(note)}
                     onContextMenu={(event) => openDateMenu(event, day)}
@@ -542,17 +667,11 @@ const AttendanceTable = ({
 
                     {note && (
                       <>
-                        <span
-                          className="day-note-marker"
-                          aria-hidden="true"
-                        >
+                        <span className="day-note-marker" aria-hidden="true">
                           •
                         </span>
 
-                        <span
-                          className="day-note-tooltip"
-                          role="tooltip"
-                        >
+                        <span className="day-note-tooltip" role="tooltip">
                           <strong>{note.title}</strong>
                           <span>{day.dateKey}</span>
 
@@ -593,14 +712,16 @@ const AttendanceTable = ({
                     className={getDayClassName(
                       "day-number",
                       day,
-                      Boolean(note)
+                      Boolean(note),
                     )}
                     style={getDayStyle(note)}
                     onContextMenu={(event) => openDateMenu(event, day)}
                     title="Right click to add or edit a date note"
                   >
                     {String(day.day).padStart(2, "0")}
-                    {day.isToday && <span className="attendance-today-label">Today</span>}
+                    {day.isToday && (
+                      <span className="attendance-today-label">Today</span>
+                    )}
                   </th>
                 );
               })}
@@ -608,7 +729,17 @@ const AttendanceTable = ({
           </thead>
 
           <tbody>
-            {!viewRows.length && <tr><td colSpan={days.length + 11} className="monthly-register__empty">No students match your search. Clear search to show all students.</td></tr>}
+            {!viewRows.length && (
+              <tr>
+                <td
+                  colSpan={days.length + 11}
+                  className="monthly-register__empty"
+                >
+                  No students match your search. Clear search to show all
+                  students.
+                </td>
+              </tr>
+            )}
             {topPadding > 0 && (
               <tr aria-hidden="true">
                 <td
@@ -634,17 +765,24 @@ const AttendanceTable = ({
                   }
                 >
                   <td className="sticky-col sticky-no">
-                    <button type="button" className="attendance-serial-button"
+                    <button
+                      type="button"
+                      className="attendance-serial-button"
                       disabled={!onMoveRow || reorderDisabled}
                       title="Double-click to move this student to another serial number (Enter also works)"
                       aria-label={`Serial ${virtualRow.index + 1}: move ${row.name || row.importedName || "student"}`}
-                      onDoubleClick={async () => { if (await onMoveRow?.(row, virtualRow.index + 1)) setSort([]); }}
+                      onDoubleClick={async () => {
+                        if (await onMoveRow?.(row, virtualRow.index + 1))
+                          setSort([]);
+                      }}
                       onKeyDown={async (event) => {
                         if (event.key === "Enter") {
                           event.preventDefault();
-                          if (await onMoveRow?.(row, virtualRow.index + 1)) setSort([]);
+                          if (await onMoveRow?.(row, virtualRow.index + 1))
+                            setSort([]);
                         }
-                      }}>
+                      }}
+                    >
                       {virtualRow.index + 1}
                     </button>
                   </td>
@@ -675,7 +813,11 @@ const AttendanceTable = ({
                         membership={row.membership}
                         fallbackDueDate={getDueDateValue(row)}
                         dateFormat={dueDateFormat}
-                        onClick={canManageMembership ? () => onOpenMembership?.(row) : undefined}
+                        onClick={
+                          canManageMembership
+                            ? () => onOpenMembership?.(row)
+                            : undefined
+                        }
                         disabled={!canManageMembership}
                         className="membership-due-date"
                       />
@@ -683,7 +825,7 @@ const AttendanceTable = ({
                       <DateMetaInput
                         value={displayValue(
                           formatEditableDueValue(getDueDateValue(row)),
-                          ""
+                          "",
                         )}
                         onChange={(value) =>
                           updateRowField(rowIndex, "importedDueDate", value)
@@ -712,7 +854,7 @@ const AttendanceTable = ({
                       <DateMetaInput
                         value={displayValue(
                           formatEditableDueValue(getPaidDateValue(row)),
-                          ""
+                          "",
                         )}
                         onChange={(value) =>
                           updateRowField(rowIndex, "importedPaidDate", value)
@@ -735,13 +877,30 @@ const AttendanceTable = ({
                         : "fee-status fee-status--due"
                     }`}
                   >
-                    {/^(?:\d+M\s+)?DUE$|^OVERDUE$/i.test(getFeeStatusValue(row)) ? <button
-                      type="button"
-                      style={{border:0,background:"transparent",color:"inherit",font:"inherit",fontWeight:700,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3}}
-                      title="Open WhatsApp with fee reminder — press Send in WhatsApp"
-                      aria-label={`WhatsApp fee reminder for ${row.name || row.importedName || "student"}`}
-                      onClick={() => openWhatsApp(row)}
-                    >{getFeeStatusValue(row)}</button> : getFeeStatusValue(row)}
+                    {/^(?:\d+M\s+)?DUE$|^OVERDUE$/i.test(
+                      getFeeStatusValue(row),
+                    ) ? (
+                      <button
+                        type="button"
+                        style={{
+                          border: 0,
+                          background: "transparent",
+                          color: "inherit",
+                          font: "inherit",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                          textUnderlineOffset: 3,
+                        }}
+                        title="Open WhatsApp with fee reminder — press Send in WhatsApp"
+                        aria-label={`WhatsApp fee reminder for ${row.name || row.importedName || "student"}`}
+                        onClick={() => openWhatsApp(row)}
+                      >
+                        {getFeeStatusValue(row)}
+                      </button>
+                    ) : (
+                      getFeeStatusValue(row)
+                    )}
                   </td>
 
                   {days.map((day) => {
@@ -754,7 +913,7 @@ const AttendanceTable = ({
                         className={getDayClassName(
                           "attendance-day-cell",
                           day,
-                          Boolean(note)
+                          Boolean(note),
                         )}
                         style={getDayStyle(note)}
                       >
@@ -785,7 +944,11 @@ const AttendanceTable = ({
               <tr aria-hidden="true">
                 <td
                   colSpan={days.length + 11}
-                  style={{ height: `${bottomPadding}px`, padding: 0, border: 0 }}
+                  style={{
+                    height: `${bottomPadding}px`,
+                    padding: 0,
+                    border: 0,
+                  }}
                 />
               </tr>
             )}
@@ -797,14 +960,8 @@ const AttendanceTable = ({
         <div
           className="attendance-context-menu"
           style={{
-            left: Math.max(
-              8,
-              Math.min(contextMenu.x, window.innerWidth - 270)
-            ),
-            top: Math.max(
-              8,
-              Math.min(contextMenu.y, window.innerHeight - 330)
-            ),
+            left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 270)),
+            top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - 330)),
           }}
           onClick={(event) => event.stopPropagation()}
           role="menu"
@@ -817,11 +974,7 @@ const AttendanceTable = ({
                     Edit note / colour
                   </button>
 
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={removeNote}
-                  >
+                  <button type="button" className="danger" onClick={removeNote}>
                     Remove note
                   </button>
                 </>
@@ -851,9 +1004,7 @@ const AttendanceTable = ({
           {contextMenu.type === "student" && (
             <button
               type="button"
-              disabled={statusUpdatingIds.includes(
-                contextMenu.row.studentId
-              )}
+              disabled={statusUpdatingIds.includes(contextMenu.row.studentId)}
               onClick={toggleStudentStatus}
             >
               Mark {contextMenu.row.status === "active" ? "Inactive" : "Active"}

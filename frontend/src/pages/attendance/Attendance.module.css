@@ -29,7 +29,9 @@
   border-color: var(--at-red);
   box-shadow: 0 0 0 3px #cf000610;
 }
-:global(.attendance-page .attendance-student-search svg) { flex-shrink: 0; }
+:global(.attendance-page .attendance-student-search svg) {
+  flex-shrink: 0;
+}
 :global(.attendance-page .attendance-student-search input) {
   width: 100%;
   min-width: 0;
@@ -65,43 +67,176 @@
 :global(.attendance-page .attendance-sort-button:hover),
 :global(.attendance-page th[aria-sort="ascending"] .attendance-sort-button),
 :global(.attendance-page th[aria-sort="descending"] .attendance-sort-button),
-:global(.attendance-page th[aria-sort="other"] .attendance-sort-button) { color: var(--at-red); }
-:global(.attendance-page .attendance-sort-button sup) { font-size: 9px; line-height: 1; }
-:global(.attendance-page .attendance-sort-button svg) { flex-shrink: 0; }
-:global(.attendance-page .attendance-sort-button:focus-visible) { outline: 2px solid var(--at-red); outline-offset: 2px; }
-:global(.attendance-page .attendance-due-header) { overflow: visible; z-index: 20; }
-:global(.attendance-page .attendance-due-header__inner) { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 1px; }
+:global(.attendance-page th[aria-sort="other"] .attendance-sort-button) {
+  color: var(--at-red);
+}
+:global(.attendance-page .attendance-sort-button sup) {
+  font-size: 9px;
+  line-height: 1;
+}
+:global(.attendance-page .attendance-sort-button svg) {
+  flex-shrink: 0;
+}
+:global(.attendance-page .attendance-sort-button:focus-visible) {
+  outline: 2px solid var(--at-red);
+  outline-offset: 2px;
+}
+:global(.attendance-page .attendance-due-header) {
+  overflow: visible !important;
+  z-index: 70 !important;
+  padding-inline: 8px;
+}
+:global(.attendance-page .attendance-due-header__inner) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+:global(.attendance-page .attendance-due-header .attendance-sort-button) {
+  width: auto;
+  min-width: 0;
+  gap: 4px;
+}
+:global(.attendance-page .attendance-date-format-cycle) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 25px;
+  padding: 0 6px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  cursor: pointer;
+}
+:global(.attendance-page .attendance-date-format-cycle:hover),
+:global(.attendance-page .attendance-date-format-cycle:focus-visible) {
+  border-color: #cf000655;
+  color: var(--at-red);
+  outline: none;
+}
 :global(.attendance-page .attendance-date-format-button) {
-  display: inline-grid; place-items: center; width: 22px; height: 24px; padding: 0;
-  border: 0; border-radius: 5px; background: transparent; color: var(--at-muted); cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  padding: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
 }
 :global(.attendance-page .attendance-date-format-button:hover),
-:global(.attendance-page .attendance-date-format-button[aria-expanded="true"]) { background: #cf000610; color: var(--at-red); }
-:global(.attendance-page .attendance-date-format-button:focus-visible) { outline: 2px solid var(--at-red); outline-offset: 2px; }
-:global(.attendance-page .attendance-date-format-menu) {
-  position: absolute; top: calc(100% + 8px); right: 0; z-index: 80; width: 188px; padding: 10px;
-  border: 1px solid var(--at-border); border-radius: 10px; background: #fff; box-shadow: 0 12px 28px #0a183026;
-  text-align: left; color: var(--at-navy);
+:global(.attendance-page .attendance-date-format-button[aria-expanded="true"]) {
+  border-color: #cf000655;
+  background: #fff1f2;
+  color: var(--at-red);
 }
-:global(.attendance-page .attendance-date-format-menu::before) { content: ""; position: absolute; top: -5px; right: 8px; width: 9px; height: 9px; transform: rotate(45deg); border-left: 1px solid var(--at-border); border-top: 1px solid var(--at-border); background: #fff; }
-:global(.attendance-page .attendance-date-format-menu > strong) { display: block; padding: 2px 4px 7px; color: var(--at-muted); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
-:global(.attendance-page .attendance-date-format-menu > button) { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 5px; border: 0; border-radius: 7px; background: transparent; color: var(--at-navy); text-align: left; cursor: pointer; }
-:global(.attendance-page .attendance-date-format-menu > button:hover) { background: #f5f7fa; }
-:global(.attendance-page .attendance-date-format-menu > button > span:last-child) { display: grid; gap: 2px; }
-:global(.attendance-page .attendance-date-format-menu b) { font-size: 12px; }
-:global(.attendance-page .attendance-date-format-menu small) { color: var(--at-muted); font-size: 11px; }
-:global(.attendance-page .attendance-date-format-radio) { width: 16px; color: var(--at-red); font-size: 14px; }
+:global(.attendance-page .attendance-date-format-button:focus-visible) {
+  outline: 2px solid var(--at-red);
+  outline-offset: 2px;
+}
+:global(.attendance-page .attendance-date-format-menu) {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: -8px;
+  z-index: 80;
+  width: 188px;
+  padding: 10px;
+  border: 1px solid var(--at-border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 28px #0a183026;
+  text-align: left;
+  color: var(--at-navy);
+}
+:global(.attendance-date-format-menu--portal) {
+  position: fixed !important;
+  top: auto;
+  right: auto;
+  z-index: 3000 !important;
+}
+:global(.attendance-date-format-menu--portal::before) {
+  display: none;
+}
+:global(.attendance-page .attendance-date-format-menu::before) {
+  content: "";
+  position: absolute;
+  top: -5px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  border-left: 1px solid var(--at-border);
+  border-top: 1px solid var(--at-border);
+  background: #fff;
+}
+:global(.attendance-page .attendance-date-format-menu > strong) {
+  display: block;
+  padding: 2px 4px 7px;
+  color: var(--at-muted);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+:global(.attendance-page .attendance-date-format-menu > button) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 5px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--at-navy);
+  text-align: left;
+  cursor: pointer;
+}
+:global(.attendance-page .attendance-date-format-menu > button:hover) {
+  background: #f5f7fa;
+}
+:global(
+  .attendance-page .attendance-date-format-menu > button > span:last-child
+) {
+  display: grid;
+  gap: 2px;
+}
+:global(.attendance-page .attendance-date-format-menu b) {
+  font-size: 12px;
+}
+:global(.attendance-page .attendance-date-format-menu small) {
+  color: var(--at-muted);
+  font-size: 11px;
+}
+:global(.attendance-page .attendance-date-format-radio) {
+  width: 16px;
+  color: var(--at-red);
+  font-size: 14px;
+}
 @media print {
-  :global(.attendance-page .attendance-search-toolbar) { display: none; }
+  :global(.attendance-page .attendance-search-toolbar) {
+    display: none;
+  }
 }
 
 :global(.attendance-page .attendance-serial-button) {
-  width: 100%; min-height: 30px; padding: 0; border: 0; border-radius: 4px;
-  color: inherit; background: transparent; font: inherit; cursor: ns-resize;
+  width: 100%;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: ns-resize;
 }
-:global(.attendance-page .attendance-serial-button:hover:not(:disabled)) { color: var(--at-red); background: #cf00060a; }
-:global(.attendance-page .attendance-serial-button:focus-visible) { outline: 2px solid var(--at-red); }
-:global(.attendance-page .attendance-serial-button:disabled) { cursor: default; }
+:global(.attendance-page .attendance-serial-button:hover:not(:disabled)) {
+  color: var(--at-red);
+  background: #cf00060a;
+}
+:global(.attendance-page .attendance-serial-button:focus-visible) {
+  outline: 2px solid var(--at-red);
+}
+:global(.attendance-page .attendance-serial-button:disabled) {
+  cursor: default;
+}
 :global(.attendance-page) {
   --at-red: #cf0006;
   --at-navy: #0a1830;
@@ -637,13 +772,12 @@
 }
 :global(.attendance-page .sticky-fee-status) {
   left: 644px;
- min-width: 108px;
+  min-width: 108px;
   width: 108px;
   max-width: 108px;
 
   white-space: nowrap;
   text-align: center;
- 
 }
 :global(.attendance-student-cell) {
   min-width: 0;
@@ -738,7 +872,9 @@
   letter-spacing: 0;
   text-transform: uppercase;
 }
-:global(.attendance-page .monthly-register-table tbody td.attendance-day-cell--today) {
+:global(
+  .attendance-page .monthly-register-table tbody td.attendance-day-cell--today
+) {
   background: #fff4f5 !important;
 }
 :global(.attendance-page .attendance-cell) {
