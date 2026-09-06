@@ -88,6 +88,12 @@ const branchSchema = new mongoose.Schema(
     phone: { type: String, trim: true, default: "" },
     phoneNumbers: { type: [phoneNumberSchema], default: [] },
     email: { type: String, trim: true, lowercase: true, default: "" },
+    whatsappGroupLink: {
+      type: String,
+      trim: true,
+      maxlength: [300, "WhatsApp group link cannot exceed 300 characters"],
+      default: "",
+    },
     address: {
       type: String,
       trim: true,

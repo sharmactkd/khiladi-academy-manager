@@ -15,3 +15,14 @@ export function groupAnnouncement(template, academy, group) {
   if(message.length>3500) throw new Error("Please shorten the announcement to 3500 characters.");
   return message;
 }
+export function groupChoices(target, allTargets, saved={}) {
+  const options=[];
+  const add=(id,name,link,source)=>{if(link) options.push({id,name,link,source});};
+  add('profile',target.whatsappGroupName || target.name,target.whatsappGroupLink,'Profile group');
+  add('saved',saved[target.id]?.name || target.name,saved[target.id]?.link,'Saved on this browser');
+  for(const item of allTargets.filter(t=>t.id!==target.id)) {
+    add(`profile:${item.id}`,item.whatsappGroupName || item.name,item.whatsappGroupLink,`${item.label} · profile`);
+    add(`saved:${item.id}`,saved[item.id]?.name || item.name,saved[item.id]?.link,`${item.label} · saved`);
+  }
+  return options;
+}

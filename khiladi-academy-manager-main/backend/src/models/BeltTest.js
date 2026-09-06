@@ -1,0 +1,149 @@
+import mongoose from "mongoose";
+
+const beltTestSchema = new mongoose.Schema(
+  {
+    academy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Academy",
+      required: [true, "Academy is required"],
+      index: true,
+    },
+    student: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Student",
+      required: [true, "Student is required"],
+      index: true,
+    },
+    currentBelt: {
+      type: String,
+      required: [true, "Current belt is required"],
+      trim: true,
+    },
+
+    currentDanRank: {
+  type: String,
+  trim: true,
+  default: "",
+},
+
+    promotedToBelt: {
+      type: String,
+      required: [true, "Promoted belt is required"],
+      trim: true,
+    },
+    promotedToDanRank: {
+  type: String,
+  trim: true,
+  default: "",
+},
+
+marks: {
+  type: Number,
+  default: null,
+  min: [0, "Marks cannot be negative"],
+},
+
+outOf: {
+  type: Number,
+  default: null,
+  min: [0, "Out of marks cannot be negative"],
+},
+
+    testDate: {
+      type: Date,
+      required: [true, "Test date is required"],
+      index: true,
+    },
+    result: {
+      type: String,
+      enum: ["pass", "fail", "pending"],
+      default: "pending",
+      index: true,
+    },
+    examinerName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    remarks: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    certificateNumber: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    certificateUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+  },
+  { timestamps: true }
+);
+
+beltTestSchema.index({ academy: 1, student: 1 });
+beltTestSchema.index({ academy: 1, testDate: -1 });
+beltTestSchema.index({ academy: 1, result: 1 });
+beltTestSchema.index(
+  { academy: 1, certificateNumber: 1 },
+  {
+    sparse: true,
+    partialFilterExpression: {
+      certificateNumber: { $type: "string", $ne: "" },
+    },
+  }
+);
+beltTestSchema.index({ academy: 1, isDeleted: 1 });
+
+beltTestSchema.pre("validate", function validateAssessmentScore() {
+  if (this.marks === null || this.marks === undefined) return;
+  if (this.outOf === null || this.outOf === undefined) return;
+
+  if (Number(this.marks) > Number(this.outOf)) {
+    this.invalidate("marks", "Marks obtained cannot exceed total marks");
+  }
+});
+
+beltTestSchema.pre("validate", function validateDanPromotion() {
+  if (this.currentBelt !== "Black" || this.promotedToBelt !== "Black") return;
+
+  const danRanks = [
+    "1st Dan", "2nd Dan", "3rd Dan", "4th Dan", "5th Dan",
+    "6th Dan", "7th Dan", "8th Dan", "9th Dan", "10th Dan",
+  ];
+  const currentIndex = danRanks.indexOf(this.currentDanRank);
+  const promotedIndex = danRanks.indexOf(this.promotedToDanRank);
+
+  if (currentIndex < 0 || promotedIndex <= currentIndex) {
+    this.invalidate(
+      "promotedToDanRank",
+      "Promoted Dan rank must be higher than current Dan rank",
+    );
+  }
+});
+
+const BeltTest = mongoose.model("BeltTest", beltTestSchema);
+
+export default BeltTest;

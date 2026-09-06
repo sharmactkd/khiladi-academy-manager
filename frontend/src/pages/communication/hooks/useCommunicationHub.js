@@ -43,7 +43,10 @@ const useCommunicationHub = () => {
     const [academyResult, branchResult, batchResult, announcementResult, linkResult, logResult, notificationResult] = requests;
     if (academyResult.status === "fulfilled") setAcademy(payload(academyResult.value)?.academy || payload(academyResult.value));
     if (branchResult.status === "fulfilled") { const data = payload(branchResult.value); setBranches(Array.isArray(data) ? data : data.branches || data.items || []); }
-    if (batchResult.status === "fulfilled") setBatches(list(batchResult.value, "batches"));
+    if (batchResult.status === "fulfilled") {
+      const data = payload(batchResult.value);
+      setBatches(Array.isArray(data) ? data : data.batches || []);
+    }
     if (announcementResult.status === "fulfilled") setAnnouncements(list(announcementResult.value, "announcements"));
     if (linkResult.status === "fulfilled") setParentLinks(list(linkResult.value, "links"));
     if (logResult.status === "fulfilled") { const data = payload(logResult.value); setLogs(data.logs || []); setLogPagination(data.pagination || null); }

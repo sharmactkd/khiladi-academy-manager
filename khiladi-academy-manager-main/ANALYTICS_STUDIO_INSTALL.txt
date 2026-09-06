@@ -1,0 +1,33 @@
+KHILADI ACADEMY MANAGER - ANALYTICS STUDIO
+
+Run these commands from the repository root in PowerShell.
+
+1. Create the new directories and files (only required if you are copying code manually):
+
+New-Item -ItemType Directory -Force "frontend/src/pages/analytics/hooks" | Out-Null
+New-Item -ItemType Directory -Force "frontend/src/components/analytics" | Out-Null
+
+New-Item -ItemType File -Force "frontend/src/pages/analytics/AnalyticsStudio.jsx" | Out-Null
+New-Item -ItemType File -Force "frontend/src/pages/analytics/AnalyticsStudio.module.css" | Out-Null
+New-Item -ItemType File -Force "frontend/src/pages/analytics/analyticsStudio.utils.js" | Out-Null
+New-Item -ItemType File -Force "frontend/src/pages/analytics/hooks/useAnalyticsStudio.js" | Out-Null
+New-Item -ItemType File -Force "frontend/src/components/analytics/AnalyticsFilters.jsx" | Out-Null
+
+2. Delete the obsolete duplicate analytics pages and unused wrappers:
+
+git rm frontend/src/pages/analytics/AnalyticsDashboard.jsx
+git rm frontend/src/pages/analytics/StudentAnalytics.jsx
+git rm frontend/src/pages/analytics/AttendanceAnalytics.jsx
+git rm frontend/src/pages/analytics/FeesAnalytics.jsx
+git rm frontend/src/pages/analytics/PerformanceAnalytics.jsx
+git rm frontend/src/components/analytics/BarChartCard.jsx
+git rm frontend/src/components/analytics/PieChartCard.jsx
+
+3. Verify:
+
+cd frontend
+npm run build
+cd ..
+git status --short
+
+Do not delete AnalyticsCard.jsx or LineChartCard.jsx. They are still used by other pages.

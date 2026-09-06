@@ -1,0 +1,72 @@
+const rubric = (items) => items.map(([criterion, weight]) => ({ criterion, weight }));
+
+const TECHNICAL = rubric([["Technique", 35], ["Accuracy", 25], ["Balance", 20], ["Speed", 10], ["Control", 10]]);
+const PHYSICAL = rubric([["Form", 25], ["Capacity", 35], ["Control", 20], ["Consistency", 20]]);
+const PERFORMANCE = rubric([["Technical execution", 30], ["Power and speed", 25], ["Balance and control", 20], ["Application", 15], ["Discipline", 10]]);
+
+const skill = (skillCode, skillName, category, level = "all", options = {}) => ({
+  skillCode, skillName, category, level, martialArt: "Taekwondo", maxScore: 10,
+  isRequired: true, assessmentIntervalDays: 90, rubric: TECHNICAL, ...options,
+});
+
+export const DEFAULT_TAEKWONDO_SKILLS = [
+  skill("STN-001", "Attention Stance (Charyot)", "stances", "beginner"),
+  skill("STN-002", "Ready Stance (Joonbi)", "stances", "beginner"),
+  skill("STN-003", "Walking Stance (Ap Seogi)", "stances", "beginner"),
+  skill("STN-004", "Front Stance (Ap Kubi)", "stances", "beginner"),
+  skill("STN-005", "Back Stance (Dwit Kubi)", "stances", "intermediate"),
+  skill("BLK-001", "Low Block (Arae Makki)", "blocks", "beginner"),
+  skill("BLK-002", "Middle Block (Momtong Makki)", "blocks", "beginner"),
+  skill("BLK-003", "High Block (Olgul Makki)", "blocks", "beginner"),
+  skill("BLK-004", "Double Forearm Block", "blocks", "intermediate"),
+  skill("HND-001", "Middle Punch (Momtong Jireugi)", "hand_techniques", "beginner"),
+  skill("HND-002", "Reverse Punch (Bandae Jireugi)", "hand_techniques", "beginner"),
+  skill("HND-003", "Knife-hand Strike (Sonnal Chigi)", "hand_techniques", "intermediate"),
+  skill("HND-004", "Back-fist Strike (Dung Jumeok)", "hand_techniques", "intermediate"),
+  skill("KCK-001", "Front Kick (Ap Chagi)", "kicks", "beginner"),
+  skill("KCK-002", "Roundhouse Kick (Dollyo Chagi)", "kicks", "beginner"),
+  skill("KCK-003", "Side Kick (Yop Chagi)", "kicks", "beginner"),
+  skill("KCK-004", "Back Kick (Dwit Chagi)", "kicks", "intermediate"),
+  skill("KCK-005", "Hook Kick (Huryeo Chagi)", "kicks", "intermediate"),
+  skill("KCK-006", "Axe Kick (Naeryo Chagi)", "kicks", "intermediate"),
+  skill("KCK-007", "Turning Back Kick", "kicks", "advanced"),
+  skill("KCK-008", "Spinning Hook Kick", "kicks", "advanced"),
+  skill("KCK-009", "Jump Front Kick", "kicks", "advanced"),
+  skill("KCK-010", "Jump Spinning Kick", "kicks", "black_belt"),
+  skill("PMS-001", "Taegeuk 1 (Il Jang)", "poomsae", "beginner", { targetBelts: ["Yellow"] }),
+  skill("PMS-002", "Taegeuk 2 (Ee Jang)", "poomsae", "beginner", { targetBelts: ["Green"] }),
+  skill("PMS-003", "Taegeuk 3 (Sam Jang)", "poomsae", "intermediate"),
+  skill("PMS-004", "Taegeuk 4 (Sa Jang)", "poomsae", "intermediate"),
+  skill("PMS-005", "Taegeuk 5 (Oh Jang)", "poomsae", "intermediate"),
+  skill("PMS-006", "Taegeuk 6 (Yuk Jang)", "poomsae", "advanced"),
+  skill("PMS-007", "Taegeuk 7 (Chil Jang)", "poomsae", "advanced"),
+  skill("PMS-008", "Taegeuk 8 (Pal Jang)", "poomsae", "advanced"),
+  skill("PMS-009", "Koryo Poomsae", "poomsae", "black_belt"),
+  skill("SPR-001", "Guard and Fighting Stance", "sparring", "beginner", { rubric: PERFORMANCE }),
+  skill("SPR-002", "Distance Management", "sparring", "intermediate", { rubric: PERFORMANCE }),
+  skill("SPR-003", "Attack Combination", "sparring", "intermediate", { rubric: PERFORMANCE }),
+  skill("SPR-004", "Counter Attack", "sparring", "advanced", { rubric: PERFORMANCE }),
+  skill("SPR-005", "Ring Movement and Footwork", "sparring", "advanced", { rubric: PERFORMANCE }),
+  skill("SPR-006", "Match Strategy and Awareness", "sparring", "black_belt", { rubric: PERFORMANCE }),
+  skill("SDF-001", "Wrist-grab Release", "self_defence", "beginner"),
+  skill("SDF-002", "Body-grab Escape", "self_defence", "intermediate"),
+  skill("SDF-003", "Fall and Recovery", "self_defence", "intermediate"),
+  skill("FLX-001", "Front Split Flexibility", "flexibility", "all", { rubric: PHYSICAL }),
+  skill("FLX-002", "Side Split Flexibility", "flexibility", "all", { rubric: PHYSICAL }),
+  skill("FLX-003", "Hip Mobility", "flexibility", "all", { rubric: PHYSICAL }),
+  skill("STR-001", "Lower-body Strength", "strength", "all", { rubric: PHYSICAL }),
+  skill("STR-002", "Core Strength", "strength", "all", { rubric: PHYSICAL }),
+  skill("STR-003", "Upper-body Strength", "strength", "all", { rubric: PHYSICAL }),
+  skill("STA-001", "Aerobic Stamina", "stamina", "all", { rubric: PHYSICAL }),
+  skill("STA-002", "High-intensity Endurance", "stamina", "all", { rubric: PHYSICAL }),
+  skill("SPD-001", "Reaction Speed", "speed", "all", { rubric: PHYSICAL }),
+  skill("SPD-002", "Kicking Speed", "speed", "all", { rubric: PHYSICAL }),
+  skill("AGL-001", "Agility and Direction Change", "agility", "all", { rubric: PHYSICAL }),
+  skill("BAL-001", "Static Balance", "balance", "all", { rubric: PHYSICAL }),
+  skill("BAL-002", "Dynamic Kicking Balance", "balance", "all", { rubric: PHYSICAL }),
+  skill("CRD-001", "Hand-eye Coordination", "coordination", "all", { rubric: PHYSICAL }),
+  skill("DSC-001", "Discipline and Etiquette", "discipline", "all", { rubric: rubric([["Punctuality", 25], ["Respect", 25], ["Focus", 25], ["Consistency", 25]]) }),
+  skill("DSC-002", "Training Consistency", "discipline", "all", { rubric: rubric([["Attendance", 35], ["Effort", 35], ["Coachability", 30]]) }),
+];
+
+export default DEFAULT_TAEKWONDO_SKILLS;

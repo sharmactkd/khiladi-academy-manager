@@ -1,0 +1,156 @@
+import { body, param } from "express-validator";
+
+export const idCardTemplateIdValidator = [
+  param("id").isMongoId().withMessage("Invalid ID card template ID"),
+];
+
+export const idCardIdValidator = [
+  param("id").isMongoId().withMessage("Invalid ID card ID"),
+];
+
+export const idCardStudentIdValidator = [
+  param("studentId").isMongoId().withMessage("Invalid student ID"),
+];
+
+export const createIdCardTemplateValidator = [
+  body("templateName")
+    .trim()
+    .notEmpty()
+    .withMessage("Template name is required")
+    .isLength({ min: 2, max: 100 })
+    .withMessage("Template name must be between 2 and 100 characters"),
+
+  body("frontDesign").optional().isObject(),
+  body("backDesign").optional().isObject(),
+  body("status").optional().isIn(["draft", "published", "archived"]),
+  body("orientation").optional().isIn(["horizontal", "vertical"]),
+  body("cardSize").optional().isIn(["cr80", "cr79", "cr100", "business", "custom"]),
+  body("customSize").optional().isObject(),
+  body("customSize.width").if(body("cardSize").equals("custom")).isFloat({ min: 1, max: 100 }),
+  body("customSize.height").if(body("cardSize").equals("custom")).isFloat({ min: 1, max: 100 }),
+  body("customSize.unit").if(body("cardSize").equals("custom")).isIn(["cm", "in"]),
+  body("fontFamily").optional().trim().isLength({ min: 1, max: 80 }),
+  body("photoShape").optional().isIn(["circle", "rounded", "square"]),
+  body("primaryColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+  body("secondaryColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+  body("accentColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+
+  body("logo")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Logo URL cannot exceed 500 characters"),
+
+  body("backgroundColor")
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/)
+    .withMessage("Background color must be a valid hex color"),
+
+  body("textColor")
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/)
+    .withMessage("Text color must be a valid hex color"),
+
+  body("fields")
+    .optional()
+    .isArray()
+    .withMessage("Fields must be an array"),
+
+  body("fields.*")
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 80 })
+    .withMessage("Each field must be between 1 and 80 characters"),
+
+  body("isDefault").optional().isBoolean(),
+];
+
+export const updateIdCardTemplateValidator = [
+  param("id").isMongoId().withMessage("Invalid ID card template ID"),
+
+  body("templateName")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Template name cannot be empty")
+    .isLength({ min: 2, max: 100 }),
+
+  body("frontDesign").optional().isObject(),
+  body("backDesign").optional().isObject(),
+  body("status").optional().isIn(["draft", "published", "archived"]),
+  body("orientation").optional().isIn(["horizontal", "vertical"]),
+  body("cardSize").optional().isIn(["cr80", "cr79", "cr100", "business", "custom"]),
+  body("customSize").optional().isObject(),
+  body("customSize.width").if(body("cardSize").equals("custom")).isFloat({ min: 1, max: 100 }),
+  body("customSize.height").if(body("cardSize").equals("custom")).isFloat({ min: 1, max: 100 }),
+  body("customSize.unit").if(body("cardSize").equals("custom")).isIn(["cm", "in"]),
+  body("fontFamily").optional().trim().isLength({ min: 1, max: 80 }),
+  body("photoShape").optional().isIn(["circle", "rounded", "square"]),
+  body("primaryColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+  body("secondaryColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+  body("accentColor").optional().matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+
+  body("logo").optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
+
+  body("backgroundColor")
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+
+  body("textColor")
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/),
+
+  body("fields").optional().isArray(),
+  body("fields.*").optional().trim().isLength({ min: 1, max: 80 }),
+  body("isDefault").optional().isBoolean(),
+];
+
+export const generateIdCardValidator = [
+  body("student").isMongoId().withMessage("Valid student is required"),
+
+  body("template").isMongoId().withMessage("Valid template is required"),
+
+  body("cardNumber")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 80 })
+    .withMessage("Card number cannot exceed 80 characters"),
+
+  body("qrCodeData")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage("QR code data cannot exceed 1000 characters"),
+
+  body("issuedDate")
+    .optional({ checkFalsy: true })
+    .isISO8601()
+    .withMessage("Issued date must be valid"),
+
+  body("validTill")
+    .optional({ checkFalsy: true })
+    .isISO8601()
+    .withMessage("Valid till date must be valid"),
+];
+
+export const generateIdCardsBulkValidator = [
+  body("students").isArray({ min: 1, max: 100 }).withMessage("Select between 1 and 100 students"),
+  body("students.*").isMongoId().withMessage("Every student ID must be valid"),
+  body("template").isMongoId().withMessage("Valid template is required"),
+  body("issuedDate").optional({ checkFalsy: true }).isISO8601(),
+  body("validTill").optional({ checkFalsy: true }).isISO8601(),
+];
+
+export const updateIdCardStatusValidator = [
+  param("id").isMongoId().withMessage("Invalid ID card ID"),
+
+  body("status")
+    .notEmpty()
+    .withMessage("Status is required")
+    .isIn(["active", "expired", "cancelled"])
+    .withMessage("Status must be active, expired, or cancelled"),
+];

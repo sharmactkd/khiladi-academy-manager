@@ -1,4 +1,24 @@
 .workspace { display:grid; gap:18px; color:#172b4d; }
+.hero { display:flex; gap:16px; align-items:center; padding:24px; background:linear-gradient(115deg,#fff,#fff5f5); border:1px solid #ecdfe1; border-radius:18px; }
+.hero small { color:#c9000c; font-size:10px; font-weight:750; letter-spacing:1.7px; }
+.hero h2 { font-size:23px; margin:6px 0; }
+.hero p { margin:0; }
+.heroIcon { display:grid; place-items:center; width:52px; height:52px; flex-shrink:0; border-radius:15px; color:#c9000c; background:#ffe8eb; }
+.audience { display:flex; justify-content:space-between; gap:20px; align-items:center; padding:20px 24px; background:white; border:1px solid #dce4ee; border-radius:14px; }
+.audience small { font-size:10px; font-weight:700; letter-spacing:1.2px; }
+.audience h3 { margin:5px 0 0; }
+.segmented { display:flex; gap:5px; padding:5px; border-radius:12px; background:#f1f4f8; }
+.workspace .segmented button { display:flex; align-items:center; justify-content:center; gap:8px; min-width:105px; border:0; background:transparent; padding:13px 16px; }
+.workspace .segmented button[aria-pressed=true] { background:white; color:#d00012; box-shadow:0 2px 7px #14243d12; }
+.typeTabs { display:flex; flex-wrap:wrap; gap:7px; margin:16px 0; }
+.typeTabs button { display:flex; align-items:center; gap:6px; }
+.fieldGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px 14px; }
+.messageLabel span { color:#687c94; font-size:11px; font-weight:400; }
+.workspace .messageLabel textarea { background:#f8fafc; line-height:1.65; resize:vertical; }
+.groupIdentity { display:flex; gap:12px; background:#f1f9f5; border:1px solid #d3eadd; padding:18px; border-radius:12px; margin:16px 0; color:#196c4c; }
+.groupIdentity div { display:grid; gap:8px; min-width:0; }
+.groupIdentity span { font-size:12px; overflow-wrap:anywhere; }
+.workspace input:focus-visible,.workspace select:focus-visible,.workspace textarea:focus-visible,.workspace button:focus-visible { outline:2px solid #d9000d; outline-offset:2px; }
 .workspace h2,.workspace h3,.workspace h4 { margin:0 0 8px; }
 .workspace p,.workspace small { color:#61748c; line-height:1.6; }
 .notice { padding:15px 18px; border:1px solid #cddfeb; border-radius:12px; background:#f1f8fe; line-height:1.6; }
@@ -22,3 +42,4 @@
 .recipient pre { white-space:pre-wrap; overflow-wrap:anywhere; padding:14px; background:#f5f8fa; border-radius:10px; font:inherit; line-height:1.7; }
 .error { padding:12px; color:#af0715!important; background:#fff2f3; border-radius:8px; }
 @media(max-width:900px) { .columns { grid-template-columns:1fr; } }
+@media(max-width:620px) { .audience { align-items:stretch; flex-direction:column; } .segmented button { min-width:0!important; flex:1; } .hero { padding:18px; } .hero h2 { font-size:19px; } .fieldGrid,.filters { grid-template-columns:1fr; } .card { padding:16px; } }

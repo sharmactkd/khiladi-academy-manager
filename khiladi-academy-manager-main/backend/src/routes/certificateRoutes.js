@@ -1,0 +1,60 @@
+import express from "express";
+
+import {
+  generateCertificate,
+  getStudentCertificates,
+  getCertificateById,
+  updateCertificateStatus,
+  verifyCertificate,
+} from "../controllers/certificateController.js";
+
+import { protect } from "../middlewares/authMiddleware.js";
+import { allowAcademyManagement } from "../middlewares/roleMiddleware.js";
+import {
+  resolveUserAcademy,
+  requireResolvedAcademy,
+} from "../middlewares/academyAccessMiddleware.js";
+import validateRequest from "../middlewares/validateRequest.js";
+import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
+
+import {
+  certificateIdValidator,
+  certificateStudentIdValidator,
+  generateCertificateValidator,
+  updateCertificateStatusValidator,
+} from "../validators/certificateValidator.js";
+
+const router = express.Router();
+
+router.get("/verify/:verificationId", verifyCertificate);
+
+router.use(protect);
+router.use(allowAcademyManagement);
+router.use(resolveUserAcademy);
+router.use(requireResolvedAcademy);
+
+router.post(
+  "/generate",
+  generateCertificateValidator,
+  validateRequest,
+  enforceLimit("certificates"),
+  generateCertificate
+);
+
+router.get(
+  "/student/:studentId",
+  certificateStudentIdValidator,
+  validateRequest,
+  getStudentCertificates
+);
+
+router.get("/:id", certificateIdValidator, validateRequest, getCertificateById);
+
+router.patch(
+  "/:id/status",
+  updateCertificateStatusValidator,
+  validateRequest,
+  updateCertificateStatus
+);
+
+export default router;

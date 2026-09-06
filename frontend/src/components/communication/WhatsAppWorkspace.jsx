@@ -3,7 +3,10 @@ import studentApi from "../../api/studentApi.js";
 import WhatsAppReminderSettings from "../attendance/WhatsAppReminderSettings.jsx";
 import { desktopReminderUrl } from "../attendance/whatsappReminder.js";
 import useWhatsAppSettings from "./useWhatsAppSettings.js";
-import { announcementTemplates, buildCampaign, studentName } from "./whatsappCampaign.js";
+import { buildCampaign, studentName } from "./whatsappCampaign.js";
+import { Users, Building2, Layers, MessageCircle } from "lucide-react";
+import AnnouncementComposer from "./AnnouncementComposer.jsx";
+import { initialAnnouncement, generateAnnouncement } from "./announcementBuilder.js";
 import styles from "./WhatsAppWorkspace.module.css";
 import WhatsAppGroupAnnouncement from "./WhatsAppGroupAnnouncement.jsx";
 
@@ -16,7 +19,9 @@ function Workspace({settings,branches,batches}) {
   const [students,setStudents] = useState([]), [loading,setLoading] = useState(true), [error,setError] = useState("");
   const [retry,setRetry] = useState(0), [selected,setSelected] = useState(new Set());
   const [search,setSearch] = useState(""), [filter,setFilter] = useState("all");
-  const [type,setType] = useState("holiday"), [message,setMessage] = useState(announcementTemplates.holiday);
+  const [message,setMessage] = useState(()=>generateAnnouncement(initialAnnouncement()));
+  const [composerValid,setComposerValid] = useState(true);
+  const [announcementForm,setAnnouncementForm] = useState(initialAnnouncement);
   const [review,setReview] = useState(null), [opened,setOpened] = useState(new Set()), [done,setDone] = useState(new Set());
   useEffect(() => {
     let cancelled=false;
@@ -47,11 +52,11 @@ function Workspace({settings,branches,batches}) {
     window.location.href=desktopReminderUrl(recipient.url);
   };
   return <section className={styles.workspace}>
-    <header><h2>WhatsApp communication</h2><p>Personalised announcements and fee-reminder settings, in one place.</p></header>
+    <header className={styles.hero}><span className={styles.heroIcon}><MessageCircle size={26}/></span><div><small>COMMUNICATION DESK</small><h2>One message. The right audience.</h2><p>Choose who receives it, prepare your announcement, then review before sending.</p></div></header>
     <div className={styles.notice}>Free assisted sending: select recipients → review messages → open each chat → press Send in WhatsApp. No automatic bulk sending or delivery tracking. Send only relevant messages to contacts who expect them.</div>
     <WhatsAppReminderSettings key={JSON.stringify(settings.value)} value={settings.value} onSave={settings.save}/>
-    <div className={styles.actions}><button aria-pressed={mode==="individual"} onClick={()=>setMode("individual")}>Individual / multiple students</button><button aria-pressed={mode==="group"} onClick={()=>setMode("group")}>Branch / batch WhatsApp group</button></div>
-    {mode==="group" ? <WhatsAppGroupAnnouncement branches={branches} batches={batches} settings={settings}/> : loading ? <p role="status">Loading all accessible students…</p> : error && !students.length ? <div role="alert">{error} <button onClick={()=>setRetry(v=>v+1)}>Retry students</button></div> : <>
+    <section className={styles.audience}><div><small>SEND MESSAGE TO</small><h3>Choose your audience</h3></div><div className={styles.segmented}>{[['individual','Student',Users],['branch','Branch',Building2],['batch','Batch',Layers]].map(([id,label,Icon])=><button key={id} aria-pressed={mode===id} onClick={()=>setMode(id)}><Icon size={18}/>{label}</button>)}</div></section>
+    {mode!=="individual" ? <WhatsAppGroupAnnouncement key={mode} mode={mode} branches={branches} batches={batches} settings={settings}/> : loading ? <p role="status">Loading all accessible students…</p> : error && !students.length ? <div role="alert">{error} <button onClick={()=>setRetry(v=>v+1)}>Retry students</button></div> : <>
     {!review ? <>
       <div className={styles.columns}>
         <section className={styles.card}><h3>1. Choose students</h3><p>{selected.size} selected · {students.length} available</p>
@@ -65,10 +70,8 @@ function Workspace({settings,branches,batches}) {
           <div className={styles.students}>{visible.map(s=><label className={styles.student} key={s._id}><input type="checkbox" checked={selected.has(String(s._id))} onChange={()=>toggle(String(s._id))}/><span><strong>{studentName(s)}</strong><small>{s.phone||"No student phone"} · {s.status} · {s.batch?.batchName||"No batch"}</small></span></label>)}{!visible.length&&<p>No students found.</p>}</div>
         </section>
         <section className={styles.card}><h3>2. Write announcement</h3>
-          <label>Message type<select value={type} onChange={e=>{setType(e.target.value);setMessage(announcementTemplates[e.target.value]);}}><option value="holiday">Holiday announcement</option><option value="championship">Championship</option><option value="belt">Belt test</option><option value="custom">Custom message</option></select></label>
-          <label>Message<textarea rows={13} maxLength={2500} value={message} onChange={e=>setMessage(e.target.value)}/></label>
-          <small>Replace [details]. {'{name}'} and {'{academy}'} personalise each message. Changing message type loads its default template. Payment QR/UPI is not added to announcements.</small>
-          <button className={styles.primary} disabled={!selected.size} onClick={prepare}>Review {selected.size} selected students</button>
+          <AnnouncementComposer value={message} onChange={setMessage} onValidityChange={setComposerValid} initialForm={announcementForm} onFormChange={setAnnouncementForm}/>
+          <button className={styles.primary} disabled={!selected.size || !composerValid} onClick={prepare}>Review {selected.size} selected students</button>
         </section>
       </div>
       {error&&<p role="alert" className={styles.error}>{error}</p>}

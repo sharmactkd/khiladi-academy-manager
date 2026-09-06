@@ -1,0 +1,61 @@
+KHILADI SECURITY V2 - POWERSHELL DEPLOYMENT
+==========================================
+
+1. Extract the complete-code ZIP from the repository root.
+
+2. Install exactly locked dependencies:
+
+   cd D:\KHILADI-Academy-Manager\backend
+   npm ci
+   cd ..\frontend
+   npm ci
+   npm run build
+
+3. Add independent production secrets to backend/.env (do not commit them):
+
+   AUDIT_LOG_SIGNING_KEY=<independent random secret, minimum 32 characters>
+   REQUIRE_EMAIL_VERIFICATION=true
+   EMAIL_VERIFICATION_EXPIRES_MINUTES=30
+   MAX_FAILED_LOGIN_ATTEMPTS=5
+   LOGIN_LOCK_MINUTES=15
+   FRONTEND_VERIFY_EMAIL_URL=https://your-domain.example/verify-email
+   AUDIT_LOG_RETENTION_DAYS=365
+
+4. Configure SMTP before enabling verification.
+
+5. Back up MongoDB, then migrate existing users exactly once. Use the deployment
+   timestamp as the cutoff so future unverified accounts are never grandfathered:
+
+   cd D:\KHILADI-Academy-Manager\backend
+   $env:EXISTING_USER_VERIFICATION_CUTOFF = (Get-Date).ToUniversalTime().ToString("o")
+   npm run security:migrate-existing-users
+   Remove-Item Env:EXISTING_USER_VERIFICATION_CUTOFF
+
+6. Run existing sensitive-data migration if it has not already completed:
+
+   npm run security:migrate-sensitive-data
+
+7. Verify locally:
+
+   npm run test:security
+   npm audit --omit=dev
+   cd ..\frontend
+   npm run build
+   npm audit --omit=dev
+
+8. The frontend host must apply frontend/public/_headers. If the host does not
+   support _headers, copy the same values into its native header configuration.
+
+9. Commit after successful verification:
+
+   cd D:\KHILADI-Academy-Manager
+   git add -A
+   git commit -m "Complete security hardening v2"
+   git push
+
+IMPORTANT
+---------
+- Do not run npm audit fix --force.
+- Do not rotate encryption/signing keys without a data migration plan.
+- Git history cleanup is destructive and is intentionally not automated here.
+- Recovery codes are shown once and must be stored offline.

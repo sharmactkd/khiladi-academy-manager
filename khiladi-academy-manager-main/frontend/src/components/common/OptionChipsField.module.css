@@ -1,0 +1,8 @@
+.root { min-width: 0; }
+.label { display: block; margin-bottom: 8px; font-weight: 800; }
+.chips { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-start; gap: 8px; }
+.chip { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; width: auto; }
+.single { display: flex; width: 100%; }
+.single .chip { width: auto; min-width: var(--choice-single-width, 112px); max-width: min(180px, 100%); justify-self: start; }
+.selected { color: var(--color-on-primary); background: var(--color-primary); }
+.custom { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 10px; }
