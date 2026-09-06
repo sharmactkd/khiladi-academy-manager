@@ -238,3 +238,22 @@
   }
   .expense-manager-premium .transaction-form-grid > label:nth-child(5) { grid-column: 4 !important; }
 }
+.expense-manager-premium
+.transaction-category-tiles
+.ui-choice--tile:not(.is-selected):not(.is-pointer-hovered):hover {
+  background: #fff !important;
+  color: #17233b !important;
+  border-color: #dbe3ed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.expense-manager-premium
+.transaction-category-tiles
+.ui-choice--tile.is-pointer-hovered:not(.is-selected) {
+  background: #fff8f8 !important;
+  color: #cf0006 !important;
+  border-color: #cf0006 !important;
+  box-shadow: 0 4px 12px rgb(207 0 6 / 8%) !important;
+  transform: translateY(-2px) !important;
+}
