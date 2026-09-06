@@ -10,17 +10,20 @@ import {
   Droplets,
   Dumbbell,
   Grid3X3,
+  HeartPulse,
   Home,
   Infinity,
   MapPin,
   Megaphone,
   Package,
   Radar,
+  Repeat2,
   Smartphone,
   Tags,
   Trophy,
   Wrench,
   Zap,
+  Utensils,
   Warehouse,
 } from "lucide-react";
 import MartialArtIcon from "./MartialArtIcon.jsx";
@@ -63,6 +66,9 @@ const EXPENSE_CATEGORY_ICONS = {
   marketing: Megaphone,
   travel: MapPin,
   maintenance: Wrench,
+  food: Utensils,
+  medical: HeartPulse,
+  subscription: Repeat2,
   "custom category": PlusIcon,
 };
 
