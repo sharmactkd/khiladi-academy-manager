@@ -17,4 +17,5 @@ const schema = new mongoose.Schema({
 }, { timestamps: true });
 
 schema.index({ academy: 1, sourceType: 1, sourceId: 1 }, { unique: true, partialFilterExpression: { sourceId: { $type: "objectId" } } });
+schema.index({ academy: 1, reversedAt: 1, date: -1, type: 1 });
 export default mongoose.model("ExpenseTransaction", schema);

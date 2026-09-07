@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "security:migrate-sensitive-data": "node scripts/migrateSensitiveStudentData.js",
     "security:migrate-existing-users": "node scripts/migrateExistingUsersAsVerified.js",
-    "test:security": "node --test tests/security/*.test.js"
+    "test:security": "node --test tests/security/*.test.js",
+    "test:expenses": "node --test tests/expenseUtils.test.js"
   },
   "keywords": [],
   "author": "",

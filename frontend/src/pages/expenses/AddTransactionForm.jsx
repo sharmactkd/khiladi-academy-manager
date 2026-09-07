@@ -1,42 +1,22 @@
+import { useState } from "react";
 import { ArrowDown, ArrowUpRight, Banknote, Plus, Smartphone } from "lucide-react";
 import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
 import styles from "./ExpenseManager.module.css";
-
-const incomeCategories = [
-  "Student Fee",
-  "Admission Fee",
-  "Belt Test",
-  "Championship",
-  "Uniform / Equipment",
-  "Sponsorship",
-];
-
-const expenseCategories = [
-  "Rent",
-  "Salary",
-  "Electricity",
-  "Equipment",
-  "Championship",
-  "Marketing",
-  "Travel",
-  "Maintenance",
-  "Food",
-  "Medical",
-  "Subscription",
-  "Movie",
-  "Parking",
-];
+import { defaultCategoriesFor, normalizeExpenseCategory } from "./expenseCategories.js";
 
 export default function AddTransactionForm({
   form,
   setForm,
   customCategories,
-  setCustomCategories,
+  onAddCustomCategory,
+  onRemoveCustomCategory,
   onSubmit,
   onClose,
 }) {
+  const [addingCustom, setAddingCustom] = useState(false);
+  const defaults = defaultCategoriesFor(form.type);
   const categories = [
-    ...(form.type === "income" ? incomeCategories : expenseCategories),
+    ...defaults,
     ...customCategories,
   ];
   const categoryKind =
@@ -51,33 +31,29 @@ export default function AddTransactionForm({
     }));
   };
 
-  const addCustomCategory = (event) => {
+  const addCustomCategory = async (event) => {
     event?.preventDefault();
     event?.stopPropagation();
 
     const value = form.customCategory.trim();
-    if (!value) return;
-
-    setCustomCategories((old) => {
-      const current = Array.isArray(old) ? old : [];
-      return current.some(
-        (item) => String(item).trim().toLowerCase() === value.toLowerCase(),
-      )
-        ? current
-        : [...current, value];
-    });
-    setForm((old) => ({
-      ...old,
-      category: value,
-      customCategory: "",
-    }));
+    if (!value || addingCustom) return;
+    const existing = categories.find((item) => normalizeExpenseCategory(item) === normalizeExpenseCategory(value));
+    if (existing) {
+      setForm((old) => ({ ...old, category: existing, customCategory: "" }));
+      return;
+    }
+    try {
+      setAddingCustom(true);
+      const savedName = await onAddCustomCategory(value);
+      if (savedName) setForm((old) => ({ ...old, category: savedName, customCategory: "" }));
+    } finally {
+      setAddingCustom(false);
+    }
   };
 
   const removeCustomCategory = (item) => {
-    setCustomCategories((old) => old.filter((value) => value !== item));
-    setForm((old) =>
-      old.category === item ? { ...old, category: "" } : old,
-    );
+    onRemoveCustomCategory(item);
+    setForm((old) => old.category === item ? { ...old, category: "" } : old);
   };
 
   const customCategoryField = (
@@ -102,11 +78,12 @@ export default function AddTransactionForm({
           type="button"
           className="expense-custom-category-add"
           aria-label={`Add custom category ${form.customCategory.trim()}`}
+          disabled={addingCustom}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={addCustomCategory}
         >
           <Plus size={14} />
-          Add
+          {addingCustom ? "Adding…" : "Add"}
         </button>
       ) : null}
     </div>

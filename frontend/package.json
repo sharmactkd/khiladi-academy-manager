@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "verify:historical-workbook": "node --max-old-space-size=4096 scripts/verifyHistoricalWorkbook.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:expenses": "node scripts/testExpenseManager.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
