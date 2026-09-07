@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useState } from "react";
+
 import { X } from "lucide-react";
 import { OptionIcon, optionKindLabel } from "./optionIconRegistry.jsx";
 import styles from "./IconOptionGrid.module.css";
@@ -21,7 +21,7 @@ const IconOptionGrid = ({
   selected = [],
   trailingContent = null,
 }) => {
-  const [hoveredValue, setHoveredValue] = useState("");
+  
   const selectedValues = new Set(
     (Array.isArray(selected) ? selected : [selected].filter(Boolean)).map(
       (value) => String(value).trim().toLowerCase(),
@@ -58,10 +58,8 @@ const IconOptionGrid = ({
                 !interactive && "is-read-only",
                 active && styles.selected,
                 active && "is-selected",
-                hoveredValue === String(item.value) && "is-pointer-hovered",
               )}
-              onPointerEnter={() => setHoveredValue(String(item.value))}
-              onPointerLeave={() => setHoveredValue("")}
+             
             >
               <span className={clsx(styles.icon, "ui-choice-icon")}><OptionIcon kind={kind} value={item.value} /></span>
               <span className={clsx(styles.label, "ui-choice-text")}>{item.label}</span>
