@@ -5,5 +5,7 @@
 .transactionPanelHeader{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #edf1f5}
 .transactionPanelHeader h2{margin:8px 0 0;font-size:16px;color:#10213d}
 .transactionPanelHeader>strong{font-size:20px}
+.formField{display:grid;gap:7px;color:#40536d;font-size:12px;font-weight:850}
+.fieldLabel{display:block;color:#40536d;font-size:12px;font-weight:850}
 .transactionPanel .tableCard{box-shadow:none;border:0;border-radius:0}
 @media(max-width:900px){.transactionColumns{grid-template-columns:1fr}}

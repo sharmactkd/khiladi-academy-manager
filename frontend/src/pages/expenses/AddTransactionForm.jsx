@@ -51,15 +51,21 @@ export default function AddTransactionForm({
     }));
   };
 
-  const addCustomCategory = () => {
+  const addCustomCategory = (event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+
     const value = form.customCategory.trim();
     if (!value) return;
 
-    setCustomCategories((old) =>
-      old.some((item) => item.toLowerCase() === value.toLowerCase())
-        ? old
-        : [...old, value],
-    );
+    setCustomCategories((old) => {
+      const current = Array.isArray(old) ? old : [];
+      return current.some(
+        (item) => String(item).trim().toLowerCase() === value.toLowerCase(),
+      )
+        ? current
+        : [...current, value];
+    });
     setForm((old) => ({
       ...old,
       category: value,
@@ -86,14 +92,19 @@ export default function AddTransactionForm({
         }
         onKeyDown={(event) => {
           if (event.key === "Enter") {
-            event.preventDefault();
-            addCustomCategory();
+            addCustomCategory(event);
           }
         }}
         placeholder="Add custom category"
       />
       {form.customCategory.trim() ? (
-        <button type="button" onClick={addCustomCategory}>
+        <button
+          type="button"
+          className="expense-custom-category-add"
+          aria-label={`Add custom category ${form.customCategory.trim()}`}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={addCustomCategory}
+        >
           <Plus size={14} />
           Add
         </button>
@@ -160,8 +171,8 @@ export default function AddTransactionForm({
             />
           </label>
 
-          <label>
-            Mode
+          <div className={styles.formField}>
+            <span className={styles.fieldLabel}>Mode</span>
             <div className={`${styles.modeTiles} transaction-mode-tiles`}>
               <button
                 type="button"
@@ -190,7 +201,7 @@ export default function AddTransactionForm({
                 Online
               </button>
             </div>
-          </label>
+          </div>
 
           <label className={styles.full}>
             Description *
@@ -208,8 +219,8 @@ export default function AddTransactionForm({
             />
           </label>
 
-          <label className={styles.full}>
-            Category
+          <div className={`${styles.formField} ${styles.full}`}>
+            <span className={styles.fieldLabel}>Category</span>
             <div
               className={`${styles.categoryTiles} transaction-category-tiles`}
             >
@@ -228,7 +239,7 @@ export default function AddTransactionForm({
                 trailingContent={customCategoryField}
               />
             </div>
-          </label>
+          </div>
 
           <label>
             Date
