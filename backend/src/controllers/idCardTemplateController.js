@@ -1,6 +1,7 @@
 import IdCardTemplate from "../models/IdCardTemplate.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
+import { uploadedFileReference } from "../services/mediaStorageService.js";
 
 const allowedFields = [
   "templateName",
@@ -34,7 +35,7 @@ const buildPayload = (body) => {
   return payload;
 };
 
-const uploadedPath = (file) => file ? `/${file.path.replace(/\\/g, "/")}` : "";
+const uploadedPath = uploadedFileReference;
 
 const applyUploadedBackgrounds = (payload, files = {}) => {
   const frontBackground = uploadedPath(files.frontBackground?.[0]);

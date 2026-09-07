@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import path from "path";
 import env from "../config/env.js";
+import { parsePrivateCloudinaryReference } from "../services/mediaStorageService.js";
 
 const PRIVATE_PREFIXES = [
   "private-uploads/students/",
@@ -18,12 +19,15 @@ const normalizeMediaPath = (value) =>
 
 export const isPrivateMediaPath = (value) => {
   const normalized = normalizeMediaPath(value);
-  return PRIVATE_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+  return Boolean(parsePrivateCloudinaryReference(normalized)) ||
+    PRIVATE_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 };
 
 export const assertPrivateMediaPath = (value) => {
   const normalized = normalizeMediaPath(value);
   if (!isPrivateMediaPath(normalized)) throw new Error("Private media path is not allowed");
+
+  if (parsePrivateCloudinaryReference(normalized)) return normalized;
 
   const basename = path.posix.basename(normalized);
   if (!/^[0-9a-f-]{36}\.(?:jpg|png|webp)$/i.test(basename)) {

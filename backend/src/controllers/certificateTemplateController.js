@@ -1,6 +1,7 @@
 import CertificateTemplate from "../models/CertificateTemplate.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
+import { uploadedFileReference } from "../services/mediaStorageService.js";
 
 const allowedFields = [
   "templateName",
@@ -15,7 +16,7 @@ const allowedFields = [
   "isDefault",
 ];
 
-const uploadedPath = (file) => file ? `/${file.path.replace(/\\/g, "/")}` : "";
+const uploadedPath = uploadedFileReference;
 
 const applyUploads = (payload, files = {}) => {
   const background = uploadedPath(files.certificateBackground?.[0]);

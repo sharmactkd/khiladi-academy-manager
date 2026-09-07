@@ -13,6 +13,7 @@ import { buildSafeSearchRegex } from "../utils/search.js";
 import { hashSensitiveValue } from "../utils/fieldEncryption.js";
 import { getPlanLimit, isLimitUnlimited } from "../services/planService.js";
 import { getResourceUsage } from "../services/usageService.js";
+import { uploadedFileReference } from "../services/mediaStorageService.js";
 
 const TAEKWONDO_BELTS = [
   "White",
@@ -60,8 +61,7 @@ const validateBranch = async (academyId, branchId) => {
 };
 
 const getUploadedFilePath = (file) => {
-  if (!file) return "";
-  return `/${file.path.replace(/\\/g, "/")}`;
+  return uploadedFileReference(file);
 };
 
 const cleanString = (value, maxLength = 500) => {

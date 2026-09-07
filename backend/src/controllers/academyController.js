@@ -2,6 +2,7 @@ import Academy from "../models/Academy.js";
 import AuditLog from "../models/AuditLog.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
+import { uploadedFileReference } from "../services/mediaStorageService.js";
 
 const SAFE_ACADEMY_UPDATE_FIELDS = [
   "ownerName",
@@ -25,8 +26,7 @@ const SAFE_ACADEMY_UPDATE_FIELDS = [
 ];
 
 const getUploadedFilePath = (file) => {
-  if (!file) return "";
-  return `/${file.path.replace(/\\/g, "/")}`;
+  return uploadedFileReference(file);
 };
 
 const parseJsonIfNeeded = (value, fallback) => {

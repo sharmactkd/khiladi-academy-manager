@@ -34,6 +34,7 @@ const auditLogSigningKey =
   process.env.AUDIT_LOG_SIGNING_KEY || process.env.JWT_ACCESS_SECRET;
 const privateMediaSigningKey =
   process.env.PRIVATE_MEDIA_SIGNING_KEY || process.env.DATA_ENCRYPTION_KEY;
+const cloudinaryEnabled = process.env.CLOUDINARY_ENABLED === "true";
 
 if (process.env.NODE_ENV === "production" && !process.env.INTEGRATION_ENCRYPTION_KEY) {
   throw new Error("Missing required environment variable: INTEGRATION_ENCRYPTION_KEY");
@@ -46,6 +47,16 @@ if (process.env.NODE_ENV === "production" && !process.env.AUDIT_LOG_SIGNING_KEY)
 }
 if (process.env.NODE_ENV === "production" && !process.env.PRIVATE_MEDIA_SIGNING_KEY) {
   throw new Error("Missing required environment variable: PRIVATE_MEDIA_SIGNING_KEY");
+}
+if (process.env.NODE_ENV === "production" && !cloudinaryEnabled) {
+  throw new Error("CLOUDINARY_ENABLED must be true in production");
+}
+if (cloudinaryEnabled) {
+  ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"].forEach(
+    (key) => {
+      if (!process.env[key]) throw new Error(`Missing required environment variable: ${key}`);
+    }
+  );
 }
 
 const env = {
@@ -82,6 +93,14 @@ const env = {
   ),
   AUDIT_LOG_RETENTION_DAYS:
     Number(process.env.AUDIT_LOG_RETENTION_DAYS) || 365,
+  CLOUDINARY_ENABLED: cloudinaryEnabled,
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || "",
+  CLOUDINARY_ROOT_FOLDER:
+    String(process.env.CLOUDINARY_ROOT_FOLDER || "khiladi/academy")
+      .trim()
+      .replace(/^\/+|\/+$/g, "") || "khiladi/academy",
   TOURNAMENT_API_ALLOWED_ORIGINS: String(
     process.env.TOURNAMENT_API_ALLOWED_ORIGINS ||
       (process.env.NODE_ENV === "production"

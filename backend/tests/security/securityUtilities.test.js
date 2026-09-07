@@ -16,6 +16,7 @@ const integrations = await import("../../src/utils/integrationSecurity.js");
 const search = await import("../../src/utils/search.js");
 const mfa = await import("../../src/utils/mfa.js");
 const privateMedia = await import("../../src/utils/privateMedia.js");
+const mediaStorage = await import("../../src/services/mediaStorageService.js");
 const razorpay = await import("../../src/services/razorpayService.js");
 
 test("sensitive values use authenticated encryption and round-trip", () => {
@@ -84,6 +85,32 @@ test("private media URLs are short-lived, signed and traversal-safe", () => {
     privateMedia.createSignedPrivateMediaUrl(
       "private-uploads/students/../123e4567-e89b-12d3-a456-426614174000.png"
     )
+  );
+});
+
+test("Cloudinary private references are opaque, validated and signed", () => {
+  const reference = mediaStorage.createPrivateCloudinaryReference({
+    publicId: "khiladi/academy/private/students/123e4567-e89b-12d3-a456-426614174000",
+    version: 123,
+    format: "webp",
+  });
+  assert.match(reference, /^cloudinary-private:/);
+  assert.deepEqual(mediaStorage.parsePrivateCloudinaryReference(reference), {
+    publicId: "khiladi/academy/private/students/123e4567-e89b-12d3-a456-426614174000",
+    version: 123,
+    format: "webp",
+  });
+  assert.equal(mediaStorage.parsePrivateCloudinaryReference(`${reference}tampered`), null);
+
+  const signedUrl = privateMedia.createSignedPrivateMediaUrl(reference);
+  const parsed = new URL(signedUrl, "http://localhost");
+  assert.equal(
+    privateMedia.verifySignedPrivateMediaRequest({
+      encodedPath: parsed.pathname.split("/").at(-1),
+      expires: parsed.searchParams.get("expires"),
+      signature: parsed.searchParams.get("signature"),
+    }),
+    reference
   );
 });
 

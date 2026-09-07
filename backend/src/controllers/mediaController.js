@@ -4,6 +4,10 @@ import asyncHandler from "../utils/asyncHandler.js";
 import AuditLog from "../models/AuditLog.js";
 import { errorResponse } from "../utils/apiResponse.js";
 import { verifySignedPrivateMediaRequest } from "../utils/privateMedia.js";
+import {
+  getPrivateCloudinaryDownloadUrl,
+  parsePrivateCloudinaryReference,
+} from "../services/mediaStorageService.js";
 
 const MIME_TYPES = { ".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
 
@@ -14,6 +18,22 @@ export const servePrivateMedia = asyncHandler(async (req, res) => {
     signature: req.query.signature,
   });
   if (!mediaPath) return errorResponse(res, "Private media link is invalid or expired", 403);
+
+  if (parsePrivateCloudinaryReference(mediaPath)) {
+    const expiresAt = Math.floor(Date.now() / 1000) + 60;
+    const downloadUrl = getPrivateCloudinaryDownloadUrl(mediaPath, expiresAt);
+    if (!downloadUrl) return errorResponse(res, "Private media storage is unavailable", 503);
+
+    void AuditLog.create({
+      action: "PRIVATE_MEDIA_VIEWED",
+      module: "media",
+      ip: req.ip || "",
+      userAgent: req.get("user-agent") || "",
+      metadata: { category: "cloudinary/authenticated" },
+    }).catch(() => {});
+    res.setHeader("Cache-Control", "private, max-age=60, no-transform");
+    return res.redirect(302, downloadUrl);
+  }
 
   const absolutePath = path.resolve(process.cwd(), mediaPath);
   const allowedRoots = [
