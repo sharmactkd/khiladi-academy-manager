@@ -370,8 +370,8 @@ const EditStudent = () => {
       event.target.value = "";
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Photo size must be less than 2MB");
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Photo must be 8 MB or smaller; it will be optimized automatically");
       event.target.value = "";
       return;
     }

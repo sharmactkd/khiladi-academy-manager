@@ -398,8 +398,8 @@ const AcademyProfile = () => {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Logo size 2MB se kam honi chahiye");
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Logo must be 8 MB or smaller; it will be optimized automatically");
       event.target.value = "";
       return;
     }

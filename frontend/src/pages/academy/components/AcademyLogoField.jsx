@@ -10,7 +10,7 @@ const AcademyLogoField = ({ logoPreview, onChange }) => (
         <span className="academy-profile-logo-upload">
           <Upload size={22} aria-hidden="true" />
           <strong>Upload / Change Logo</strong>
-          <small>JPG, PNG or WEBP · Maximum 2 MB</small>
+          <small>JPG, PNG or WEBP · Auto-optimized after upload</small>
         </span>
         <input className="academy-profile-logo-input" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={onChange} />
       </label>

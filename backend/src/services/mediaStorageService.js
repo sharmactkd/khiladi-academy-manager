@@ -112,7 +112,6 @@ export const storeImage = async ({ buffer, fieldName, localDestination, extensio
     type: config.type,
     overwrite: false,
     format: "webp",
-    transformation: [{ width: 1600, height: 1600, crop: "limit", quality: "auto:good" }],
     tags: ["khiladi-academy-manager"],
   });
   const reference = config.type === "authenticated"

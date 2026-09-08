@@ -1,8 +1,9 @@
 import multer from "multer";
 
 import { removeStoredUpload, storeImage } from "../services/mediaStorageService.js";
+import { optimizeUploadedImage } from "../utils/imageOptimization.js";
 
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const IMAGE_TYPES = [
   { extension: ".jpg", mimeType: "image/jpeg", matches: (b) => b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
   { extension: ".png", mimeType: "image/png", matches: (b) => b.length >= 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
@@ -31,11 +32,12 @@ const parser = multer({
 const processFile = async (file) => {
   const imageType = IMAGE_TYPES.find((type) => type.matches(file.buffer));
   if (!imageType) throw new Error("Invalid image content. Upload a genuine JPG, PNG or WEBP file");
+  const optimized = await optimizeUploadedImage(file.buffer, file.fieldname);
   const stored = await storeImage({
-    buffer: file.buffer,
+    buffer: optimized.buffer,
     fieldName: file.fieldname,
     localDestination: localDestinationFor(file.fieldname),
-    extension: imageType.extension,
+    extension: optimized.extension,
   });
   return {
     ...file,
@@ -43,7 +45,9 @@ const processFile = async (file) => {
     filename: stored.filename,
     path: stored.reference,
     storageReference: stored.reference,
-    mimetype: imageType.mimeType,
+    mimetype: optimized.mimeType,
+    originalSize: file.size,
+    size: optimized.optimizedBytes,
     storedUpload: stored,
   };
 };

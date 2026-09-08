@@ -139,8 +139,8 @@ const AddStudent = () => {
     if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) {
       toast.error("Only JPG, PNG and WEBP images are allowed"); event.target.value = ""; return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Photo size must be less than 2MB"); event.target.value = ""; return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Photo must be 8 MB or smaller; it will be optimized automatically"); event.target.value = ""; return;
     }
     setPhoto(file); setPhotoPreview(URL.createObjectURL(file));
   };
