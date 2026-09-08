@@ -29,7 +29,7 @@ import CurrencySelector from "../../components/common/CurrencySelector.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import BranchFormSectionHeader from "./components/BranchFormSectionHeader.jsx";
-import "./BranchForm.module.css";
+import "./BranchForm.css";
 
 const FACILITY_OPTIONS = [
   "Mat Arena", "Changing Room", "Washroom", "Drinking Water", "Parking",

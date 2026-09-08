@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Building2, Crown, Mail, MapPin, Pencil, Phone, Power, UserRound } from "lucide-react";
 import { joinAddressParts } from "../branch.utils.js";
-import "./BranchCard.module.css";
+import "./BranchCard.css";
 
 const value = (input, fallback = "Not added") => String(input ?? "").trim() || fallback;
 const phone = (code, number) => String(number || "").trim() ? `${code || "+91"} ${number}` : "Not added";

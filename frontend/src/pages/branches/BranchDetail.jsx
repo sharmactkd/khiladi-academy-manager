@@ -14,7 +14,7 @@ import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.j
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import BranchDetailSectionHeader from "./components/BranchDetailSectionHeader.jsx";
-import "./BranchDetail.module.css";
+import "./BranchDetail.css";
 import { currencyMeta, formatMoney } from "../../utils/currency.js";
 
 const displayValue = (value, fallback = "Not added") =>

@@ -31,7 +31,7 @@ import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import { currencyMeta } from "../../utils/currency.js";
 import { formatBatchLabel } from "./batch.utils.js";
-import "./BatchForm.module.css";
+import "./BatchForm.css";
 
 const DAYS = [
   "monday",

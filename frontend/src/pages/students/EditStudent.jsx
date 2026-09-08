@@ -46,9 +46,9 @@ import MedicalSelectors, {
   buildMedicalConditionsPayload,
   normalizeMedicalSelection,
 } from "./components/MedicalSelectors.jsx";
-import "../branches/BranchForm.module.css";
-import "../batches/BatchForm.module.css";
-import "./StudentForm.module.css";
+import "../branches/BranchForm.css";
+import "../batches/BatchForm.css";
+import "./StudentForm.css";
 
 const toDateInput = (value) => {
   if (!value) return "";

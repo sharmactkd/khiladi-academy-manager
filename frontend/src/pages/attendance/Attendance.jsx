@@ -18,7 +18,7 @@ import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
 import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
-import "./Attendance.module.css";
+import "./Attendance.css";
 
 const now = new Date();
 

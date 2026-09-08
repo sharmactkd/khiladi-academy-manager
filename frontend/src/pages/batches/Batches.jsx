@@ -11,7 +11,7 @@ import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import MetricGrid from "../../components/common/MetricGrid.jsx";
 import BatchCard from "./components/BatchCard.jsx";
-import "./Batches.module.css";
+import "./Batches.css";
 
 const Batches = () => {
   const navigate = useNavigate();

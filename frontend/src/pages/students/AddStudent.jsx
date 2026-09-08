@@ -25,9 +25,9 @@ import {
 } from "../../utils/studentAgeCategory.js";
 import StudentFormSection from "./components/StudentFormSection.jsx";
 import MedicalSelectors, { buildMedicalConditionsPayload } from "./components/MedicalSelectors.jsx";
-import "../branches/BranchForm.module.css";
-import "../batches/BatchForm.module.css";
-import "./StudentForm.module.css";
+import "../branches/BranchForm.css";
+import "../batches/BatchForm.css";
+import "./StudentForm.css";
 
 const formatAadhaar = (value = "") => String(value).replace(/\D/g, "").slice(0, 12).replace(/(\d{4})(?=\d)/g, "$1-");
 const appendValue = (body, key, value) => body.append(key, typeof value === "object" && !(value instanceof File) ? JSON.stringify(value) : value ?? "");

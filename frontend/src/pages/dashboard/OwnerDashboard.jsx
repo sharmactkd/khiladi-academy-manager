@@ -20,7 +20,7 @@ import RecentActivityPanel from "./components/RecentActivityPanel.jsx";
 import { getQuickActions, MANAGEMENT_GROUPS } from "./dashboard.config.js";
 import { dateFormatter, formatMoney, getPersonName, joinAddressParts, normalizeDailyAttendance } from "./dashboard.utils.js";
 import useOwnerDashboard from "./hooks/useOwnerDashboard.js";
-import "./OwnerDashboard.module.css";
+import "./OwnerDashboard.css";
 
 const OwnerDashboard = () => {
   const data = useOwnerDashboard();

@@ -16,7 +16,7 @@ import {
   formatGenderGroup,
   normalizeList,
 } from "../batch.utils.js";
-import "./BatchCard.module.css";
+import "./BatchCard.css";
 
 const DAY_LABELS = {
   monday: "Mon",

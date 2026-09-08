@@ -12,7 +12,7 @@ import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.j
 import BatchAcademyHeader from "./components/BatchAcademyHeader.jsx";
 import BatchDetailSectionHeader from "./components/BatchDetailSectionHeader.jsx";
 import { currency, displayValue, formatBatchLabel, formatBatchTime, formatGenderGroup, normalizeList } from "./batch.utils.js";
-import "./BatchDetail.module.css";
+import "./BatchDetail.css";
 
 const getStudentName = (student) => student?.name || `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "-";
 const availableSeats = (capacity, count) => Number(capacity || 0) ? Math.max(Number(capacity) - count, 0) : "No limit";

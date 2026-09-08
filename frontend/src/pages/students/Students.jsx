@@ -17,7 +17,7 @@ import { printDataTable } from "../../utils/securePrint.js";
 import { getStudentAgeCategoryDisplay } from "../../utils/studentAgeCategory.js";
 import { formatStudentPhone } from "../../utils/studentPhone.js";
 import StudentsTable from "../../components/students/StudentsTable.jsx";
-import "./Students.module.css";
+import "./Students.css";
 
 const BLOOD_GROUPS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 

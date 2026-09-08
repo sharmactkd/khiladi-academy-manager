@@ -25,7 +25,7 @@ import {
   MARTIAL_ART_OPTIONS,
   PROFILE_SECTIONS,
 } from "./academyProfile.config.js";
-import "./AcademyProfile.module.css";
+import "./AcademyProfile.css";
 
 const createEmptyCredential = (type = "affiliation") => ({
   type,

@@ -30,7 +30,7 @@ import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import BranchFormSectionHeader from "./components/BranchFormSectionHeader.jsx";
 import { currentYear, FACILITY_OPTIONS, LANGUAGE_OPTIONS } from "./branch.config.js";
 import { createBranchPayload, createInitialBranchForm, joinAddressParts, unwrapList } from "./branch.utils.js";
-import "./BranchForm.module.css";
+import "./BranchForm.css";
 
 const AddBranch = () => {
   const navigate = useNavigate();

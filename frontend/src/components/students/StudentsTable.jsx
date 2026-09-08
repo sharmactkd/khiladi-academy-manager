@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Edit3, Trash2, UsersRound } from "lucide-react";
 import { getStudentAgeCategoryDisplay } from "../../utils/studentAgeCategory.js";
 import { formatStudentPhone } from "../../utils/studentPhone.js";
-import "./StudentsTable.module.css";
+import "./StudentsTable.css";
 
 const getStudentFullName = (student) => student.name || [student.firstName, student.lastName].filter(Boolean).join(" ");
 const displayBelt = (student) => student.beltRank === "Black" && student.danRank ? `Black (${student.danRank})` : student.beltRank || "-";

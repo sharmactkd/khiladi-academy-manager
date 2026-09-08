@@ -19,7 +19,7 @@ import useAuth from "../../hooks/useAuth.js";
 import { formatMoney } from "../../utils/currency.js";
 import { getStudentAgeCategoryDisplay } from "../../utils/studentAgeCategory.js";
 import { formatStudentPhoneWithCode } from "../../utils/studentPhone.js";
-import "./StudentProfile.module.css";
+import "./StudentProfile.css";
 
 const text = (value, fallback = "Not added") => String(value ?? "").trim() || fallback;
 const studentName = (student) => text(

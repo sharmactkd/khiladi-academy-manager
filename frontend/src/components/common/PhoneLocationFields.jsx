@@ -8,7 +8,7 @@ import {
   formatStudentPhone,
   getPhoneDigits,
 } from "../../utils/studentPhone.js";
-import "./PhoneLocationFields.module.css";
+import "./PhoneLocationFields.css";
 
 const DEFAULT_COUNTRY_ISO = "IN";
 const DEFAULT_DIAL_CODE = "+91";

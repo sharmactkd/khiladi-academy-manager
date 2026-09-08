@@ -12,7 +12,7 @@ import {
 
 import { membershipApi } from "../../api/membershipApi.js";
 import MembershipBadge from "./MembershipBadge.jsx";
-import "../../pages/attendance/Attendance.module.css";
+import "../../pages/attendance/Attendance.css";
 
 const ACTIONS = [
   { value: "extend_days", label: "Add training days" },

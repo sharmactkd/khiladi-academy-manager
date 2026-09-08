@@ -19,7 +19,7 @@ import MetricGrid from "../../components/common/MetricGrid.jsx";
 import BranchCard from "./components/BranchCard.jsx";
 import { PAGE_SIZE } from "./branch.config.js";
 import { joinAddressParts, unwrapList } from "./branch.utils.js";
-import "./Branches.module.css";
+import "./Branches.css";
 
 
 const Branches = () => {
