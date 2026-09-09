@@ -6,6 +6,7 @@ const Register = lazy(() => import("../pages/auth/Register.jsx"));
 const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword.jsx"));
 const ResetPassword = lazy(() => import("../pages/auth/ResetPassword.jsx"));
 const VerifyEmail = lazy(() => import("../pages/auth/VerifyEmail.jsx"));
+const SsoCallback = lazy(() => import("../pages/auth/SsoCallback.jsx"));
 const AccountSecurity = lazy(() => import("../pages/account/AccountSecurity.jsx"));
 const OwnerDashboard = lazy(() => import("../pages/dashboard/OwnerDashboard.jsx"));
 const CreateAcademy = lazy(() => import("../pages/onboarding/CreateAcademy.jsx"));
@@ -164,6 +165,7 @@ const AppRoutes = () => {
         element={<ResetPassword />}
       />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/auth/sso/callback" element={<SsoCallback />} />
       <Route path="/verify/id-card/:verificationId" element={<VerifyIdCard />} />
       <Route path="/verify/certificate/:verificationId" element={<VerifyCertificate />} />
 

@@ -41,8 +41,11 @@ import {
   loginRateLimiter,
   registerRateLimiter,
 } from "../middlewares/rateLimiter.js";
+import { centralSsoLogin } from "../controllers/ssoAuthController.js";
 
 const router = express.Router();
+
+router.post("/sso/exchange", loginRateLimiter, centralSsoLogin);
 
 router.post(
   "/register",

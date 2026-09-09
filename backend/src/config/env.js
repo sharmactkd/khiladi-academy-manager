@@ -118,6 +118,13 @@ const env = {
         : process.env.TRUST_PROXY,
 
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
+  ACADEMY_SSO_ASSERTION_SECRET:
+    process.env.ACADEMY_SSO_ASSERTION_SECRET || "",
+  KHILADI_IDENTITY_API_URL:
+    process.env.KHILADI_IDENTITY_API_URL || "https://khiladi-identity-api.onrender.com",
+  ACADEMY_SSO_REDIRECT_URI:
+    process.env.ACADEMY_SSO_REDIRECT_URI ||
+    "https://academy.khiladi-khoj.com/auth/sso/callback",
 
   SMTP_HOST: process.env.SMTP_HOST || "",
   SMTP_PORT: Number(process.env.SMTP_PORT) || 587,
@@ -143,5 +150,9 @@ const env = {
 
   isProduction: process.env.NODE_ENV === "production",
 };
+
+if (env.isProduction && env.ACADEMY_SSO_ASSERTION_SECRET.length < 32) {
+  throw new Error("ACADEMY_SSO_ASSERTION_SECRET must contain at least 32 characters in production");
+}
 
 export default env;

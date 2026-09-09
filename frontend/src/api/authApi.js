@@ -4,6 +4,7 @@ export const authApi = {
   register: (payload) => api.post("/auth/register", payload),
   login: (payload) => api.post("/auth/login", payload),
   googleLogin: (payload) => api.post("/auth/google", payload),
+  ssoExchange: (payload) => api.post("/auth/sso/exchange", payload),
   completeGoogleMfa: (payload) => api.post("/auth/google/mfa", payload),
   forgotPassword: (payload) => api.post("/auth/forgot-password", payload),
   resetPassword: (payload) => api.post("/auth/reset-password", payload),

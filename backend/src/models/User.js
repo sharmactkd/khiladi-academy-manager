@@ -103,6 +103,14 @@ const userSchema = new mongoose.Schema(
       index: true,
     },
 
+    centralIdentityId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      trim: true,
+    },
+
     profilePicture: {
       type: String,
       default: "",

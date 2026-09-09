@@ -30,7 +30,7 @@ const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 const verificationExpiry = () =>
   new Date(Date.now() + env.EMAIL_VERIFICATION_EXPIRES_MINUTES * 60 * 1000);
 
-const createGoogleMfaChallenge = async (user) => {
+export const createGoogleMfaChallenge = async (user) => {
   const rawToken = crypto.randomBytes(32).toString("hex");
   user.mfaLoginChallengeHash = hashToken(rawToken);
   user.mfaLoginChallengeExpires = new Date(Date.now() + 5 * 60 * 1000);
@@ -146,7 +146,7 @@ const createAuditLog = async ({ req, user = null, action, metadata = {} }) => {
   }
 };
 
-const issueAuthResponse = async ({ req, res, user, message, statusCode = 200 }) => {
+export const issueAuthResponse = async ({ req, res, user, message, statusCode = 200 }) => {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken();
 

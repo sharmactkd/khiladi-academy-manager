@@ -82,6 +82,12 @@ export const AuthProvider = ({ children }) => {
     persistAuth(data.user, data.accessToken);
     return data;
   };
+  const ssoExchange = async (payload) => {
+    const response = await authApi.ssoExchange(payload);
+    const data = response.data?.data;
+    if (!data?.requiresMfa) persistAuth(data.user, data.accessToken);
+    return data;
+  };
 
   const completeGoogleMfa = async (challengeToken, mfaCode) => {
     const response = await authApi.completeGoogleMfa({ challengeToken, mfaCode });
@@ -112,6 +118,7 @@ export const AuthProvider = ({ children }) => {
       register,
       login,
       googleLogin,
+      ssoExchange,
       completeGoogleMfa,
       verifyEmail,
       logout,

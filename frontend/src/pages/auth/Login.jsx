@@ -11,6 +11,7 @@ import Button from "../../components/common/Button.jsx";
 import Input from "../../components/common/Input.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { getRoleLandingPath } from "../../utils/authLanding.js";
+import { beginCentralSso } from "../../utils/centralSso.js";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -219,6 +220,7 @@ const Login = () => {
         >
           <span>or continue with</span>
         </div> : null}
+        {!googleMfaChallenge ? <button type="button" className="btn btn-outline auth-submit-button" onClick={beginCentralSso}>Continue with KHILADI</button> : null}
 
         {!googleMfaChallenge ? <div className="google-login-container">
           {googleLoading ? (
