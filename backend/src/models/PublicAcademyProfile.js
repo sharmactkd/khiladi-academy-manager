@@ -45,6 +45,21 @@ const publicAcademyProfileSchema = new mongoose.Schema({
   feeDisplay: { type: String, enum: ["hidden", "starting", "contact"], default: "contact" },
   startingFee: { type: Number, min: 0, max: 10000000, default: null },
   branches: { type: [branchSchema], default: [] },
+  visibility: {
+    academyOverview: { type: Boolean, default: true },
+    academyContact: { type: Boolean, default: true },
+    socialLinks: { type: Boolean, default: true },
+    affiliations: { type: Boolean, default: true },
+    branches: { type: Boolean, default: true },
+    branchContact: { type: Boolean, default: true },
+    branchFacilities: { type: Boolean, default: true },
+    branchCoaches: { type: Boolean, default: true },
+    batches: { type: Boolean, default: true },
+    batchCoaches: { type: Boolean, default: true },
+    batchSchedule: { type: Boolean, default: true },
+  },
+  hiddenBranchIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Branch" }],
+  hiddenBatchIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],
   publishedAt: { type: Date, default: null },
 }, { timestamps: true });
 

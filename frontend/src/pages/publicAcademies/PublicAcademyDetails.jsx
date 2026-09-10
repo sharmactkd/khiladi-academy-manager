@@ -1,48 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import publicAcademyApi from "../../api/publicAcademyApi.js";
 import AcademyEnquiryForm from "./AcademyEnquiryForm.jsx";
 import PublicShell from "./PublicShell.jsx";
+import "./PublicProfileVisibility.css";
+
+const title = (value) => String(value || "").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+const locationText = (location) => [location?.address, location?.city, location?.state, location?.country].filter(Boolean).join(", ");
+const ageText = (range) => range?.min != null || range?.max != null ? `${range.min ?? "Any"}–${range.max ?? "Any"} years` : "All ages";
+const beltText = (range) => range?.min || range?.max ? `${range.min || "Any belt"} to ${range.max || "Any belt"}` : "All belt levels";
 
 export default function PublicAcademyDetails() {
-  const { slug } = useParams();
-  const [profile, setProfile] = useState(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    publicAcademyApi.get(slug)
-      .then((response) => {
-        const item = response.data?.data?.profile;
-        setProfile(item);
-        document.title = `${item?.academyName || "Academy"} | KHILADI`;
-      })
-      .catch((requestError) => setError(requestError.response?.data?.message || "Academy not found"));
-  }, [slug]);
-
+  const { slug } = useParams(); const [profile, setProfile] = useState(null); const [error, setError] = useState("");
+  useEffect(() => { publicAcademyApi.get(slug).then((response) => { const item = response.data?.data?.profile; setProfile(item); document.title = `${item?.academyName || "Academy"} | KHILADI`; }).catch((requestError) => setError(requestError.response?.data?.message || "Academy not found")); }, [slug]);
+  const batchesByBranch = useMemo(() => (profile?.batches || []).reduce((result, batch) => { const key = batch.branchId || "academy"; (result[key] ||= []).push(batch); return result; }, {}), [profile?.batches]);
   if (error) return <PublicShell><div className="pa-state"><h1>{error}</h1></div></PublicShell>;
   if (!profile) return <PublicShell><div className="pa-state">Loading academy…</div></PublicShell>;
-
-  const location = [profile.location?.address, profile.location?.city, profile.location?.state].filter(Boolean).join(", ");
+  const location = locationText(profile.location);
   return <PublicShell>
-    <header className="pa-detail-hero" style={profile.coverImage ? { backgroundImage: `linear-gradient(90deg,#111827e8,#11182770),url(${profile.coverImage})` } : undefined}>
-      <div className="pa-detail-copy">
-        {profile.logo && <img className="pa-detail-logo" src={profile.logo} alt="" />}
-        <div className="pa-eyebrow">{profile.trialAvailable ? "Trial classes available" : "KHILADI Academy"}</div>
-        <h1>{profile.academyName}</h1>
-        <p>{profile.tagline || location}</p>
-      </div>
-    </header>
+    <header className="pa-detail-hero" style={profile.coverImage ? { backgroundImage: `linear-gradient(90deg,#111827e8,#11182770),url(${profile.coverImage})` } : undefined}><div className="pa-detail-copy">{profile.logo && <img className="pa-detail-logo" src={profile.logo} alt={`${profile.academyName} logo`} />}<div className="pa-eyebrow">{profile.trialAvailable ? "Trial classes available" : "KHILADI Academy"}</div><h1>{profile.academyName}</h1><p>{profile.tagline || location}</p><div className="pa-hero-tags">{profile.since && <span>Established {profile.since}</span>}{profile.onlineTraining && <span>Online training</span>}{profile.branches?.length > 0 && <span>{profile.branches.length} branch{profile.branches.length > 1 ? "es" : ""}</span>}</div></div></header>
     <main className="pa-wrap">
-      <div className="pa-detail-grid">
-        <section>
-          <div className="pa-panel"><h2>About the academy</h2><p>{profile.about}</p><div className="pa-tags">{profile.martialArts?.map((item) => <span className="pa-tag" key={item}>{item}</span>)}</div></div>
-          <div className="pa-panel"><h2>Branches</h2>{profile.branches?.length ? profile.branches.map((branch, index) => <div className="pa-branch" key={`${branch.name}-${index}`}><strong>{branch.name}</strong><p>{[branch.address, branch.city, branch.state].filter(Boolean).join(", ")}</p><div className="pa-tags">{branch.martialArts?.map((item) => <span className="pa-tag" key={item}>{item}</span>)}</div></div>) : <p>Contact the academy for branch information.</p>}</div>
-        </section>
-        <aside>
-          <div className="pa-panel"><h2>Quick facts</h2>{profile.since && <p>Established {profile.since}</p>}{profile.onlineTraining && <p>Online training available</p>}{profile.girlsOnlyBatches && <p>Girls-only batches available</p>}<p>{profile.feeDisplay === "starting" && profile.startingFee ? `Fees from ₹${profile.startingFee}` : "Contact for fee details"}</p></div>
-          <div className="pa-panel"><h2>Contact</h2><p>{location}</p>{profile.contact?.phone && <a className="pa-button" href={`tel:${profile.contact.countryCode || ""}${profile.contact.phone}`}>Call academy</a>}{profile.contact?.email && <p><a href={`mailto:${profile.contact.email}`}>{profile.contact.email}</a></p>}{profile.contact?.website && <p><a href={profile.contact.website} target="_blank" rel="noreferrer">Visit website</a></p>}</div>
-        </aside>
-      </div>
+      <div className="pa-detail-grid"><section>
+        {profile.about && <div className="pa-panel"><span className="pa-eyebrow">Our academy</span><h2>About {profile.academyName}</h2><p className="pa-copy">{profile.about}</p><div className="pa-tags">{profile.martialArts?.map((item) => <span className="pa-tag" key={item}>{item}</span>)}</div></div>}
+        {!!profile.affiliations?.length && <div className="pa-panel"><h2>Affiliations & recognition</h2><div className="pa-info-grid">{profile.affiliations.map((item, index) => <article className="pa-info-card" key={`${item.organizationName}-${index}`}><small>{title(item.type)}</small><strong>{item.organizationName}</strong>{item.registrationNumber && <p>Registration: {item.registrationNumber}</p>}</article>)}</div></div>}
+        {!!profile.branches?.length && <div className="pa-panel"><span className="pa-eyebrow">Locations</span><h2>Our branches</h2><div className="pa-public-records">{profile.branches.map((branch) => <article className="pa-public-record" key={branch.id}><header><div><h3>{branch.name}</h3><p>{locationText(branch.location)}</p></div>{branch.isMainBranch && <span className="pa-record-badge">Main branch</span>}</header>{branch.martialArts?.length > 0 && <div className="pa-tags">{branch.martialArts.map((item) => <span className="pa-tag" key={item}>{item}</span>)}</div>}{branch.facilities?.length > 0 && <p><strong>Facilities:</strong> {branch.facilities.join(", ")}</p>}{branch.languages?.length > 0 && <p><strong>Languages:</strong> {branch.languages.join(", ")}</p>}{branch.coaches?.length > 0 && <div className="pa-coaches">{branch.coaches.map((coach, index) => <div key={`${coach.name}-${index}`}><strong>{coach.name}</strong><small>{coach.role}{coach.achievements ? ` · ${coach.achievements}` : ""}</small></div>)}</div>}{branch.contact?.phone && <a className="pa-inline-link" href={`tel:${branch.contact.countryCode || ""}${branch.contact.phone}`}>Call this branch</a>}{batchesByBranch[branch.id]?.length > 0 && <p className="pa-linked-count">{batchesByBranch[branch.id].length} public batch{batchesByBranch[branch.id].length > 1 ? "es" : ""}</p>}</article>)}</div></div>}
+        {!!profile.batches?.length && <div className="pa-panel"><span className="pa-eyebrow">Programs</span><h2>Training batches</h2><div className="pa-batch-grid">{profile.batches.map((batch) => <article className="pa-batch-card" key={batch.id}><div><small>{batch.branchName || "Academy batch"}</small><h3>{batch.name}</h3></div><div className="pa-tags">{batch.martialArts?.map((item) => <span className="pa-tag" key={item}>{item}</span>)}</div><dl><dt>Level</dt><dd>{batch.skillLevels?.map(title).join(", ") || "Mixed"}</dd><dt>Format</dt><dd>{batch.modes?.map(title).join(", ") || "Offline"}</dd><dt>Age</dt><dd>{ageText(batch.ageRange)}</dd><dt>Belt</dt><dd>{beltText(batch.beltRange)}</dd>{batch.genderGroup && <><dt>Group</dt><dd>{title(batch.genderGroup)}</dd></>}{batch.venue && <><dt>Venue</dt><dd>{batch.venue}</dd></>}</dl>{batch.schedule?.length > 0 && <div className="pa-schedule">{batch.schedule.map((slot, index) => <span key={`${slot.day}-${index}`}><strong>{title(slot.day)}</strong>{slot.startTime}–{slot.endTime}</span>)}</div>}{batch.coaches?.length > 0 && <div className="pa-coaches">{batch.coaches.map((coach, index) => <div key={`${coach.name}-${index}`}><strong>{coach.name}</strong><small>{coach.role}</small></div>)}</div>}</article>)}</div></div>}
+      </section><aside>
+        {(profile.highlights?.length > 0 || profile.facilities?.length > 0 || profile.languages?.length > 0) && <div className="pa-panel"><h2>Quick facts</h2>{profile.highlights?.map((item) => <p key={item}>✓ {item}</p>)}{profile.facilities?.length > 0 && <p><strong>Facilities</strong><br />{profile.facilities.join(", ")}</p>}{profile.languages?.length > 0 && <p><strong>Languages</strong><br />{profile.languages.join(", ")}</p>}</div>}
+        {(profile.location || profile.contact || profile.socialLinks) && <div className="pa-panel pa-contact-panel"><h2>Contact</h2>{location && <p>{location}</p>}{profile.contact?.phone && <a className="pa-button" href={`tel:${profile.contact.countryCode || ""}${profile.contact.phone}`}>Call academy</a>}{profile.contact?.email && <a className="pa-inline-link" href={`mailto:${profile.contact.email}`}>{profile.contact.email}</a>}<div className="pa-socials">{Object.entries(profile.socialLinks || {}).filter(([, value]) => value).map(([key, value]) => <a key={key} href={value} target="_blank" rel="noreferrer">{title(key)} ↗</a>)}</div></div>}
+      </aside></div>
       <AcademyEnquiryForm profile={profile} />
     </main>
   </PublicShell>;
