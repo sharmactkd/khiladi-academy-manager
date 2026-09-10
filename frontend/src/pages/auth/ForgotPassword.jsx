@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, KeyRound, Mail, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { authApi } from "../../api/authApi.js";
-import AuthLayout from "../../layouts/AuthLayout.jsx";
 import Button from "../../components/common/Button.jsx";
-import Input from "../../components/common/Input.jsx";
+import AcademyAuthLayout from "../../layouts/AcademyAuthLayout.jsx";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -15,108 +14,48 @@ const ForgotPassword = () => {
 
   const handleEmailChange = (event) => {
     setEmail(event.target.value);
-
-    if (error) {
-      setError("");
-    }
-
-    if (message) {
-      setMessage("");
-    }
+    if (error) setError("");
+    if (message) setMessage("");
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
     setError("");
     setMessage("");
     setLoading(true);
-
     try {
-      const response =
-        await authApi.forgotPassword({
-          email,
-        });
-
-      setMessage(
-        response.data?.message ||
-          "Reset instructions sent"
-      );
+      const response = await authApi.forgotPassword({ email });
+      setMessage(response.data?.message || "Reset instructions sent");
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Request failed"
-      );
+      setError(err.response?.data?.message || "Request failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AuthLayout
-      title="Forgot Password?"
-      subtitle="Enter your registered email and we will send you password reset instructions."
-    >
-      <form
-        className="form auth-form"
-        onSubmit={handleSubmit}
-      >
-        {error && (
-          <div
-            className="alert alert-error"
-            role="alert"
-          >
-            {error}
-          </div>
-        )}
+    <AcademyAuthLayout panelClassName="academy-login__panel--forgot">
+      <div className="academy-login__purpose-icon" aria-hidden="true"><KeyRound size={28} /></div>
+      <header className="academy-login__heading">
+        <h2 id="academy-forgot-title">Forgot Password?</h2>
+        <p>Enter your registered email and we’ll send secure password reset instructions.</p>
+      </header>
 
-        {message && (
-          <div
-            className="alert alert-success"
-            role="status"
-          >
-            {message}
-          </div>
-        )}
+      {error && <div className="academy-login__alert" role="alert">{error}</div>}
+      {message && <div className="academy-login__success" role="status"><ShieldCheck size={19} />{message}</div>}
 
-        <Input
-          label="Registered Email"
-          name="email"
-          type="email"
-          value={email}
-          onChange={handleEmailChange}
-          placeholder="name@example.com"
-          autoComplete="email"
-          inputMode="email"
-          required
-        />
+      <form className="academy-login__form" onSubmit={handleSubmit} aria-labelledby="academy-forgot-title">
+        <label className="academy-login__field">
+          <span>Registered email</span>
+          <div className="academy-login__input-wrap"><Mail size={19} /><input name="email" type="email" value={email} onChange={handleEmailChange} placeholder="name@example.com" autoComplete="email" inputMode="email" required /></div>
+        </label>
 
-        <Button
-          type="submit"
-          variant="primary"
-          className="auth-submit-button"
-          loading={loading}
-        >
-          {loading
-            ? "Sending reset link..."
-            : "Send Reset Link"}
-        </Button>
-
-        <p className="auth-links">
-          <Link
-            to="/login"
-            className="auth-back-link"
-          >
-            <ArrowLeft
-              size={16}
-              aria-hidden="true"
-            />
-
-            Back to Login
-          </Link>
-        </p>
+        <Button type="submit" variant="primary" className="academy-login__submit" loading={loading}>{loading ? "Sending reset link..." : "Send Reset Link"}</Button>
       </form>
-    </AuthLayout>
+
+      <p className="academy-login__register"><Link to="/login" className="academy-login__back-link"><ArrowLeft size={16} /> Back to Sign In</Link></p>
+      <footer className="academy-login__security"><ShieldCheck size={18} /> Secure • Private • Protected</footer>
+    </AcademyAuthLayout>
   );
 };
 
