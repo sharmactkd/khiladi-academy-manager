@@ -62,6 +62,12 @@ export const registerRateLimiter = buildRateLimiter({
   message: "Too many registration attempts. Please try again later.",
 });
 
+export const publicEnquiryRateLimiter = buildRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 8,
+  message: "Too many enquiry requests. Please try again later.",
+});
+
 export const tournamentWebhookRateLimiter = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 60,

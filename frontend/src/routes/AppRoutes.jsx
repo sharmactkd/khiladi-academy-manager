@@ -7,6 +7,12 @@ const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword.jsx"));
 const ResetPassword = lazy(() => import("../pages/auth/ResetPassword.jsx"));
 const VerifyEmail = lazy(() => import("../pages/auth/VerifyEmail.jsx"));
 const SsoCallback = lazy(() => import("../pages/auth/SsoCallback.jsx"));
+const AcademyDirectory = lazy(() => import("../pages/publicAcademies/AcademyDirectory.jsx"));
+const PublicAcademyDetails = lazy(() => import("../pages/publicAcademies/PublicAcademyDetails.jsx"));
+const ManagePublicAcademyProfile = lazy(() => import("../pages/publicAcademies/ManagePublicAcademyProfile.jsx"));
+const AdmissionsEnquiries = lazy(() => import("../pages/admissions/AdmissionsEnquiries.jsx"));
+const AdmissionsFollowUps = lazy(() => import("../pages/admissions/AdmissionsFollowUps.jsx"));
+const AdmissionLeadDetails = lazy(() => import("../pages/admissions/AdmissionLeadDetails.jsx"));
 const AccountSecurity = lazy(() => import("../pages/account/AccountSecurity.jsx"));
 const OwnerDashboard = lazy(() => import("../pages/dashboard/OwnerDashboard.jsx"));
 const CreateAcademy = lazy(() => import("../pages/onboarding/CreateAcademy.jsx"));
@@ -166,6 +172,8 @@ const AppRoutes = () => {
       />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/auth/sso/callback" element={<SsoCallback />} />
+      <Route path="/academies" element={<AcademyDirectory />} />
+      <Route path="/academies/:slug" element={<PublicAcademyDetails />} />
       <Route path="/verify/id-card/:verificationId" element={<VerifyIdCard />} />
       <Route path="/verify/certificate/:verificationId" element={<VerifyCertificate />} />
 
@@ -687,6 +695,10 @@ const AppRoutes = () => {
             }
           >
             <Route path="/academy/profile" element={<AcademyProfile />} />
+            <Route path="/academy/public-profile" element={<ManagePublicAcademyProfile />} />
+            <Route path="/admissions/enquiries" element={<AdmissionsEnquiries />} />
+            <Route path="/admissions/follow-ups" element={<AdmissionsFollowUps />} />
+            <Route path="/admissions/enquiries/:id" element={<AdmissionLeadDetails />} />
 
             <Route
               path="/branches/new"

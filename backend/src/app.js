@@ -9,6 +9,8 @@ import env from "./config/env.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import academyRoutes from "./routes/academyRoutes.js";
+import publicAcademyRoutes from "./routes/publicAcademyRoutes.js";
+import admissionEnquiryRoutes from "./routes/admissionEnquiryRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
 import studentRoutes from "./routes/studentRoutes.js";
@@ -143,7 +145,9 @@ app.use("/api", mutationAuditMiddleware);
 app.use("/api/media", mediaRoutes);
 
 app.use("/api/auth", authRoutes);
+app.use("/api/public/academies", publicAcademyRoutes);
 app.use("/api/academy", academyRoutes);
+app.use("/api/admissions/enquiries", admissionEnquiryRoutes);
 app.use("/api/admin", adminRoutes);
 
 app.use("/api/branches", branchRoutes);

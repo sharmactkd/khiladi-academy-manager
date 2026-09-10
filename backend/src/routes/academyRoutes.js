@@ -15,6 +15,7 @@ import {
   createAcademyValidator,
   updateAcademyValidator,
 } from "../validators/academyValidator.js";
+import { getMyPublicProfile, publishMyPublicProfile, unpublishMyPublicProfile, updateMyPublicProfile } from "../controllers/publicAcademyController.js";
 
 const router = express.Router();
 
@@ -42,6 +43,10 @@ router.post(
 );
 
 router.get("/my", getMyAcademy);
+router.get("/public-profile", allowRoles("academy_owner", "super_admin"), getMyPublicProfile);
+router.patch("/public-profile", allowRoles("academy_owner", "super_admin"), updateMyPublicProfile);
+router.post("/public-profile/publish", allowRoles("academy_owner", "super_admin"), publishMyPublicProfile);
+router.post("/public-profile/unpublish", allowRoles("academy_owner", "super_admin"), unpublishMyPublicProfile);
 
 router.patch(
   "/my",

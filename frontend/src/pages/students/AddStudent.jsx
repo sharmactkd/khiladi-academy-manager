@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import DateInput from "../../components/common/DateInput.jsx";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
 import { ArrowLeft, BookOpen, HeartPulse, IdCard, MapPin, Phone, Save, ShieldAlert, UserRound } from "lucide-react";
@@ -8,6 +8,7 @@ import { academyApi } from "../../api/academyApi.js";
 import { batchApi } from "../../api/batchApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { studentApi } from "../../api/studentApi.js";
+import { admissionEnquiryApi } from "../../api/admissionEnquiryApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import { BeltTagsField, SportsMartialArtsField } from "../../components/common/AcademyOperationsFields.jsx";
 import FormActionBar from "../../components/common/FormActionBar.jsx";
@@ -67,6 +68,8 @@ const normalizeEntityId = (value) => {
 
 const AddStudent = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const admissionLead = location.state?.admissionLead || null;
   const { user } = useAuth();
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
@@ -75,13 +78,13 @@ const AddStudent = () => {
   const [submitError, setSubmitError] = useState("");
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState("");
-  const [studentContact, setStudentContact] = useState({ countryCode: "+91", phone: "", country: "India", state: "", city: "" });
+  const [studentContact, setStudentContact] = useState({ countryCode: "+91", phone: admissionLead?.phone || "", country: "India", state: "", city: "" });
   const [parentContacts, setParentContacts] = useState([createPersonContact()]);
   const [emergencyContacts, setEmergencyContacts] = useState([createPersonContact()]);
   const [medicalConditions, setMedicalConditions] = useState([]);
   const [otherMedicalCondition, setOtherMedicalCondition] = useState("");
   const { register, handleSubmit, control, setValue, formState: { errors } } = useForm({
-    defaultValues: { branch: "", batch: "", gender: "male", status: "active", martialArt: "", beltRank: "", danRank: "", bloodGroup: "" },
+    defaultValues: { name: admissionLead?.name || "", email: admissionLead?.email || "", branch: "", batch: "", gender: "male", status: "active", martialArt: admissionLead?.martialArt || "", beltRank: "", danRank: "", bloodGroup: "" },
   });
   const dob = useWatch({ control, name: "dob" });
   const martialArt = useWatch({ control, name: "martialArt" });
@@ -111,7 +114,7 @@ const AddStudent = () => {
         const academyData = academyResult.value?.data?.data?.academy || academyResult.value?.data?.academy || null;
         setAcademy(academyData);
         const sports = normalizeOptions(academyData?.martialArts);
-        if (sports.length) setValue("martialArt", sports[0]);
+        if (sports.length && !admissionLead?.martialArt) setValue("martialArt", sports[0]);
       }
       if (branchResult.status === "fulfilled") {
         const activeBranches = unwrapList(branchResult.value, "branches").filter((branch) => branch?.isActive !== false);
@@ -171,15 +174,23 @@ const AddStudent = () => {
         bloodGroup: values.bloodGroup || "", medicalConditions: buildMedicalConditionsPayload(medicalConditions, otherMedicalCondition), joiningDate: values.joiningDate || "", status: values.status || "active",
         notes: values.medicalNotes || "",
       };
+      let created;
       if (photo) {
         const body = new FormData();
         Object.entries(payload).forEach(([key, value]) => appendValue(body, key, value));
         body.append("profilePhoto", photo);
-        await studentApi.create(body);
+        created = await studentApi.create(body);
       } else {
         // A name-only student does not need multipart encoding. Sending JSON
         // avoids empty multipart fields being interpreted as supplied values.
-        await studentApi.create(payload);
+        created = await studentApi.create(payload);
+      }
+      if (admissionLead?._id && created?.data?._id) {
+        try {
+          await admissionEnquiryApi.convert(admissionLead._id, created.data._id);
+        } catch {
+          toast.error("Student add ho gaya, lekin lead status update nahi hua");
+        }
       }
       toast.success("Student added successfully");
       navigate("/students");
