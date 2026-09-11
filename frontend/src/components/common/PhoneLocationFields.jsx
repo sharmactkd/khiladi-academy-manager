@@ -54,6 +54,7 @@ const PhoneLocationFields = ({
   country = "India",
   state = "",
   city = "",
+  cityLabel = "District",
   
   onChange,
   phoneLabel = "Phone",
@@ -685,13 +686,13 @@ const PhoneLocationFields = ({
           </div>
 
           <div className="form-group">
-            <label>District</label>
+            <label>{cityLabel}</label>
             <select
               value={city || ""}
               onChange={(event) => update("city", event.target.value)}
               disabled={!selectedStateIso}
             >
-              <option value="">Select District</option>
+              <option value="">{`Select ${cityLabel}`}</option>
               {districts.map((item) => (
                 <option key={`${item.name}-${item.latitude}`} value={item.name}>
                   {item.name}

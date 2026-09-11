@@ -4,7 +4,9 @@ import {
   CalendarDays,
   GraduationCap,
   Layers3,
+  Mail,
   MapPin,
+  Phone,
   UserRound,
 } from "lucide-react";
 import "./AcademyHeroHeader.css";
@@ -24,6 +26,8 @@ const AcademyHeroHeader = ({
   addressLabel = "Main Branch",
   address = "",
   summaryItems = [],
+  contactPhone = "",
+  contactEmail = "",
   onLogoClick,
   action = null,
   headingId = "academy-hero-title",
@@ -73,6 +77,13 @@ const AcademyHeroHeader = ({
               <strong>{address || "Complete address not available"}</strong>
             </span>
           </address>
+
+          {(contactPhone || contactEmail) ? (
+            <div className="owner-hero__contact" aria-label="Academy contact details">
+              {contactPhone ? <a href={`tel:${contactPhone.replace(/\s+/g, "")}`}><Phone size={17} aria-hidden="true" /><span>Call</span><strong>{contactPhone}</strong></a> : null}
+              {contactEmail ? <a href={`mailto:${contactEmail}`}><Mail size={17} aria-hidden="true" /><span>Email</span><strong>{contactEmail}</strong></a> : null}
+            </div>
+          ) : null}
 
           {summaryItems.length ? (
             <div

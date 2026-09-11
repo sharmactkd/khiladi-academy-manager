@@ -8,6 +8,19 @@ import { errorResponse, successResponse } from "../utils/apiResponse.js";
 
 const clean = (value, max = 180) => String(value ?? "").trim().slice(0, max);
 const list = (value, max = 20) => (Array.isArray(value) ? value : String(value ?? "").split(",")).map((item) => clean(item, 80)).filter(Boolean).slice(0, max);
+const publicList = (value, max = 30) => {
+  const source = Array.isArray(value) ? value : [value];
+  const flattened = source.flatMap((item) => {
+    if (typeof item !== "string") return item == null ? [] : [item];
+    const text = item.trim();
+    if (!text) return [];
+    if (text.startsWith("[") && text.endsWith("]")) {
+      try { const parsed = JSON.parse(text); return Array.isArray(parsed) ? parsed : [text]; } catch { return text.split(","); }
+    }
+    return text.split(",");
+  });
+  return [...new Set(flattened.map((item) => clean(String(item).replace(/^['"]|['"]$/g, ""), 80)).filter(Boolean))].slice(0, max);
+};
 const slugify = (value) => clean(value, 140).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "academy";
 const visibilityKeys = ["academyOverview", "academyContact", "socialLinks", "affiliations", "branches", "branchContact", "branchFacilities", "branchCoaches", "batches", "batchCoaches", "batchSchedule"];
 const ownerAcademy = (req) => Academy.findOne(req.user.role === "super_admin" && req.query.academyId ? { _id: req.query.academyId } : { owner: req.user._id });
@@ -37,9 +50,9 @@ const managementPayload = async (academy, profile) => {
 const publicBranch = (branch, visibility) => ({
   id: String(branch._id), name: branch.branchName, isMainBranch: branch.isMainBranch, since: branch.branchSince, directorName: branch.directorName,
   location: { address: branch.address, city: branch.city, state: branch.state, country: branch.country },
-  martialArts: [...new Set([...(branch.martialArts || []), ...(branch.customMartialArts || [])])],
-  languages: [...new Set([...(branch.languagesSpoken || []), ...(branch.customLanguages || [])])],
-  ...(visibility.branchFacilities ? { facilities: [...new Set([...(branch.facilities || []), ...(branch.customFacilities || [])])] } : {}),
+  martialArts: publicList([...(branch.martialArts || []), ...(branch.customMartialArts || [])]),
+  languages: publicList([...(branch.languagesSpoken || []), ...(branch.customLanguages || [])]),
+  ...(visibility.branchFacilities ? { facilities: publicList([...(branch.facilities || []), ...(branch.customFacilities || [])]) } : {}),
   ...(visibility.branchContact ? { contact: { countryCode: branch.countryCode, phone: branch.phone, email: branch.email } } : {}),
   ...(visibility.branchCoaches ? { coaches: [
     branch.headCoachName && { role: "Head coach", name: branch.headCoachName, achievements: branch.headCoachAchievements },
@@ -50,13 +63,13 @@ const publicBranch = (branch, visibility) => ({
 
 const publicBatch = (batch, visibility) => ({
   id: String(batch._id), branchId: batch.branch?._id ? String(batch.branch._id) : null, branchName: batch.branch?.branchName || "", name: batch.batchName,
-  martialArts: [...new Set([...(batch.martialArts || []), batch.martialArt].filter(Boolean))],
-  types: [...new Set([...(batch.batchTypes || []), ...(batch.customBatchTypes || []), batch.batchType].filter(Boolean))],
-  skillLevels: [...new Set([...(batch.skillLevels || []), batch.skillLevel].filter(Boolean))], modes: [...new Set([...(batch.modes || []), batch.mode].filter(Boolean))],
+  martialArts: publicList([...(batch.martialArts || []), batch.martialArt]),
+  types: publicList([...(batch.batchTypes || []), ...(batch.customBatchTypes || []), batch.batchType]),
+  skillLevels: publicList([...(batch.skillLevels || []), batch.skillLevel]), modes: publicList([...(batch.modes || []), batch.mode]),
   sessionSlots: batch.sessionSlots || [], venue: batch.venue, genderGroup: batch.genderGroup,
   ageRange: { min: batch.noMinAgeLimit ? null : batch.minAge, max: batch.noMaxAgeLimit ? null : batch.maxAge },
   beltRange: { min: batch.noMinBeltLimit ? "" : batch.minBelt, max: batch.noMaxBeltLimit ? "" : batch.maxBelt },
-  languages: [...new Set([...(batch.batchLanguages || []), ...(batch.customBatchLanguages || [])])], capacity: batch.noCapacityLimit ? null : batch.capacity,
+  languages: publicList([...(batch.batchLanguages || []), ...(batch.customBatchLanguages || [])]), capacity: batch.noCapacityLimit ? null : batch.capacity,
   ...(visibility.batchSchedule ? { schedule: batch.schedule || [] } : {}),
   ...(visibility.batchCoaches ? { coaches: [
     batch.headCoachName && { role: "Head coach", name: batch.headCoachName, achievements: batch.headCoachAchievements },
@@ -75,7 +88,7 @@ const buildPublicProfile = async (profile) => {
   const batches = visibility.batches === false ? [] : await Batch.find({ academy: academy._id, isActive: true }).populate("branch", "branchName").sort({ batchName: 1 }).lean();
   const visibleBatches = batches.filter((item) => !hiddenBatches.has(String(item._id)));
   const result = { _id: profile._id, slug: profile.slug, academyName: academy.academyName, ownerName: academy.ownerName, tagline: profile.tagline, logo: academy.logo || profile.logo, coverImage: profile.coverImage, trialAvailable: profile.trialAvailable, onlineTraining: profile.onlineTraining, girlsOnlyBatches: profile.girlsOnlyBatches, visibility };
-  if (visibility.academyOverview !== false) Object.assign(result, { about: academy.about || profile.about, since: academy.since, martialArts: academy.martialArts || [], highlights: profile.highlights || [], facilities: profile.facilities || [], languages: profile.languages || [] });
+  if (visibility.academyOverview !== false) Object.assign(result, { about: academy.about || profile.about, since: academy.since, martialArts: publicList(academy.martialArts), highlights: publicList(profile.highlights), facilities: publicList(profile.facilities), languages: publicList(profile.languages) });
   if (visibility.academyContact !== false) {
     result.location = { address: academy.address, city: academy.city, state: academy.state, country: academy.country };
     result.contact = { ...(profile.contact?.showPhone ? { countryCode: academy.countryCode, phone: academy.phone, phoneNumbers: academy.phoneNumbers || [] } : {}), ...(profile.contact?.showEmail ? { email: academy.email } : {}), ...(visibility.socialLinks !== false ? { website: academy.socialLinks?.website } : {}) };
@@ -127,10 +140,24 @@ export const unpublishMyPublicProfile = asyncHandler(async (req, res) => {
 
 export const listPublicAcademies = asyncHandler(async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1); const limit = Math.min(24, Math.max(1, Number(req.query.limit) || 12)); const filter = { status: "published" };
-  if (req.query.city) filter["location.city"] = new RegExp(`^${clean(req.query.city, 80).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+  const exactLocation = (value) => new RegExp(`^${clean(value, 80).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+  const academyLocationFilter = { isActive: true };
+  if (req.query.country) academyLocationFilter.country = exactLocation(req.query.country);
+  if (req.query.state) academyLocationFilter.state = exactLocation(req.query.state);
+  if (req.query.city) academyLocationFilter.city = exactLocation(req.query.city);
+  if (req.query.country || req.query.state || req.query.city) filter.academy = { $in: await Academy.find(academyLocationFilter).distinct("_id") };
   if (req.query.martialArt) filter.martialArts = clean(req.query.martialArt, 80); if (req.query.trialAvailable === "true") filter.trialAvailable = true; if (req.query.search) filter.$text = { $search: clean(req.query.search, 100) };
-  const [storedItems, total] = await Promise.all([PublicAcademyProfile.find(filter).select("+academy academyName slug tagline logo coverImage since martialArts highlights location trialAvailable onlineTraining").populate("academy", "academyName logo since martialArts city state country isActive").sort(req.query.sort === "newest" ? { publishedAt: -1 } : { academyName: 1 }).skip((page - 1) * limit).limit(limit).lean(), PublicAcademyProfile.countDocuments(filter)]);
-  const items = storedItems.filter((item) => item.academy?.isActive).map((item) => ({ academyName: item.academy.academyName, slug: item.slug, tagline: item.tagline, logo: item.academy.logo || item.logo, coverImage: item.coverImage, since: item.academy.since, martialArts: item.academy.martialArts || [], highlights: item.highlights || [], location: { city: item.academy.city, state: item.academy.state, country: item.academy.country }, trialAvailable: item.trialAvailable, onlineTraining: item.onlineTraining }));
+  const [storedItems, total] = await Promise.all([PublicAcademyProfile.find(filter).select("+academy academyName slug tagline logo coverImage since martialArts highlights location trialAvailable onlineTraining visibility hiddenBranchIds hiddenBatchIds").populate("academy", "academyName logo since martialArts city state country isActive").sort(req.query.sort === "newest" ? { publishedAt: -1 } : { academyName: 1 }).skip((page - 1) * limit).limit(limit).lean(), PublicAcademyProfile.countDocuments(filter)]);
+  const activeItems = storedItems.filter((item) => item.academy?.isActive);
+  const academyIds = activeItems.map((item) => item.academy._id);
+  const [branchRecords, batchRecords] = academyIds.length ? await Promise.all([
+    Branch.find({ academy: { $in: academyIds }, isActive: true }).select("_id academy").lean(),
+    Batch.find({ academy: { $in: academyIds }, isActive: true }).select("_id academy").lean(),
+  ]) : [[], []];
+  const recordsByAcademy = (records) => records.reduce((map, record) => { const key = String(record.academy); if (!map.has(key)) map.set(key, []); map.get(key).push(String(record._id)); return map; }, new Map());
+  const branchesByAcademy = recordsByAcademy(branchRecords); const batchesByAcademy = recordsByAcademy(batchRecords);
+  const visibleCount = (ids, hiddenIds) => { const hidden = new Set((hiddenIds || []).map(String)); return (ids || []).filter((id) => !hidden.has(id)).length; };
+  const items = activeItems.map((item) => { const key = String(item.academy._id); return { academyName: item.academy.academyName, slug: item.slug, tagline: item.tagline, logo: item.academy.logo || item.logo, coverImage: item.coverImage, since: item.academy.since, martialArts: publicList(item.academy.martialArts), highlights: publicList(item.highlights), location: { city: item.academy.city, state: item.academy.state, country: item.academy.country }, trialAvailable: item.trialAvailable, onlineTraining: item.onlineTraining, branchCount: item.visibility?.branches === false ? 0 : visibleCount(branchesByAcademy.get(key), item.hiddenBranchIds), batchCount: item.visibility?.batches === false ? 0 : visibleCount(batchesByAcademy.get(key), item.hiddenBatchIds) }; });
   return successResponse(res, "Published academies loaded", { items, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
 });
 
