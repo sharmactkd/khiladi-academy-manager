@@ -79,6 +79,11 @@ export const feePaymentIdValidator = [
 export const createFeePaymentValidator = [
   body("student").isMongoId().withMessage("Valid student ID is required"),
 
+  body("numberOfMonths")
+    .optional()
+    .isInt({ min: 1, max: 24 })
+    .withMessage("Number of months must be between 1 and 24"),
+
   body("feePlan").optional({ nullable: true, checkFalsy: true }).isMongoId(),
 
   body("amount")

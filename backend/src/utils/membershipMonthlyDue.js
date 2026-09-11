@@ -1,6 +1,6 @@
 export const calculateAccruedUnpaidMonths = (source, now = new Date()) => {
   const stored = Math.max(0, Number(source?.unpaidMonths || 0));
-  if (!source?.autoMonthlyDue || !source?.effectiveDueDate || source?.status === "paused" || source?.status === "complimentary" || source?.feeRequired === false) return stored;
+  if (!source?.autoMonthlyDue || !source?.effectiveDueDate || source?.status === "paused" || source?.status === "complimentary" || source?.feeRequired === false || Number(source?.remainingTrainingDays || 0) > 0) return stored;
   const due = new Date(source.effectiveDueDate), current = new Date(now);
   if (Number.isNaN(due.getTime()) || Number.isNaN(current.getTime())) return stored;
   const dueDay = due.getUTCDate();

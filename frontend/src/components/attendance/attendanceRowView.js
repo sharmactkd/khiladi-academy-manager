@@ -3,13 +3,21 @@ const missing = (value) => !text(value) || ["-", "—"].includes(text(value));
 
 export const getDueDateValue = (row) => row.importedDueDate || row.feeDueDate || "-";
 export const getFeeStatusValue = (row) => {
-  const unpaidMonths = Number(row.membership?.unpaidMonths || 0);
-  if (row.rowType === "student" && row.studentId && Number.isFinite(unpaidMonths) && unpaidMonths > 0) {
-    return unpaidMonths === 1 ? "DUE" : `${unpaidMonths}M DUE`;
+  const remainingDays = Number(row.membership?.remainingTrainingDays || 0);
+  if (row.rowType === "student" && row.studentId && Number.isFinite(remainingDays) && remainingDays > 0) {
+    return "PAID";
   }
-  return String(row.rowType === "student" && row.studentId
+  const unpaidMonths = Number(row.membership?.unpaidMonths || 0);
+  const unpaidDays = Number(row.membership?.unpaidDays || 0);
+  if (row.rowType === "student" && row.studentId && (unpaidMonths > 0 || unpaidDays > 0)) {
+    const showMonths = unpaidMonths > 1 || (unpaidMonths === 1 && unpaidDays > 0);
+    const duration = [showMonths ? `${unpaidMonths}M` : "", unpaidDays > 0 ? `${unpaidDays}D` : ""].filter(Boolean);
+    return duration.length ? `${duration.join(", ")} DUE` : "DUE";
+  }
+  const value = String(row.rowType === "student" && row.studentId
     ? row.feeStatus || row.importedFeeStatus || "-"
     : row.importedFeeStatus || row.feeStatus || "-").toUpperCase();
+  return value === "OVERDUE" ? "DUE" : value;
 };
 
 // Follow the register's date conventions: DD-MM-YYYY, ISO, MM/DD/YYYY.

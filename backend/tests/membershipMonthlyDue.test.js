@@ -15,3 +15,7 @@ test("legacy, paused, complimentary and fee-waived memberships do not auto-accru
   assert.equal(calculateAccruedUnpaidMonths(membership({status:'paused'}),new Date("2027-01-05Z")),0);
   assert.equal(calculateAccruedUnpaidMonths(membership({feeRequired:false}),new Date("2027-01-05Z")),0);
 });
+
+test("remaining training days keep membership paid without accruing dues", () => {
+  assert.equal(calculateAccruedUnpaidMonths(membership({ remainingTrainingDays: 10 }), new Date("2026-12-05T00:00:00Z")), 0);
+});

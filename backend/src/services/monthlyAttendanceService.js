@@ -8,6 +8,7 @@ import AttendanceDayNote from "../models/AttendanceDayNote.js";
 import AttendanceRowOrder from "../models/AttendanceRowOrder.js";
 import { applyRowOrder, moveRowKeys } from "../utils/attendanceRowOrder.js";
 import { getMembershipMap } from "./membershipService.js";
+import { isDueOnOrBeforeToday } from "../utils/businessDate.js";
 
 const STATUS_MAP = {
   present: "P",
@@ -300,6 +301,19 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
   )
     ? membership.feeStatus
     : "";
+  const hasRemainingTrainingDays = Number(membership?.remainingTrainingDays || 0) > 0;
+  const calculatedMembershipFeeStatus = isDueOnOrBeforeToday(membership?.effectiveDueDate)
+    ? "due"
+    : membership?.feeStatus === "overdue" ? "due" : membership?.feeStatus || "";
+  const calculatedPaymentStatus = fee
+    ? Number(fee.amountPaid || 0) >= Number(fee.finalAmount || fee.amount || 0) && Number(fee.finalAmount || fee.amount || 0) > 0
+      ? "paid"
+      : Number(fee.amountPaid || 0) > 0
+        ? "partial"
+        : isDueOnOrBeforeToday(fee.dueDate)
+          ? "due"
+          : "due"
+    : "";
 
   return {
     no: identity.importedSerialNo || index + 1,
@@ -339,7 +353,7 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
       : formatDisplayDate(normalizedPaidDate) || fee?.paidDate || fee?.paymentDate || null,
     feePaid: formatDisplayDate(identity.importedFeePaid) || fee?.amountPaid || fee?.amount || "",
     feeStatus: isLinkedStudent
-      ? specialMembershipFeeStatus || fee?.status || identity.importedFeeStatus || ""
+      ? specialMembershipFeeStatus || (hasRemainingTrainingDays ? "paid" : calculatedPaymentStatus || calculatedMembershipFeeStatus || identity.importedFeeStatus || "")
       : identity.importedFeeStatus || fee?.status || membership?.feeStatus || "",
     membership,
     attendance,
@@ -363,22 +377,12 @@ const buildMonthlyRows = async ({
     });
   });
 
-  const studentVisibilityFilters = [
-    // Normal roster: all active and inactive students assigned to this batch.
-    {
-      batch: batchObjectId,
-      status: { $in: ["active", "inactive"] },
-    },
-
-    // Backward compatibility for legacy/provisional profiles that were
-    // imported before batch assignment was available. Include inactive rows
-    // as well so the complete legacy roster stays visible below active rows.
-    // Mongoose's `batch: null` matches explicit null and a missing batch field.
-    {
-      batch: null,
-      status: { $in: ["active", "inactive"] },
-    },
-  ];
+  // A batch register must only preload its own roster. Historical students
+  // from another/no batch are still included below when attendance exists.
+  const studentVisibilityFilters = [{
+    batch: batchObjectId,
+    status: { $in: ["active", "inactive"] },
+  }];
 
   if (markedStudentIds.length) {
     // Keep historical rows visible even if the student later became inactive
@@ -401,16 +405,10 @@ const buildMonthlyRows = async ({
   const studentMap = new Map(students.map((student) => [String(student._id), student]));
 
   const studentIds = students.map((student) => student._id);
-  const feeMap = await getMonthlyFeeMap({
-    academyId: academyObjectId,
-    studentIds,
-    month,
-    year,
-  });
-  const membershipMap = await getMembershipMap({
-    academyId: academyObjectId,
-    studentIds,
-  });
+  const [feeMap, membershipMap] = await Promise.all([
+    getMonthlyFeeMap({ academyId: academyObjectId, studentIds, month, year }),
+    getMembershipMap({ academyId: academyObjectId, studentIds }),
+  ]);
 
   const rowIdentityMap = new Map();
   const attendanceByRow = new Map();
@@ -545,31 +543,21 @@ export const getMonthlyAttendanceRegister = async ({
     throw error;
   }
 
-  const batch = await Batch.findOne({
-    _id: batchObjectId,
-    academy: academyObjectId,
-  }).lean();
+  const days = buildDays({ year: numericYear, month: numericMonth });
+  const { start, end } = getMonthRange({ year: numericYear, month: numericMonth });
+  const orderId = `${academyObjectId}:${batchObjectId}:${numericYear}:${numericMonth}`;
+  const [batch, attendanceDocs, dayNoteDocs, order] = await Promise.all([
+    Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).lean(),
+    Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).lean(),
+    AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).lean(),
+    AttendanceRowOrder.findById(orderId).lean(),
+  ]);
 
   if (!batch) {
     const error = new Error("Batch not found in your academy");
     error.statusCode = 404;
     throw error;
   }
-
-  const days = buildDays({ year: numericYear, month: numericMonth });
-  const { start, end } = getMonthRange({ year: numericYear, month: numericMonth });
-
-  const attendanceDocs = await Attendance.find({
-    academy: academyObjectId,
-    batch: batchObjectId,
-    date: { $gte: start, $lt: end },
-  }).lean();
-
-  const dayNoteDocs = await AttendanceDayNote.find({
-    academy: academyObjectId,
-    batch: batchObjectId,
-    date: { $gte: start, $lt: end },
-  }).lean();
 
   const dayNotes = dayNoteDocs.reduce((map, note) => {
     const dateKey = new Date(note.date).toISOString().slice(0, 10);
@@ -595,7 +583,6 @@ export const getMonthlyAttendanceRegister = async ({
     attendanceDocs,
   });
 
-  const order = await AttendanceRowOrder.findById(`${academyObjectId}:${batchObjectId}:${numericYear}:${numericMonth}`).lean();
   const orderedRows = applyRowOrder(rows.map((row) => ({ ...row, registerOrderKey: getAttendanceRegisterRowKey(row) })), order?.keys || []);
   return {
     orderRevision: order?.revision || 0,

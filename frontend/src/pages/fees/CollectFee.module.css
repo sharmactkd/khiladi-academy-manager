@@ -11,4 +11,9 @@
 @media(max-width:820px){.heading{align-items:flex-start;flex-direction:column}.selectedStudent{grid-template-columns:48px 1fr}.selectedStudent dl{grid-column:1/-1;padding:10px 0 0;border-top:1px solid #dfe6ee;border-left:0}.paymentGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.paymentModes>div{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){.splitPayment>div{grid-template-columns:1fr}.splitPlus,.splitEquals{height:auto}.splitTotal{min-height:48px}}
 @media(max-width:560px){.heading>a{width:100%;box-sizing:border-box;justify-content:center}.formSection,.summaryCard{padding:12px}.periodGrid,.paymentGrid{grid-template-columns:1fr}.selectedStudent dl{grid-template-columns:1fr}.paymentModes>div{grid-template-columns:1fr}.summaryCard{display:block}.studentMenu button{grid-template-columns:34px 1fr}.studentMenu button>b{display:none}.splitPayment{padding:11px}.splitPayment>header{align-items:flex-start}.splitPayment>header>span{font-size:12px}}
+
+/* Multi-month fee period */
+.periodGrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:900px){.periodGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.periodGrid{grid-template-columns:1fr}}
 @media print{.page>:global(.academy-hero-header),.breadcrumb,.heading>a,.studentMenu,.submitButton,.resetButton,.summaryCard>footer{display:none!important}.workspace{grid-template-columns:1.45fr .55fr}.formCard,.summaryCard{box-shadow:none}.summaryCard{position:static;display:block}.formSection{padding:11px}.paymentModes button{height:31px}.notes textarea{min-height:52px}}

@@ -5,6 +5,7 @@ import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import FeePlan from "../models/FeePlan.js";
 import FeePayment from "../models/FeePayment.js";
+import StudentMembership from "../models/StudentMembership.js";
 import Sequence from "../models/Sequence.js";
 import { getCurrencySymbol } from "../utils/currency.js";
 
@@ -207,10 +208,7 @@ export const calculateFeeStatus = ({
     return "partial";
   }
 
-  if (dueDate && new Date() > new Date(dueDate)) {
-    return "overdue";
-  }
-
+  // Use calendar dates so the transition is deterministic across timezones.
   return "due";
 };
 
@@ -489,6 +487,7 @@ export const collectStudentFee = async ({
     existing.updatedBy = userId;
 
     await existing.save();
+    await syncMembershipAfterFeePayment({ academyId, student, payment: existing });
     return existing;
   }
 
@@ -522,6 +521,37 @@ export const collectStudentFee = async ({
 });
 
 await feePayment.save();
+await syncMembershipAfterFeePayment({ academyId, student, payment: feePayment });
 
 return feePayment;
+};
+
+const syncMembershipAfterFeePayment = async ({ academyId, student, payment }) => {
+  const currentMonth = Number(payment.feeMonth);
+  const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+  const nextYear = currentMonth === 12 ? Number(payment.feeYear) + 1 : Number(payment.feeYear);
+  const paymentDueDate = new Date(payment.dueDate || 0);
+  const dueDay = Number.isNaN(paymentDueDate.getTime()) ? 10 : paymentDueDate.getUTCDate();
+  const paid = payment.status === "paid";
+
+  await StudentMembership.findOneAndUpdate(
+    { academy: academyId, student: student._id },
+    {
+      $set: {
+        batch: student.batch?._id || student.batch || null,
+        feeStatus: payment.status,
+        effectiveDueDate: paid
+          ? buildDueDate(nextMonth, nextYear, dueDay)
+          : payment.dueDate,
+        feeRequired: true,
+        ...(paid ? { unpaidMonths: 0, unpaidDays: 0 } : {}),
+      },
+      $setOnInsert: {
+        status: student.status === "active" ? "active" : "paused",
+        startDate: student.joiningDate || student.createdAt || new Date(),
+        originalDueDate: payment.dueDate,
+      },
+    },
+    { upsert: true, runValidators: true },
+  );
 };

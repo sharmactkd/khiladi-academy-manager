@@ -224,8 +224,6 @@ feePaymentSchema.pre("validate", function () {
       this.paidDate = this.paymentDate || new Date();
     } else if (amountPaid > 0 && amountPaid < this.finalAmount) {
       this.status = "partial";
-    } else if (this.dueDate && new Date() > new Date(this.dueDate)) {
-      this.status = "overdue";
     } else {
       this.status = "due";
     }

@@ -13,6 +13,7 @@ const MEMBERSHIP_FIELDS = [
   "effectiveDueDate",
   "remainingTrainingDays",
   "unpaidMonths",
+  "unpaidDays",
   "autoMonthlyDue",
   "feeRequired",
   "feeStatus",
@@ -71,8 +72,13 @@ export const serializeMembership = (membership) => {
     effectiveDueDate: source.effectiveDueDate,
     remainingTrainingDays: Number(source.remainingTrainingDays || 0),
     unpaidMonths: calculateAccruedUnpaidMonths(source),
+    unpaidDays: Number(source.unpaidDays || 0),
     feeRequired: source.feeRequired !== false,
-    feeStatus: calculateAccruedUnpaidMonths(source) > 0 ? "due" : source.feeStatus,
+    feeStatus: Number(source.remainingTrainingDays || 0) > 0
+      ? "paid"
+      : calculateAccruedUnpaidMonths(source) > 0 || Number(source.unpaidDays || 0) > 0
+        ? "due"
+        : source.feeStatus === "overdue" ? "due" : source.feeStatus,
     autoMonthlyDue: source.autoMonthlyDue === true,
     internalNote: source.internalNote || "",
     lastAdjustedAt: source.lastAdjustedAt,
@@ -187,7 +193,16 @@ export const applyMembershipAdjustment = async ({
       break;
     case "change_unpaid_months":
       months = boundedInteger(payload.months, "Month adjustment", -120, 120);
-      membership.unpaidMonths = Math.max(0, Number(membership.unpaidMonths || 0) + months);
+      days = boundedInteger(payload.days || 0, "Day adjustment", -29, 29);
+      {
+        const totalDays = Math.max(0,
+          Number(membership.unpaidMonths || 0) * 30 +
+          Number(membership.unpaidDays || 0) +
+          months * 30 + days
+        );
+        membership.unpaidMonths = Math.floor(totalDays / 30);
+        membership.unpaidDays = totalDays % 30;
+      }
       break;
     case "pause":
       membership.status = "paused";
@@ -202,14 +217,17 @@ export const applyMembershipAdjustment = async ({
       break;
     }
     case "set_fee_status": {
-      const allowed = ["paid", "due", "partial", "overdue", "waived", "complimentary"];
+      const allowed = ["paid", "due", "partial", "waived", "complimentary"];
       const feeStatus = clean(payload.feeStatus).toLowerCase();
       if (!allowed.includes(feeStatus)) throw createError("Fee status is invalid");
       membership.feeStatus = feeStatus;
       membership.feeRequired = !["waived", "complimentary"].includes(feeStatus);
       if (feeStatus === "complimentary") membership.status = "complimentary";
       else if (membership.status === "complimentary") membership.status = "active";
-      if (feeStatus === "paid") membership.unpaidMonths = 0;
+      if (feeStatus === "paid") {
+        membership.unpaidMonths = 0;
+        membership.unpaidDays = 0;
+      }
       break;
     }
     case "set_note":

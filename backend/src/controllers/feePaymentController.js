@@ -25,6 +25,18 @@ const getMonthYearFromQuery = (query) => {
   };
 };
 
+const addBillingMonths = (month, year, offset) => {
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1 + offset, 1));
+  return { feeMonth: date.getUTCMonth() + 1, feeYear: date.getUTCFullYear() };
+};
+
+const moneyPart = (total, count, index) => {
+  const roundedTotal = Math.round(Number(total || 0) * 100);
+  const base = Math.floor(roundedTotal / count);
+  const cents = index === count - 1 ? roundedTotal - base * (count - 1) : base;
+  return cents / 100;
+};
+
 const getActiveStudents = async (academyId, query = {}) => {
   const filter = {
     academy: academyId,
@@ -265,42 +277,51 @@ export const getStudentsFeeStatus = asyncHandler(async (req, res) => {
 
 export const collectFee = asyncHandler(async (req, res) => {
   try {
-    const feePayment = await collectStudentFee({
-      academyId: req.academyId,
-      userId: req.user._id,
-      payload: req.body,
-    });
+    const periodCount = Math.min(Math.max(Number(req.body.numberOfMonths) || 1, 1), 24);
+    const payments = [];
+    for (let index = 0; index < periodCount; index += 1) {
+      const period = addBillingMonths(req.body.feeMonth || req.body.month, req.body.feeYear || req.body.year, index);
+      const periodPayload = {
+        ...req.body,
+        ...period,
+        amount: moneyPart(req.body.amount, periodCount, index),
+        discount: moneyPart(req.body.discount, periodCount, index),
+        amountPaid: moneyPart(req.body.amountPaid, periodCount, index),
+        cashAmount: moneyPart(req.body.cashAmount, periodCount, index),
+        onlineAmount: moneyPart(req.body.onlineAmount, periodCount, index),
+      };
+      const payment = await collectStudentFee({ academyId: req.academyId, userId: req.user._id, payload: periodPayload });
+      payments.push(payment);
+      await ExpenseTransaction.updateOne(
+        { academy: req.academyId, sourceType: "fee_payment", sourceId: payment._id },
+        { $set: {
+          academy: req.academyId,
+          branch: payment.branch || null,
+          type: "income",
+          category: "Student Fee",
+          amount: Number(payment.amountPaid || 0),
+          account: payment.paymentMode === "online" ? "upi" : "cash",
+          date: payment.paidDate || payment.paymentDate || new Date(),
+          description: `Fee payment ${payment.receiptNumber || ""}`.trim(),
+          sourceType: "fee_payment",
+          sourceId: payment._id,
+          createdBy: req.user._id,
+        } },
+        { upsert: true },
+      );
+    }
 
-    const populatedPayment = await FeePayment.findById(feePayment._id)
+    const populatedPayment = await FeePayment.findById(payments[0]._id)
       .populate("student", "firstName lastName admissionNumber phone email")
       .populate("batch", "batchName martialArt")
       .populate("branch", "branchName currencyCode currencySymbol currencyCountryCode")
-      .populate("feePlan", "name monthlyAmount amount dueDay");
-
-    // Every successful fee collection is also an income transaction. The
-    // unique source key makes retries/imports idempotent and prevents doubles.
-    await ExpenseTransaction.updateOne(
-      { academy: req.academyId, sourceType: "fee_payment", sourceId: feePayment._id },
-      { $setOnInsert: {
-        academy: req.academyId,
-        branch: feePayment.branch || null,
-        type: "income",
-        category: "Student Fee",
-        amount: Number(feePayment.amountPaid || 0),
-        account: feePayment.paymentMode === "online" ? "upi" : "cash",
-        date: feePayment.paidDate || feePayment.paymentDate || new Date(),
-        description: `Fee payment ${feePayment.receiptNumber || ""}`.trim(),
-        sourceType: "fee_payment",
-        sourceId: feePayment._id,
-        createdBy: req.user._id,
-      } },
-      { upsert: true },
-    );
+      .populate("feePlan", "name monthlyAmount amount dueDay")
+      .lean();
 
     return successResponse(
       res,
-      "Fee collected successfully",
-      populatedPayment,
+      periodCount > 1 ? `${periodCount} months fee collected successfully` : "Fee collected successfully",
+      { ...populatedPayment, periodCount, paymentIds: payments.map((payment) => payment._id) },
       201
     );
   } catch (error) {

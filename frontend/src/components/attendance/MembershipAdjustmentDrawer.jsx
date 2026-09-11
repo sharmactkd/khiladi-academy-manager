@@ -19,7 +19,7 @@ const ACTIONS = [
   { value: "reduce_days", label: "Remove training days" },
   { value: "set_due_date", label: "Set custom due date" },
   { value: "set_remaining_days", label: "Set remaining days" },
-  { value: "change_unpaid_months", label: "Adjust unpaid months" },
+  { value: "change_unpaid_months", label: "Adjust unpaid months & days" },
   { value: "pause", label: "Pause membership" },
   { value: "resume", label: "Resume membership" },
   { value: "set_fee_status", label: "Set fee status" },
@@ -32,6 +32,7 @@ const initialForm = {
   dueDate: "",
   remainingTrainingDays: 0,
   months: 1,
+  unpaidDays: 0,
   resumeDate: new Date().toISOString().slice(0, 10),
   feeStatus: "due",
   reason: "",
@@ -54,7 +55,7 @@ const formatAction = (item) => {
     reduce_days: `Removed ${item.days} days`,
     set_due_date: "Custom due date set",
     set_remaining_days: "Remaining days updated",
-    change_unpaid_months: `${item.months > 0 ? "+" : ""}${item.months} unpaid month(s)`,
+    change_unpaid_months: `${item.months > 0 ? "+" : ""}${item.months} month(s), ${item.days > 0 ? "+" : ""}${item.days || 0} day(s) due`,
     pause: "Membership paused",
     resume: "Membership resumed",
     set_fee_status: "Fee status updated",
@@ -129,7 +130,10 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
     if (["extend_days", "reduce_days"].includes(form.type)) payload.days = Number(form.days);
     if (form.type === "set_due_date") payload.dueDate = form.dueDate;
     if (form.type === "set_remaining_days") payload.remainingTrainingDays = Number(form.remainingTrainingDays);
-    if (form.type === "change_unpaid_months") payload.months = Number(form.months);
+    if (form.type === "change_unpaid_months") {
+      payload.months = Number(form.months);
+      payload.days = Number(form.unpaidDays);
+    }
     if (form.type === "resume") payload.resumeDate = form.resumeDate;
     if (form.type === "set_fee_status") payload.feeStatus = form.feeStatus;
     return payload;
@@ -188,7 +192,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
               <div><small>Current State</small><MembershipBadge membership={membership} disabled /></div>
               <div><small>Effective Due Date</small><strong>{formatDate(membership?.effectiveDueDate)}</strong></div>
               <div><small>Days Remaining</small><strong>{membership?.remainingTrainingDays || 0}</strong></div>
-              <div><small>Unpaid Months</small><strong>{membership?.unpaidMonths || 0}</strong></div>
+              <div><small>Unpaid Balance</small><strong>{membership?.unpaidMonths || 0}M, {membership?.unpaidDays || 0}D</strong></div>
             </section>
 
             <form className="membership-form" onSubmit={submit}>
@@ -198,9 +202,9 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
               {["extend_days", "reduce_days"].includes(form.type) && <label className="membership-field"><span>Number of Days</span><input type="number" min="1" max="3650" value={form.days} onChange={(event) => updateForm("days", event.target.value)} required /></label>}
               {form.type === "set_due_date" && <label className="membership-field"><span>Custom Due Date</span><DateInput value={form.dueDate} onChange={(event) => updateForm("dueDate", event.target.value)} required /></label>}
               {form.type === "set_remaining_days" && <label className="membership-field"><span>Remaining Training Days</span><input type="number" min="0" max="3650" value={form.remainingTrainingDays} onChange={(event) => updateForm("remainingTrainingDays", event.target.value)} required /></label>}
-              {form.type === "change_unpaid_months" && <label className="membership-field"><span>Month Adjustment</span><input type="number" min="-120" max="120" value={form.months} onChange={(event) => updateForm("months", event.target.value)} required /><small>Use positive to add and negative to reduce.</small></label>}
+              {form.type === "change_unpaid_months" && <><label className="membership-field"><span>Month Adjustment</span><input type="number" min="-120" max="120" value={form.months} onChange={(event) => updateForm("months", event.target.value)} required /><small>Positive adds; negative reduces.</small></label><label className="membership-field"><span>Days Adjustment</span><input type="number" min="-29" max="29" value={form.unpaidDays} onChange={(event) => updateForm("unpaidDays", event.target.value)} required /><small>Example: 2 months + 20 days.</small></label></>}
               {form.type === "resume" && <label className="membership-field"><span>Resume Date</span><DateInput value={form.resumeDate} onChange={(event) => updateForm("resumeDate", event.target.value)} /></label>}
-              {form.type === "set_fee_status" && <label className="membership-field"><span>Fee Status</span><select value={form.feeStatus} onChange={(event) => updateForm("feeStatus", event.target.value)}><option value="paid">Paid</option><option value="due">Due</option><option value="partial">Partial</option><option value="overdue">Overdue</option><option value="waived">Waived</option><option value="complimentary">Complimentary</option></select></label>}
+              {form.type === "set_fee_status" && <label className="membership-field"><span>Fee Status</span><select value={form.feeStatus === "overdue" ? "due" : form.feeStatus} onChange={(event) => updateForm("feeStatus", event.target.value)}><option value="paid">Paid</option><option value="due">Due</option><option value="partial">Partial</option><option value="waived">Waived</option><option value="complimentary">Complimentary</option></select></label>}
 
               <label className="membership-field membership-field--wide"><span>Reason (optional)</span><input value={form.reason} onChange={(event) => updateForm("reason", event.target.value)} maxLength="300" placeholder="Example: Approved holiday adjustment" /></label>
               <label className="membership-field membership-field--wide"><span>Internal Note</span><textarea value={form.internalNote} onChange={(event) => updateForm("internalNote", event.target.value)} maxLength="1000" placeholder="Example: 15 days protected; apply when training resumes" /></label>

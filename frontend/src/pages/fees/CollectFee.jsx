@@ -122,6 +122,7 @@ const CollectFee = () => {
       student: studentIdFromUrl,
       feeMonth: initialMonth,
       feeYear: initialYear,
+      numberOfMonths: 1,
       amount: "",
       discount: 0,
       amountPaid: "",
@@ -136,6 +137,7 @@ const CollectFee = () => {
   const selectedStudentId = watch("student");
   const feeMonth = Number(watch("feeMonth") || initialMonth);
   const feeYear = Number(watch("feeYear") || initialYear);
+  const numberOfMonths = Math.min(Math.max(Number(watch("numberOfMonths")) || 1, 1), 24);
   const amount = Number(watch("amount") || 0);
   const discount = Math.max(Number(watch("discount") || 0), 0);
   const amountPaid = Math.max(Number(watch("amountPaid") || 0), 0);
@@ -190,15 +192,16 @@ const CollectFee = () => {
     const batchFee = Number(selectedStudent.batch?.monthlyFee || 0);
     const monthlyFee = studentFee > 0 ? studentFee : batchFee;
     setStudentSearch(studentName(selectedStudent));
-    setValue("amount", monthlyFee, { shouldValidate: true });
+    const totalFee = monthlyFee * numberOfMonths;
+    setValue("amount", totalFee, { shouldValidate: true });
     if (paymentMode === "cash_online") {
-      const cashShare = Math.floor(monthlyFee / 2);
+      const cashShare = Math.floor(totalFee / 2);
       setValue("cashAmount", cashShare, { shouldValidate: true });
-      setValue("onlineAmount", monthlyFee - cashShare, { shouldValidate: true });
+      setValue("onlineAmount", totalFee - cashShare, { shouldValidate: true });
     } else {
-      setValue("amountPaid", monthlyFee, { shouldValidate: true });
+      setValue("amountPaid", totalFee, { shouldValidate: true });
     }
-  }, [selectedStudent, paymentMode, setValue]);
+  }, [selectedStudent, paymentMode, numberOfMonths, setValue]);
 
   useEffect(() => {
     if (paymentMode !== "cash_online") return;
@@ -230,6 +233,7 @@ const CollectFee = () => {
       student: studentIdFromUrl,
       feeMonth: initialMonth,
       feeYear: initialYear,
+      numberOfMonths: 1,
       amount: "",
       discount: 0,
       amountPaid: "",
@@ -292,6 +296,10 @@ const CollectFee = () => {
   const currency = (value) => formatMoney(value, feeBranch);
   const academyAddress = joinAddress(mainBranch) || joinAddress(academy);
   const selectedMonthLabel = MONTH_OPTIONS.find((month) => month.value === feeMonth)?.label || "Month";
+  const endingPeriod = new Date(feeYear, feeMonth - 1 + numberOfMonths - 1, 1);
+  const feePeriodLabel = numberOfMonths === 1
+    ? `${selectedMonthLabel} ${feeYear}`
+    : `${selectedMonthLabel} ${feeYear} – ${MONTH_OPTIONS[endingPeriod.getMonth()].label} ${endingPeriod.getFullYear()}`;
 
   return (
     <div className={`page ${styles.page}`}>
@@ -368,14 +376,15 @@ const CollectFee = () => {
             <div className={styles.periodGrid}>
               <label><span>Month *</span><select {...register("feeMonth", { required: "Month required" })}>{MONTH_OPTIONS.map((month) => <option key={month.value} value={month.value}>{month.label}</option>)}</select></label>
               <label><span>Year *</span><input type="number" min="2000" max="2100" {...register("feeYear", { required: "Year required", min: 2000, max: 2100 })} /></label>
-              <label><span>Monthly Fee</span><div className={styles.readOnlyField}>{currency(amount)}</div></label>
+              <label><span>Number of Months *</span><select {...register("numberOfMonths", { required: true, min: 1, max: 24 })}>{Array.from({ length: 24 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} {index ? "Months" : "Month"}</option>)}</select></label>
+              <label><span>Total Fee</span><div className={styles.readOnlyField}>{currency(amount)}</div></label>
             </div>
           </section>
 
           <section className={styles.formSection}>
             <header><span>02</span><div><h2>Payment Details</h2><p>Enter the amount received and payment information.</p></div></header>
             <div className={styles.paymentGrid}>
-              <label><span>Monthly Fee *</span><div className={styles.moneyInput}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0" {...register("amount", { required: "Amount required", min: { value: 0, message: "Amount cannot be negative" } })} /></div>{errors.amount ? <small className={styles.errorText}>{errors.amount.message}</small> : null}</label>
+              <label><span>Total Fee ({numberOfMonths} {numberOfMonths === 1 ? "month" : "months"}) *</span><div className={styles.moneyInput}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0" {...register("amount", { required: "Amount required", min: { value: 0, message: "Amount cannot be negative" } })} /></div>{errors.amount ? <small className={styles.errorText}>{errors.amount.message}</small> : null}</label>
               <label><span>Discount / Scholarship</span><div className={styles.moneyInput}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0" {...register("discount", { min: { value: 0, message: "Discount cannot be negative" } })} /></div>{errors.discount ? <small className={styles.errorText}>{errors.discount.message}</small> : null}</label>
               <label><span>Final Payable</span><div className={`${styles.readOnlyField} ${styles.emphasisField}`}>{currency(finalPayable)}</div></label>
               <label><span>Amount Paid *</span><div className={`${styles.moneyInput} ${paymentMode === "cash_online" ? styles.calculatedInput : ""}`}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0" readOnly={paymentMode === "cash_online"} {...register("amountPaid", { required: "Amount paid required", min: { value: 0, message: "Paid amount cannot be negative" } })} /></div>{paymentMode === "cash_online" ? <small className={styles.helperText}>Automatically calculated from cash and online amounts.</small> : null}{errors.amountPaid ? <small className={styles.errorText}>{errors.amountPaid.message}</small> : null}</label>
@@ -410,7 +419,7 @@ const CollectFee = () => {
           <header><span><ReceiptText size={20} /></span><div><small>Review & confirm</small><h2>Payment Summary</h2></div></header>
           {selectedStudent ? <div className={styles.summaryStudent}><img src={getStudentPhotoUrl(selectedStudent)} alt="" /><div><strong>{studentName(selectedStudent)}</strong><span>{selectedStudent.admissionNumber || "No admission number"}</span><small>{selectedStudent.branch?.branchName || "No branch"} · {selectedStudent.batch?.batchName || "No batch"}</small></div></div> : <div className={styles.summaryPlaceholder}><UserRound size={24} /><span>Select a student to prepare the receipt.</span></div>}
           <dl className={styles.breakdown}>
-            <div><dt>Monthly Fee</dt><dd>{currency(amount)}</dd></div>
+            <div><dt>Fee for {numberOfMonths} {numberOfMonths === 1 ? "month" : "months"}</dt><dd>{currency(amount)}</dd></div>
             <div><dt>Discount / Scholarship</dt><dd className={discount > 0 ? styles.discountText : ""}>{discount > 0 ? `−${currency(discount)}` : currency(0)}</dd></div>
             <div className={styles.totalRow}><dt>Final Payable</dt><dd>{currency(finalPayable)}</dd></div>
             <div><dt>Amount Paid</dt><dd className={styles.paidText}>{currency(amountPaid)}</dd></div>
@@ -418,7 +427,7 @@ const CollectFee = () => {
             <div><dt>Pending Amount</dt><dd className={pendingAmount > 0 ? styles.pendingText : styles.paidText}>{currency(pendingAmount)}</dd></div>
           </dl>
           <div className={`${styles.statusPanel} ${styles[`status${paymentStatus.key[0].toUpperCase()}${paymentStatus.key.slice(1)}`]}`}><CheckCircle2 size={22} /><strong>{paymentStatus.label}</strong></div>
-          <div className={styles.summaryMeta}><p><CalendarDays size={15} /><span>Fee Period</span><strong>{selectedMonthLabel} {feeYear}</strong></p><p><FileText size={15} /><span>Receipt</span><strong>Generated automatically</strong></p><p><Banknote size={15} /><span>Mode</span><strong>{PAYMENT_MODES.find((mode) => mode.value === paymentMode)?.label}</strong></p></div>
+          <div className={styles.summaryMeta}><p><CalendarDays size={15} /><span>Fee Period</span><strong>{feePeriodLabel}</strong></p><p><FileText size={15} /><span>Receipts</span><strong>{numberOfMonths === 1 ? "Generated automatically" : `${numberOfMonths} monthly ledger records`}</strong></p><p><Banknote size={15} /><span>Mode</span><strong>{PAYMENT_MODES.find((mode) => mode.value === paymentMode)?.label}</strong></p></div>
           <button className={styles.submitButton} type="submit" disabled={saving || loadingStudents}><ReceiptText size={17} />{saving ? "Collecting Fee..." : "Collect Fee & Generate Receipt"}<ArrowRight size={16} /></button>
           <button className={styles.resetButton} type="button" onClick={resetForm} disabled={saving}><RotateCcw size={15} />Reset Form</button>
           <footer><ShieldCheck size={15} /><span><strong>Secure academy record</strong>Payment and receipt details are stored safely.</span><LockKeyhole size={13} /></footer>

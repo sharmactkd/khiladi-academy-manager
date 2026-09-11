@@ -877,7 +877,7 @@ const AttendanceTable = ({
                         : "fee-status fee-status--due"
                     }`}
                   >
-                    {/^(?:\d+M\s+)?DUE$|^OVERDUE$/i.test(
+                    {/^(?:(?:\d+M)(?:, \d+D)?|\d+D)?\s*DUE$/i.test(
                       getFeeStatusValue(row),
                     ) ? (
                       <button
@@ -889,8 +889,7 @@ const AttendanceTable = ({
                           font: "inherit",
                           fontWeight: 700,
                           cursor: "pointer",
-                          textDecoration: "underline",
-                          textUnderlineOffset: 3,
+                          textDecoration: "none",
                         }}
                         title="Open WhatsApp with fee reminder — press Send in WhatsApp"
                         aria-label={`WhatsApp fee reminder for ${row.name || row.importedName || "student"}`}

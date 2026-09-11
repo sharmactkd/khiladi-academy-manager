@@ -14,6 +14,7 @@ export const getMembershipDisplay = (membership, fallbackDueDate) => {
 
   const remainingDays = Number(membership.remainingTrainingDays || 0);
   const unpaidMonths = Number(membership.unpaidMonths || 0);
+  const unpaidDays = Number(membership.unpaidDays || 0);
 
   if (membership.status === "paused") {
     return {
@@ -25,19 +26,19 @@ export const getMembershipDisplay = (membership, fallbackDueDate) => {
     return { label: "Complimentary", tone: "purple" };
   }
   if (membership.feeStatus === "waived") return { label: "Fee Waived", tone: "purple" };
-  if (unpaidMonths > 0) {
-    return {
-      label: `${unpaidMonths}M Extra Due`,
-      tone: "red",
-    };
-  }
   if (remainingDays > 0) {
     return {
       label: `${remainingDays} Days Left`,
       tone: "blue",
     };
   }
-
+  if (unpaidMonths > 0 || unpaidDays > 0) {
+    const duration = [unpaidMonths ? `${unpaidMonths}M` : "", unpaidDays ? `${unpaidDays}D` : ""].filter(Boolean).join(", ");
+    return {
+      label: `${duration} Due`,
+      tone: "red",
+    };
+  }
   if (membership.feeStatus === "overdue") {
     return { label: `Overdue · ${formatDueDate(dueDate)}`, tone: "red" };
   }
