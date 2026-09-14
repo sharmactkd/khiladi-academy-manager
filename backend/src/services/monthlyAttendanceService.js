@@ -344,16 +344,16 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
     statusUpdatedAt:
       student?.statusUpdatedAt || student?.updatedAt || student?.createdAt || null,
     feeDueDate:
-      membership?.effectiveDueDate ||
       normalizedDueDate ||
+      membership?.effectiveDueDate ||
       fee?.dueDate ||
       null,
     feePaidDate: isLinkedStudent
-      ? fee?.paidDate || fee?.paymentDate || formatDisplayDate(normalizedPaidDate) || null
+      ? formatDisplayDate(normalizedPaidDate) || fee?.paidDate || fee?.paymentDate || null
       : formatDisplayDate(normalizedPaidDate) || fee?.paidDate || fee?.paymentDate || null,
     feePaid: formatDisplayDate(identity.importedFeePaid) || fee?.amountPaid || fee?.amount || "",
     feeStatus: isLinkedStudent
-      ? specialMembershipFeeStatus || (hasRemainingTrainingDays ? "paid" : calculatedPaymentStatus || calculatedMembershipFeeStatus || identity.importedFeeStatus || "")
+      ? identity.importedFeeStatus || specialMembershipFeeStatus || (hasRemainingTrainingDays ? "paid" : calculatedPaymentStatus || calculatedMembershipFeeStatus || "")
       : identity.importedFeeStatus || fee?.status || membership?.feeStatus || "",
     membership,
     attendance,

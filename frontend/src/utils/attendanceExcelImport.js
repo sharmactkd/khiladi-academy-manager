@@ -144,6 +144,27 @@ const isAttendanceHeaderRow = (row = []) => {
   );
 };
 
+const findMetadataColumn = (headerRow = [], aliases = []) => {
+  const normalizedAliases = new Set(aliases.map(normalizeKey));
+  return headerRow.findIndex((value) => normalizedAliases.has(normalizeKey(value)));
+};
+
+const detectAttendanceMetadataColumns = (headerRow = []) => {
+  const dueDate = findMetadataColumn(headerRow, ["due date", "fee due date", "due"]);
+  const paidDate = findMetadataColumn(headerRow, ["paid date", "payment date", "fee paid date"]);
+  const feeStatus = findMetadataColumn(headerRow, ["fee status", "payment status", "status"]);
+  const extraNote = findMetadataColumn(headerRow, ["extra note", "fee note", "note", "remarks"]);
+
+  // Preserve the supported legacy A:AN layout when descriptive headings are
+  // missing. In that workbook D stores due date, E paid date, F fee status.
+  return {
+    dueDate: dueDate >= 0 ? dueDate : 3,
+    paidDate: paidDate >= 0 && paidDate !== (dueDate >= 0 ? dueDate : 3) ? paidDate : 4,
+    feeStatus: feeStatus >= 0 ? feeStatus : 5,
+    extraNote: extraNote >= 0 ? extraNote : 6,
+  };
+};
+
 const isBlankRow = (row = []) => !row.some((cell) => clean(cell));
 
 const isValidStudentRow = (row = []) => {
@@ -604,6 +625,7 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
     detectedBlocks += 1;
     totalDateColumns += dateColumns.length;
     const blockRows = [];
+    const metadataColumns = detectAttendanceMetadataColumns(headerRow);
 
     let dataRowIndex = rowIndex + 3;
 
@@ -657,14 +679,11 @@ export const parseAttendanceSheet = (workbook, sheetName) => {
           admissionNumber,
           studentCode: admissionNumber,
           batchName: "",
-          // In the supplied legacy workbook column D is labelled "Paid Date"
-          // but contains the due day/date. Column E contains the actual paid
-          // date. Store both explicitly so they cannot be swapped in the UI.
-          importedDueDate: clean(row[3]),
-          importedPaidDate: clean(row[4]),
+          importedDueDate: clean(row[metadataColumns.dueDate]),
+          importedPaidDate: clean(row[metadataColumns.paidDate]),
           importedFeePaid: "",
-          importedFeeStatus: clean(row[5]),
-          importedExtraNote: clean(row[6]),
+          importedFeeStatus: clean(row[metadataColumns.feeStatus]),
+          importedExtraNote: clean(row[metadataColumns.extraNote]),
           attendance,
         };
         parsedRows.push(parsedStudentRow);

@@ -53,6 +53,23 @@ const addDays = (value, days) => {
   return date;
 };
 
+const moveDueDateToNextCycle = (value, now = new Date()) => {
+  const source = value ? new Date(value) : new Date(now);
+  if (Number.isNaN(source.getTime())) return null;
+  const dueDay = source.getUTCDate();
+  let year = source.getUTCFullYear();
+  let month = source.getUTCMonth();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  let candidate;
+  do {
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    candidate = new Date(Date.UTC(year, month, Math.min(dueDay, lastDay)));
+    month += 1;
+    if (month > 11) { month = 0; year += 1; }
+  } while (candidate <= today);
+  return candidate;
+};
+
 const snapshot = (membership) =>
   MEMBERSHIP_FIELDS.reduce((result, field) => {
     result[field] = membership[field] ?? null;
@@ -192,16 +209,18 @@ export const applyMembershipAdjustment = async ({
       membership.remainingTrainingDays = boundedInteger(payload.remainingTrainingDays, "Remaining days", 0, 3650);
       break;
     case "change_unpaid_months":
-      months = boundedInteger(payload.months, "Month adjustment", -120, 120);
-      days = boundedInteger(payload.days || 0, "Day adjustment", -29, 29);
+      months = boundedInteger(payload.months, "Unpaid months", 0, 120);
+      days = boundedInteger(payload.days || 0, "Unpaid days", 0, 29);
       {
-        const totalDays = Math.max(0,
-          Number(membership.unpaidMonths || 0) * 30 +
-          Number(membership.unpaidDays || 0) +
-          months * 30 + days
+        membership.unpaidMonths = months;
+        membership.unpaidDays = days;
+        membership.feeStatus = months > 0 || days > 0 ? "due" : "paid";
+        membership.feeRequired = true;
+        // The operator has set the exact balance as of today. Move the next
+        // automatic cycle into the future so today's cycle is not added again.
+        membership.effectiveDueDate = moveDueDateToNextCycle(
+          membership.effectiveDueDate || membership.originalDueDate,
         );
-        membership.unpaidMonths = Math.floor(totalDays / 30);
-        membership.unpaidDays = totalDays % 30;
       }
       break;
     case "pause":

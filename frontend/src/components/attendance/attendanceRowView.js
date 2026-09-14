@@ -3,6 +3,11 @@ const missing = (value) => !text(value) || ["-", "—"].includes(text(value));
 
 export const getDueDateValue = (row) => row.importedDueDate || row.feeDueDate || "-";
 export const getFeeStatusValue = (row) => {
+  const importedStatus = text(row.importedFeeStatus).toUpperCase();
+  const normalizedImportedStatus = importedStatus === "OVERDUE" ? "DUE" : importedStatus;
+  const importedHasDuration = /\d+\s*[MD]/i.test(importedStatus);
+  if (importedHasDuration) return normalizedImportedStatus;
+  if (normalizedImportedStatus && normalizedImportedStatus !== "DUE") return normalizedImportedStatus;
   const remainingDays = Number(row.membership?.remainingTrainingDays || 0);
   if (row.rowType === "student" && row.studentId && Number.isFinite(remainingDays) && remainingDays > 0) {
     return "PAID";
@@ -14,6 +19,7 @@ export const getFeeStatusValue = (row) => {
     const duration = [showMonths ? `${unpaidMonths}M` : "", unpaidDays > 0 ? `${unpaidDays}D` : ""].filter(Boolean);
     return duration.length ? `${duration.join(", ")} DUE` : "DUE";
   }
+  if (normalizedImportedStatus === "DUE") return "DUE";
   const value = String(row.rowType === "student" && row.studentId
     ? row.feeStatus || row.importedFeeStatus || "-"
     : row.importedFeeStatus || row.feeStatus || "-").toUpperCase();
