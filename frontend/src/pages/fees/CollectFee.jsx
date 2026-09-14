@@ -27,6 +27,7 @@ import {
 import { academyApi } from "../../api/academyApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { feePaymentApi } from "../../api/feeApi.js";
+import { membershipApi } from "../../api/membershipApi.js";
 import { studentApi } from "../../api/studentApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
@@ -109,6 +110,7 @@ const CollectFee = () => {
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [studentSearch, setStudentSearch] = useState("");
   const [studentMenuOpen, setStudentMenuOpen] = useState(false);
+  const [dueMonthCount, setDueMonthCount] = useState(1);
 
   const {
     register,
@@ -152,6 +154,7 @@ const CollectFee = () => {
     () => students.find((student) => String(student._id) === String(selectedStudentId)) || null,
     [students, selectedStudentId]
   );
+  const selectableMonthCount = Math.min(24, Math.max(1, dueMonthCount));
 
   const filteredStudents = useMemo(() => {
     const query = studentSearch.trim().toLowerCase();
@@ -202,6 +205,28 @@ const CollectFee = () => {
       setValue("amountPaid", totalFee, { shouldValidate: true });
     }
   }, [selectedStudent, paymentMode, numberOfMonths, setValue]);
+
+  useEffect(() => {
+    if (!selectedStudentId) {
+      setDueMonthCount(1);
+      return;
+    }
+    let active = true;
+    membershipApi.getStudentMembership(selectedStudentId)
+      .then((response) => {
+        if (!active) return;
+        const payload = response?.data?.data || response?.data || {};
+        const monthsDue = Math.min(24, Math.max(1, Number(payload.membership?.unpaidMonths || 0)));
+        setDueMonthCount(monthsDue);
+        setValue("numberOfMonths", monthsDue, { shouldDirty: false, shouldValidate: true });
+      })
+      .catch(() => {
+        if (!active) return;
+        setDueMonthCount(1);
+        setValue("numberOfMonths", 1, { shouldDirty: false, shouldValidate: true });
+      });
+    return () => { active = false; };
+  }, [selectedStudentId, setValue]);
 
   useEffect(() => {
     if (paymentMode !== "cash_online") return;
@@ -376,7 +401,7 @@ const CollectFee = () => {
             <div className={styles.periodGrid}>
               <label><span>Month *</span><select {...register("feeMonth", { required: "Month required" })}>{MONTH_OPTIONS.map((month) => <option key={month.value} value={month.value}>{month.label}</option>)}</select></label>
               <label><span>Year *</span><input type="number" min="2000" max="2100" {...register("feeYear", { required: "Year required", min: 2000, max: 2100 })} /></label>
-              <label><span>Number of Months *</span><select {...register("numberOfMonths", { required: true, min: 1, max: 24 })}>{Array.from({ length: 24 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} {index ? "Months" : "Month"}</option>)}</select></label>
+              <label><span>Number of Months *</span><select {...register("numberOfMonths", { required: true, min: 1, max: selectableMonthCount })}>{Array.from({ length: selectableMonthCount }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} {index ? "Months" : "Month"}</option>)}</select><small className={styles.helperText}>{dueMonthCount > 1 ? `${dueMonthCount} unpaid months detected.` : "No additional unpaid month detected."}</small></label>
               <label><span>Total Fee</span><div className={styles.readOnlyField}>{currency(amount)}</div></label>
             </div>
           </section>

@@ -59,7 +59,7 @@ export const cycleAttendanceSort = (sorts, key, additive = false) => {
     : [...sorts, { key, direction }];
 };
 
-export const buildAttendanceRowView = (rows, query = "", sort = [], monthDate = "") => {
+export const buildAttendanceRowView = (rows, query = "", sort = [], monthDate = "", preserveManualOrder = false) => {
   const needle = text(query).toLowerCase();
   const digits = needle.replace(/\D/g, "");
   const phoneQuery = digits.length > 0 && /^[\d\s()+-]+$/.test(needle);
@@ -92,6 +92,11 @@ export const buildAttendanceRowView = (rows, query = "", sort = [], monthDate = 
     }
     return a.sourceIndex - b.sourceIndex;
   });
+  if (preserveManualOrder && !sorts.length) {
+    // Preserve the saved order inside each visible group, while keeping
+    // inactive students at the bottom of the register.
+    return [...activeRows, ...inactiveRows, ...otherRows];
+  }
   // Status groups take precedence over saved manual order and column sorting.
   // Keep sourceIndex unchanged so attendance edits still target the correct row.
   return [...activeRows, ...inactiveRows, ...otherRows];

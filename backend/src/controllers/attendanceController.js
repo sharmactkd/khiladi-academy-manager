@@ -1045,8 +1045,8 @@ export const saveMonthlyRegister = asyncHandler(async (req, res) => {
 });
 
 export const moveMonthlyRegisterRow = asyncHandler(async (req, res) => {
-  const { batch, month, year, rowKey, position, revision } = req.body;
-  const data = await moveMonthlyAttendanceRow({ academyId: req.academyId, batchId: batch, month, year, rowKey, position, revision });
+  const { batch, month, year, rowKey, position, orderedKeys, revision } = req.body;
+  const data = await moveMonthlyAttendanceRow({ academyId: req.academyId, batchId: batch, month, year, rowKey, position, orderedKeys, revision });
   return successResponse(res, "Attendance row order saved", data);
 });
 

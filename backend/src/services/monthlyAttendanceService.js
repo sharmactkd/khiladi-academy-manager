@@ -596,7 +596,7 @@ export const getMonthlyAttendanceRegister = async ({
   };
 };
 
-export const moveMonthlyAttendanceRow = async ({ academyId, batchId, month, year, rowKey, position, revision }) => {
+export const moveMonthlyAttendanceRow = async ({ academyId, batchId, month, year, rowKey, position, orderedKeys, revision }) => {
   if (!Number.isInteger(Number(month)) || Number(month) < 1 || Number(month) > 12 || !Number.isInteger(Number(year)) || Number(year) < 2000 || Number(year) > 2100) {
     throw Object.assign(new Error("Valid month and year are required"), { statusCode: 400 });
   }
@@ -606,7 +606,17 @@ export const moveMonthlyAttendanceRow = async ({ academyId, batchId, month, year
     error.statusCode = 409;
     throw error;
   }
-  const keys = moveRowKeys(register.rows.map((row) => row.registerOrderKey), rowKey, position);
+  const currentKeys = register.rows.map((row) => row.registerOrderKey);
+  let keys;
+  if (Array.isArray(orderedKeys)) {
+    const uniqueKeys = new Set(orderedKeys);
+    const currentKeySet = new Set(currentKeys);
+    const isExactRegister = orderedKeys.length === currentKeys.length && uniqueKeys.size === currentKeys.length && orderedKeys.every((key) => currentKeySet.has(key));
+    if (!isExactRegister) throw Object.assign(new Error("Submitted attendance order does not match this register"), { statusCode: 400 });
+    keys = orderedKeys;
+  } else {
+    keys = moveRowKeys(currentKeys, rowKey, position);
+  }
   const orderId = `${academyId}:${batchId}:${Number(year)}:${Number(month)}`;
   try {
     const saved = await AttendanceRowOrder.findOneAndUpdate({ _id: orderId, revision }, {

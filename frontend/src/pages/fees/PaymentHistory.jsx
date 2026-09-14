@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowLeft, ArrowRight, Banknote, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleDollarSign, Download, FileText, FilterX, GraduationCap, Plus, ReceiptText, ReceiptText as ReceiptIndianRupee, RefreshCw, Search, Smartphone, WalletCards } from "lucide-react";
+import { ArrowLeft, ArrowRight, Banknote, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleDollarSign, Download, FileText, FilterX, GraduationCap, Pencil, Plus, ReceiptText, ReceiptText as ReceiptIndianRupee, RefreshCw, Save, Search, Smartphone, WalletCards, X } from "lucide-react";
 import { academyApi } from "../../api/academyApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import { feePaymentApi } from "../../api/feeApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
+import DateInput from "../../components/common/DateInput.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { formatPaymentMode, PAYMENT_MODE_OPTIONS } from "../../utils/feePaymentModes.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
@@ -33,6 +34,8 @@ const PaymentHistory = () => {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ page: 1, total: 0, pages: 1 });
   const [summary, setSummary] = useState({ collected: 0, balance: 0, paid: 0, split: 0 });
+  const [dateEditor, setDateEditor] = useState(null);
+  const [dateSaving, setDateSaving] = useState(false);
 
   const fetchPayments = async () => {
     try {
@@ -70,6 +73,31 @@ const PaymentHistory = () => {
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
     const anchor = document.createElement("a"); anchor.href = url; anchor.download = "payment-history.csv"; anchor.click(); URL.revokeObjectURL(url);
   };
+  const openDateEditor = (payment) => {
+    const currentDate = payment.paymentDate ? new Date(payment.paymentDate) : new Date();
+    const safeDate = Number.isNaN(currentDate.getTime()) ? new Date() : currentDate;
+    setDateEditor({
+      id: payment._id,
+      student: studentName(payment.student),
+      receipt: payment.receiptNumber || "—",
+      paymentDate: safeDate.toISOString().slice(0, 10),
+    });
+  };
+  const savePaymentDate = async (event) => {
+    event.preventDefault();
+    if (!dateEditor?.id || !dateEditor.paymentDate) return;
+    try {
+      setDateSaving(true);
+      await feePaymentApi.update(dateEditor.id, { paymentDate: dateEditor.paymentDate });
+      setDateEditor(null);
+      await fetchPayments();
+      toast.success("Payment date updated successfully");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Payment date update nahi hui");
+    } finally {
+      setDateSaving(false);
+    }
+  };
 
   return (
     <div className={`page ${styles.page}`}>
@@ -97,9 +125,10 @@ const PaymentHistory = () => {
 
       <section className={styles.tableCard}>
         <header><div><h2>Transaction Ledger</h2><p>{pagination.total} payment {pagination.total === 1 ? "record" : "records"} found</p></div><span><CalendarDays size={15}/>Newest first</span></header>
-        {loading ? <div className={styles.state}><RefreshCw className={styles.spinner} size={24}/><strong>Loading payments...</strong></div> : !filteredPayments.length ? <div className={styles.state}><ReceiptIndianRupee size={28}/><strong>No payments found</strong><p>Try changing or clearing your current filters.</p>{hasFilters ? <button onClick={clearFilters}>Clear Filters</button> : null}</div> : <div className={styles.tableWrap}><table><thead><tr><th>Student</th><th>Fee Period</th><th>Payment</th><th>Payable</th><th>Paid</th><th>Balance</th><th>Date</th><th>Status</th><th aria-label="Actions"/></tr></thead><tbody>{visiblePayments.map((payment) => { const name = studentName(payment.student); const statusKey = String(payment.status || "due"); const rowCurrency = paymentCurrencySource(payment, mainBranch); return <tr key={payment._id} tabIndex={0} aria-label={`View payment receipt for ${name}`} onClick={(event) => { if (!event.target.closest("a, button")) navigate(`/fees/receipt/${payment._id}`); }} onKeyDown={(event) => { if (event.target !== event.currentTarget) return; if (event.key === "Enter" || event.key === " ") { event.preventDefault(); navigate(`/fees/receipt/${payment._id}`); } }}><td>{payment.student?._id ? <Link className={styles.studentLink} to={`/students/${payment.student._id}`} title="View student profile"><strong>{name}</strong></Link> : <strong title="The original student record is missing. Restore or verify its link to recover the name.">{name}</strong>}</td><td><strong>{MONTHS[Number(payment.feeMonth) - 1]?.label || payment.feeMonth} {payment.feeYear}</strong></td><td><span className={styles.modeIcon}>{payment.paymentMode === "cash" ? <Banknote size={15}/> : payment.paymentMode === "online" ? <Smartphone size={15}/> : <WalletCards size={15}/>}</span><div><strong>{formatPaymentMode(payment.paymentMode)}</strong>{payment.paymentMode === "cash_online" ? <small>Cash {currency(payment.cashAmount, rowCurrency)} + Online {currency(payment.onlineAmount, rowCurrency)}</small> : null}</div></td><td>{currency(payment.finalAmount, rowCurrency)}</td><td><strong className={styles.paidAmount}>{currency(payment.amountPaid, rowCurrency)}</strong></td><td><strong className={Number(payment.pendingAmount || 0) > 0 ? styles.pendingAmount : ""}>{currency(payment.pendingAmount, rowCurrency)}</strong></td><td>{formatDate(payment.paymentDate)}</td><td><span className={`${styles.status} ${styles[`status${statusKey.charAt(0).toUpperCase()}${statusKey.slice(1)}`]}`}>{statusKey}</span></td><td><Link className={styles.receiptAction} to={`/fees/receipt/${payment._id}`} title="View receipt"><ReceiptIndianRupee size={16}/><ArrowRight size={13}/></Link></td></tr>; })}</tbody></table></div>}
+        {loading ? <div className={styles.state}><RefreshCw className={styles.spinner} size={24}/><strong>Loading payments...</strong></div> : !filteredPayments.length ? <div className={styles.state}><ReceiptIndianRupee size={28}/><strong>No payments found</strong><p>Try changing or clearing your current filters.</p>{hasFilters ? <button onClick={clearFilters}>Clear Filters</button> : null}</div> : <div className={styles.tableWrap}><table><thead><tr><th>Student</th><th>Fee Period</th><th>Payment</th><th>Payable</th><th>Paid</th><th>Balance</th><th>Date</th><th>Status</th><th aria-label="Actions"/></tr></thead><tbody>{visiblePayments.map((payment) => { const name = studentName(payment.student); const statusKey = String(payment.status || "due"); const rowCurrency = paymentCurrencySource(payment, mainBranch); return <tr key={payment._id} tabIndex={0} aria-label={`View payment receipt for ${name}`} onClick={(event) => { if (!event.target.closest("a, button")) navigate(`/fees/receipt/${payment._id}`); }} onKeyDown={(event) => { if (event.target !== event.currentTarget) return; if (event.key === "Enter" || event.key === " ") { event.preventDefault(); navigate(`/fees/receipt/${payment._id}`); } }}><td>{payment.student?._id ? <Link className={styles.studentLink} to={`/students/${payment.student._id}`} title="View student profile"><strong>{name}</strong></Link> : <strong title="The original student record is missing. Restore or verify its link to recover the name.">{name}</strong>}</td><td><strong>{MONTHS[Number(payment.feeMonth) - 1]?.label || payment.feeMonth} {payment.feeYear}</strong></td><td><span className={styles.modeIcon}>{payment.paymentMode === "cash" ? <Banknote size={15}/> : payment.paymentMode === "online" ? <Smartphone size={15}/> : <WalletCards size={15}/>}</span><div><strong>{formatPaymentMode(payment.paymentMode)}</strong>{payment.paymentMode === "cash_online" ? <small>Cash {currency(payment.cashAmount, rowCurrency)} + Online {currency(payment.onlineAmount, rowCurrency)}</small> : null}</div></td><td>{currency(payment.finalAmount, rowCurrency)}</td><td><strong className={styles.paidAmount}>{currency(payment.amountPaid, rowCurrency)}</strong></td><td><strong className={Number(payment.pendingAmount || 0) > 0 ? styles.pendingAmount : ""}>{currency(payment.pendingAmount, rowCurrency)}</strong></td><td>{formatDate(payment.paymentDate)}</td><td><span className={`${styles.status} ${styles[`status${statusKey.charAt(0).toUpperCase()}${statusKey.slice(1)}`]}`}>{statusKey}</span></td><td><div className={styles.rowActions}><button type="button" onClick={() => openDateEditor(payment)} title="Edit payment date" aria-label={`Edit payment date for ${name}`}><Pencil size={15}/></button><Link className={styles.receiptAction} to={`/fees/receipt/${payment._id}`} title="View receipt"><ReceiptIndianRupee size={16}/><ArrowRight size={13}/></Link></div></td></tr>; })}</tbody></table></div>}
         {!loading && filteredPayments.length ? <footer><span>Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, pagination.total)} of {pagination.total}</span><div><button type="button" onClick={() => setPage((value) => Math.max(value - 1, 1))} disabled={page === 1}><ChevronLeft size={15}/>Previous</button><strong>{page} <span>of {pageCount}</span></strong><button type="button" onClick={() => setPage((value) => Math.min(value + 1, pageCount))} disabled={page === pageCount}>Next<ChevronRight size={15}/></button></div></footer> : null}
       </section>
+      {dateEditor ? <div className={styles.modalBackdrop} onMouseDown={(event) => event.target === event.currentTarget && !dateSaving && setDateEditor(null)}><form className={styles.dateModal} onSubmit={savePaymentDate}><header><div><small>Payment correction</small><h2>Edit Payment Date</h2><p>{dateEditor.student} · {dateEditor.receipt}</p></div><button type="button" onClick={() => setDateEditor(null)} disabled={dateSaving} aria-label="Close"><X size={18}/></button></header><label><span>Correct Payment Date</span><DateInput value={dateEditor.paymentDate} onChange={(event) => setDateEditor((current) => ({ ...current, paymentDate: event.target.value }))} required /></label><footer><button type="button" onClick={() => setDateEditor(null)} disabled={dateSaving}>Cancel</button><button type="submit" disabled={dateSaving}><Save size={16}/>{dateSaving ? "Saving…" : "Save Date"}</button></footer></form></div> : null}
     </div>
   );
 };

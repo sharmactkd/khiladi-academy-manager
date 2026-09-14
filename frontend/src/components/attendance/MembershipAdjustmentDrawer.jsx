@@ -31,7 +31,7 @@ const initialForm = {
   days: 5,
   dueDate: "",
   remainingTrainingDays: 0,
-  months: 1,
+  months: 0,
   unpaidDays: 0,
   resumeDate: new Date().toISOString().slice(0, 10),
   feeStatus: "due",
@@ -192,7 +192,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
               <div><small>Current State</small><MembershipBadge membership={membership} disabled /></div>
               <div><small>Effective Due Date</small><strong>{formatDate(membership?.effectiveDueDate)}</strong></div>
               <div><small>Days Remaining</small><strong>{membership?.remainingTrainingDays || 0}</strong></div>
-              <div><small>Unpaid Balance</small><strong>{membership?.unpaidMonths || 0}M, {membership?.unpaidDays || 0}D</strong></div>
+              <div><small>Unpaid Balance</small><strong>{[Number(membership?.unpaidMonths || 0) > 0 ? `${membership.unpaidMonths}M` : "", Number(membership?.unpaidDays || 0) > 0 ? `${membership.unpaidDays}D` : ""].filter(Boolean).join(", ") || "0D"}</strong></div>
             </section>
 
             <form className="membership-form" onSubmit={submit}>

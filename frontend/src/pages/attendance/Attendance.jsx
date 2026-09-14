@@ -16,6 +16,7 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import AttendanceControls from "../../components/attendance/AttendanceControls.jsx";
 import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
 import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
+import { buildAttendanceRowView } from "../../components/attendance/attendanceRowView.js";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import "./Attendance.css";
@@ -488,18 +489,22 @@ const Attendance = () => {
       toast.error("Restart the updated backend and refresh this page first.");
       return false;
     }
-    const input = window.prompt(`Move ${row.name || row.importedName || "student"} to position (1–${rows.length}). This saves the order for this batch and month.`, String(currentPosition));
+    const displayedRows = buildAttendanceRowView(rows, "", [], "", true).map((entry) => entry.row);
+    const input = window.prompt(`Move ${row.name || row.importedName || "student"} to position (1–${displayedRows.length}). This saves the order for this batch and month.`, String(currentPosition));
     if (input === null) return false;
     const position = Number(input.trim());
-    if (!Number.isInteger(position) || position < 1 || position > rows.length) {
-      toast.error(`Enter a whole number between 1 and ${rows.length}`);
+    if (!Number.isInteger(position) || position < 1 || position > displayedRows.length) {
+      toast.error(`Enter a whole number between 1 and ${displayedRows.length}`);
       return false;
     }
+    const orderedRows = displayedRows.filter((item) => item.registerOrderKey !== row.registerOrderKey);
+    orderedRows.splice(position - 1, 0, row);
+    const orderedKeys = orderedRows.map((item) => item.registerOrderKey);
     const context = registerContextRef.current;
     reorderingRef.current = true;
     setReordering(true);
     try {
-      const response = await attendanceApi.moveMonthlyRow({ batch, month, year, rowKey: row.registerOrderKey, position, revision: orderRevision });
+      const response = await attendanceApi.moveMonthlyRow({ batch, month, year, rowKey: row.registerOrderKey, position, orderedKeys, revision: orderRevision });
       const data = normalizeResponseData(response);
       if (registerContextRef.current !== context) return false;
       if (!Array.isArray(data.rows)) throw new Error("Server did not return the saved row order");
@@ -723,6 +728,7 @@ const Attendance = () => {
             searchQuery={studentSearch}
             onMoveRow={moveRegisterRow}
             reorderDisabled={loading || saving || hasUnsavedChanges || reordering}
+            preserveManualOrder={orderRevision > 0 && !studentSearch}
             dayNotes={dayNotes}
             onRowsChange={handleRowsChange}
             onSaveDayNote={saveDayNote}

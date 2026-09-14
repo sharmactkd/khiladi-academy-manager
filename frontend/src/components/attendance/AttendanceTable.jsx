@@ -237,6 +237,7 @@ const AttendanceTable = ({
   canManageMembership = false,
   statusUpdatingIds = [],
   loading = false,
+  preserveManualOrder = false,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -320,8 +321,9 @@ const AttendanceTable = ({
         searchQuery,
         sort,
         suppliedDays[0]?.dateKey,
+        preserveManualOrder,
       ),
-    [safeRows, searchQuery, sort, suppliedDays],
+    [safeRows, searchQuery, sort, suppliedDays, preserveManualOrder],
   );
   const toggleSort = (key, event) =>
     setSort((current) =>
@@ -768,7 +770,7 @@ const AttendanceTable = ({
                     <button
                       type="button"
                       className="attendance-serial-button"
-                      disabled={!onMoveRow || reorderDisabled}
+                      disabled={!onMoveRow || reorderDisabled || Boolean(searchQuery) || sort.length > 0}
                       title="Double-click to move this student to another serial number (Enter also works)"
                       aria-label={`Serial ${virtualRow.index + 1}: move ${row.name || row.importedName || "student"}`}
                       onDoubleClick={async () => {

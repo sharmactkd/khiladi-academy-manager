@@ -525,9 +525,20 @@ export const updateFeePayment = asyncHandler(async (req, res) => {
     }
   });
 
+  if (Object.prototype.hasOwnProperty.call(req.body, "paymentDate")) {
+    payment.paidDate = Number(payment.amountPaid || 0) > 0 ? payment.paymentDate : null;
+  }
+
   payment.updatedBy = req.user._id;
 
   await payment.save();
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "paymentDate")) {
+    await ExpenseTransaction.updateOne(
+      { academy: req.academyId, sourceType: "fee_payment", sourceId: payment._id },
+      { $set: { date: payment.paymentDate, updatedBy: req.user._id } },
+    );
+  }
 
   return successResponse(res, "Fee payment updated successfully", payment);
 });
