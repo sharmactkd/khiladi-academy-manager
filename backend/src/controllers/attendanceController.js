@@ -1014,6 +1014,9 @@ export const getMonthlyRegister = asyncHandler(async (req, res) => {
     year,
   });
 
+  res.setHeader("Server-Timing", `attendance;dur=${Number(data.performance?.totalMs || 0)}`);
+  res.setHeader("Cache-Control", "private, no-store");
+
   return successResponse(res, "Monthly attendance register fetched", data);
 });
 

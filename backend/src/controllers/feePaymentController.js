@@ -10,6 +10,8 @@ import {
   buildStudentFeeStatus,
   buildStudentsFeeStatuses,
   collectStudentFee,
+  reconcileMembershipAfterCollection,
+  applyPaymentStatusTransitionToMembership,
   getMonthYearNow,
 } from "../services/feeService.js";
 
@@ -188,7 +190,6 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
       paid: 0,
       due: 0,
       partial: 0,
-      overdue: 0,
     }
   );
 
@@ -244,7 +245,7 @@ export const getFeesDashboard = asyncHandler(async (req, res) => {
     activeStudents: students.length,
     totalTransactions: thisMonthPayments.length,
     pendingAmount,
-    overdueStudents: summary.overdue,
+    overdueStudents: 0,
     summary,
     monthlyTrend,
     paymentMix,
@@ -276,40 +277,68 @@ export const getStudentsFeeStatus = asyncHandler(async (req, res) => {
 });
 
 export const collectFee = asyncHandler(async (req, res) => {
+  const session = await mongoose.startSession();
   try {
     const periodCount = Math.min(Math.max(Number(req.body.numberOfMonths) || 1, 1), 24);
-    const payments = [];
-    for (let index = 0; index < periodCount; index += 1) {
-      const period = addBillingMonths(req.body.feeMonth || req.body.month, req.body.feeYear || req.body.year, index);
-      const periodPayload = {
-        ...req.body,
-        ...period,
-        amount: moneyPart(req.body.amount, periodCount, index),
-        discount: moneyPart(req.body.discount, periodCount, index),
-        amountPaid: moneyPart(req.body.amountPaid, periodCount, index),
-        cashAmount: moneyPart(req.body.cashAmount, periodCount, index),
-        onlineAmount: moneyPart(req.body.onlineAmount, periodCount, index),
-      };
-      const payment = await collectStudentFee({ academyId: req.academyId, userId: req.user._id, payload: periodPayload });
-      payments.push(payment);
-      await ExpenseTransaction.updateOne(
-        { academy: req.academyId, sourceType: "fee_payment", sourceId: payment._id },
-        { $set: {
-          academy: req.academyId,
-          branch: payment.branch || null,
-          type: "income",
-          category: "Student Fee",
-          amount: Number(payment.amountPaid || 0),
-          account: payment.paymentMode === "online" ? "upi" : "cash",
-          date: payment.paidDate || payment.paymentDate || new Date(),
-          description: `Fee payment ${payment.receiptNumber || ""}`.trim(),
-          sourceType: "fee_payment",
-          sourceId: payment._id,
-          createdBy: req.user._id,
-        } },
-        { upsert: true },
-      );
-    }
+    const idempotencyKey = String(req.body.idempotencyKey || "").trim();
+    let payments = [];
+    let replayed = false;
+    await session.withTransaction(async () => {
+      const prior = await FeePayment.find({ academy: req.academyId, student: req.body.student, "installments.idempotencyKey": idempotencyKey })
+        .sort({ feeYear: 1, feeMonth: 1 })
+        .session(session);
+      if (prior.length) {
+        if (prior.length !== periodCount) throw new Error("This collection request is incomplete. Review payment history before retrying.");
+        payments = prior;
+        replayed = true;
+        return;
+      }
+
+      let completedPeriods = 0;
+      for (let index = 0; index < periodCount; index += 1) {
+        const period = addBillingMonths(req.body.feeMonth || req.body.month, req.body.feeYear || req.body.year, index);
+        const periodPayload = {
+          ...req.body,
+          ...period,
+          amount: moneyPart(req.body.amount, periodCount, index),
+          discount: moneyPart(req.body.discount, periodCount, index),
+          amountPaid: moneyPart(req.body.amountPaid, periodCount, index),
+          cashAmount: moneyPart(req.body.cashAmount, periodCount, index),
+          onlineAmount: moneyPart(req.body.onlineAmount, periodCount, index),
+        };
+        const result = await collectStudentFee({ academyId: req.academyId, userId: req.user._id, payload: periodPayload, session });
+        const payment = result.payment;
+        payments.push(payment);
+        if (result.becamePaid) completedPeriods += 1;
+        await ExpenseTransaction.updateOne(
+          { academy: req.academyId, sourceType: "fee_payment", sourceId: payment._id },
+          { $set: {
+            academy: req.academyId,
+            branch: payment.branch || null,
+            type: "income",
+            category: "Student Fee",
+            amount: Number(payment.amountPaid || 0),
+            account: payment.paymentMode === "online" ? "upi" : payment.paymentMode === "cash" ? "cash" : "other",
+            date: payment.paidDate || payment.paymentDate || new Date(),
+            description: `Fee payment ${payment.receiptNumber || ""}`.trim(),
+            sourceType: "fee_payment",
+            sourceId: payment._id,
+            createdBy: req.user._id,
+            reversedAt: null,
+            reversalReason: "",
+          } },
+          { upsert: true, session },
+        );
+      }
+      const student = await Student.findOne({ _id: req.body.student, academy: req.academyId }).session(session);
+      await reconcileMembershipAfterCollection({
+        academyId: req.academyId,
+        student,
+        completedPeriods,
+        latestPayment: payments[payments.length - 1],
+        session,
+      });
+    });
 
     const populatedPayment = await FeePayment.findById(payments[0]._id)
       .populate("student", "firstName lastName admissionNumber phone email")
@@ -321,11 +350,14 @@ export const collectFee = asyncHandler(async (req, res) => {
     return successResponse(
       res,
       periodCount > 1 ? `${periodCount} months fee collected successfully` : "Fee collected successfully",
-      { ...populatedPayment, periodCount, paymentIds: payments.map((payment) => payment._id) },
-      201
+      { ...populatedPayment, periodCount, paymentIds: payments.map((payment) => payment._id), idempotent: replayed },
+      replayed ? 200 : 201
     );
   } catch (error) {
-    return errorResponse(res, error.message || "Fee collection failed", 400);
+    const status = error?.code === 11000 ? 409 : 400;
+    return errorResponse(res, error.message || "Fee collection failed", status);
+  } finally {
+    await session.endSession();
   }
 });
 
@@ -342,7 +374,7 @@ export const getPendingFees = asyncHandler(async (req, res) => {
   });
 
   const pending = data.filter((item) =>
-    ["due", "partial", "overdue"].includes(item.status)
+    ["due", "partial"].includes(item.status)
   );
 
   return successResponse(res, "Pending fees fetched successfully", {
@@ -359,7 +391,11 @@ export const getFeePayments = asyncHandler(async (req, res) => {
 
   if (req.query.student) query.student = req.query.student;
   if (req.query.batch) query.batch = req.query.batch;
-  if (req.query.status) query.status = req.query.status;
+  if (req.query.status) {
+    query.status = req.query.status === "due"
+      ? { $in: ["due", "pending", "overdue"] }
+      : req.query.status;
+  }
   if (req.query.paymentMode) query.paymentMode = req.query.paymentMode;
   if (req.query.month) query.feeMonth = Number(req.query.month);
   if (req.query.year) query.feeYear = Number(req.query.year);
@@ -378,6 +414,7 @@ export const getFeePayments = asyncHandler(async (req, res) => {
     query.$or = [
       { student: { $in: studentIds } },
       { receiptNumber: searchRegex },
+      { "installments.receiptNumber": searchRegex },
     ];
   }
 
@@ -496,13 +533,22 @@ export const getFeePaymentById = asyncHandler(async (req, res) => {
 });
 
 export const updateFeePayment = asyncHandler(async (req, res) => {
+  const session = await mongoose.startSession();
+  let updatedPayment;
+  try {
+    await session.withTransaction(async () => {
   const payment = await FeePayment.findOne({
     _id: req.params.id,
     academy: req.academyId,
-  });
+  }).session(session);
 
   if (!payment) {
-    return errorResponse(res, "Fee payment not found", 404);
+    const error = new Error("Fee payment not found"); error.statusCode = 404; throw error;
+  }
+
+  const previousStatus = payment.status;
+  if (Object.prototype.hasOwnProperty.call(req.body, "status") && req.body.status !== payment.status) {
+    throw new Error("Payment status is calculated automatically. Use Reverse Payment to cancel a payment.");
   }
 
   const allowedFields = [
@@ -516,7 +562,6 @@ export const updateFeePayment = asyncHandler(async (req, res) => {
     "notes",
     "note",
     "dueDate",
-    "status",
   ];
 
   allowedFields.forEach((field) => {
@@ -527,36 +572,85 @@ export const updateFeePayment = asyncHandler(async (req, res) => {
 
   if (Object.prototype.hasOwnProperty.call(req.body, "paymentDate")) {
     payment.paidDate = Number(payment.amountPaid || 0) > 0 ? payment.paymentDate : null;
+    const latest = payment.installments?.filter((item) => !item.reversedAt).sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate))[0];
+    if (latest) latest.paymentDate = payment.paymentDate;
+  }
+  if (Object.prototype.hasOwnProperty.call(req.body, "amountPaid") && payment.installments?.length) {
+    const latest = payment.installments.filter((item) => !item.reversedAt).sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate))[0];
+    if (latest) {
+      latest.amountPaid = Number(req.body.amountPaid || 0);
+      latest.paymentMode = req.body.paymentMode || latest.paymentMode;
+      latest.cashAmount = latest.paymentMode === "cash" ? latest.amountPaid : Number(req.body.cashAmount || latest.cashAmount || 0);
+      latest.onlineAmount = latest.paymentMode === "online" ? latest.amountPaid : Number(req.body.onlineAmount || latest.onlineAmount || 0);
+    }
   }
 
   payment.updatedBy = req.user._id;
 
-  await payment.save();
+  await payment.save({ session });
 
   if (Object.prototype.hasOwnProperty.call(req.body, "paymentDate")) {
     await ExpenseTransaction.updateOne(
       { academy: req.academyId, sourceType: "fee_payment", sourceId: payment._id },
       { $set: { date: payment.paymentDate, updatedBy: req.user._id } },
+      { session },
     );
   }
-
-  return successResponse(res, "Fee payment updated successfully", payment);
+  await ExpenseTransaction.updateOne(
+    { academy: req.academyId, sourceType: "fee_payment", sourceId: payment._id },
+    { $set: { amount: Number(payment.amountPaid || 0), account: payment.paymentMode === "online" ? "upi" : payment.paymentMode === "cash" ? "cash" : "other" } },
+    { session },
+  );
+  await applyPaymentStatusTransitionToMembership({ academyId: req.academyId, studentId: payment.student, oldStatus: previousStatus, newStatus: payment.status, payment, session });
+  updatedPayment = payment;
+    });
+    return successResponse(res, "Fee payment updated successfully", updatedPayment);
+  } catch (error) {
+    return errorResponse(res, error.message || "Fee payment update failed", error.statusCode || 400);
+  } finally {
+    await session.endSession();
+  }
 });
 
 export const deleteFeePayment = asyncHandler(async (req, res) => {
+  const reason = String(req.body?.reason || "Legacy cancellation").trim();
+  const session = await mongoose.startSession();
+  let cancelledPayment;
+  try {
+    await session.withTransaction(async () => {
   const payment = await FeePayment.findOne({
     _id: req.params.id,
     academy: req.academyId,
-  });
+  }).session(session);
 
   if (!payment) {
-    return errorResponse(res, "Fee payment not found", 404);
+    const error = new Error("Fee payment not found"); error.statusCode = 404; throw error;
   }
-
+  if (payment.status === "cancelled") { cancelledPayment = payment; return; }
+  const previousStatus = payment.status;
   payment.status = "cancelled";
+  payment.reversedAt = new Date();
+  payment.reversalReason = reason;
+  payment.reversedBy = req.user._id;
+  (payment.installments || []).forEach((item) => {
+    if (!item.reversedAt) { item.reversedAt = payment.reversedAt; item.reversalReason = reason; item.reversedBy = req.user._id; }
+  });
   payment.updatedBy = req.user._id;
-
-  await payment.save();
-
-  return successResponse(res, "Fee payment cancelled successfully", payment);
+  await payment.save({ session });
+  await ExpenseTransaction.updateOne(
+    { academy: req.academyId, sourceType: "fee_payment", sourceId: payment._id, reversedAt: null },
+    { $set: { reversedAt: payment.reversedAt, reversalReason: reason, updatedBy: req.user._id } },
+    { session },
+  );
+  await applyPaymentStatusTransitionToMembership({ academyId: req.academyId, studentId: payment.student, oldStatus: previousStatus, newStatus: "cancelled", payment, session });
+  cancelledPayment = payment;
+    });
+    return successResponse(res, "Fee payment reversed successfully", cancelledPayment);
+  } catch (error) {
+    return errorResponse(res, error.message || "Fee payment reversal failed", error.statusCode || 400);
+  } finally {
+    await session.endSession();
+  }
 });
+
+export const reverseFeePayment = deleteFeePayment;

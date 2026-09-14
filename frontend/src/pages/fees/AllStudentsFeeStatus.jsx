@@ -160,7 +160,6 @@ const AllStudentsFeeStatus = () => {
             <option value="paid">Paid</option>
             <option value="due">Due</option>
             <option value="partial">Partial</option>
-            <option value="overdue">Overdue</option>
           </select>
         </div>
       </div>

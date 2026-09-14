@@ -39,4 +39,21 @@
 .studentLink:hover strong { color: var(--ph-red); text-decoration: underline; }
 .studentLink:focus-visible { outline: 2px solid var(--ph-red); outline-offset: 4px; }
 .tableCard tbody tr:focus-visible { outline: 2px solid var(--ph-red); outline-offset: -2px; background: #fff8f8; }
+.dateModal > label textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1px solid #cbd6e3;
+  border-radius: 9px;
+  padding: 12px;
+  color: #1e344f;
+  background: #fff;
+  font: inherit;
+  line-height: 1.5;
+  outline: none;
+}
+.dateModal > label textarea:focus {
+  border-color: var(--ph-red);
+  box-shadow: 0 0 0 3px rgba(207, 0, 6, .1);
+}
 .rowActions{display:flex;align-items:center;gap:6px}.rowActions>button{display:grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid #cbd7e4;border-radius:8px;color:#1d3d68;background:#fff;cursor:pointer}.rowActions>button:hover{border-color:#f09298;color:var(--ph-red);background:#fff5f5}.modalBackdrop{position:fixed;z-index:1000;inset:0;display:grid;place-items:center;padding:20px;background:rgba(15,31,53,.62);backdrop-filter:blur(4px)}.dateModal{width:min(440px,100%);overflow:hidden;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 24px 70px rgba(7,19,36,.3)}.dateModal>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px;border-bottom:1px solid #e5eaf0;background:linear-gradient(115deg,#fff 65%,#fff0f1)}.dateModal>header small{color:var(--ph-red);font-size:11px;font-weight:950;letter-spacing:.12em;text-transform:uppercase}.dateModal h2{margin:4px 0;color:var(--ph-navy);font-size:21px}.dateModal p{margin:0;color:#718197;font-size:12px}.dateModal>header button{display:grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid #d5deea;border-radius:9px;color:#54677f;background:#fff;cursor:pointer}.dateModal>label{display:grid;gap:7px;padding:22px}.dateModal>label>span{color:#40546c;font-size:12px;font-weight:900}.dateModal>label input{width:100%;height:44px;box-sizing:border-box;border:1px solid #cbd6e3;border-radius:9px;padding:0 12px;color:#1e344f;background:#fff}.dateModal>footer{display:flex;justify-content:flex-end;gap:8px;padding:15px 22px;border-top:1px solid #e5eaf0;background:#f8fafc}.dateModal>footer button{display:flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 16px;border:1px solid #ccd7e3;border-radius:9px;color:#344961;background:#fff;font-size:12px;font-weight:900;cursor:pointer}.dateModal>footer button[type="submit"]{border-color:var(--ph-red);color:#fff;background:var(--ph-red)}.dateModal button:disabled{opacity:.55;cursor:not-allowed}

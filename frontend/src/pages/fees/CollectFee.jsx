@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DateInput from "../../components/common/DateInput.jsx";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -94,6 +94,7 @@ const getAttendanceReturnPath = (searchParams) => {
 };
 
 const CollectFee = () => {
+  const collectionKeyRef = useRef("");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
@@ -274,8 +275,12 @@ const CollectFee = () => {
   const onSubmit = async (values) => {
     try {
       setSaving(true);
+      if (!collectionKeyRef.current) {
+        collectionKeyRef.current = globalThis.crypto?.randomUUID?.() || `fee-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      }
       const response = await feePaymentApi.collect({
         ...values,
+        idempotencyKey: collectionKeyRef.current,
         amount: Number(values.amount || 0),
         discount: Number(values.discount || 0),
         amountPaid: Number(values.amountPaid || 0),
@@ -288,6 +293,7 @@ const CollectFee = () => {
         paymentDate: values.paymentDate || new Date().toISOString().slice(0, 10),
       });
       toast.success("Fee collected successfully");
+      collectionKeyRef.current = "";
       const payment = response?.data?.data || response?.data || null;
 
       if (attendanceReturnPath) {

@@ -8,7 +8,7 @@ import AttendanceDayNote from "../models/AttendanceDayNote.js";
 import AttendanceRowOrder from "../models/AttendanceRowOrder.js";
 import { applyRowOrder, moveRowKeys } from "../utils/attendanceRowOrder.js";
 import { getMembershipMap } from "./membershipService.js";
-import { isDueOnOrBeforeToday } from "../utils/businessDate.js";
+import { resolveFeeStatus } from "../utils/feeStatus.js";
 
 const STATUS_MAP = {
   present: "P",
@@ -296,24 +296,12 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
     ? clean(identity.importedPaidDate)
     : clean(identity.importedFeePaid);
   const isLinkedStudent = identity.rowType === "student" && Boolean(identity.studentId);
-  const specialMembershipFeeStatus = ["waived", "complimentary"].includes(
-    clean(membership?.feeStatus).toLowerCase()
-  )
-    ? membership.feeStatus
-    : "";
-  const hasRemainingTrainingDays = Number(membership?.remainingTrainingDays || 0) > 0;
-  const calculatedMembershipFeeStatus = isDueOnOrBeforeToday(membership?.effectiveDueDate)
-    ? "due"
-    : membership?.feeStatus === "overdue" ? "due" : membership?.feeStatus || "";
-  const calculatedPaymentStatus = fee
-    ? Number(fee.amountPaid || 0) >= Number(fee.finalAmount || fee.amount || 0) && Number(fee.finalAmount || fee.amount || 0) > 0
-      ? "paid"
-      : Number(fee.amountPaid || 0) > 0
-        ? "partial"
-        : isDueOnOrBeforeToday(fee.dueDate)
-          ? "due"
-          : "due"
-    : "";
+  const feeStatusSummary = resolveFeeStatus({
+    membership,
+    payableAmount: fee ? Number(fee.finalAmount ?? fee.amount ?? 0) : null,
+    paidAmount: fee ? Number(fee.amountPaid || 0) : null,
+    fallbackStatus: membership?.feeStatus || fee?.status || "due",
+  });
 
   return {
     no: identity.importedSerialNo || index + 1,
@@ -353,8 +341,9 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
       : formatDisplayDate(normalizedPaidDate) || fee?.paidDate || fee?.paymentDate || null,
     feePaid: formatDisplayDate(identity.importedFeePaid) || fee?.amountPaid || fee?.amount || "",
     feeStatus: isLinkedStudent
-      ? identity.importedFeeStatus || specialMembershipFeeStatus || (hasRemainingTrainingDays ? "paid" : calculatedPaymentStatus || calculatedMembershipFeeStatus || "")
+      ? feeStatusSummary.code
       : identity.importedFeeStatus || fee?.status || membership?.feeStatus || "",
+    feeStatusSummary: isLinkedStudent ? feeStatusSummary : null,
     membership,
     attendance,
     ...counts,
@@ -377,30 +366,16 @@ const buildMonthlyRows = async ({
     });
   });
 
-  // A batch register must only preload its own roster. Historical students
-  // from another/no batch are still included below when attendance exists.
-  const studentVisibilityFilters = [{
-    batch: batchObjectId,
-    status: { $in: ["active", "inactive"] },
-  }];
-
-  if (markedStudentIds.length) {
-    // Keep historical rows visible even if the student later became inactive
-    // or their current batch assignment changed.
-    studentVisibilityFilters.push({
-      _id: { $in: markedStudentIds },
-      status: { $in: ["active", "inactive"] },
-    });
-  }
-
-  const students = await Student.find({
-    academy: academyObjectId,
-    $or: studentVisibilityFilters,
-  })
-    .select(
-      "admissionNumber firstName lastName phone countryCode status statusUpdatedAt joiningDate createdAt updatedAt batch dob dateOfBirth fatherName schoolName address"
-    )
-    .lean();
+  // Fetch the current roster and historical students through index-friendly
+  // queries, then merge by ID. This avoids a broad $or scan on large academies.
+  const studentFields = "admissionNumber firstName lastName phone countryCode status statusUpdatedAt joiningDate createdAt updatedAt batch dob dateOfBirth fatherName schoolName address";
+  const [rosterStudents, historicalStudents] = await Promise.all([
+    Student.find({ academy: academyObjectId, batch: batchObjectId, status: { $in: ["active", "inactive"] } }).select(studentFields).lean(),
+    markedStudentIds.length
+      ? Student.find({ academy: academyObjectId, _id: { $in: [...new Set(markedStudentIds.map(String))] }, status: { $in: ["active", "inactive"] } }).select(studentFields).lean()
+      : Promise.resolve([]),
+  ]);
+  const students = [...new Map([...rosterStudents, ...historicalStudents].map(student => [String(student._id), student])).values()];
 
   const studentMap = new Map(students.map((student) => [String(student._id), student]));
 
@@ -543,14 +518,15 @@ export const getMonthlyAttendanceRegister = async ({
     throw error;
   }
 
+  const startedAt = performance.now();
   const days = buildDays({ year: numericYear, month: numericMonth });
   const { start, end } = getMonthRange({ year: numericYear, month: numericMonth });
   const orderId = `${academyObjectId}:${batchObjectId}:${numericYear}:${numericMonth}`;
   const [batch, attendanceDocs, dayNoteDocs, order] = await Promise.all([
-    Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).lean(),
-    Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).lean(),
-    AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).lean(),
-    AttendanceRowOrder.findById(orderId).lean(),
+    Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).select("batchName martialArt branch isActive").lean(),
+    Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date records").lean(),
+    AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date type title description color createdAt updatedAt").lean(),
+    AttendanceRowOrder.findById(orderId).select("keys revision").lean(),
   ]);
 
   if (!batch) {
@@ -593,6 +569,7 @@ export const getMonthlyAttendanceRegister = async ({
     dayNotes,
     students,
     rows: orderedRows,
+    performance: { totalMs: Math.round(performance.now() - startedAt), rowCount: orderedRows.length, attendanceDocuments: attendanceDocs.length },
   };
 };
 

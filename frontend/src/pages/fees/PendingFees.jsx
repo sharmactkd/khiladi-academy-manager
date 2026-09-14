@@ -44,7 +44,7 @@ const PendingFees = () => {
       <div className="page-header">
         <div>
           <h1>Pending / Overdue Fees</h1>
-          <p>Due, partial aur overdue students list</p>
+          <p>Due aur partially-paid students list</p>
         </div>
 
         <Link className="btn btn-primary" to="/fees/collect">

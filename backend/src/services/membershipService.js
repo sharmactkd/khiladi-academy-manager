@@ -5,6 +5,7 @@ import MembershipAdjustment from "../models/MembershipAdjustment.js";
 import Student from "../models/Student.js";
 import StudentMembership from "../models/StudentMembership.js";
 import { calculateAccruedUnpaidMonths } from "../utils/membershipMonthlyDue.js";
+import { resolveFeeStatus } from "../utils/feeStatus.js";
 
 const MEMBERSHIP_FIELDS = [
   "status",
@@ -79,6 +80,11 @@ const snapshot = (membership) =>
 export const serializeMembership = (membership) => {
   if (!membership) return null;
   const source = typeof membership.toObject === "function" ? membership.toObject() : membership;
+  const unpaidMonths = calculateAccruedUnpaidMonths(source);
+  const feeStatusSummary = resolveFeeStatus({
+    membership: { ...source, unpaidMonths },
+    fallbackStatus: source.feeStatus || "due",
+  });
   return {
     _id: source._id,
     student: source.student,
@@ -88,14 +94,11 @@ export const serializeMembership = (membership) => {
     originalDueDate: source.originalDueDate,
     effectiveDueDate: source.effectiveDueDate,
     remainingTrainingDays: Number(source.remainingTrainingDays || 0),
-    unpaidMonths: calculateAccruedUnpaidMonths(source),
+    unpaidMonths,
     unpaidDays: Number(source.unpaidDays || 0),
     feeRequired: source.feeRequired !== false,
-    feeStatus: Number(source.remainingTrainingDays || 0) > 0
-      ? "paid"
-      : calculateAccruedUnpaidMonths(source) > 0 || Number(source.unpaidDays || 0) > 0
-        ? "due"
-        : source.feeStatus === "overdue" ? "due" : source.feeStatus,
+    feeStatus: feeStatusSummary.code,
+    feeStatusSummary,
     autoMonthlyDue: source.autoMonthlyDue === true,
     internalNote: source.internalNote || "",
     lastAdjustedAt: source.lastAdjustedAt,

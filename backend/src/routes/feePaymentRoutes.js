@@ -10,6 +10,7 @@ import {
   getFeePaymentById,
   updateFeePayment,
   deleteFeePayment,
+  reverseFeePayment,
 } from "../controllers/feePaymentController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
@@ -21,11 +22,13 @@ import {
 } from "../middlewares/academyAccessMiddleware.js";
 
 import validateRequest from "../middlewares/validateRequest.js";
+import { repairFeeIntegrity, scanFeeIntegrity } from "../controllers/feeIntegrityController.js";
 
 import {
   feePaymentIdValidator,
   createFeePaymentValidator,
   updateFeePaymentValidator,
+  reverseFeePaymentValidator,
   listFeePaymentsValidator,
 } from "../validators/feeValidator.js";
 
@@ -37,12 +40,21 @@ router.use(resolveUserAcademy);
 router.use(requireResolvedAcademy);
 
 router.get("/dashboard", getFeesDashboard);
+router.get("/integrity/scan", scanFeeIntegrity);
+router.post("/integrity/repair", repairFeeIntegrity);
 
 router.get(
   "/students-status",
   listFeePaymentsValidator,
   validateRequest,
   getStudentsFeeStatus
+);
+
+router.post(
+  "/:id/reverse",
+  reverseFeePaymentValidator,
+  validateRequest,
+  reverseFeePayment
 );
 
 router.get(

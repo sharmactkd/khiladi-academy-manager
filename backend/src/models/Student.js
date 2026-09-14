@@ -445,6 +445,7 @@ studentSchema.index({ academy: 1, admissionNumber: 1 }, { unique: true });
 studentSchema.index({ academy: 1, aadhaarHash: 1 }, { sparse: true });
 studentSchema.index({ academy: 1, branch: 1 });
 studentSchema.index({ academy: 1, batch: 1 });
+studentSchema.index({ academy: 1, batch: 1, status: 1 });
 studentSchema.index({ academy: 1, status: 1 });
 studentSchema.index({ academy: 1, ageCategory: 1 });
 studentSchema.index({ academy: 1, profileStatus: 1 });

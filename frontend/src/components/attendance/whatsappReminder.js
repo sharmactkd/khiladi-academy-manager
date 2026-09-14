@@ -74,7 +74,7 @@ export function buildWhatsAppReminder(row, status, settings, displayedDates = {}
     months: String(row.membership?.unpaidMonths || ""),
   };
   let message = settings.template.replace(/\{(name|academy|status|dueDate|months|lastPaid|period)\}/g, (_, key) => values[key]).trim();
-  const pendingMonths = Number(row.membership?.unpaidMonths || String(status).match(/^(\d+)M\s+DUE$/i)?.[1] || 0);
+  const pendingMonths = Number(row.membership?.unpaidMonths || String(status).match(/^(\d+)M(?:,\s*\d+D)?\s+DUE$/i)?.[1] || 0);
   if (Number.isInteger(pendingMonths) && pendingMonths > 1) {
     const pending = `Pending Fee - ${pendingMonths} months`;
     const periodIndex = values.period ? message.indexOf(values.period) : -1;

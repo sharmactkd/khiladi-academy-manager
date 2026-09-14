@@ -168,6 +168,7 @@ const attendanceSchema = new mongoose.Schema(
 attendanceSchema.index({ academy: 1, batch: 1, date: 1 }, { unique: true });
 attendanceSchema.index({ academy: 1, date: 1 });
 attendanceSchema.index({ academy: 1, batch: 1 });
+attendanceSchema.index({ academy: 1, batch: 1, "records.student": 1, date: 1 });
 attendanceSchema.index({ "records.student": 1 });
 attendanceSchema.index({ "records.importedRowNumber": 1 });
 attendanceSchema.index({ "records.importedName": 1 });

@@ -1,4 +1,5 @@
 import { remainingDaysDisplay } from "./remainingDaysDisplay.js";
+import { formatFeeDueBalance, normalizeFeeStatus } from "../../utils/feeStatus.js";
 
 export const formatDueDate = (value, format = "full") => {
   if (!value) return "Not set";
@@ -33,15 +34,15 @@ export const getMembershipDisplay = (membership, fallbackDueDate) => {
     };
   }
   if (unpaidMonths > 0 || unpaidDays > 0) {
-    const duration = [unpaidMonths ? `${unpaidMonths}M` : "", unpaidDays ? `${unpaidDays}D` : ""].filter(Boolean).join(", ");
     return {
-      label: `${duration} Due`,
+      label: formatFeeDueBalance(unpaidMonths, unpaidDays).replace("DUE", "Due"),
       tone: "red",
     };
   }
-  if (membership.feeStatus === "overdue") {
-    return { label: `Overdue · ${formatDueDate(dueDate)}`, tone: "red" };
-  }
+  const status = normalizeFeeStatus(membership.feeStatus, "paid");
+  if (status === "due") return { label: "Due", tone: "red" };
+  if (status === "partial") return { label: "Partial", tone: "amber" };
+  if (status === "paid") return { label: "Paid", tone: "green" };
 
   return { label: formatDueDate(dueDate), tone: "neutral" };
 };

@@ -77,6 +77,11 @@ export const feePaymentIdValidator = [
 ];
 
 export const createFeePaymentValidator = [
+  body("idempotencyKey")
+    .trim()
+    .isLength({ min: 8, max: 120 })
+    .matches(/^[A-Za-z0-9:_-]+$/)
+    .withMessage("A valid idempotency key is required"),
   body("student").isMongoId().withMessage("Valid student ID is required"),
 
   body("numberOfMonths")
@@ -211,6 +216,14 @@ export const updateFeePaymentValidator = [
   body("notes").optional({ checkFalsy: true }).trim(),
 
   body("note").optional({ checkFalsy: true }).trim(),
+];
+
+export const reverseFeePaymentValidator = [
+  param("id").isMongoId().withMessage("Invalid fee payment ID"),
+  body("reason")
+    .trim()
+    .isLength({ min: 3, max: 300 })
+    .withMessage("Reversal reason must be between 3 and 300 characters"),
 ];
 
 export const listFeePaymentsValidator = [

@@ -134,6 +134,8 @@ const Attendance = () => {
   const saveRetryCountRef = useRef(0);
   const saveRegisterRef = useRef(null);
   const registerContextRef = useRef("");
+  const loadRequestRef = useRef({ id: 0, controller: null });
+  const registerCacheRef = useRef(new Map());
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -272,17 +274,14 @@ const Attendance = () => {
     ) => {
       if (!selectedBatchId) return;
 
-      try {
-        setLoading(true);
+      const cacheKey = `${selectedBatchId}:${selectedYear}:${selectedMonth}`;
+      const requestId = loadRequestRef.current.id + 1;
+      loadRequestRef.current.controller?.abort();
+      const controller = new AbortController();
+      loadRequestRef.current = { id: requestId, controller };
 
-        const response = await attendanceApi.getMonthlyRegister({
-          batch: selectedBatchId,
-          month: selectedMonth,
-          year: selectedYear,
-        });
-
-        const data = normalizeResponseData(response);
-
+      const applyLoadedData = (data) => {
+        if (loadRequestRef.current.id !== requestId) return;
         setDays(Array.isArray(data.days) ? data.days : []);
         const loadedRows = Array.isArray(data.rows) ? data.rows : [];
         setOrderRevision(data.orderRevision || 0);
@@ -292,7 +291,29 @@ const Attendance = () => {
         setDayNotes(data.dayNotes || {});
         setHasUnsavedChanges(false);
         setAutoSaveError("");
+      };
+
+      try {
+        setLoading(true);
+
+        const cached = registerCacheRef.current.get(cacheKey);
+        if (cached && Date.now() - cached.savedAt < 30000) {
+          applyLoadedData(cached.data);
+          return;
+        }
+
+        const response = await attendanceApi.getMonthlyRegister({
+          batch: selectedBatchId,
+          month: selectedMonth,
+          year: selectedYear,
+        }, { signal: controller.signal });
+
+        const data = normalizeResponseData(response);
+        registerCacheRef.current.set(cacheKey, { data, savedAt: Date.now() });
+        applyLoadedData(data);
       } catch (error) {
+        if (error?.code === "ERR_CANCELED" || controller.signal.aborted) return;
+        if (loadRequestRef.current.id !== requestId) return;
         if (error?.response?.status === 401) {
           toast.error("Session expired. Please login again.");
         } else {
@@ -306,7 +327,7 @@ const Attendance = () => {
         setRows([]);
         setDayNotes({});
       } finally {
-        setLoading(false);
+        if (loadRequestRef.current.id === requestId) setLoading(false);
       }
     },
     [batch, month, year]
@@ -345,6 +366,7 @@ const Attendance = () => {
       if (data.saveVerification?.verified !== true) {
         throw new Error("Server could not verify the saved attendance");
       }
+      registerCacheRef.current.delete(`${batch}:${year}:${month}`);
       window.clearTimeout(saveRetryTimerRef.current);
       saveRetryCountRef.current = 0;
       const hasNewerChanges = editVersionRef.current !== savingVersion;
@@ -417,6 +439,7 @@ const Attendance = () => {
     try {
       const response = await attendanceApi.saveDayNote({ batch, ...note });
       const saved = normalizeResponseData(response).note || normalizeResponseData(response);
+      registerCacheRef.current.delete(`${batch}:${year}:${month}`);
       setDayNotes((current) => ({ ...current, [note.date]: { ...note, ...saved, date: note.date } }));
       toast.success("Date note saved");
     } catch (error) {
@@ -428,6 +451,7 @@ const Attendance = () => {
   const removeDayNote = async (date) => {
     try {
       await attendanceApi.removeDayNote({ batch, date });
+      registerCacheRef.current.delete(`${batch}:${year}:${month}`);
       setDayNotes((current) => { const next = { ...current }; delete next[date]; return next; });
       toast.success("Date note removed");
     } catch (error) { toast.error(error?.response?.data?.message || "Date note remove nahi hua"); }
@@ -508,6 +532,7 @@ const Attendance = () => {
       const data = normalizeResponseData(response);
       if (registerContextRef.current !== context) return false;
       if (!Array.isArray(data.rows)) throw new Error("Server did not return the saved row order");
+      registerCacheRef.current.delete(`${batch}:${year}:${month}`);
       rowsRef.current = data.rows;
       setRows(data.rows);
       setOrderRevision(data.orderRevision);
@@ -563,6 +588,7 @@ const Attendance = () => {
     window.clearTimeout(saveRetryTimerRef.current);
     saveRetryCountRef.current = 0;
     rowsRef.current = nextRows;
+    registerCacheRef.current.delete(`${batch}:${year}:${month}`);
     editVersionRef.current += 1;
     setRows(nextRows);
     setHasUnsavedChanges(true);
@@ -570,6 +596,7 @@ const Attendance = () => {
   };
 
   const handleMembershipUpdated = (studentId, membership, adjustmentType) => {
+    registerCacheRef.current.delete(`${batch}:${year}:${month}`);
     setRows((current) => current.map((row) =>
       String(row.studentId) === String(studentId)
         ? {
@@ -646,6 +673,7 @@ const Attendance = () => {
   useEffect(() => () => {
     window.clearTimeout(autoSaveTimerRef.current);
     window.clearTimeout(saveRetryTimerRef.current);
+    loadRequestRef.current.controller?.abort();
   }, []);
 
   useEffect(() => {

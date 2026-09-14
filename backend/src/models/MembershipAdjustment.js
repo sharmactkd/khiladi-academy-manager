@@ -33,6 +33,7 @@ const membershipAdjustmentSchema = new mongoose.Schema(
         "resume",
         "set_fee_status",
         "set_note",
+        "import_fee_snapshot",
         "reversal",
       ],
       index: true,

@@ -8,6 +8,8 @@ import FeePayment from "../models/FeePayment.js";
 import StudentMembership from "../models/StudentMembership.js";
 import Sequence from "../models/Sequence.js";
 import { getCurrencySymbol } from "../utils/currency.js";
+import { calculateAccruedUnpaidMonths } from "../utils/membershipMonthlyDue.js";
+import { resolveFeeStatus } from "../utils/feeStatus.js";
 
 export const getMonthYearNow = () => {
   const now = new Date();
@@ -37,14 +39,28 @@ export const buildDueDate = (month, year, dueDay = 10) => {
   return new Date(safeYear, safeMonth - 1, Math.min(safeDueDay, lastDay));
 };
 
-export const generateReceiptNumber = async (academyId) => {
+const nextFutureDueDate = (sourceDate, now = new Date()) => {
+  const source = new Date(sourceDate || now);
+  const dueDay = Number.isNaN(source.getTime()) ? 10 : source.getUTCDate();
+  let year = now.getUTCFullYear();
+  let month = now.getUTCMonth();
+  let candidate = buildDueDate(month + 1, year, dueDay);
+  if (candidate <= now) {
+    month += 1;
+    if (month > 11) { month = 0; year += 1; }
+    candidate = buildDueDate(month + 1, year, dueDay);
+  }
+  return candidate;
+};
+
+export const generateReceiptNumber = async (academyId, session = null) => {
   const year = new Date().getFullYear();
   const prefix = `KAM-${year}`;
 
   const counter = await Sequence.findOneAndUpdate(
     { scope: `fee-receipt:${academyId}:${year}` },
     { $inc: { value: 1 } },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
+    { new: true, upsert: true, setDefaultsOnInsert: true, session }
   );
 
   return `${prefix}-${String(counter.value).padStart(5, "0")}`;
@@ -200,16 +216,7 @@ export const calculateFeeStatus = ({
   const safePayable = Number(payableAmount || 0);
   const safePaid = Number(paidAmount || 0);
 
-  if (safePayable > 0 && safePaid >= safePayable) {
-    return "paid";
-  }
-
-  if (safePaid > 0 && safePaid < safePayable) {
-    return "partial";
-  }
-
-  // Use calendar dates so the transition is deterministic across timezones.
-  return "due";
+  return resolveFeeStatus({ payableAmount: safePayable, paidAmount: safePaid }).code;
 };
 
 export const getStudentMonthPaymentSummary = async ({
@@ -428,6 +435,7 @@ export const collectStudentFee = async ({
   academyId,
   userId,
   payload,
+  session = null,
 }) => {
   const student = await validateStudentInAcademy(academyId, payload.student);
 
@@ -450,10 +458,20 @@ export const collectStudentFee = async ({
   const amountPaid = Number(payload.amountPaid ?? payload.paidAmount ?? finalAmount);
   const dueDay = Number(payload.dueDay || feeConfig.dueDay || 10);
   const dueDate = payload.dueDate || buildDueDate(feeMonth, feeYear, dueDay);
-  const receiptNumber = await generateReceiptNumber(academyId);
+  const idempotencyKey = String(payload.idempotencyKey || "").trim();
+  if (!idempotencyKey) throw new Error("Idempotency key is required");
+  const collectionKey = `${idempotencyKey}:${feeYear}-${String(feeMonth).padStart(2, "0")}`;
   const branch = student.branch && typeof student.branch === "object" ? student.branch : null;
   const currencyCode = branch?.currencyCode || "INR";
   const currencySymbol = branch?.currencySymbol || getCurrencySymbol(currencyCode);
+
+  const replay = await FeePayment.findOne({
+    academy: academyId,
+    student: student._id,
+    $or: [{ collectionKey }, { "installments.idempotencyKey": idempotencyKey, feeMonth, feeYear }],
+  }).session(session);
+  if (replay) return { payment: replay, becamePaid: false, replayed: true };
+  const receiptNumber = await generateReceiptNumber(academyId, session);
 
   const existing = await FeePayment.findOne({
     academy: academyId,
@@ -463,19 +481,51 @@ export const collectStudentFee = async ({
     status: {
       $ne: "cancelled",
     },
-  });
+  }).session(session);
+
+  const paymentDate = payload.paymentDate || new Date();
+  const paymentMode = payload.paymentMode || "cash";
+  const installmentCash = paymentMode === "cash"
+    ? amountPaid
+    : Number(payload.cashAmount || 0);
+  const installmentOnline = paymentMode === "online"
+    ? amountPaid
+    : Number(payload.onlineAmount || 0);
+  const installment = {
+    idempotencyKey,
+    receiptNumber,
+    amountPaid,
+    cashAmount: installmentCash,
+    onlineAmount: installmentOnline,
+    paymentMode,
+    paymentDate,
+    notes: payload.notes || payload.note || "",
+    collectedBy: userId,
+  };
 
   if (existing) {
-    existing.amount = amount;
-    existing.discount = discount;
+    const wasPaid = existing.status === "paid";
+    existing.amount = Math.max(Number(existing.amount || 0), amount);
+    existing.discount = Math.max(Number(existing.discount || 0), discount);
     existing.finalAmount = finalAmount;
-    existing.amountPaid = amountPaid;
-    existing.pendingAmount = Math.max(finalAmount - amountPaid, 0);
-    existing.paymentDate = payload.paymentDate || new Date();
-    existing.paidDate = amountPaid >= finalAmount ? existing.paymentDate : null;
-    existing.paymentMode = payload.paymentMode || existing.paymentMode || "cash";
-    existing.cashAmount = Number(payload.cashAmount || 0);
-    existing.onlineAmount = Number(payload.onlineAmount || 0);
+    // Legacy rows may predate installment history. Preserve their already
+    // received amount as a synthetic immutable opening installment.
+    if (!existing.installments?.length && Number(existing.amountPaid || 0) > 0) {
+      existing.installments = [{
+        idempotencyKey: `legacy:${existing._id}`,
+        receiptNumber: existing.receiptNumber || `LEGACY-${existing._id}`,
+        amountPaid: Number(existing.amountPaid || 0),
+        cashAmount: Number(existing.cashAmount || 0),
+        onlineAmount: Number(existing.onlineAmount || 0),
+        paymentMode: existing.paymentMode || "cash",
+        paymentDate: existing.paymentDate || existing.createdAt || new Date(),
+        notes: existing.notes || existing.note || "",
+        collectedBy: existing.collectedBy || userId,
+      }];
+    }
+    existing.installments.push(installment);
+    existing.collectionId = idempotencyKey;
+    existing.collectionKey = collectionKey;
     existing.dueDate = dueDate;
     existing.notes = payload.notes || payload.note || existing.notes || "";
     existing.note = payload.notes || payload.note || existing.note || "";
@@ -486,9 +536,8 @@ export const collectStudentFee = async ({
     existing.feePlan = feeConfig.feePlan?._id || null;
     existing.updatedBy = userId;
 
-    await existing.save();
-    await syncMembershipAfterFeePayment({ academyId, student, payment: existing });
-    return existing;
+    await existing.save({ session });
+    return { payment: existing, becamePaid: !wasPaid && existing.status === "paid", replayed: false };
   }
 
  const feePayment = new FeePayment({
@@ -514,44 +563,89 @@ export const collectStudentFee = async ({
   cashAmount: Number(payload.cashAmount || 0),
   onlineAmount: Number(payload.onlineAmount || 0),
   receiptNumber,
+  collectionId: idempotencyKey,
+  collectionKey,
+  installments: [installment],
   notes: payload.notes || payload.note || "",
   note: payload.notes || payload.note || "",
   collectedBy: userId,
   updatedBy: userId,
 });
 
-await feePayment.save();
-await syncMembershipAfterFeePayment({ academyId, student, payment: feePayment });
+await feePayment.save({ session });
 
-return feePayment;
+return { payment: feePayment, becamePaid: feePayment.status === "paid", replayed: false };
 };
 
-const syncMembershipAfterFeePayment = async ({ academyId, student, payment }) => {
-  const currentMonth = Number(payment.feeMonth);
-  const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-  const nextYear = currentMonth === 12 ? Number(payment.feeYear) + 1 : Number(payment.feeYear);
-  const paymentDueDate = new Date(payment.dueDate || 0);
-  const dueDay = Number.isNaN(paymentDueDate.getTime()) ? 10 : paymentDueDate.getUTCDate();
-  const paid = payment.status === "paid";
+export const reconcileMembershipAfterCollection = async ({
+  academyId,
+  student,
+  completedPeriods = 0,
+  latestPayment,
+  session = null,
+}) => {
+  let membership = await StudentMembership.findOne({ academy: academyId, student: student._id }).session(session);
+  if (!membership) {
+    membership = new StudentMembership({
+      academy: academyId,
+      student: student._id,
+      batch: student.batch?._id || student.batch || null,
+      status: student.status === "active" ? "active" : "paused",
+      startDate: student.joiningDate || student.createdAt || new Date(),
+      originalDueDate: latestPayment?.dueDate || student.joiningDate || new Date(),
+      effectiveDueDate: latestPayment?.dueDate || student.joiningDate || new Date(),
+      feeRequired: true,
+    });
+  }
+  membership.batch = student.batch?._id || student.batch || null;
+  const accruedUnpaidMonths = calculateAccruedUnpaidMonths(membership);
+  membership.unpaidMonths = Math.max(0, accruedUnpaidMonths - Number(completedPeriods || 0));
+  // Persist the materialized balance and start future accrual from the next
+  // cycle instead of repeatedly adding the same elapsed calendar months.
+  membership.autoMonthlyDue = true;
+  const futureAccrualDate = nextFutureDueDate(membership.effectiveDueDate || latestPayment?.dueDate);
+  const stillDue = membership.unpaidMonths > 0 || Number(membership.unpaidDays || 0) > 0;
+  if (latestPayment?.status === "paid" && !stillDue) {
+    const next = Number(latestPayment.feeMonth) === 12
+      ? { month: 1, year: Number(latestPayment.feeYear) + 1 }
+      : { month: Number(latestPayment.feeMonth) + 1, year: Number(latestPayment.feeYear) };
+    const sourceDue = new Date(latestPayment.dueDate || 0);
+    const paidThroughDate = buildDueDate(next.month, next.year, Number.isNaN(sourceDue.getTime()) ? 10 : sourceDue.getUTCDate());
+    membership.effectiveDueDate = paidThroughDate > futureAccrualDate ? paidThroughDate : futureAccrualDate;
+    membership.feeStatus = "paid";
+  } else {
+    membership.effectiveDueDate = futureAccrualDate;
+    membership.feeStatus = stillDue ? "due" : latestPayment?.status || membership.feeStatus || "due";
+  }
+  membership.feeRequired = true;
+  await membership.save({ session });
+  return membership;
+};
 
-  await StudentMembership.findOneAndUpdate(
-    { academy: academyId, student: student._id },
-    {
-      $set: {
-        batch: student.batch?._id || student.batch || null,
-        feeStatus: payment.status,
-        effectiveDueDate: paid
-          ? buildDueDate(nextMonth, nextYear, dueDay)
-          : payment.dueDate,
-        feeRequired: true,
-        ...(paid ? { unpaidMonths: 0, unpaidDays: 0 } : {}),
-      },
-      $setOnInsert: {
-        status: student.status === "active" ? "active" : "paused",
-        startDate: student.joiningDate || student.createdAt || new Date(),
-        originalDueDate: payment.dueDate,
-      },
-    },
-    { upsert: true, runValidators: true },
-  );
+export const applyPaymentStatusTransitionToMembership = async ({
+  academyId,
+  studentId,
+  oldStatus,
+  newStatus,
+  payment,
+  session = null,
+}) => {
+  let membership = await StudentMembership.findOne({ academy: academyId, student: studentId }).session(session);
+  if (!membership) return null;
+  const wasPaid = oldStatus === "paid";
+  const isPaid = newStatus === "paid";
+  if (wasPaid !== isPaid) {
+    membership.unpaidMonths = Math.max(0, Number(membership.unpaidMonths || 0) + (isPaid ? -1 : 1));
+  }
+  const stillDue = Number(membership.unpaidMonths || 0) > 0 || Number(membership.unpaidDays || 0) > 0;
+  membership.feeStatus = stillDue ? "due" : isPaid ? "paid" : (newStatus === "cancelled" ? "due" : newStatus);
+  if (!stillDue && isPaid && payment) {
+    const next = Number(payment.feeMonth) === 12
+      ? { month: 1, year: Number(payment.feeYear) + 1 }
+      : { month: Number(payment.feeMonth) + 1, year: Number(payment.feeYear) };
+    const sourceDue = new Date(payment.dueDate || 0);
+    membership.effectiveDueDate = buildDueDate(next.month, next.year, Number.isNaN(sourceDue.getTime()) ? 10 : sourceDue.getUTCDate());
+  }
+  await membership.save({ session });
+  return membership;
 };

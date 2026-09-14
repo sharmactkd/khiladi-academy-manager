@@ -25,6 +25,7 @@ import {
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
 import { attendanceImportRateLimiter } from "../middlewares/rateLimiter.js";
+import { applyImportedFees, previewImportedFees } from "../controllers/importedFeeReconciliationController.js";
 
 import {
   markAttendanceValidator,
@@ -64,6 +65,9 @@ router.post(
   validateAttendanceImportRows,
   previewAttendanceImport
 );
+
+router.get("/imported-fees/preview", previewImportedFees);
+router.post("/imported-fees/apply", attendanceImportRateLimiter, applyImportedFees);
 
 router.post(
   "/import",

@@ -19,7 +19,7 @@ const formatDate = (value) => value ? new Date(value).toLocaleDateString("en-GB"
 const joinAddress = (source) => [source?.address, source?.city, source?.state, source?.country].map((item) => String(item || "").trim()).filter(Boolean).join(", ");
 const normalizeAcademy = (response) => response?.data?.data?.academy || response?.data?.academy || null;
 const normalizeBranches = (response) => { const list = response?.data?.data || response?.data || []; return Array.isArray(list) ? list.filter((item) => item?.isActive !== false) : []; };
-const initialData = { totalCollection: 0, thisMonthCollection: 0, previousMonthCollection: 0, collectionChangePercent: 0, collectionRate: 0, activeStudents: 0, totalTransactions: 0, pendingAmount: 0, overdueStudents: 0, summary: { paid: 0, due: 0, partial: 0, overdue: 0 }, monthlyTrend: [], paymentMix: { cash: { amount: 0, transactions: 0 }, online: { amount: 0, transactions: 0 }, cash_online: { amount: 0, transactions: 0 } }, recentPayments: [] };
+const initialData = { totalCollection: 0, thisMonthCollection: 0, previousMonthCollection: 0, collectionChangePercent: 0, collectionRate: 0, activeStudents: 0, totalTransactions: 0, pendingAmount: 0, summary: { paid: 0, due: 0, partial: 0 }, monthlyTrend: [], paymentMix: { cash: { amount: 0, transactions: 0 }, online: { amount: 0, transactions: 0 }, cash_online: { amount: 0, transactions: 0 } }, recentPayments: [] };
 
 const FeesDashboard = () => {
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ const FeesDashboard = () => {
   const [feeStatusList, setFeeStatusList] = useState([]);
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
-  const [attentionTab, setAttentionTab] = useState("overdue");
+  const [attentionTab, setAttentionTab] = useState("due");
   const [loading, setLoading] = useState(true);
 
   const fetchDashboard = async () => {
@@ -71,8 +71,7 @@ const FeesDashboard = () => {
   const paymentMix = useMemo(() => Object.entries(data.paymentMix || {}).map(([key, item]) => ({ key, name: MIX_META[key]?.label || formatPaymentMode(key), value: Number(item?.amount || 0), transactions: Number(item?.transactions || 0), color: MIX_META[key]?.color || "#8290a3" })), [data.paymentMix]);
   const totalMix = paymentMix.reduce((sum, item) => sum + item.value, 0);
   const attentionStudents = useMemo(() => {
-    const nowDate = new Date();
-    return feeStatusList.filter((item) => attentionTab === "overdue" ? item.status === "overdue" : ["due", "partial"].includes(item.status)).sort((a, b) => Number(b.pendingAmount || 0) - Number(a.pendingAmount || 0)).slice(0, 5).map((item) => ({ ...item, days: item.dueDate ? Math.max(Math.ceil((nowDate - new Date(item.dueDate)) / 86400000), 0) : 0 }));
+    return feeStatusList.filter((item) => item.status === attentionTab).sort((a, b) => Number(b.pendingAmount || 0) - Number(a.pendingAmount || 0)).slice(0, 5);
   }, [feeStatusList, attentionTab]);
 
   const exportReport = () => {
@@ -96,7 +95,7 @@ const FeesDashboard = () => {
       {loading ? <div className={styles.loading}><RefreshCw size={25} /><strong>Loading financial overview...</strong></div> : <>
         <section className={styles.kpis}>
           <article><span className={styles.greenIcon}><Banknote size={21} /></span><div><small>Collected This Month</small><strong>{currency(data.thisMonthCollection)}</strong><p className={change >= 0 ? styles.positive : styles.negative}><ChangeIcon size={13} />{Math.abs(change)}% <span>vs previous month</span></p></div></article>
-          <article><span className={styles.amberIcon}><Users size={21} /></span><div><small>Outstanding Dues</small><strong>{currency(data.pendingAmount)}</strong><p>{data.summary?.due + data.summary?.partial + data.summary?.overdue || 0} students require attention</p></div></article>
+          <article><span className={styles.amberIcon}><Users size={21} /></span><div><small>Outstanding Dues</small><strong>{currency(data.pendingAmount)}</strong><p>{(data.summary?.due || 0) + (data.summary?.partial || 0)} students require attention</p></div></article>
           <article><span className={styles.blueIcon}><CircleDollarSign size={21} /></span><div><small>Collection Rate</small><strong>{Number(data.collectionRate || 0).toFixed(1)}%</strong><div className={styles.progress}><i style={{ width: `${Math.min(Number(data.collectionRate || 0), 100)}%` }} /></div><p>Target: 85%</p></div></article>
           <article><span className={styles.purpleIcon}><WalletCards size={21} /></span><div><small>Total Transactions</small><strong>{data.totalTransactions || 0}</strong><div className={styles.modeCounts}>{paymentMix.map((item) => <span key={item.key}><b>{item.name === "Cash + Online" ? "Split" : item.name}</b><em>{item.transactions}</em></span>)}</div></div></article>
         </section>
@@ -108,7 +107,7 @@ const FeesDashboard = () => {
 
         <section className={styles.activityGrid}>
           <article className={styles.tableCard}><header><div><h2>Recent Payments</h2><p>Latest recorded fee transactions</p></div><Link to="/fees/payments">View all<ArrowRight size={13}/></Link></header>{!data.recentPayments?.length ? <div className={styles.empty}>No payments found for this academy.</div> : <div className={styles.tableWrap}><table><thead><tr><th>Student</th><th>Amount</th><th>Due Date</th><th>Paid Date</th><th>Fee Status</th></tr></thead><tbody>{data.recentPayments.slice(0, 6).map((payment) => { const paymentCurrency = recentPaymentCurrency(payment); return <tr key={payment._id} onDoubleClick={() => payment._id && navigate(`/fees/receipt/${payment._id}`)}><td><strong>{payment.studentName || "—"}</strong></td><td><strong>{formatMoney(payment.amountPaid, paymentCurrency)}</strong></td><td>{formatDate(payment.dueDate)}</td><td>{formatDate(payment.paidDate)}</td><td><span className={`${styles.status} ${styles[`status${String(payment.status || "due")[0].toUpperCase()}${String(payment.status || "due").slice(1)}`]}`}>{payment.status || "due"}</span></td></tr>; })}</tbody></table></div>}</article>
-          <article className={styles.attentionCard}><header><div><h2>Fee Attention</h2><p>Students requiring follow-up</p></div><div><button className={attentionTab === "overdue" ? styles.activeTab : ""} onClick={() => setAttentionTab("overdue")}>Overdue</button><button className={attentionTab === "due" ? styles.activeTab : ""} onClick={() => setAttentionTab("due")}>Due Soon</button></div></header><div className={styles.attentionList}>{!attentionStudents.length ? <div className={styles.empty}><CheckCircle2 size={20}/>No students in this category.</div> : attentionStudents.map((item) => <div key={item.student?._id}><span className={styles.avatar}>{String(item.student?.name || "S").charAt(0)}</span><p><strong>{item.student?.name || "Student"}</strong><small>{item.student?.batch?.batchName || "No batch"}</small></p><b>{formatMoney(item.pendingAmount, item.student?.branch || mainBranch)}</b><em>{attentionTab === "overdue" ? `${item.days} days` : String(item.status || "due")}</em><Link to={`/fees/collect?student=${item.student?._id}&month=${filters.month}&year=${filters.year}`}>Collect</Link></div>)}</div><Link className={styles.viewOutstanding} to="/fees/pending"><AlertTriangle size={14}/>View all outstanding fees<ArrowRight size={14}/></Link></article>
+          <article className={styles.attentionCard}><header><div><h2>Fee Attention</h2><p>Students requiring follow-up</p></div><div><button className={attentionTab === "due" ? styles.activeTab : ""} onClick={() => setAttentionTab("due")}>Due</button><button className={attentionTab === "partial" ? styles.activeTab : ""} onClick={() => setAttentionTab("partial")}>Partially Paid</button></div></header><div className={styles.attentionList}>{!attentionStudents.length ? <div className={styles.empty}><CheckCircle2 size={20}/>No students in this category.</div> : attentionStudents.map((item) => <div key={item.student?._id}><span className={styles.avatar}>{String(item.student?.name || "S").charAt(0)}</span><p><strong>{item.student?.name || "Student"}</strong><small>{item.student?.batch?.batchName || "No batch"}</small></p><b>{formatMoney(item.pendingAmount, item.student?.branch || mainBranch)}</b><em>{attentionTab === "partial" ? "Partial" : "Due"}</em><Link to={`/fees/collect?student=${item.student?._id}&month=${filters.month}&year=${filters.year}`}>Collect</Link></div>)}</div><Link className={styles.viewOutstanding} to="/fees/pending"><AlertTriangle size={14}/>View all outstanding fees<ArrowRight size={14}/></Link></article>
         </section>
       </>}
     </div>

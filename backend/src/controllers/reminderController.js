@@ -90,7 +90,7 @@ export const sendFeeReminder = asyncHandler(async (req, res) => {
 
   const filter = {
     academy: req.academyId,
-    status: { $in: ["pending", "overdue", "partial"] },
+    status: { $in: ["due", "pending", "overdue", "partial"] },
   };
 
   if (Array.isArray(req.body.studentIds) && req.body.studentIds.length) {

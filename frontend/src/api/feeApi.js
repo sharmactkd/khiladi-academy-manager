@@ -18,5 +18,6 @@ export const feePaymentApi = {
   getReceipt: (id) => api.get(`/fees/receipt/${id}`),
   getStudentHistory: (studentId) => api.get(`/fees/student/${studentId}`),
   update: (id, payload) => api.patch(`/fees/${id}`, payload),
+  reverse: (id, reason) => api.post(`/fees/${id}/reverse`, { reason }),
   remove: (id) => api.delete(`/fees/${id}`),
 };
