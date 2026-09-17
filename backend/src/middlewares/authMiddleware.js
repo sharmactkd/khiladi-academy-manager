@@ -19,7 +19,7 @@ export const protect = asyncHandler(async (req, res, next) => {
 
   const decoded = verifyAccessToken(token);
 
-  const user = await User.findById(decoded.id).select("+password");
+  const user = await User.findById(decoded.id);
 
   if (!user) {
     return errorResponse(res, "User not found", 401);
@@ -43,6 +43,16 @@ export const protect = asyncHandler(async (req, res, next) => {
     return errorResponse(res, "Session expired after password change", 401);
   }
 
+  if (
+    user.authInvalidBefore &&
+    decoded.iat &&
+    decoded.iat < Math.floor(user.authInvalidBefore.getTime() / 1000)
+  ) {
+    return errorResponse(res, "Session has been revoked. Please sign in again", 401);
+  }
+
   req.user = user;
+  res.locals.mediaViewerId = String(user._id);
+  req.authIssuedAt = decoded.iat ? new Date(decoded.iat * 1000) : null;
   next();
 });

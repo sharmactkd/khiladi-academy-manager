@@ -13,6 +13,11 @@ const refreshTokenSessionSchema = new mongoose.Schema(
       required: true,
       default: () => crypto.randomUUID(),
     },
+    familyId: {
+      type: String,
+      required: true,
+      default: () => crypto.randomUUID(),
+    },
     tokenHash: {
       type: String,
       required: true,
@@ -38,6 +43,14 @@ const refreshTokenSessionSchema = new mongoose.Schema(
       default: Date.now,
     },
     rotatedAt: {
+      type: Date,
+      default: null,
+    },
+    previousTokenHash: {
+      type: String,
+      default: "",
+    },
+    previousTokenExpiresAt: {
       type: Date,
       default: null,
     },
@@ -192,6 +205,20 @@ const userSchema = new mongoose.Schema(
       get: decryptSensitiveValue,
     },
 
+    pendingMfaSecret: {
+      type: String,
+      select: false,
+      default: undefined,
+      set: encryptSensitiveValue,
+      get: decryptSensitiveValue,
+    },
+
+    pendingMfaExpires: {
+      type: Date,
+      select: false,
+      default: undefined,
+    },
+
     mfaRecoveryCodes: {
       type: [String],
       select: false,
@@ -228,6 +255,11 @@ const userSchema = new mongoose.Schema(
     },
 
     passwordChangedAt: {
+      type: Date,
+      default: null,
+    },
+
+    authInvalidBefore: {
       type: Date,
       default: null,
     },

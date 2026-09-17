@@ -39,40 +39,51 @@ export const assertPrivateMediaPath = (value) => {
   return normalized;
 };
 
-const signatureFor = ({ encodedPath, expires }) =>
+const signatureFor = ({ encodedPath, expires, scope }) =>
   crypto
     .createHmac("sha256", env.PRIVATE_MEDIA_SIGNING_KEY)
-    .update(`${encodedPath}.${expires}`)
+    .update(`${encodedPath}.${expires}.${scope}`)
     .digest("base64url");
 
-export const createSignedPrivateMediaUrl = (value) => {
+const createScope = ({ viewerId = "", academyId = "", ip = "" } = {}) => Buffer.from(JSON.stringify({
+  viewerId: String(viewerId),
+  academyId: String(academyId),
+  ipHash: crypto.createHash("sha256").update(String(ip)).digest("base64url").slice(0, 18),
+}), "utf8").toString("base64url");
+
+export const createSignedPrivateMediaUrl = (value, context = {}) => {
   const normalized = assertPrivateMediaPath(value);
   const encodedPath = Buffer.from(normalized, "utf8").toString("base64url");
   const expires = Math.floor(Date.now() / 1000) + env.PRIVATE_MEDIA_URL_TTL_SECONDS;
-  const signature = signatureFor({ encodedPath, expires });
-  return `/api/media/private/${encodedPath}?expires=${expires}&signature=${signature}`;
+  const scope = createScope(context);
+  const signature = signatureFor({ encodedPath, expires, scope });
+  return `/api/media/private/${encodedPath}?expires=${expires}&scope=${scope}&signature=${signature}`;
 };
 
-export const verifySignedPrivateMediaRequest = ({ encodedPath, expires, signature }) => {
+export const verifySignedPrivateMediaRequest = ({ encodedPath, expires, signature, scope, ip }) => {
   const expiry = Number(expires);
   const now = Math.floor(Date.now() / 1000);
   if (!encodedPath || !Number.isInteger(expiry) || expiry < now) return null;
   if (expiry > now + env.PRIVATE_MEDIA_URL_TTL_SECONDS + 30) return null;
 
-  const expected = Buffer.from(signatureFor({ encodedPath, expires: expiry }), "base64url");
+  if (!scope) return null;
+  const expected = Buffer.from(signatureFor({ encodedPath, expires: expiry, scope }), "base64url");
   const received = Buffer.from(String(signature || ""), "base64url");
   if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) return null;
 
   try {
-    return assertPrivateMediaPath(Buffer.from(encodedPath, "base64url").toString("utf8"));
+    const claims = JSON.parse(Buffer.from(scope, "base64url").toString("utf8"));
+    const ipHash = crypto.createHash("sha256").update(String(ip || "")).digest("base64url").slice(0, 18);
+    if (claims.ipHash !== ipHash) return null;
+    return { mediaPath: assertPrivateMediaPath(Buffer.from(encodedPath, "base64url").toString("utf8")), claims };
   } catch {
     return null;
   }
 };
 
-export const signPrivateMediaReferences = (value, seen = new WeakSet()) => {
+export const signPrivateMediaReferences = (value, seen = new WeakSet(), context = {}) => {
   if (typeof value === "string") {
-    return isPrivateMediaPath(value) ? createSignedPrivateMediaUrl(value) : value;
+    return isPrivateMediaPath(value) ? createSignedPrivateMediaUrl(value, context) : value;
   }
   if (!value || typeof value !== "object" || value instanceof Date || Buffer.isBuffer(value)) return value;
 
@@ -86,7 +97,7 @@ export const signPrivateMediaReferences = (value, seen = new WeakSet()) => {
   if (seen.has(value)) return value;
   seen.add(value);
 
-  if (Array.isArray(value)) return value.map((item) => signPrivateMediaReferences(item, seen));
+  if (Array.isArray(value)) return value.map((item) => signPrivateMediaReferences(item, seen, context));
   const source = typeof value.toJSON === "function" ? value.toJSON() : value;
 
   // Mongoose ObjectIds serialize to their 24-character hexadecimal string.
@@ -94,13 +105,13 @@ export const signPrivateMediaReferences = (value, seen = new WeakSet()) => {
   // otherwise turn it into { 0: "a", 1: "b", 2: "c" }, corrupting every
   // populated/reference id returned by the API.
   if (typeof source === "string") {
-    return isPrivateMediaPath(source) ? createSignedPrivateMediaUrl(source) : source;
+    return isPrivateMediaPath(source) ? createSignedPrivateMediaUrl(source, context) : source;
   }
   if (!source || typeof source !== "object" || source instanceof Date || Buffer.isBuffer(source)) {
     return source;
   }
 
   return Object.fromEntries(
-    Object.entries(source).map(([key, item]) => [key, signPrivateMediaReferences(item, seen)])
+    Object.entries(source).map(([key, item]) => [key, signPrivateMediaReferences(item, seen, context)])
   );
 };

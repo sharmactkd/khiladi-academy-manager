@@ -16,6 +16,7 @@ export const authApi = {
   beginMfaSetup: () => api.post("/auth/mfa/setup"),
   enableMfa: (payload) => api.post("/auth/mfa/enable", payload),
   disableMfa: (payload) => api.post("/auth/mfa/disable", payload),
+  stepUp: (payload) => api.post("/auth/step-up", payload),
   refresh: () => api.post("/auth/refresh"),
   logout: () => api.post("/auth/logout"),
   me: () => api.get("/auth/me"),

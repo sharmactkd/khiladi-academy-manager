@@ -14,7 +14,10 @@ import {
 } from "../controllers/studentController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
-import { allowAcademyManagement } from "../middlewares/roleMiddleware.js";
+import {
+  allowAcademyManagement,
+  requireAcademyOwner,
+} from "../middlewares/roleMiddleware.js";
 import {
   resolveUserAcademy,
   requireResolvedAcademy,
@@ -22,6 +25,7 @@ import {
 import validateRequest from "../middlewares/validateRequest.js";
 import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
 import { uploadImage } from "../middlewares/uploadMiddleware.js";
+import { requireStepUp } from "../middlewares/stepUpMiddleware.js";
 import {
   expensiveOperationRateLimiter,
   studentImportRateLimiter,
@@ -43,6 +47,8 @@ router.use(requireResolvedAcademy);
 
 router.post(
   "/import",
+  requireAcademyOwner,
+  requireStepUp("students:import"),
   studentImportRateLimiter,
   (req, res, next) => {
     const rows = req.body?.students;
@@ -60,12 +66,15 @@ router.post(
 
 router.patch(
   "/bulk/status",
+  requireAcademyOwner,
   expensiveOperationRateLimiter,
   updateAllStudentsStatus
 );
 
 router.delete(
   "/bulk/all",
+  requireAcademyOwner,
+  requireStepUp("students:delete-all"),
   expensiveOperationRateLimiter,
   deleteAllStudents
 );
@@ -97,6 +106,6 @@ router
     validateRequest,
     updateStudent
   )
-  .delete(studentIdValidator, validateRequest, deleteStudent);
+  .delete(requireAcademyOwner, studentIdValidator, validateRequest, deleteStudent);
 
 export default router;

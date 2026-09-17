@@ -23,7 +23,7 @@ test("sensitive values use authenticated encryption and round-trip", () => {
   const plain = "123456789012";
   const encrypted = fields.encryptSensitiveValue(plain);
   assert.notEqual(encrypted, plain);
-  assert.match(encrypted, /^v1\./);
+  assert.match(encrypted, /^v2\.[a-zA-Z0-9_-]+\./);
   assert.equal(fields.decryptSensitiveValue(encrypted), plain);
   assert.equal(fields.hashSensitiveValue(plain), fields.hashSensitiveValue(plain));
 });
@@ -62,22 +62,27 @@ test("MFA setup produces a valid secret URI and one-way recovery hashes", () => 
 
 test("private media URLs are short-lived, signed and traversal-safe", () => {
   const filePath = "private-uploads/students/123e4567-e89b-12d3-a456-426614174000.png";
-  const signedUrl = privateMedia.createSignedPrivateMediaUrl(filePath);
+  const context = { viewerId: "user-1", academyId: "academy-1", ip: "127.0.0.1" };
+  const signedUrl = privateMedia.createSignedPrivateMediaUrl(filePath, context);
   const parsed = new URL(signedUrl, "http://localhost");
   const encodedPath = parsed.pathname.split("/").at(-1);
   assert.equal(
     privateMedia.verifySignedPrivateMediaRequest({
       encodedPath,
       expires: parsed.searchParams.get("expires"),
+      scope: parsed.searchParams.get("scope"),
       signature: parsed.searchParams.get("signature"),
-    }),
+      ip: context.ip,
+    })?.mediaPath,
     filePath
   );
   assert.equal(
     privateMedia.verifySignedPrivateMediaRequest({
       encodedPath,
       expires: parsed.searchParams.get("expires"),
+      scope: parsed.searchParams.get("scope"),
       signature: `${parsed.searchParams.get("signature")}x`,
+      ip: context.ip,
     }),
     null
   );
@@ -102,14 +107,17 @@ test("Cloudinary private references are opaque, validated and signed", () => {
   });
   assert.equal(mediaStorage.parsePrivateCloudinaryReference(`${reference}tampered`), null);
 
-  const signedUrl = privateMedia.createSignedPrivateMediaUrl(reference);
+  const context = { viewerId: "user-1", academyId: "academy-1", ip: "127.0.0.1" };
+  const signedUrl = privateMedia.createSignedPrivateMediaUrl(reference, context);
   const parsed = new URL(signedUrl, "http://localhost");
   assert.equal(
     privateMedia.verifySignedPrivateMediaRequest({
       encodedPath: parsed.pathname.split("/").at(-1),
       expires: parsed.searchParams.get("expires"),
+      scope: parsed.searchParams.get("scope"),
       signature: parsed.searchParams.get("signature"),
-    }),
+      ip: context.ip,
+    })?.mediaPath,
     reference
   );
 });

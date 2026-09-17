@@ -56,7 +56,10 @@ export const loginValidator = [
 ];
 
 export const enableMfaValidator = [
-  body("secret").trim().isLength({ min: 20, max: 128 }),
+  body("password")
+    .optional({ checkFalsy: true })
+    .isLength({ min: 1, max: 200 })
+    .withMessage("Current password is invalid"),
   body("code").trim().matches(/^\d{6}$/).withMessage("Enter a 6-digit code"),
 ];
 

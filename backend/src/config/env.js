@@ -65,6 +65,10 @@ const env = {
 
   MONGO_URI: process.env.MONGO_URI,
   CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",
+  REDIS_URL: process.env.REDIS_URL || "",
+  TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY || "",
+  TURNSTILE_VERIFY_URL:
+    process.env.TURNSTILE_VERIFY_URL || "https://challenges.cloudflare.com/turnstile/v0/siteverify",
 
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
@@ -75,6 +79,10 @@ const env = {
     process.env.REFRESH_TOKEN_COOKIE_NAME || "khiladi_refresh_token",
 
   MAX_REFRESH_SESSIONS: Number(process.env.MAX_REFRESH_SESSIONS) || 5,
+  STEP_UP_EXPIRES_MINUTES: Math.min(
+    Math.max(Number(process.env.STEP_UP_EXPIRES_MINUTES) || 10, 5),
+    15
+  ),
   REQUIRE_EMAIL_VERIFICATION:
     process.env.REQUIRE_EMAIL_VERIFICATION === "true" ||
     process.env.NODE_ENV === "production",
@@ -85,6 +93,11 @@ const env = {
   LOGIN_LOCK_MINUTES: Number(process.env.LOGIN_LOCK_MINUTES) || 15,
   INTEGRATION_ENCRYPTION_KEY: integrationEncryptionKey,
   DATA_ENCRYPTION_KEY: dataEncryptionKey,
+  DATA_HASH_KEY: process.env.DATA_HASH_KEY || dataEncryptionKey,
+  DATA_ENCRYPTION_KEY_ID: process.env.DATA_ENCRYPTION_KEY_ID || "primary",
+  DATA_ENCRYPTION_PREVIOUS_KEYS: process.env.DATA_ENCRYPTION_PREVIOUS_KEYS || "{}",
+  INTEGRATION_ENCRYPTION_KEY_ID: process.env.INTEGRATION_ENCRYPTION_KEY_ID || "primary",
+  INTEGRATION_ENCRYPTION_PREVIOUS_KEYS: process.env.INTEGRATION_ENCRYPTION_PREVIOUS_KEYS || "{}",
   AUDIT_LOG_SIGNING_KEY: auditLogSigningKey,
   PRIVATE_MEDIA_SIGNING_KEY: privateMediaSigningKey,
   PRIVATE_MEDIA_URL_TTL_SECONDS: Math.min(
@@ -93,6 +106,8 @@ const env = {
   ),
   AUDIT_LOG_RETENTION_DAYS:
     Number(process.env.AUDIT_LOG_RETENTION_DAYS) || 365,
+  IMPORT_SESSION_RETENTION_DAYS: Math.max(Number(process.env.IMPORT_SESSION_RETENTION_DAYS) || 30, 7),
+  CLOSED_ENQUIRY_RETENTION_DAYS: Math.max(Number(process.env.CLOSED_ENQUIRY_RETENTION_DAYS) || 730, 30),
   CLOUDINARY_ENABLED: cloudinaryEnabled,
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",

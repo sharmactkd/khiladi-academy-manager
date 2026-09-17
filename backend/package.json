@@ -11,7 +11,14 @@
     "test:security": "node --test tests/security/*.test.js",
     "test:expenses": "node --test tests/expenseUtils.test.js",
     "test:cloudinary": "node scripts/testCloudinaryConnection.js",
-    "performance:indexes": "node scripts/createPerformanceIndexes.js"
+    "performance:indexes": "node scripts/createPerformanceIndexes.js",
+    "security:verify-audit": "node scripts/verifyAuditIntegrity.js",
+    "security:verify-production": "node scripts/verifyProductionReadiness.js",
+    "security:verify-headers": "node scripts/verifySecurityHeaders.js",
+    "backup:verify-restore": "node scripts/verifyRestoredBackup.js"
+    ,"security:rotate-keys": "node scripts/rotateEncryptionKeys.js"
+    ,"security:retention": "node scripts/enforceDataRetention.js"
+    ,"security:owasp-smoke": "node scripts/runOwaspApiSmoke.js"
   },
   "keywords": [],
   "author": "",
@@ -38,7 +45,9 @@
     "otpauth": "^9.5.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "rate-limit-redis": "^4.3.1",
     "razorpay": "^2.9.6",
+    "redis": "^5.12.1",
     "sharp": "^0.35.4",
     "web-push": "^3.6.7",
     "winston": "^3.19.0"

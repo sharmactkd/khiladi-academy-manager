@@ -1,4 +1,5 @@
 import AuditLog from "../models/AuditLog.js";
+import { recordAuditWriteFailure, recordAuditWriteSuccess } from "../services/auditMonitoringService.js";
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -23,9 +24,7 @@ export const mutationAuditMiddleware = (req, res, next) => {
         statusCode: res.statusCode,
         resourceId: req.params?.id || req.params?.studentId || null,
       },
-    }).catch(() => {
-      // Audit persistence must not alter an already completed response.
-    });
+    }).then(recordAuditWriteSuccess).catch(recordAuditWriteFailure);
   });
 
   return next();

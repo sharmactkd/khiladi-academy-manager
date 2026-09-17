@@ -2,6 +2,29 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import env from "../config/env.js";
 
+export const auditIntegrityPayload = (log) => JSON.stringify({
+  user: log.user ? String(log.user) : "",
+  academy: log.academy ? String(log.academy) : "",
+  action: log.action,
+  module: log.module,
+  ip: log.ip || "",
+  userAgent: log.userAgent || "",
+  metadata: log.metadata || {},
+  createdAt: log.createdAt,
+});
+
+export const calculateAuditIntegrityHash = (log) => crypto
+  .createHmac("sha256", env.AUDIT_LOG_SIGNING_KEY)
+  .update(auditIntegrityPayload(log))
+  .digest("hex");
+
+export const verifyAuditIntegrityHash = (log) => {
+  if (!log?.integrityHash || !log?.createdAt) return false;
+  const expected = Buffer.from(calculateAuditIntegrityHash(log), "hex");
+  const received = Buffer.from(String(log.integrityHash), "hex");
+  return expected.length === received.length && crypto.timingSafeEqual(expected, received);
+};
+
 const auditLogSchema = new mongoose.Schema(
   {
     user: {
@@ -74,20 +97,8 @@ auditLogSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 auditLogSchema.pre("save", function () {
   if (this.integrityHash) return;
-  const payload = JSON.stringify({
-    user: this.user ? String(this.user) : "",
-    academy: this.academy ? String(this.academy) : "",
-    action: this.action,
-    module: this.module,
-    ip: this.ip,
-    userAgent: this.userAgent,
-    metadata: this.metadata,
-    createdAt: this.createdAt || new Date(),
-  });
-  this.integrityHash = crypto
-    .createHmac("sha256", env.AUDIT_LOG_SIGNING_KEY)
-    .update(payload)
-    .digest("hex");
+  if (!this.createdAt) this.createdAt = new Date();
+  this.integrityHash = calculateAuditIntegrityHash(this);
 });
 
 const AuditLog = mongoose.model("AuditLog", auditLogSchema);

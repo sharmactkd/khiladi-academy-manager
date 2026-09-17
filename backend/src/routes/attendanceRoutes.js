@@ -18,13 +18,18 @@ import {
 } from "../controllers/attendanceController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
-import { allowAcademyManagement } from "../middlewares/roleMiddleware.js";
+import {
+  allowAcademyManagement,
+  requireAcademyOwner,
+} from "../middlewares/roleMiddleware.js";
 import {
   resolveUserAcademy,
   requireResolvedAcademy,
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
 import { attendanceImportRateLimiter } from "../middlewares/rateLimiter.js";
+import { requireAssistantAttendanceScope } from "../middlewares/assistantAttendanceScopeMiddleware.js";
+import { requireStepUp } from "../middlewares/stepUpMiddleware.js";
 import { applyImportedFees, previewImportedFees } from "../controllers/importedFeeReconciliationController.js";
 
 import {
@@ -41,12 +46,12 @@ router.use(allowAcademyManagement);
 router.use(resolveUserAcademy);
 router.use(requireResolvedAcademy);
 
-router.get("/monthly-register", getMonthlyRegister);
-router.get("/yearly-register", getYearlyRegister);
-router.post("/monthly-register", saveMonthlyRegister);
-router.patch("/monthly-register/order", moveMonthlyRegisterRow);
-router.put("/day-note", upsertAttendanceDayNote);
-router.delete("/day-note", removeAttendanceDayNote);
+router.get("/monthly-register", requireAssistantAttendanceScope, getMonthlyRegister);
+router.get("/yearly-register", requireAssistantAttendanceScope, getYearlyRegister);
+router.post("/monthly-register", requireAssistantAttendanceScope, saveMonthlyRegister);
+router.patch("/monthly-register/order", requireAssistantAttendanceScope, moveMonthlyRegisterRow);
+router.put("/day-note", requireAssistantAttendanceScope, upsertAttendanceDayNote);
+router.delete("/day-note", requireAssistantAttendanceScope, removeAttendanceDayNote);
 
 const validateAttendanceImportRows = (req, res, next) => {
     const rows = req.body?.rows;
@@ -61,32 +66,59 @@ const validateAttendanceImportRows = (req, res, next) => {
 
 router.post(
   "/import/preview",
+  requireAcademyOwner,
+  requireStepUp("attendance:import"),
   attendanceImportRateLimiter,
   validateAttendanceImportRows,
   previewAttendanceImport
 );
 
-router.get("/imported-fees/preview", previewImportedFees);
-router.post("/imported-fees/apply", attendanceImportRateLimiter, applyImportedFees);
+router.get("/imported-fees/preview", requireAcademyOwner, requireStepUp("fees:reconcile"), previewImportedFees);
+router.post(
+  "/imported-fees/apply",
+  requireAcademyOwner,
+  requireStepUp("fees:reconcile"),
+  attendanceImportRateLimiter,
+  applyImportedFees
+);
 
 router.post(
   "/import",
+  requireAcademyOwner,
+  requireStepUp("attendance:import"),
   attendanceImportRateLimiter,
   validateAttendanceImportRows,
   importJournal,
   importOldAttendance
 );
 
-router.post("/mark", markAttendanceValidator, validateRequest, markAttendance);
+router.post(
+  "/mark",
+  markAttendanceValidator,
+  validateRequest,
+  requireAssistantAttendanceScope,
+  markAttendance
+);
 
-router.get("/", attendanceListValidator, validateRequest, getAttendance);
+router.get(
+  "/",
+  attendanceListValidator,
+  validateRequest,
+  requireAssistantAttendanceScope,
+  getAttendance
+);
 
-router.get("/student/:studentId/yearly-profile", getStudentYearlyProfile);
+router.get(
+  "/student/:studentId/yearly-profile",
+  requireAssistantAttendanceScope,
+  getStudentYearlyProfile
+);
 
 router.get(
   "/student/:studentId",
   studentAttendanceValidator,
   validateRequest,
+  requireAssistantAttendanceScope,
   getStudentAttendance
 );
 
@@ -94,6 +126,7 @@ router.get(
   "/batch/:batchId",
   batchAttendanceValidator,
   validateRequest,
+  requireAssistantAttendanceScope,
   getBatchAttendance
 );
 

@@ -13,6 +13,7 @@ import {
   resendEmailVerification,
   revokeAllSessions,
   revokeSession,
+  createStepUp,
   verifyEmail,
   beginMfaSetup,
   disableMfa,
@@ -96,6 +97,7 @@ router.post(
 );
 
 router.post("/refresh", authRateLimiter, refreshAccessToken);
+router.post("/step-up", protect, authRateLimiter, createStepUp);
 
 router.post(
   "/verify-email",

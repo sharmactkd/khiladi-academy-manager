@@ -29,6 +29,7 @@ export const resolveUserAcademy = asyncHandler(async (req, res, next) => {
 
       req.academy = academy;
       req.academyId = academy._id;
+      res.locals.mediaAcademyId = String(academy._id);
       return next();
     }
 
@@ -37,6 +38,7 @@ export const resolveUserAcademy = asyncHandler(async (req, res, next) => {
     if (academy) {
       req.academy = academy;
       req.academyId = academy._id;
+      res.locals.mediaAcademyId = String(academy._id);
       return next();
     }
 
@@ -78,6 +80,7 @@ export const resolveUserAcademy = asyncHandler(async (req, res, next) => {
 
   req.academy = academy;
   req.academyId = academy._id;
+  res.locals.mediaAcademyId = String(academy._id);
   return next();
 });
 

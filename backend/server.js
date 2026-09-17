@@ -3,12 +3,15 @@ import app from "./src/app.js";
 import connectDB from "./src/config/db.js";
 import env from "./src/config/env.js";
 import logger from "./src/utils/logger.js";
+import { startAuditIntegrityMonitor, verifyRecentAuditIntegrity } from "./src/services/auditMonitoringService.js";
 
 const server = http.createServer(app);
 
 const startServer = async () => {
   try {
     await connectDB();
+    await verifyRecentAuditIntegrity({ limit: 250 });
+    startAuditIntegrityMonitor();
 
     server.listen(env.PORT, () => {
       logger.info(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);

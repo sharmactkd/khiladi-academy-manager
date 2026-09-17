@@ -12,12 +12,15 @@ import {
 const MIME_TYPES = { ".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
 
 export const servePrivateMedia = asyncHandler(async (req, res) => {
-  const mediaPath = verifySignedPrivateMediaRequest({
+  const verified = verifySignedPrivateMediaRequest({
     encodedPath: req.params.encodedPath,
     expires: req.query.expires,
     signature: req.query.signature,
+    scope: req.query.scope,
+    ip: req.ip,
   });
-  if (!mediaPath) return errorResponse(res, "Private media link is invalid or expired", 403);
+  if (!verified) return errorResponse(res, "Private media link is invalid, expired or belongs to another viewer", 403);
+  const { mediaPath, claims } = verified;
 
   if (parsePrivateCloudinaryReference(mediaPath)) {
     const expiresAt = Math.floor(Date.now() / 1000) + 60;
@@ -29,7 +32,9 @@ export const servePrivateMedia = asyncHandler(async (req, res) => {
       module: "media",
       ip: req.ip || "",
       userAgent: req.get("user-agent") || "",
-      metadata: { category: "cloudinary/authenticated" },
+      user: claims.viewerId || null,
+      academy: claims.academyId || null,
+      metadata: { category: "cloudinary/authenticated", resource: mediaPath },
     }).catch(() => {});
     res.setHeader("Cache-Control", "private, max-age=60, no-transform");
     return res.redirect(302, downloadUrl);
@@ -61,7 +66,9 @@ export const servePrivateMedia = asyncHandler(async (req, res) => {
     module: "media",
     ip: req.ip || "",
     userAgent: req.get("user-agent") || "",
-    metadata: { category: mediaPath.split("/").slice(0, -1).join("/") },
+    user: claims.viewerId || null,
+    academy: claims.academyId || null,
+    metadata: { category: mediaPath.split("/").slice(0, -1).join("/"), resource: mediaPath },
   }).catch(() => {});
   return res.sendFile(absolutePath);
 });

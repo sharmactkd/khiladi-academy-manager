@@ -5,6 +5,7 @@ import PublicAcademyProfile from "../models/PublicAcademyProfile.js";
 import Student from "../models/Student.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { errorResponse, successResponse } from "../utils/apiResponse.js";
+import { verifyTurnstile } from "../services/turnstileService.js";
 
 const clean = (value, max) => String(value ?? "").replace(/[<>]/g, "").trim().slice(0, max);
 const phoneDigits = (value) => String(value ?? "").replace(/\D/g, "");
@@ -12,6 +13,12 @@ const ownerAcademy = (req) => Academy.findOne(req.user.role === "super_admin" &&
 
 export const createPublicEnquiry = asyncHandler(async (req, res) => {
   if (req.body?.website) return successResponse(res, "Enquiry received", null, 201);
+  const startedAt = Number(req.body?.formStartedAt);
+  if (!Number.isFinite(startedAt) || Date.now() - startedAt < 2000 || Date.now() - startedAt > 2 * 60 * 60 * 1000) {
+    return errorResponse(res, "Please reload the form and try again", 400);
+  }
+  const challenge = await verifyTurnstile({ token: req.body?.turnstileToken, ip: req.ip });
+  if (!challenge.success) return errorResponse(res, "Human verification failed. Please try again", 403);
   const profile = await PublicAcademyProfile.findOne({ slug: req.params.slug, status: "published" }).select("+academy");
   if (!profile) return errorResponse(res, "Academy not found", 404);
   const name = clean(req.body?.name, 100); const phone = phoneDigits(req.body?.phone).slice(0, 15);

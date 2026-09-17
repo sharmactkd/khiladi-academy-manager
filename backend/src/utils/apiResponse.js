@@ -13,7 +13,11 @@ export const apiResponse = (
   };
 
   if (data !== null) {
-    response.data = signPrivateMediaReferences(data);
+    response.data = signPrivateMediaReferences(data, new WeakSet(), {
+      viewerId: res.locals?.mediaViewerId || "",
+      academyId: res.locals?.mediaAcademyId || "",
+      ip: res.req?.ip || "",
+    });
   }
 
   return res.status(statusCode).json(response);

@@ -9,12 +9,14 @@ import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import {
   generateAccessToken,
   generateRefreshToken,
+  generateStepUpToken,
   hashToken,
 } from "../utils/generateToken.js";
 import env from "../config/env.js";
 import {
   sendEmailVerificationEmail,
   sendPasswordResetEmail,
+  sendSecurityAlertEmail,
 } from "../services/emailService.js";
 import logger from "../utils/logger.js";
 import {
@@ -77,6 +79,10 @@ export const normalizeRefreshTokenSessions = (user) => {
 
   user.refreshTokens = user.refreshTokens
     .filter((session) => session.expiresAt > now)
+    .map((session) => {
+      if (!session.familyId) session.familyId = crypto.randomUUID();
+      return session;
+    })
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, env.MAX_REFRESH_SESSIONS);
 };
@@ -86,6 +92,7 @@ export const addRefreshTokenSession = async (user, refreshToken, req) => {
 
   user.refreshTokens.unshift({
     sessionId: crypto.randomUUID(),
+    familyId: crypto.randomUUID(),
     tokenHash: hashRefreshToken(refreshToken),
     createdAt: new Date(),
     expiresAt: getRefreshTokenExpiryDate(),
@@ -586,11 +593,48 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
 
   const tokenHash = hashRefreshToken(refreshToken);
 
-  const user = await User.findOne({
+  let user = await User.findOne({
     "refreshTokens.tokenHash": tokenHash,
   });
 
   if (!user) {
+    const replayUser = await User.findOne({
+      "refreshTokens.previousTokenHash": tokenHash,
+    });
+    if (replayUser) {
+      const replaySession = replayUser.refreshTokens.find(
+        (item) => item.previousTokenHash === tokenHash
+      );
+      const inConcurrencyGrace = replaySession?.previousTokenExpiresAt > new Date();
+      if (!inConcurrencyGrace) {
+        const familyId = replaySession?.familyId;
+        replayUser.refreshTokens = replayUser.refreshTokens.filter(
+          (item) => item.familyId !== familyId
+        );
+        replayUser.authInvalidBefore = new Date();
+        await replayUser.save({ validateBeforeSave: false });
+        await createAuditLog({
+          req,
+          user: replayUser._id,
+          action: "REFRESH_TOKEN_REPLAY_DETECTED",
+          metadata: { familyId },
+        });
+        try {
+          await sendSecurityAlertEmail({
+            to: replayUser.email,
+            action: "A reused refresh token was detected and the affected session was revoked",
+          });
+        } catch (error) {
+          logger.error(`Refresh replay alert email failed: ${error.message}`);
+        }
+      }
+      clearRefreshTokenCookie(res);
+      return errorResponse(
+        res,
+        inConcurrencyGrace ? "Refresh is already in progress" : "Session reuse detected. Sign in again",
+        inConcurrencyGrace ? 409 : 401
+      );
+    }
     clearRefreshTokenCookie(res);
     return errorResponse(res, "Invalid refresh token", 401);
   }
@@ -624,18 +668,82 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 
   const nextRefreshToken = generateRefreshToken();
-  session.tokenHash = hashRefreshToken(nextRefreshToken);
-  session.lastUsedAt = new Date();
-  session.rotatedAt = new Date();
-  session.expiresAt = getRefreshTokenExpiryDate();
-  const accessToken = generateAccessToken(user);
-
-  await user.save();
+  const nextTokenHash = hashRefreshToken(nextRefreshToken);
+  const previousTokenExpiresAt = new Date(Date.now() + 5 * 1000);
+  const updatedUser = await User.findOneAndUpdate(
+    {
+      _id: user._id,
+      refreshTokens: { $elemMatch: { sessionId: session.sessionId, tokenHash } },
+    },
+    {
+      $set: {
+        "refreshTokens.$.previousTokenHash": tokenHash,
+        "refreshTokens.$.previousTokenExpiresAt": previousTokenExpiresAt,
+        "refreshTokens.$.tokenHash": nextTokenHash,
+        "refreshTokens.$.lastUsedAt": new Date(),
+        "refreshTokens.$.rotatedAt": new Date(),
+        "refreshTokens.$.expiresAt": getRefreshTokenExpiryDate(),
+      },
+    },
+    { new: true }
+  );
+  if (!updatedUser) {
+    clearRefreshTokenCookie(res);
+    return errorResponse(res, "Refresh token was already rotated", 409);
+  }
+  user = updatedUser;
+  const accessToken = generateAccessToken(updatedUser);
   setRefreshTokenCookie(res, nextRefreshToken);
 
   return successResponse(res, "Access token refreshed", {
     user: buildSafeUserResponse(user),
     accessToken,
+  });
+});
+
+export const createStepUp = asyncHandler(async (req, res) => {
+  const operation = String(req.body?.operation || "").trim();
+  const allowedOperations = new Set([
+    "students:delete-all",
+    "students:import",
+    "attendance:import",
+    "fees:repair",
+    "fees:reconcile",
+  ]);
+  if (!allowedOperations.has(operation)) {
+    return errorResponse(res, "Invalid step-up operation", 400);
+  }
+  const user = await User.findById(req.user._id).select(
+    "+password +mfaSecret +mfaRecoveryCodes"
+  );
+  if (!user) return errorResponse(res, "User not found", 404);
+  if (user.loginProvider === "local") {
+    if (!req.body?.password || !(await user.comparePassword(req.body.password))) {
+      return errorResponse(res, "Current password is incorrect", 401);
+    }
+  } else {
+    const issuedAt = req.authIssuedAt?.getTime() || 0;
+    if (!issuedAt || Date.now() - issuedAt > 5 * 60 * 1000) {
+      return errorResponse(res, "Sign in again before authorizing this operation", 401);
+    }
+  }
+  if (user.mfaEnabled) {
+    const code = String(req.body?.mfaCode || "").trim();
+    const validTotp = verifyMfaCode({ secret: user.mfaSecret, code });
+    const recoveryHash = hashRecoveryCode(code);
+    const recoveryIndex = user.mfaRecoveryCodes.findIndex((item) => item === recoveryHash);
+    if (!validTotp && recoveryIndex < 0) return errorResponse(res, "Invalid MFA code", 401);
+    if (!validTotp) {
+      user.mfaRecoveryCodes.splice(recoveryIndex, 1);
+      await user.save({ validateBeforeSave: false });
+    }
+  }
+  const stepUpToken = generateStepUpToken({ user, operation });
+  await createAuditLog({ req, user: user._id, action: "STEP_UP_AUTHENTICATED", metadata: { operation } });
+  return successResponse(res, "Sensitive operation authorized", {
+    stepUpToken,
+    operation,
+    expiresInMinutes: env.STEP_UP_EXPIRES_MINUTES,
   });
 });
 
@@ -714,6 +822,7 @@ export const revokeSession = asyncHandler(async (req, res) => {
 
 export const revokeAllSessions = asyncHandler(async (req, res) => {
   req.user.refreshTokens = [];
+  req.user.authInvalidBefore = new Date();
   await req.user.save({ validateBeforeSave: false });
   clearRefreshTokenCookie(res);
   await createAuditLog({ req, user: req.user._id, action: "ALL_SESSIONS_REVOKED" });
@@ -725,6 +834,10 @@ export const beginMfaSetup = asyncHandler(async (req, res) => {
     return errorResponse(res, "Multi-factor authentication is already enabled", 409);
   }
   const secret = createMfaSecret();
+  req.user.pendingMfaSecret = secret;
+  req.user.pendingMfaExpires = new Date(Date.now() + 10 * 60 * 1000);
+  await req.user.save({ validateBeforeSave: false });
+  await createAuditLog({ req, user: req.user._id, action: "MFA_SETUP_STARTED" });
   return successResponse(res, "MFA setup created", {
     secret,
     otpauthUrl: createMfaUri({ secret, email: req.user.email }),
@@ -732,17 +845,54 @@ export const beginMfaSetup = asyncHandler(async (req, res) => {
 });
 
 export const enableMfa = asyncHandler(async (req, res) => {
-  if (!verifyMfaCode({ secret: req.body.secret, code: req.body.code })) {
+  const user = await User.findById(req.user._id).select(
+    "+password +pendingMfaSecret +pendingMfaExpires"
+  );
+  if (!user || user.mfaEnabled) {
+    return errorResponse(res, "MFA setup is unavailable", 409);
+  }
+  if (!user.pendingMfaSecret || !user.pendingMfaExpires || user.pendingMfaExpires <= new Date()) {
+    if (user) {
+      user.pendingMfaSecret = undefined;
+      user.pendingMfaExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+    }
+    return errorResponse(res, "MFA setup expired. Start again", 400);
+  }
+
+  if (user.loginProvider === "local") {
+    if (!req.body.password || !(await user.comparePassword(req.body.password))) {
+      return errorResponse(res, "Current password is incorrect", 401);
+    }
+  } else {
+    const issuedAt = req.authIssuedAt?.getTime() || 0;
+    if (!issuedAt || Date.now() - issuedAt > 5 * 60 * 1000) {
+      return errorResponse(res, "Sign in again before enabling MFA", 401);
+    }
+  }
+
+  if (!verifyMfaCode({ secret: user.pendingMfaSecret, code: req.body.code })) {
     return errorResponse(res, "Invalid authenticator code", 400);
   }
   const recoveryCodes = createRecoveryCodes();
-  req.user.mfaSecret = req.body.secret;
-  req.user.mfaRecoveryCodes = recoveryCodes.map(hashRecoveryCode);
-  req.user.mfaEnabled = true;
-  await req.user.save({ validateBeforeSave: false });
-  await createAuditLog({ req, user: req.user._id, action: "MFA_ENABLED" });
+  user.mfaSecret = user.pendingMfaSecret;
+  user.pendingMfaSecret = undefined;
+  user.pendingMfaExpires = undefined;
+  user.mfaRecoveryCodes = recoveryCodes.map(hashRecoveryCode);
+  user.mfaEnabled = true;
+  user.refreshTokens = [];
+  user.authInvalidBefore = new Date();
+  await user.save({ validateBeforeSave: false });
+  clearRefreshTokenCookie(res);
+  await createAuditLog({ req, user: user._id, action: "MFA_ENABLED" });
+  try {
+    await sendSecurityAlertEmail({ to: user.email, action: "Multi-factor authentication enabled" });
+  } catch (error) {
+    logger.error(`MFA security alert email failed: ${error.message}`);
+  }
   return successResponse(res, "Multi-factor authentication enabled", {
     recoveryCodes,
+    requiresReauthentication: true,
   });
 });
 
@@ -760,8 +910,11 @@ export const disableMfa = asyncHandler(async (req, res) => {
   if (!valid) return errorResponse(res, "Invalid authenticator code", 401);
   user.mfaEnabled = false;
   user.mfaSecret = "";
+  user.pendingMfaSecret = undefined;
+  user.pendingMfaExpires = undefined;
   user.mfaRecoveryCodes = [];
   user.refreshTokens = [];
+  user.authInvalidBefore = new Date();
   await user.save({ validateBeforeSave: false });
   clearRefreshTokenCookie(res);
   await createAuditLog({ req, user: user._id, action: "MFA_DISABLED" });

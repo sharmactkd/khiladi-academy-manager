@@ -10,6 +10,7 @@ router.get(
   privateMediaRateLimiter,
   param("encodedPath").isBase64({ urlSafe: true }).isLength({ min: 16, max: 512 }),
   query("expires").isInt({ min: 1 }),
+  query("scope").isBase64({ urlSafe: true }).isLength({ min: 16, max: 512 }),
   query("signature").isBase64({ urlSafe: true }).isLength({ min: 40, max: 64 }),
   validateRequest,
   servePrivateMedia

@@ -71,3 +71,16 @@ export const sendPasswordResetEmail = async ({ to, resetUrl }) => {
 
   await sendEmail({ to, subject, text, html });
 };
+
+export const sendSecurityAlertEmail = async ({ to, action }) => {
+  if (!to) return;
+  const subject = `Security alert: ${action}`;
+  const text = `${action} was completed for your KHILADI Academy Manager account. If this was not you, reset your password immediately and contact support.`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10223e">
+      <h2>Account security alert</h2>
+      <p><strong>${action}</strong> was completed for your KHILADI Academy Manager account.</p>
+      <p>If this was not you, reset your password immediately and contact support.</p>
+    </div>`;
+  await sendEmail({ to, subject, text, html });
+};

@@ -70,6 +70,7 @@ app.use((req, res, next) => {
   req.requestId = crypto.randomUUID();
   res.setHeader("X-Request-Id", req.requestId);
   res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
   next();
 });
 

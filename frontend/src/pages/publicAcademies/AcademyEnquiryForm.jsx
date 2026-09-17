@@ -1,18 +1,45 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Building2, CalendarDays, CheckCircle2, Dumbbell, Mail, MessageCircle, Phone, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import publicAcademyApi from "../../api/publicAcademyApi.js";
 import "./AcademyEnquiryForm.css";
 
-const initial = { name: "", phone: "", email: "", studentAge: "", martialArt: "", branchName: "", preferredDate: "", requestType: "trial_class", message: "", consentToContact: false, website: "" };
+const createInitial = () => ({ name: "", phone: "", email: "", studentAge: "", martialArt: "", branchName: "", preferredDate: "", requestType: "trial_class", message: "", consentToContact: false, website: "", formStartedAt: Date.now(), turnstileToken: "" });
 const Field = ({ icon: Icon, label, required = false, children }) => <div className="pa-enquiry-field"><label>{Icon && <Icon size={15} />}{label}{required && <sup>*</sup>}</label>{children}</div>;
 
 export default function AcademyEnquiryForm({ profile, selectedBranch = null, selectedBatch = null, mode = "question" }) {
-  const [form, setForm] = useState(initial);
+  const [form, setForm] = useState(createInitial);
+  const turnstileRef = useRef(null);
+  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const isTrial = mode === "trial";
   const minDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  useEffect(() => {
+    if (!siteKey) return undefined;
+    const render = () => {
+      if (!turnstileRef.current || !window.turnstile || turnstileRef.current.dataset.widgetId) return;
+      const widgetId = window.turnstile.render(turnstileRef.current, {
+        sitekey: siteKey,
+        callback: (token) => setForm((current) => ({ ...current, turnstileToken: token })),
+        "expired-callback": () => setForm((current) => ({ ...current, turnstileToken: "" })),
+      });
+      turnstileRef.current.dataset.widgetId = String(widgetId);
+    };
+    let script = document.querySelector('script[data-khiladi-turnstile="true"]');
+    if (!script) {
+      script = document.createElement("script");
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      script.dataset.khiladiTurnstile = "true";
+      document.head.appendChild(script);
+    }
+    script.addEventListener("load", render);
+    render();
+    return () => script.removeEventListener("load", render);
+  }, [siteKey]);
 
   useEffect(() => setForm((current) => ({ ...current, branchName: selectedBranch?.name || current.branchName, requestType: isTrial ? "trial_class" : "general" })), [isTrial, selectedBranch?.name]);
   const change = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value }));
@@ -21,7 +48,9 @@ export default function AcademyEnquiryForm({ profile, selectedBranch = null, sel
     try {
       const response = await publicAcademyApi.enquire(profile.slug, form);
       setSuccess(response.data?.message || "Enquiry sent successfully");
-      setForm({ ...initial, branchName: selectedBranch?.name || "", requestType: isTrial ? "trial_class" : "general" });
+      setForm({ ...createInitial(), branchName: selectedBranch?.name || "", requestType: isTrial ? "trial_class" : "general" });
+      const widgetId = turnstileRef.current?.dataset.widgetId;
+      if (widgetId && window.turnstile) window.turnstile.reset(widgetId);
     } catch (requestError) { setError(requestError.response?.data?.message || "Enquiry could not be sent"); }
     finally { setBusy(false); }
   };
@@ -49,6 +78,7 @@ export default function AcademyEnquiryForm({ profile, selectedBranch = null, sel
     <section className="pa-enquiry-section"><div className="pa-enquiry-section__title"><span>03</span><div><strong>{isTrial ? "Trial Requirements" : "Your Question"}</strong><small>Provide any details the academy should know</small></div></div><div className="pa-enquiry-message"><Field icon={MessageCircle} label={isTrial ? "Message or special requirements" : "Question or message"} required><textarea className="pa-textarea" name="message" value={form.message} onChange={change} rows="4" maxLength="600" required placeholder={isTrial ? "Tell us about preferred timing, experience or any special requirement…" : "Type your question here…"} /><small className="pa-enquiry-count">{form.message.length}/600</small></Field></div></section>
 
     <input className="pa-honeypot" name="website" value={form.website} onChange={change} tabIndex="-1" autoComplete="off" aria-hidden="true" />
+    {siteKey && <div className="pa-turnstile" ref={turnstileRef} />}
     <footer className="pa-enquiry-footer"><label className="pa-consent"><input type="checkbox" name="consentToContact" checked={form.consentToContact} onChange={change} required /><span><ShieldCheck size={17} />I agree that this academy may contact me regarding this request. <b>*</b></span></label><button className="pa-enquiry-submit" type="submit" disabled={busy}>{busy ? <><span className="pa-enquiry-spinner" />Sending…</> : <>{isTrial ? <Sparkles size={18} /> : <Send size={18} />}{isTrial ? "Request Trial Class" : "Send Question"}</>}</button></footer>
   </form>;
 }

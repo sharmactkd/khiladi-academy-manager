@@ -23,6 +23,7 @@ import {
 
 import validateRequest from "../middlewares/validateRequest.js";
 import { repairFeeIntegrity, scanFeeIntegrity } from "../controllers/feeIntegrityController.js";
+import { requireStepUp } from "../middlewares/stepUpMiddleware.js";
 
 import {
   feePaymentIdValidator,
@@ -41,7 +42,7 @@ router.use(requireResolvedAcademy);
 
 router.get("/dashboard", getFeesDashboard);
 router.get("/integrity/scan", scanFeeIntegrity);
-router.post("/integrity/repair", repairFeeIntegrity);
+router.post("/integrity/repair", requireStepUp("fees:repair"), repairFeeIntegrity);
 
 router.get(
   "/students-status",

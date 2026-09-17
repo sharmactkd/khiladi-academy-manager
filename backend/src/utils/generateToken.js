@@ -15,6 +15,14 @@ export const generateAccessToken = (user) => {
   );
 };
 
+export const generateStepUpToken = ({ user, operation }) => jwt.sign(
+  { id: user._id.toString(), purpose: "step-up", operation },
+  env.JWT_ACCESS_SECRET,
+  { expiresIn: `${env.STEP_UP_EXPIRES_MINUTES}m` }
+);
+
+export const verifyStepUpToken = (token) => jwt.verify(token, env.JWT_ACCESS_SECRET);
+
 export const generateRefreshToken = () => {
   return crypto.randomBytes(64).toString("hex");
 };

@@ -1,0 +1,74 @@
+name: Production security checks
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "45 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  owasp-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run authorized non-destructive API smoke checks
+        working-directory: backend
+        env:
+          SECURITY_TEST_BASE_URL: ${{ vars.SECURITY_TEST_BASE_URL }}
+          SECURITY_TEST_AUTHORIZED: ${{ vars.SECURITY_TEST_AUTHORIZED }}
+        run: |
+          if [ -z "$SECURITY_TEST_BASE_URL" ]; then
+            echo "SECURITY_TEST_BASE_URL is not configured; skipping."
+            exit 0
+          fi
+          npm run security:owasp-smoke
+
+  headers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify deployed security headers
+        env:
+          FRONTEND_HEALTH_URL: ${{ vars.FRONTEND_HEALTH_URL }}
+          BACKEND_HEALTH_URL: ${{ vars.BACKEND_HEALTH_URL }}
+        run: |
+          if [ -z "$FRONTEND_HEALTH_URL$BACKEND_HEALTH_URL" ]; then
+            echo "Repository variables FRONTEND_HEALTH_URL/BACKEND_HEALTH_URL are not configured; skipping."
+            exit 0
+          fi
+          node backend/scripts/verifySecurityHeaders.js
+
+  audit-integrity:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - name: Verify audit signatures
+        working-directory: backend
+        env:
+          MONGO_URI: ${{ secrets.SECURITY_AUDIT_MONGO_URI }}
+          JWT_ACCESS_SECRET: ${{ secrets.SECURITY_AUDIT_JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.SECURITY_AUDIT_JWT_REFRESH_SECRET }}
+          AUDIT_LOG_SIGNING_KEY: ${{ secrets.SECURITY_AUDIT_LOG_SIGNING_KEY }}
+        run: |
+          if [ -z "$MONGO_URI" ] || [ -z "$AUDIT_LOG_SIGNING_KEY" ]; then
+            echo "Required audit verification secrets are not configured."
+            exit 1
+          fi
+          npm run security:verify-audit
