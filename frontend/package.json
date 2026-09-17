@@ -33,7 +33,7 @@
     "react-dom": "^19.2.3",
     "react-hook-form": "^7.76.0",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.15.1",
+    "react-router-dom": "^7.18.3",
     "react-to-print": "^3.3.0",
     "recharts": "^3.8.1",
     "vite": "^7.3.0",
