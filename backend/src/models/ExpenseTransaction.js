@@ -12,8 +12,12 @@ const schema = new mongoose.Schema({
   sourceType: { type: String, default: "manual" },
   sourceId: { type: mongoose.Schema.Types.ObjectId, default: null },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   reversedAt: { type: Date, default: null },
   reversalReason: { type: String, trim: true, maxlength: 300, default: "" },
+  deletedAt: { type: Date, default: null },
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  deletionReason: { type: String, trim: true, maxlength: 300, default: "" },
 }, { timestamps: true });
 
 schema.index({ academy: 1, sourceType: 1, sourceId: 1 }, { unique: true, partialFilterExpression: { sourceId: { $type: "objectId" } } });

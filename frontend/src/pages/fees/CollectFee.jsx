@@ -155,7 +155,8 @@ const CollectFee = () => {
     () => students.find((student) => String(student._id) === String(selectedStudentId)) || null,
     [students, selectedStudentId]
   );
-  const selectableMonthCount = Math.min(24, Math.max(1, dueMonthCount));
+  // Allow advance collections even when only one (or zero) cycle is due.
+  const selectableMonthCount = 12;
 
   const filteredStudents = useMemo(() => {
     const query = studentSearch.trim().toLowerCase();
@@ -220,6 +221,13 @@ const CollectFee = () => {
         const monthsDue = Math.min(24, Math.max(1, Number(payload.membership?.unpaidMonths || 0)));
         setDueMonthCount(monthsDue);
         setValue("numberOfMonths", monthsDue, { shouldDirty: false, shouldValidate: true });
+        const effectiveDueDate = payload.membership?.effectiveDueDate
+          ? new Date(payload.membership.effectiveDueDate)
+          : null;
+        if (effectiveDueDate && !Number.isNaN(effectiveDueDate.getTime())) {
+          setValue("feeMonth", effectiveDueDate.getUTCMonth() + 1, { shouldDirty: false });
+          setValue("feeYear", effectiveDueDate.getUTCFullYear(), { shouldDirty: false });
+        }
       })
       .catch(() => {
         if (!active) return;
@@ -407,7 +415,7 @@ const CollectFee = () => {
             <div className={styles.periodGrid}>
               <label><span>Month *</span><select {...register("feeMonth", { required: "Month required" })}>{MONTH_OPTIONS.map((month) => <option key={month.value} value={month.value}>{month.label}</option>)}</select></label>
               <label><span>Year *</span><input type="number" min="2000" max="2100" {...register("feeYear", { required: "Year required", min: 2000, max: 2100 })} /></label>
-              <label><span>Number of Months *</span><select {...register("numberOfMonths", { required: true, min: 1, max: selectableMonthCount })}>{Array.from({ length: selectableMonthCount }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} {index ? "Months" : "Month"}</option>)}</select><small className={styles.helperText}>{dueMonthCount > 1 ? `${dueMonthCount} unpaid months detected.` : "No additional unpaid month detected."}</small></label>
+              <label><span>Number of Months *</span><select {...register("numberOfMonths", { required: true, min: 1, max: selectableMonthCount })}>{Array.from({ length: selectableMonthCount }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} {index ? "Months" : "Month"}</option>)}</select><small className={styles.helperText}>{dueMonthCount > 1 ? `${dueMonthCount} unpaid months detected. Advance payment is also allowed.` : "Advance payment up to 12 months is allowed."}</small></label>
               <label><span>Total Fee</span><div className={styles.readOnlyField}>{currency(amount)}</div></label>
             </div>
           </section>

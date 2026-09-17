@@ -33,15 +33,31 @@ export const resolveFeeStatus = ({
   } else if (remainingDays > 0) {
     code = "paid";
     source = "remaining-days";
+  } else if (membershipStatus === "partial") {
+    code = "partial";
+    source = "membership-partial";
   } else if (unpaidMonths > 0 || unpaidDays > 0) {
     code = "due";
     source = "membership-balance";
+  } else if (membership?.effectiveDueDate) {
+    const dueDate = new Date(membership.effectiveDueDate);
+    if (!Number.isNaN(dueDate.getTime()) && dueDate > new Date()) {
+      code = "paid";
+      source = "future-due-date";
+    }
   } else if (payableAmount !== null || paidAmount !== null) {
     const payable = Math.max(0, Number(payableAmount || 0));
     const paid = Math.max(0, Number(paidAmount || 0));
     code = payable === 0 || paid >= payable ? "paid" : paid > 0 ? "partial" : "due";
     source = "monthly-ledger";
-  } else {
+  }
+  if (!code && (payableAmount !== null || paidAmount !== null)) {
+    const payable = Math.max(0, Number(payableAmount || 0));
+    const paid = Math.max(0, Number(paidAmount || 0));
+    code = payable === 0 || paid >= payable ? "paid" : paid > 0 ? "partial" : "due";
+    source = "monthly-ledger";
+  }
+  if (!code) {
     code = normalizeFeeStatus(membershipStatus || fallbackStatus);
     source = "fallback";
   }

@@ -33,6 +33,20 @@ test("monthly ledger resolves paid, partial and due consistently", () => {
   assert.equal(resolveFeeStatus({ payableAmount: 0, paidAmount: 0 }).code, "paid");
 });
 
+test("membership partial status is not hidden by its unpaid cycle", () => {
+  assert.equal(resolveFeeStatus({ membership: { feeStatus: "partial", unpaidMonths: 1 } }).code, "partial");
+});
+
+test("a future effective due date stays paid until that date", () => {
+  const result = resolveFeeStatus({
+    membership: { effectiveDueDate: "2099-09-20T00:00:00.000Z", feeStatus: "due" },
+    payableAmount: 1000,
+    paidAmount: 0,
+  });
+  assert.equal(result.code, "paid");
+  assert.equal(result.source, "future-due-date");
+});
+
 test("waived and complimentary override payment calculations", () => {
   assert.equal(resolveFeeStatus({ membership: { feeStatus: "waived" }, payableAmount: 500 }).code, "waived");
   assert.equal(resolveFeeStatus({ membership: { feeStatus: "complimentary" }, payableAmount: 500 }).code, "complimentary");

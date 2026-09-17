@@ -7,6 +7,8 @@ const validDateKey = (value) => {
 };
 export const listExpenseValidation = [query("type").optional().isIn(["income", "expense"]), query("page").optional().isInt({ min: 1 }), query("limit").optional().isInt({ min: 1, max: 100 }), query("from").optional().custom(validDateKey), query("to").optional().custom(validDateKey)];
 export const createExpenseValidation = [body("type").isIn(["income", "expense"]), body("category").isString().trim().isLength({ min: 1, max: 80 }), body("amount").isFloat({ gt: 0 }), body("account").optional().isIn(["cash", "bank", "upi", "other"]), body("date").custom(validDateKey), body("branch").optional({ nullable: true, checkFalsy: true }).isMongoId(), body("description").optional().isString().trim().isLength({ max: 500 })];
+export const updateExpenseValidation = [param("id").isMongoId(), ...createExpenseValidation];
+export const deleteExpenseValidation = [param("id").isMongoId(), body("reason").optional({ nullable: true, checkFalsy: true }).isString().trim().isLength({ max: 300 })];
 export const reverseExpenseValidation = [param("id").isMongoId(), body("reason").isString().trim().isLength({ min: 3, max: 300 })];
 export const categoryTypeValidation = [query("type").optional().isIn(["income", "expense"])];
 export const createCategoryValidation = [body("type").isIn(["income", "expense"]), body("name").isString().trim().isLength({ min: 1, max: 80 })];

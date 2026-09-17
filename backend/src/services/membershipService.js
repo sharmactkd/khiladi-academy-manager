@@ -233,8 +233,12 @@ export const applyMembershipAdjustment = async ({
       membership.status = "active";
       if (payload.resumeDate && Number(membership.remainingTrainingDays || 0) > 0) {
         const resumeDate = parseDate(payload.resumeDate, "Resume date");
-        membership.effectiveDueDate = addDays(resumeDate, membership.remainingTrainingDays);
+        // Inclusive academy rule: 20 paid days resumed on Sep 1 become due
+        // on Sep 20 (Sep 1 is day one), not Sep 21.
+        membership.effectiveDueDate = addDays(resumeDate, Math.max(0, membership.remainingTrainingDays - 1));
         membership.remainingTrainingDays = 0;
+        membership.autoMonthlyDue = true;
+        membership.feeStatus = "paid";
       }
       break;
     }

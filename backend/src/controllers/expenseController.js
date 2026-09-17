@@ -4,7 +4,9 @@ import ExpenseCategory from "../models/ExpenseCategory.js";
 import ExpenseTransaction from "../models/ExpenseTransaction.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse } from "../utils/apiResponse.js";
-import { buildExpenseListFilter, cleanCategoryName, isDefaultCategory, normalizeCategoryName, parseExpensePagination } from "../utils/expenseUtils.js";
+import { buildExpenseListFilter, buildExpenseMutationPayload, cleanCategoryName, isDefaultCategory, isManualExpenseTransaction, normalizeCategoryName, parseExpensePagination } from "../utils/expenseUtils.js";
+
+const ensureOwnedBranch = async (academy, branch) => !branch || Boolean(await Branch.exists({ _id: branch, academy }));
 
 const summaryForAcademy = async (academy) => {
   const rows = await ExpenseTransaction.aggregate([
@@ -29,10 +31,34 @@ export const listExpenses = asyncHandler(async (req, res) => {
 });
 
 export const createExpense = asyncHandler(async (req, res) => {
-  const payload = { type: req.body.type, category: cleanCategoryName(req.body.category), amount: Number(req.body.amount), account: req.body.account || "cash", date: req.body.date, branch: req.body.branch || null, description: String(req.body.description || "").trim() };
-  if (payload.branch && !(await Branch.exists({ _id: payload.branch, academy: req.academyId }))) return res.status(400).json({ success: false, message: "Selected branch does not belong to this academy." });
+  const payload = buildExpenseMutationPayload(req.body);
+  if (!(await ensureOwnedBranch(req.academyId, payload.branch))) return res.status(400).json({ success: false, message: "Selected branch does not belong to this academy." });
   const transaction = await ExpenseTransaction.create({ ...payload, academy: req.academyId, createdBy: req.user._id });
   return successResponse(res, "Transaction added successfully", { transaction }, 201);
+});
+
+export const updateExpense = asyncHandler(async (req, res) => {
+  const transaction = await ExpenseTransaction.findOne({ _id: req.params.id, academy: req.academyId, reversedAt: null });
+  if (!transaction) return res.status(404).json({ success: false, message: "Transaction not found or no longer active." });
+  if (!isManualExpenseTransaction(transaction)) return res.status(409).json({ success: false, message: "Linked fee income cannot be edited here. Update or reverse it from Payment History." });
+
+  const payload = buildExpenseMutationPayload(req.body);
+  if (!(await ensureOwnedBranch(req.academyId, payload.branch))) return res.status(400).json({ success: false, message: "Selected branch does not belong to this academy." });
+  Object.assign(transaction, payload, { updatedBy: req.user._id });
+  await transaction.save();
+  return successResponse(res, "Transaction updated successfully", { transaction });
+});
+
+export const deleteExpense = asyncHandler(async (req, res) => {
+  const transaction = await ExpenseTransaction.findOne({ _id: req.params.id, academy: req.academyId, reversedAt: null });
+  if (!transaction) return res.status(404).json({ success: false, message: "Transaction not found or already deleted." });
+  if (!isManualExpenseTransaction(transaction)) return res.status(409).json({ success: false, message: "Linked fee income cannot be deleted here. Reverse it from Payment History." });
+
+  const deletedAt = new Date();
+  const reason = String(req.body?.reason || "").trim();
+  Object.assign(transaction, { reversedAt: deletedAt, reversalReason: reason ? `Deleted: ${reason}` : "Deleted by user", deletedAt, deletedBy: req.user._id, deletionReason: reason });
+  await transaction.save();
+  return successResponse(res, "Transaction deleted successfully", { transaction });
 });
 
 export const reverseExpense = asyncHandler(async (req, res) => {

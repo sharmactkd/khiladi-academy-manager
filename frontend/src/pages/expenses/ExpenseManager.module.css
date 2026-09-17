@@ -446,6 +446,38 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+.transactionDetail .editButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  margin-top: 4px;
+  border: 1px solid #cbd7e5;
+  border-radius: 8px;
+  background: #fff;
+  color: #10213d;
+  font-weight: 850;
+}
+.transactionDetail .editButton:hover {
+  border-color: #10213d;
+  background: #f7f9fc;
+}
+.transactionDetail .auditHint,
+.transactionDetail .linkedHint {
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: #f7f9fc;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.transactionDetail .linkedHint {
+  border: 1px solid #f2d7a5;
+  background: #fff9ed;
+  color: #805c12;
+}
 .pagination {
   display: flex;
   align-items: center;

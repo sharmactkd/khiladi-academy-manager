@@ -12,6 +12,8 @@ export default function AddTransactionForm({
   onRemoveCustomCategory,
   onSubmit,
   onClose,
+  mode = "create",
+  saving = false,
 }) {
   const [addingCustom, setAddingCustom] = useState(false);
   const defaults = defaultCategoriesFor(form.type);
@@ -93,9 +95,9 @@ export default function AddTransactionForm({
     <section className={styles.formCard}>
       <div className={styles.formHeader}>
         <div>
-          <span className={styles.formEyebrow}>NEW TRANSACTION</span>
-          <h2>Add transaction</h2>
-          <p>Capture academy income or an expense with a clear audit trail.</p>
+          <span className={styles.formEyebrow}>{mode === "edit" ? "EDIT TRANSACTION" : "NEW TRANSACTION"}</span>
+          <h2>{mode === "edit" ? "Edit transaction" : "Add transaction"}</h2>
+          <p>{mode === "edit" ? "Correct the active manual record. Your change remains auditable." : "Capture academy income or an expense with a clear audit trail."}</p>
         </div>
         <button
           type="button"
@@ -234,8 +236,8 @@ export default function AddTransactionForm({
           </label>
         </div>
 
-        <button className={styles.primary} type="submit">
-          Save transaction
+        <button className={styles.primary} type="submit" disabled={saving}>
+          {saving ? "Saving…" : mode === "edit" ? "Save changes" : "Save transaction"}
         </button>
       </form>
     </section>

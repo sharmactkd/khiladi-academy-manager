@@ -189,7 +189,7 @@ const DateMetaInput = ({
 
 const getPaidDateValue = (row) =>
   row.rowType === "student" && row.studentId
-    ? row.importedPaidDate || row.feePaidDate || row.paidDate || "-"
+    ? row.feePaidDate || row.paidDate || row.importedPaidDate || "-"
     : row.importedPaidDate || row.paidDate || row.feePaidDate || "-";
 
 const isFutureDay = (day) => {

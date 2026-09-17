@@ -10,8 +10,14 @@ export const normalizeFeeStatus = (value, fallback = "due") => {
 export const formatFeeDueBalance = (months = 0, days = 0) => {
   const safeMonths = Math.max(0, Math.trunc(Number(months) || 0));
   const safeDays = Math.max(0, Math.trunc(Number(days) || 0));
+  if (safeMonths === 1 && safeDays === 0) return "DUE";
   const parts = [safeMonths ? `${safeMonths}M` : "", safeDays ? `${safeDays}D` : ""].filter(Boolean);
   return parts.length ? `${parts.join(", ")} DUE` : "DUE";
+};
+
+export const compactAttendanceDueLabel = (value) => {
+  const label = text(value).toUpperCase();
+  return /^1M(?:,\s*0D)?\s+DUE$/.test(label) ? "DUE" : label;
 };
 
 export const getCanonicalFeeDisplay = (row = {}) => {
@@ -20,7 +26,7 @@ export const getCanonicalFeeDisplay = (row = {}) => {
     const imported = text(row.importedFeeStatus || row.feeStatus || "-").toUpperCase();
     return imported.replace(/OVERDUE/g, "DUE").replace(/PENDING/g, "DUE");
   }
-  if (row.feeStatusSummary?.label) return text(row.feeStatusSummary.label).toUpperCase();
+  if (row.feeStatusSummary?.label) return compactAttendanceDueLabel(row.feeStatusSummary.label);
   const membership = row.membership || {};
   const status = normalizeFeeStatus(membership.feeStatus || row.feeStatus);
   if (["waived", "complimentary"].includes(status)) return status === "waived" ? "FEE WAIVED" : "COMPLIMENTARY";

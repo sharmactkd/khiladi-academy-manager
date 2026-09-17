@@ -33,6 +33,7 @@ export const getMembershipDisplay = (membership, fallbackDueDate) => {
       tone: "blue",
     };
   }
+  if (membership.feeStatus === "partial") return { label: "Partial", tone: "amber" };
   if (unpaidMonths > 0 || unpaidDays > 0) {
     return {
       label: formatFeeDueBalance(unpaidMonths, unpaidDays).replace("DUE", "Due"),

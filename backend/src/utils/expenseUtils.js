@@ -4,6 +4,16 @@ export const DEFAULT_EXPENSE_CATEGORIES = {
 };
 export const normalizeCategoryName = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
 export const cleanCategoryName = (value) => String(value || "").trim().replace(/\s+/g, " ");
+export const isManualExpenseTransaction = (transaction) => String(transaction?.sourceType || "manual") === "manual" && !transaction?.sourceId;
+export const buildExpenseMutationPayload = (body = {}) => ({
+  type: body.type,
+  category: cleanCategoryName(body.category),
+  amount: Number(body.amount),
+  account: body.account || "cash",
+  date: body.date,
+  branch: body.branch || null,
+  description: String(body.description || "").trim(),
+});
 export const isDefaultCategory = (type, value) => (DEFAULT_EXPENSE_CATEGORIES[type] || []).some((name) => normalizeCategoryName(name) === normalizeCategoryName(value));
 export const parseExpensePagination = (query = {}) => {
   const page = Number.parseInt(query.page, 10), limit = Number.parseInt(query.limit, 10);

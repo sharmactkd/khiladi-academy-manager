@@ -296,12 +296,13 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
     ? clean(identity.importedPaidDate)
     : clean(identity.importedFeePaid);
   const isLinkedStudent = identity.rowType === "student" && Boolean(identity.studentId);
-  const feeStatusSummary = resolveFeeStatus({
+  const hasFeeTruth = Boolean(membership || fee || clean(identity.importedFeeStatus));
+  const feeStatusSummary = hasFeeTruth ? resolveFeeStatus({
     membership,
     payableAmount: fee ? Number(fee.finalAmount ?? fee.amount ?? 0) : null,
     paidAmount: fee ? Number(fee.amountPaid || 0) : null,
-    fallbackStatus: membership?.feeStatus || fee?.status || "due",
-  });
+    fallbackStatus: membership?.feeStatus || fee?.status || identity.importedFeeStatus || "due",
+  }) : null;
 
   return {
     no: identity.importedSerialNo || index + 1,
@@ -337,11 +338,11 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
       fee?.dueDate ||
       null,
     feePaidDate: isLinkedStudent
-      ? formatDisplayDate(normalizedPaidDate) || fee?.paidDate || fee?.paymentDate || null
+      ? fee?.paidDate || fee?.paymentDate || formatDisplayDate(normalizedPaidDate) || null
       : formatDisplayDate(normalizedPaidDate) || fee?.paidDate || fee?.paymentDate || null,
     feePaid: formatDisplayDate(identity.importedFeePaid) || fee?.amountPaid || fee?.amount || "",
     feeStatus: isLinkedStudent
-      ? feeStatusSummary.code
+      ? feeStatusSummary?.code || ""
       : identity.importedFeeStatus || fee?.status || membership?.feeStatus || "",
     feeStatusSummary: isLinkedStudent ? feeStatusSummary : null,
     membership,
