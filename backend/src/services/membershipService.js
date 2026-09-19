@@ -6,6 +6,7 @@ import Student from "../models/Student.js";
 import StudentMembership from "../models/StudentMembership.js";
 import { calculateAccruedUnpaidMonths } from "../utils/membershipMonthlyDue.js";
 import { resolveFeeStatus } from "../utils/feeStatus.js";
+import { queueFeeIntegritySync } from "./automaticFeeIntegrityService.js";
 
 const MEMBERSHIP_FIELDS = [
   "status",
@@ -284,6 +285,8 @@ export const applyMembershipAdjustment = async ({
     createdBy: userId,
   });
 
+  queueFeeIntegritySync(academyId);
+
   return { membership: serializeMembership(membership), adjustment };
 };
 
@@ -327,6 +330,8 @@ export const reverseMembershipAdjustment = async ({ academyId, adjustmentId, use
     createdBy: userId,
     reversalOf: adjustment._id,
   });
+
+  queueFeeIntegritySync(academyId);
 
   return serializeMembership(membership);
 };

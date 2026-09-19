@@ -3,11 +3,12 @@ import mongoose from "mongoose";
 import connectDB from "../src/config/db.js";
 import Attendance from "../src/models/Attendance.js";
 import AttendanceDayNote from "../src/models/AttendanceDayNote.js";
+import AttendanceMonthMetadata from "../src/models/AttendanceMonthMetadata.js";
 import FeePayment from "../src/models/FeePayment.js";
 import Student from "../src/models/Student.js";
 import StudentMembership from "../src/models/StudentMembership.js";
 
-const models = [Student, Attendance, AttendanceDayNote, FeePayment, StudentMembership];
+const models = [Student, Attendance, AttendanceDayNote, AttendanceMonthMetadata, FeePayment, StudentMembership];
 
 let failed = false;
 try {

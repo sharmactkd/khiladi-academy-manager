@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { UploadCloud, FileSpreadsheet, History, Search, RefreshCw } from "lucide-react";
+import { AlertCircle, CalendarDays, Check, ChevronDown, ChevronRight, CircleCheck, FileSpreadsheet, GraduationCap, History, MapPin, Phone, RefreshCw, Search, ShieldCheck, Sparkles, Stethoscope, UploadCloud, UserRound } from "lucide-react";
 import useAuth from "../../hooks/useAuth.js";
 import api from "../../api/api.js";
 import { getDefaultStudentSheet, buildAutoMapping, STUDENT_IMPORT_FIELDS } from "../../utils/studentExcelImport.js";
@@ -14,6 +14,17 @@ const errorText = error => error?.response?.data?.message || error.message || "O
 const emptyResult = () => ({ created: 0, updated: 0, unchanged: 0, attendance: 0, skipped: 0, failed: 0, metadata: 0, errors: [] });
 const pageSize = 50;
 const reviewFields = ["aadhaarNumber", "dateOfBirth", "phone", "email", "schoolName", "className", "section", "collegeName", "occupation", "parentName", "parentPhone", "address", "city", "state", "beltRank", "danRank", "heightCm", "weightKg", "bloodGroup", "medicalConditions", "joiningDate", "notes"];
+const mappingGroups = [
+  { key: "identity", label: "Student identity", hint: "Name and unique student details", icon: UserRound, fields: ["name", "firstName", "lastName", "admissionNumber", "studentCode", "dateOfBirth", "gender", "status", "aadhaarNumber"] },
+  { key: "contact", label: "Contact & parent", hint: "Phone, email and guardian details", icon: Phone, fields: ["phone", "countryCode", "email", "parentName", "parentPhone", "parentCountryCode"] },
+  { key: "training", label: "Training details", hint: "Batch, martial art, belt and joining date", icon: GraduationCap, fields: ["batchName", "martialArt", "beltRank", "danRank", "joiningDate"] },
+  { key: "education", label: "Education & work", hint: "School, class, college and occupation", icon: FileSpreadsheet, fields: ["schoolName", "className", "section", "collegeName", "occupation"] },
+  { key: "location", label: "Address", hint: "Country, state, city and full address", icon: MapPin, fields: ["country", "state", "city", "address"] },
+  { key: "medical", label: "Medical & emergency", hint: "Health and emergency contact details", icon: Stethoscope, fields: ["bloodGroup", "heightCm", "weightKg", "medicalConditions", "notes", "emergencyContactName", "emergencyContactPhone", "emergencyContactCountryCode", "emergencyContactRelation"] },
+];
+const recommendedMappingKeys = new Set(["dateOfBirth", "phone", "joiningDate", "beltRank"]);
+const fieldByKey = Object.fromEntries(STUDENT_IMPORT_FIELDS.map(field => [field.key, field]));
+const monthLabels = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function Imports() {
   const { user } = useAuth();
@@ -24,8 +35,9 @@ export default function Imports() {
   const [months, setMonths] = useState([]), [branches, setBranches] = useState([]), [batches, setBatches] = useState([]), [students, setStudents] = useState([]);
   const [branch, setBranch] = useState(""), [batch, setBatch] = useState(params.get("batch") || "");
   const [phase, setPhase] = useState("setup"), [busy, setBusy] = useState(false), [progress, setProgress] = useState(""), [error, setError] = useState("");
-  const [scope, setScope] = useState("selected"), [selected, setSelected] = useState([]), [decisions, setDecisions] = useState({});
-  const [query, setQuery] = useState(""), [existingQuery, setExistingQuery] = useState(""), [tab, setTab] = useState("all"), [page, setPage] = useState(0);
+  const [scope, setScope] = useState("all"), [selected, setSelected] = useState([]), [decisions, setDecisions] = useState({});
+  const [query, setQuery] = useState(""), [page, setPage] = useState(0);
+  const [scopeQuery, setScopeQuery] = useState("");
   const [policy, setPolicy] = useState("fill-empty"), [duplicateMode, setDuplicateMode] = useState("skip");
   const [importTarget, setImportTarget] = useState("new");
   const [sessions, setSessions] = useState([]), [job, setJob] = useState(null), [result, setResult] = useState(null), [resumePlan, setResumePlan] = useState(null);
@@ -33,6 +45,11 @@ export default function Imports() {
   const [historyDetail, setHistoryDetail] = useState(null);
   const [mappingProfiles, setMappingProfiles] = useState({});
   const [overrides, setOverrides] = useState({});
+  const [mappingQuery, setMappingQuery] = useState("");
+  const [expandedMappingGroups, setExpandedMappingGroups] = useState(() => new Set(["identity", "contact", "training"]));
+  const [expandedIgnoredGroups, setExpandedIgnoredGroups] = useState(() => new Set());
+  const [monthQuery, setMonthQuery] = useState("");
+  const [expandedMonthGroups, setExpandedMonthGroups] = useState(() => new Set());
   const worker = useRef(null), pending = useRef(new Map()), sequence = useRef(0), flight = useRef(false), stop = useRef(false), fileInput = useRef(null), loadedHash = useRef("");
   const draftKey = `operator:${id(user)}:${id(user?.academy)}`;
   useEffect(() => { draftStore(`mappings:${draftKey}`).then(value => setMappingProfiles(value || {})).catch(() => {}); }, [draftKey]);
@@ -74,7 +91,8 @@ export default function Imports() {
       const preferred = getDefaultStudentSheet(data.names);
       const roles = Object.fromEntries(data.names.map(name => [name, isHistoricalAttendanceSheet(name) ? "attendance" : name === preferred ? "record" : "ignore"]));
       setFile(source); setHash(digest); loadedHash.current = digest; setSheetRoles(expected?.plan?.sheetRoles || roles);
-      setRecords({}); setBlocks([]); setResult(null); setPhase("setup"); setSelected([]); setDecisions({}); setQuery(""); setPage(0);
+      setRecords({}); setBlocks([]); setResult(null); setPhase("setup"); setSelected([]); setDecisions({}); setQuery(""); setScopeQuery(""); setPage(0);
+      setMonthQuery(""); setExpandedMonthGroups(new Set());
       if (expected) { setResumePlan(expected); setMode(expected.mode); setBranch(expected.plan.branch); setBatch(expected.plan.batch); setScope(expected.plan.scope); setPolicy(expected.plan.policy); setDuplicateMode(expected.plan.duplicateMode); setOverrides(expected.plan.overrides || {}); setImportTarget(expected.plan.importTarget || "all"); }
       else { setJob(null); setResumePlan(null); setOverrides({}); setImportTarget("new"); setPolicy("keep"); setDuplicateMode("skip"); }
     } catch (e) { setError(errorText(e)); }
@@ -104,7 +122,9 @@ export default function Imports() {
         }
       }
       if (mode !== "students" && !nextBlocks.length) throw new Error("No supported attendance blocks. Nothing imported. Check worksheet roles/layout.");
+      const attendanceYears = [...new Set(nextBlocks.map(block => Number(block.year)))].filter(Number.isFinite).sort((a, b) => b - a);
       setRecords(nextRecords); setBlocks(nextBlocks); setMonths(resumePlan?.plan?.months || nextBlocks.map(block => block.blockId)); setWarnings(notes);
+      setMonthQuery(""); setExpandedMonthGroups(new Set(attendanceYears.slice(0, 2).map(String)));
       setSelected(resumePlan?.plan?.selected || []); setDecisions(resumePlan?.plan?.decisions || {}); setPhase("mapping"); setPage(0);
     } catch (e) { setError(errorText(e)); }
     finally { flight.current = false; setBusy(false); setProgress(""); }
@@ -115,16 +135,60 @@ export default function Imports() {
   const selectedItems = useMemo(() => directoryItems.filter(item => scope === "all" || selected.includes(item.key)), [directoryItems, scope, selected]);
   const suggestions = useMemo(() => Object.fromEntries(selectedItems.map(item => [item.key, suggest(item, students, batch)])), [selectedItems, students, batch]);
   const category = key => decisions[key] === "__skip__" ? "excluded" : decisions[key] === "__new__" ? "new" : decisions[key] ? "matched" : "review";
-  const rows = (phase === "review" ? selectedItems : directoryItems).filter(item => norm(`${item.name} ${item.phone} ${item.row.admissionNumber || ""}`).includes(norm(query)) && (phase !== "review" || tab === "all" || category(item.key) === tab));
+  const decisionItems = selectedItems.filter(item => category(item.key) === "review" || category(item.key) === "new");
+  const matchedItems = selectedItems.filter(item => category(item.key) === "matched");
+  const excludedItems = selectedItems.filter(item => category(item.key) === "excluded");
+  const rows = decisionItems.filter(item => norm(`${item.name} ${item.phone} ${item.row.admissionNumber || ""}`).includes(norm(query)));
+  const scopeRows = directoryItems.filter(item => norm(`${item.name} ${item.phone} ${item.row.admissionNumber || ""}`).includes(norm(scopeQuery)));
   const pages = Math.max(1, Math.ceil(rows.length / pageSize)), currentPage = Math.min(page, pages - 1);
-  const eligibleStudents = students.filter(s => (!s.batch || id(s.batch) === batch) && s.status !== "left" && norm(`${studentName(s)} ${s.phone} ${s.admissionNumber}`).includes(norm(existingQuery)));
+  const eligibleStudents = students.filter(s => (!s.batch || id(s.batch) === batch) && s.status !== "left");
   const unresolved = selectedItems.filter(item => !decisions[item.key]);
   const included = importCandidates(selectedItems, decisions, importTarget);
   const toggle = key => setSelected(values => values.includes(key) ? values.filter(value => value !== key) : [...values, key]);
+  const worksheetNames = Object.keys(sheetRoles);
+  const suggestedRecordSheet = getDefaultStudentSheet(worksheetNames);
+  const suggestedSheetRole = sheet => isHistoricalAttendanceSheet(sheet) ? "attendance" : sheet === suggestedRecordSheet ? "record" : "ignore";
+  const groupedSheets = {
+    attendance: worksheetNames.filter(sheet => sheetRoles[sheet] === "attendance"),
+    record: worksheetNames.filter(sheet => sheetRoles[sheet] === "record"),
+    balance: worksheetNames.filter(sheet => sheetRoles[sheet] === "ignore" && /balance/i.test(sheet)),
+    other: worksheetNames.filter(sheet => sheetRoles[sheet] === "ignore" && !/balance/i.test(sheet)),
+  };
+  const updateSheetRole = (sheet, role) => {
+    setSheetRoles(values => ({ ...values, [sheet]: role }));
+    setSelected([]); setDecisions({});
+  };
+  const acceptSheetSuggestions = () => {
+    setSheetRoles(Object.fromEntries(worksheetNames.map(sheet => [sheet, suggestedSheetRole(sheet)])));
+    setSelected([]); setDecisions({});
+  };
+  const toggleIgnoredGroup = key => setExpandedIgnoredGroups(values => {
+    const next = new Set(values); next.has(key) ? next.delete(key) : next.add(key); return next;
+  });
+  const toggleMappingGroup = key => setExpandedMappingGroups(values => {
+    const next = new Set(values); next.has(key) ? next.delete(key) : next.add(key); return next;
+  });
+  const sortedAttendanceBlocks = useMemo(() => [...blocks].sort((a, b) => Number(b.year) - Number(a.year) || Number(a.month) - Number(b.month) || String(a.sheetName).localeCompare(String(b.sheetName))), [blocks]);
+  const attendanceYears = useMemo(() => [...new Set(sortedAttendanceBlocks.map(block => Number(block.year)))].filter(Number.isFinite), [sortedAttendanceBlocks]);
+  const recentAttendanceYears = attendanceYears.slice(0, 4);
+  const earlierAttendanceYears = attendanceYears.slice(4);
+  const normalizedMonthQuery = monthQuery.trim().toLowerCase();
+  const monthMatches = block => !normalizedMonthQuery || `${monthLabels[Number(block.month)] || block.month} ${block.month} ${block.year} ${block.sheetName}`.toLowerCase().includes(normalizedMonthQuery);
+  const blocksForYear = year => sortedAttendanceBlocks.filter(block => Number(block.year) === Number(year) && monthMatches(block));
+  const earlierBlocks = sortedAttendanceBlocks.filter(block => earlierAttendanceYears.includes(Number(block.year)) && monthMatches(block));
+  const changeMonths = updater => { setMonths(updater); setDecisions({}); setSelected([]); };
+  const toggleMonth = blockId => changeMonths(values => values.includes(blockId) ? values.filter(value => value !== blockId) : [...values, blockId]);
+  const setMonthGroupSelection = (groupBlocks, shouldSelect) => {
+    const ids = new Set(groupBlocks.map(block => block.blockId));
+    changeMonths(values => shouldSelect ? [...new Set([...values, ...ids])] : values.filter(value => !ids.has(value)));
+  };
+  const toggleMonthGroup = key => setExpandedMonthGroups(values => {
+    const next = new Set(values); next.has(String(key)) ? next.delete(String(key)) : next.add(String(key)); return next;
+  });
   const review = async () => {
     if (flight.current) return;
     if (!selectedItems.length) { setError("Select at least one player."); return; }
-    if (resumePlan?._id) { setDecisions(resumePlan.plan.decisions); setPhase("review"); setTab("all"); setQuery(""); setPage(0); setError(""); return; }
+    if (resumePlan?._id) { setDecisions(resumePlan.plan.decisions); setPhase("review"); setQuery(""); setPage(0); setError(""); return; }
     flight.current = true; setBusy(true); setProgress("Checking saved students in your app…"); setError("");
     try {
       const data = unwrap(await api.get("/students"));
@@ -132,7 +196,7 @@ export default function Imports() {
       if (!Array.isArray(savedStudents)) throw new Error("Could not verify saved students. Please try again; no records were created.");
       setStudents(savedStudents);
       setDecisions(prepareImportChoices(selectedItems, savedStudents, batch, decisions));
-      setPhase("review"); setTab("all"); setQuery(""); setExistingQuery(""); setPage(0);
+      setPhase("review"); setQuery(""); setPage(0);
     } catch (e) { setError(errorText(e)); }
     finally { flight.current = false; setBusy(false); setProgress(""); }
   };
@@ -208,12 +272,11 @@ export default function Imports() {
 
   return <div className={styles.page}>
     <header className={styles.heading}><div><span>DATA MANAGEMENT</span><h1>Imports</h1><p>One workspace for student records and attendance. Nothing is saved until you confirm.</p></div><div className={styles.actions}><Link to="/imports/fee-reconciliation">Reconcile imported fees</Link><button disabled={busy} onClick={reset}>New import</button></div></header>
-    <nav className={styles.steps} aria-label="Import stages">{["setup", "mapping", "scope", "review", "confirm", "result"].map((step, i) => <span key={step} aria-current={phase === step ? "step" : undefined}>{i + 1}. {({ setup: "File & sheets", mapping: "Match Excel columns", scope: "Select students", review: "New or existing?", confirm: "Review & import", result: "Result" })[step]}</span>)}</nav>
+    <nav className={styles.steps} aria-label="Import stages">{["setup", "mapping", "review", "confirm", "result"].map((step, i) => <span key={step} aria-current={phase === step ? "step" : undefined}>{i + 1}. {({ setup: "File & sheets", mapping: "Match Excel columns", review: "Select & match students", confirm: "Review & import", result: "Result" })[step]}</span>)}</nav>
     <p className={styles.notice}>{({
       setup: "Choose your file, import type, source sheets and destination branch/batch. Nothing is imported at this step.",
       mapping: "Tell the app which Excel columns contain name, phone, DOB, school, belt and other details. Choose attendance months below when applicable.",
-      scope: "Choose all Excel players or search and select specific players. Excel information is not yet saved in your app.",
-      review: "For each selected Excel player: create a new student, link an existing app student, or exclude. These are only choices, not saved records.",
+      review: "Choose who to import and resolve only unmatched players. Safe matches stay out of the main table and can be reviewed separately. Nothing is saved yet.",
       confirm: "Check the counts and destination. Only the final Import buttons below start saving. Profiles save first, then attendance links to successful student records.",
       result: "Review confirmed successes and failures. Closing this page does not undo data already saved.",
     })[phase]}</p>
@@ -226,51 +289,199 @@ export default function Imports() {
       {hash && sessions.some(session => session.fileHash === hash) && <p className={styles.notice}>This exact workbook was imported before. Review history below; duplicate handling still depends on student/date identity.</p>}
       </section>
       <section className={styles.card}><h2>What do you want to import?</h2><div className={styles.actions}>{[["students", "Student Records"], ["attendance", "Attendance"], ["both", "Records + Attendance"]].map(([value, label]) => <button key={value} aria-pressed={mode === value} disabled={Boolean(resumePlan)} onClick={() => setMode(value)}>{label}</button>)}</div><p>Attendance fee labels are historical information, not payment transactions or receipts.</p></section>
-      {file && <section className={styles.card}><h2>Worksheet classification</h2><div className={styles.sheetGrid}>{Object.entries(sheetRoles).map(([sheet, role]) => <label key={sheet}><span>{sheet}</span><select disabled={Boolean(resumePlan)} value={role} onChange={e => setSheetRoles(values => ({ ...values, [sheet]: e.target.value }))}><option value="record">Student Record</option><option value="attendance">Attendance</option><option value="ignore">Ignore</option></select></label>)}</div><p>Attendance currently supports the historical monthly-table layout. Other formats are rejected with a warning; Balance/REPORT sheets are not payment imports.</p></section>}
+      {file && <section className={`${styles.card} ${styles.classificationCard}`}>
+        <div className={styles.classificationHeader}>
+          <div><h2>Worksheet classification</h2><p>We grouped your worksheets automatically. Review only the sheets that look incorrect.</p></div>
+          <span className={styles.detectedPill}><Sparkles size={14} /> Auto-detected</span>
+        </div>
+        <div className={styles.classificationStats} aria-label="Worksheet classification summary">
+          <span><strong>{groupedSheets.attendance.length}</strong> Attendance</span>
+          <span><strong>{groupedSheets.record.length}</strong> Student record</span>
+          <span><strong>{groupedSheets.balance.length + groupedSheets.other.length}</strong> Ignored</span>
+        </div>
+        <div className={styles.classificationActions}>
+          <button type="button" disabled={Boolean(resumePlan)} onClick={acceptSheetSuggestions}><Sparkles size={15} /> Accept all suggestions</button>
+          <small>Every sheet remains editable before analysis.</small>
+        </div>
+        <div className={styles.sheetGroups}>
+          {[{ key: "attendance", label: "Attendance sheets", icon: CalendarDays }, { key: "record", label: "Student record sheets", icon: UserRound }].map(group => {
+            const Icon = group.icon;
+            return <article key={group.key} className={styles.sheetRoleCard}>
+              <header><span className={styles.sheetGroupIcon}><Icon size={18} /></span><div><strong>{group.label}</strong><small>{groupedSheets[group.key].length} worksheet{groupedSheets[group.key].length === 1 ? "" : "s"}</small></div></header>
+              <div className={styles.sheetRoleList}>{groupedSheets[group.key].length ? groupedSheets[group.key].map(sheet => <div key={sheet} className={styles.sheetRoleRow}>
+                <span className={styles.sheetName}><FileSpreadsheet size={16} /><strong>{sheet}</strong></span>
+                <select aria-label={`Role for ${sheet}`} disabled={Boolean(resumePlan)} value={sheetRoles[sheet]} onChange={e => updateSheetRole(sheet, e.target.value)}><option value="record">Student Record</option><option value="attendance">Attendance</option><option value="ignore">Ignore</option></select>
+                <span className={sheetRoles[sheet] === suggestedSheetRole(sheet) ? styles.detectedBadge : styles.changedBadge}>{sheetRoles[sheet] === suggestedSheetRole(sheet) ? <><Check size={12} /> Detected</> : "Changed"}</span>
+              </div>) : <p className={styles.emptySheetGroup}>No worksheet assigned here.</p>}</div>
+            </article>;
+          })}
+          {[{ key: "balance", label: "Balance sheets", hint: "Not treated as payment imports" }, { key: "other", label: "Other ignored sheets", hint: "Reports and unsupported layouts" }].map(group => <article key={group.key} className={`${styles.sheetRoleCard} ${styles.ignoredSheetCard}`}>
+            <button type="button" className={styles.ignoredGroupButton} onClick={() => toggleIgnoredGroup(group.key)} aria-expanded={expandedIgnoredGroups.has(group.key)}>
+              <span>{expandedIgnoredGroups.has(group.key) ? <ChevronDown size={17} /> : <ChevronRight size={17} />}<ShieldCheck size={18} /><span><strong>{group.label}</strong><small>{group.hint}</small></span></span><b>{groupedSheets[group.key].length}</b>
+            </button>
+            {expandedIgnoredGroups.has(group.key) && <div className={styles.sheetRoleList}>{groupedSheets[group.key].length ? groupedSheets[group.key].map(sheet => <div key={sheet} className={styles.sheetRoleRow}>
+              <span className={styles.sheetName}><FileSpreadsheet size={16} /><strong>{sheet}</strong></span>
+              <select aria-label={`Role for ${sheet}`} disabled={Boolean(resumePlan)} value={sheetRoles[sheet]} onChange={e => updateSheetRole(sheet, e.target.value)}><option value="record">Student Record</option><option value="attendance">Attendance</option><option value="ignore">Ignore</option></select>
+              <span className={styles.mutedBadge}>Ignored</span>
+            </div>) : <p className={styles.emptySheetGroup}>No worksheets in this group.</p>}</div>}
+          </article>)}
+        </div>
+        <p className={styles.classificationNote}><AlertCircle size={15} /> Attendance supports the historical monthly-table layout. Balance/REPORT sheets are never imported as fee payments or receipts.</p>
+      </section>}
       <section className={styles.card}><h2>Destination</h2><div className={styles.actions}><label>Branch<select disabled={Boolean(resumePlan)} value={branch} onChange={e => { setBranch(e.target.value); setBatch(""); }}><option value="">Select branch</option>{branches.map(item => <option key={id(item)} value={id(item)}>{item.branchName}</option>)}</select></label><Link to="/branches/new" target="_blank" rel="noreferrer">Add new branch ↗</Link><label>Batch<select disabled={Boolean(resumePlan)} value={batch} onChange={e => setBatch(e.target.value)}><option value="">Select batch</option>{batchOptions.map(item => <option key={id(item)} value={id(item)}>{item.batchName}</option>)}</select></label><Link to="/batches/new" target="_blank" rel="noreferrer">Add new batch ↗</Link><button onClick={() => refresh().catch(e => setError(errorText(e)))}><RefreshCw size={15} /> Refresh lists</button></div><p>New branches/batches use their existing validated forms. Return here and refresh after creating them.</p></section>
       <button className={styles.primary} disabled={!file || !batch} onClick={analyze}>Analyse selected sheets</button>
     </>}
     {phase === "mapping" && <>
-      {Object.entries(records).map(([sheet, data]) => <section key={sheet} className={styles.card}><h2>{sheet} — match Excel columns</h2><p>Choose which Excel column supplies each student field. This does not match students to app records. Use Ignore / unavailable when the file has no value for a field.</p><label>Header row<input type="number" min="1" max={data.grid.length} value={data.headerIndex + 1} onChange={e => { const index = Math.max(0, Math.min(data.grid.length - 1, Number(e.target.value) - 1)); setRecords(all => ({ ...all, [sheet]: { ...data, headerIndex: index, mapping: buildAutoMapping(data.grid[index] || []) } })); setSelected([]); setDecisions({}); }} /></label><div className={styles.mapping}>{STUDENT_IMPORT_FIELDS.map(field => <label key={field.key}>{field.label}<select className={data.mapping[field.key] === undefined || data.mapping[field.key] === "" ? styles.unmapped : ""} value={data.mapping[field.key] ?? ""} onChange={e => { setRecords(all => ({ ...all, [sheet]: { ...data, mapping: { ...data.mapping, [field.key]: e.target.value } } })); setSelected([]); setDecisions({}); }}><option value="">Ignore / unavailable</option>{(data.grid[data.headerIndex] || []).map((header, index) => <option key={index} value={index}>{String(header || `Column ${index + 1}`)}</option>)}</select></label>)}</div><details><summary>First 5 source rows</summary><div className={styles.table}><table><tbody>{data.grid.slice(data.headerIndex + 1, data.headerIndex + 6).map((row, i) => <tr key={i}>{row.slice(0, 10).map((value, j) => <td key={j}>{String(value ?? "")}</td>)}</tr>)}</tbody></table></div></details></section>)}
-      {blocks.length > 0 && <section className={styles.card}><h2>Attendance months</h2><div className={styles.actions}>{blocks.map(block => <label key={block.blockId}><input type="checkbox" checked={months.includes(block.blockId)} onChange={() => { setMonths(values => values.includes(block.blockId) ? values.filter(value => value !== block.blockId) : [...values, block.blockId]); setDecisions({}); setSelected([]); }} />{block.sheetName}: {block.month}/{block.year}</label>)}</div></section>}
-      <div className={styles.actions}><button onClick={() => setPhase("setup")}>Back to file & sheets</button><button onClick={saveMappings}>Save mapping profile</button><button className={styles.primary} disabled={!directoryItems.length} onClick={() => { setPhase("scope"); setQuery(""); setPage(0); }}>Continue: select students</button></div>
-    </>}
-    {phase === "scope" && <>
-      <section className={styles.card}><h2>Which students do you want to import?</h2><div className={styles.actions}><button aria-pressed={scope === "all"} onClick={() => setScope("all")}>All players</button><button aria-pressed={scope === "selected"} onClick={() => setScope("selected")}>Individual / multiple players</button><strong>{selectedItems.length} selected / {directoryItems.length} source identities</strong></div><p>Repeated attendance identities are grouped. Identical names without identifiers may represent different people—review before creating records.</p></section>
-    </>}
-    {(phase === "scope" || phase === "review") && <section className={`${styles.card} ${styles.matchingCard}`}>
-      <h2>{phase === "review" ? "Create new or link existing students" : "Students found in your Excel"}</h2>
-      {phase === "review" && <>
-        {!students.length && !resumePlan?._id && <div className={styles.emptyAppNotice} role="status"><strong>Your app has no saved students.</strong><p>Selected Excel players are set to Create new student. No student is saved yet. You can exclude any player; saving starts only after the final Import button.</p></div>}
-        <div className={styles.matchTabs} aria-label="Filter student matching results">
-          {["all", "matched", "review", "new", "excluded"].map(value => <button type="button" key={value} aria-pressed={tab === value} onClick={() => { setTab(value); setPage(0); }}>
-            {({all:"All Excel players",matched:"Existing app students",review:"Identity needs review",new:"New students to create",excluded:"Excluded"})[value]}
-            <span>{value === "all" ? selectedItems.length : selectedItems.filter(item => category(item.key) === value).length}</span>
-          </button>)}
+      {Object.entries(records).map(([sheet, data]) => {
+        const mappedCount = STUDENT_IMPORT_FIELDS.filter(field => data.mapping[field.key] !== undefined && data.mapping[field.key] !== "").length;
+        const nameReady = (data.mapping.name !== undefined && data.mapping.name !== "") || ((data.mapping.firstName !== undefined && data.mapping.firstName !== "") && (data.mapping.lastName !== undefined && data.mapping.lastName !== ""));
+        const recommendedMissing = [...recommendedMappingKeys].filter(key => data.mapping[key] === undefined || data.mapping[key] === "").length;
+        const searchValue = mappingQuery.trim().toLowerCase();
+        const updateMapping = (key, value) => { setRecords(all => ({ ...all, [sheet]: { ...data, mapping: { ...data.mapping, [key]: value } } })); setSelected([]); setDecisions({}); };
+        const autoMap = () => { setRecords(all => ({ ...all, [sheet]: { ...data, mapping: buildAutoMapping(data.grid[data.headerIndex] || []) } })); setSelected([]); setDecisions({}); };
+        return <section key={sheet} className={`${styles.card} ${styles.mappingCard}`}>
+          <div className={styles.mappingHeader}>
+            <div><span className={styles.eyebrow}>EXCEL COLUMN MAPPING</span><h2>{sheet} — match Excel columns</h2><p>Match each app field with its Excel column. Optional fields can safely stay ignored.</p></div>
+            <label className={styles.headerRowControl}>Header row<input type="number" min="1" max={data.grid.length} value={data.headerIndex + 1} onChange={e => { const index = Math.max(0, Math.min(data.grid.length - 1, Number(e.target.value) - 1)); setRecords(all => ({ ...all, [sheet]: { ...data, headerIndex: index, mapping: buildAutoMapping(data.grid[index] || []) } })); setSelected([]); setDecisions({}); }} /></label>
+          </div>
+          <div className={styles.mappingSummary}>
+            <span className={styles.summaryMapped}><CircleCheck size={16} /><strong>{mappedCount}</strong> mapped</span>
+            <span className={recommendedMissing ? styles.summaryRecommended : styles.summaryMapped}><AlertCircle size={16} /><strong>{recommendedMissing}</strong> recommended checks</span>
+            <span className={nameReady ? styles.summaryReady : styles.summaryRequired}><ShieldCheck size={16} />{nameReady ? "Required identity ready" : "Name mapping required"}</span>
+          </div>
+          <label className={styles.mappingSearch}><Search size={17} /><input value={mappingQuery} onChange={e => setMappingQuery(e.target.value)} placeholder="Search app fields…" aria-label="Search mapping fields" /></label>
+          <div className={styles.mappingGroups}>{mappingGroups.map(group => {
+            const Icon = group.icon;
+            const fields = group.fields.map(key => fieldByKey[key]).filter(Boolean).filter(field => !searchValue || field.label.toLowerCase().includes(searchValue));
+            if (searchValue && !fields.length) return null;
+            const expanded = searchValue || expandedMappingGroups.has(group.key);
+            const groupMapped = group.fields.filter(key => data.mapping[key] !== undefined && data.mapping[key] !== "").length;
+            return <article key={group.key} className={styles.mappingGroup}>
+              <button type="button" className={styles.mappingGroupHeader} onClick={() => toggleMappingGroup(group.key)} aria-expanded={Boolean(expanded)}>
+                <span className={styles.mappingGroupTitle}><span className={styles.mappingGroupIcon}><Icon size={18} /></span><span><strong>{group.label}</strong><small>{group.hint}</small></span></span>
+                <span className={styles.mappingGroupCount}>{groupMapped}/{group.fields.length}{expanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}</span>
+              </button>
+              {expanded && <div className={styles.mappingRows}>
+                <div className={styles.mappingColumnHead}><span>App field</span><span>Excel column</span><span>Status</span></div>
+                {fields.map(field => {
+                  const mapped = data.mapping[field.key] !== undefined && data.mapping[field.key] !== "";
+                  const requiredMissing = field.key === "name" && !nameReady;
+                  return <div key={field.key} className={styles.mappingRow}>
+                    <span className={styles.mappingField}><strong>{field.label}</strong>{field.key === "name" ? <small>Required unless first + last name are mapped</small> : recommendedMappingKeys.has(field.key) ? <small>Recommended</small> : <small>Optional</small>}</span>
+                    <select aria-label={`Excel column for ${field.label}`} className={!mapped && requiredMissing ? styles.unmapped : ""} value={data.mapping[field.key] ?? ""} onChange={e => updateMapping(field.key, e.target.value)}><option value="">Ignore / unavailable</option>{(data.grid[data.headerIndex] || []).map((header, index) => <option key={index} value={index}>{String(header || `Column ${index + 1}`)}</option>)}</select>
+                    <span className={mapped ? styles.statusMapped : requiredMissing ? styles.statusRequired : styles.statusOptional}>{mapped ? <><Check size={12} /> Mapped</> : requiredMissing ? "Required" : "Optional"}</span>
+                  </div>;
+                })}
+              </div>}
+            </article>;
+          })}</div>
+          <div className={styles.mappingFooter}><button type="button" onClick={autoMap}><Sparkles size={15} /> Auto-map again</button><small>Manual selections remain editable until import starts.</small></div>
+          <details className={styles.sourcePreview}><summary>Preview first 5 source rows</summary><div className={styles.table}><table><tbody>{data.grid.slice(data.headerIndex + 1, data.headerIndex + 6).map((row, i) => <tr key={i}>{row.slice(0, 10).map((value, j) => <td key={j}>{String(value ?? "")}</td>)}</tr>)}</tbody></table></div></details>
+        </section>;
+      })}
+      {blocks.length > 0 && <section className={`${styles.card} ${styles.monthsCard}`}>
+        <div className={styles.monthsHeader}>
+          <div className={styles.monthsTitle}><span><CalendarDays size={21} /></span><div><h2>Attendance months</h2><p>Choose the months you want to import.</p></div></div>
+          <div className={styles.monthsHeaderActions}>
+            <label className={styles.monthSearch}><Search size={16} /><input value={monthQuery} onChange={e => setMonthQuery(e.target.value)} placeholder="Find month or year" aria-label="Find attendance month or year" /></label>
+            <button type="button" onClick={() => changeMonths([])} disabled={!months.length}>Clear all</button>
+            <button type="button" className={styles.primary} onClick={() => changeMonths(sortedAttendanceBlocks.map(block => block.blockId))} disabled={months.length === sortedAttendanceBlocks.length}>Select all</button>
+          </div>
         </div>
-        <div className={styles.matchFilters}>
-          <label>What should be imported?<select value={importTarget} disabled={Boolean(job)} onChange={e => { setImportTarget(e.target.value); if (e.target.value === "all") { setPolicy("overwrite"); setDuplicateMode("overwrite"); } else { setPolicy("keep"); setDuplicateMode("skip"); } }}><option value="new">Only new students + their selected attendance</option><option value="all">New + existing students (update selected data)</option></select></label>
-          <label>Existing profile policy<select value={policy} onChange={e => setPolicy(e.target.value)} disabled={Boolean(job) || mode === "attendance" || importTarget === "new"}><option value="fill-empty">Fill blank supported fields only</option><option value="keep">Keep existing profile unchanged</option><option value="review">Review and select individual fields</option><option value="overwrite">Replace supported fields supplied in Excel</option></select></label>
-          <label>Existing attendance<select value={duplicateMode} onChange={e => setDuplicateMode(e.target.value)} disabled={Boolean(job)}><option value="skip">Skip existing marks (fill missing metadata)</option><option value="overwrite">Replace marks and imported metadata</option></select></label>
-          {students.length > 0 && <label>Find existing app student<span className={styles.matchSearch}><Search size={17} aria-hidden="true" /><input placeholder="Search existing student…" aria-label="Find existing student" value={existingQuery} onChange={e => setExistingQuery(e.target.value)} /></span></label>}
+        <div className={styles.monthsSummary}>
+          <span><strong>{blocks.length}</strong> months found</span>
+          <span className={styles.monthsSelected}><CircleCheck size={15} /><strong>{months.length}</strong> selected</span>
+          <span>{attendanceYears.length ? `${Math.min(...attendanceYears)}–${Math.max(...attendanceYears)}` : "—"}</span>
+          <span className={styles.monthsWarning}><AlertCircle size={15} /> Only attendance marks are imported. Balance and fee labels are not treated as payments.</span>
         </div>
-        <p className={styles.matchHelp}>{importTarget === "new" ? "Only NEW identities will be imported. Existing students and their attendance will not be changed. " : "Selected existing profiles/attendance may be replaced according to the policies above. Blank Excel fields do not erase saved data; identity, status and unselected data are preserved. "}Ambiguous identities require review. Attendance-only mode keeps existing profiles unchanged. New attendance-only profiles are inactive/incomplete; look under All / Inactive students after import. Records save before attendance; closing does not undo saved data.</p>
-      </>}
-      <div className={styles.matchToolbar}>
-        <label className={styles.workbookSearch}>Find workbook player<span className={styles.matchSearch}><Search size={17} aria-hidden="true" /><input aria-label="Search workbook players" placeholder="Search name, phone or admission…" value={query} onChange={e => { setQuery(e.target.value); setPage(0); }} /></span></label>
-        {phase === "review" && unresolved.length > 0 && <button type="button" className={styles.stageButton} disabled={Boolean(job)} onClick={() => setDecisions(values => ({ ...values, ...Object.fromEntries(unresolved.map(item => [item.key, "__new__"])) }))}>Create new students for unmatched players ({unresolved.length})</button>}
-        {phase === "scope" && scope === "selected" && <><button onClick={() => setSelected(values => [...new Set([...values, ...rows.map(item => item.key)])])}>Select search results</button><button onClick={() => setSelected([])}>Clear selection</button></>}
+        <div className={styles.monthYearGroups}>
+          {recentAttendanceYears.map(year => {
+            const allYearBlocks = sortedAttendanceBlocks.filter(block => Number(block.year) === Number(year));
+            const visibleYearBlocks = blocksForYear(year);
+            if (normalizedMonthQuery && !visibleYearBlocks.length) return null;
+            const selectedCount = allYearBlocks.filter(block => months.includes(block.blockId)).length;
+            const allSelected = selectedCount === allYearBlocks.length;
+            const expanded = Boolean(normalizedMonthQuery) || expandedMonthGroups.has(String(year));
+            return <article key={year} className={styles.monthYearGroup}>
+              <div className={styles.monthYearHeader}>
+                <button type="button" className={styles.monthExpandButton} onClick={() => toggleMonthGroup(year)} aria-expanded={expanded}>{expanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}</button>
+                <label className={styles.monthYearCheck}><input type="checkbox" checked={allSelected} onChange={() => setMonthGroupSelection(allYearBlocks, !allSelected)} /><strong>{year}</strong></label>
+                <span>{selectedCount} of {allYearBlocks.length} selected</span>
+              </div>
+              {expanded && <div className={styles.monthTiles}>{visibleYearBlocks.map(block => <label key={block.blockId} className={`${styles.monthTile} ${months.includes(block.blockId) ? styles.monthTileSelected : ""}`}>
+                <input type="checkbox" checked={months.includes(block.blockId)} onChange={() => toggleMonth(block.blockId)} />
+                <span><strong>{monthLabels[Number(block.month)] || `Month ${block.month}`}</strong><small>{block.sheetName}</small></span>
+              </label>)}</div>}
+            </article>;
+          })}
+          {earlierAttendanceYears.length > 0 && (!normalizedMonthQuery || earlierBlocks.length > 0) && (() => {
+            const allEarlierBlocks = sortedAttendanceBlocks.filter(block => earlierAttendanceYears.includes(Number(block.year)));
+            const selectedCount = allEarlierBlocks.filter(block => months.includes(block.blockId)).length;
+            const allSelected = selectedCount === allEarlierBlocks.length;
+            const expanded = Boolean(normalizedMonthQuery) || expandedMonthGroups.has("earlier");
+            return <article className={styles.monthYearGroup}>
+              <div className={styles.monthYearHeader}>
+                <button type="button" className={styles.monthExpandButton} onClick={() => toggleMonthGroup("earlier")} aria-expanded={expanded}>{expanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}</button>
+                <label className={styles.monthYearCheck}><input type="checkbox" checked={allSelected} onChange={() => setMonthGroupSelection(allEarlierBlocks, !allSelected)} /><strong>Earlier years ({Math.min(...earlierAttendanceYears)}–{Math.max(...earlierAttendanceYears)})</strong></label>
+                <span>{selectedCount} of {allEarlierBlocks.length} selected</span>
+              </div>
+              {expanded && <div className={styles.earlierYears}>{earlierAttendanceYears.map(year => {
+                const yearBlocks = blocksForYear(year);
+                if (!yearBlocks.length) return null;
+                return <div key={year} className={styles.earlierYear}><strong>{year}</strong><div className={styles.monthTiles}>{yearBlocks.map(block => <label key={block.blockId} className={`${styles.monthTile} ${months.includes(block.blockId) ? styles.monthTileSelected : ""}`}><input type="checkbox" checked={months.includes(block.blockId)} onChange={() => toggleMonth(block.blockId)} /><span><strong>{monthLabels[Number(block.month)] || `Month ${block.month}`}</strong><small>{block.sheetName}</small></span></label>)}</div></div>;
+              })}</div>}
+            </article>;
+          })()}
+        </div>
+        {normalizedMonthQuery && !recentAttendanceYears.some(year => blocksForYear(year).length) && !earlierBlocks.length && <p className={styles.emptyMonthSearch}>No attendance month matches “{monthQuery}”.</p>}
+      </section>}
+      <div className={styles.actions}><button onClick={() => setPhase("setup")}>Back to file & sheets</button><button onClick={saveMappings}>Save mapping profile</button><button className={styles.primary} disabled={!directoryItems.length} onClick={review}>Continue: select & match students</button></div>
+    </>}
+    {phase === "review" && <>
+    <section className={`${styles.card} ${styles.studentScopeCard}`}>
+      <div className={styles.studentScopeHeader}><div><h2>Select students to import</h2><p>Import everyone, or open the individual picker to choose specific workbook players.</p></div><strong>{selectedItems.length} of {directoryItems.length} selected</strong></div>
+      <div className={styles.scopeChoiceRow}>
+        <button type="button" aria-pressed={scope === "all"} onClick={() => { setScope("all"); setPage(0); }}>Import all players</button>
+        <button type="button" aria-pressed={scope === "selected"} onClick={() => { setScope("selected"); if (!selected.length) setSelected(directoryItems.map(item => item.key)); setPage(0); }}>Choose individual players</button>
       </div>
-      <div className={`${styles.table} ${styles.matchingTable}`}><table><colgroup>{phase === "review" ? <><col style={{ width: "22%" }} /><col style={{ width: "34%" }} /><col style={{ width: "12%" }} /><col style={{ width: "32%" }} /></> : <><col style={{ width: "7%" }} /><col style={{ width: "25%" }} /><col style={{ width: "52%" }} /><col style={{ width: "16%" }} /></>}</colgroup><thead><tr>{phase === "scope" && <th>Select</th>}<th>Player</th><th>Information in Excel</th><th>Attendance cells</th>{phase === "review" && <th>Create new or link existing student</th>}</tr></thead><tbody>{rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(item => <tr key={item.key} onClick={e => { if (phase === "scope" && scope === "selected" && !e.target.closest("input,button,select,details")) toggle(item.key); }}>
-        {phase === "scope" && <td><input aria-label={`Select ${item.name}`} type="checkbox" disabled={scope === "all"} checked={scope === "all" || selected.includes(item.key)} onChange={() => toggle(item.key)} /></td>}<td><strong>{item.name}</strong><small>{item.phone || "No phone"}</small></td><td><span className={item.record ? styles.badge : styles.warnBadge}>{item.record ? "Details found in Excel" : "Only attendance found in Excel"}</span><small>{item.sources.join(", ")}</small><small>{[item.row.schoolName, item.row.beltRank, item.row.dateOfBirth].filter(Boolean).join(" · ")}</small></td><td>{item.attendance.reduce((sum, row) => sum + (row.attendance?.length || 0), 0)}</td>
-        {phase === "review" && <td><small>{!students.length && !resumePlan?._id ? "No saved students in your app" : suggestions[item.key]?.reason}</small><select disabled={Boolean(job)} className={!decisions[item.key] ? styles.unmapped : decisions[item.key] === "__new__" ? styles.newStudentChoice : ""} value={decisions[item.key] || ""} onChange={e => setDecisions(values => ({ ...values, [item.key]: e.target.value }))}>{students.length > 0 && <option value="">Choose: create new or link existing</option>}<option value="__new__">Create new student record</option><option value="__skip__">Exclude this player</option>{students.filter(s => id(s) === decisions[item.key] || eligibleStudents.includes(s)).filter(s => id(s) === decisions[item.key] || !Object.entries(decisions).some(([key, value]) => key !== item.key && value === id(s))).sort((a, b) => studentName(a).trim().localeCompare(studentName(b).trim(), "en", { sensitivity: "base", numeric: true })).map(s => <option key={id(s)} value={id(s)}>{studentName(s)} · {s.phone || s.admissionNumber}</option>)}</select>{decisions[item.key] === "__new__" && <small>{item.record ? "Available mapped Excel details will create a new profile on Import." : "Only available name/details will create an inactive, incomplete profile on Import. Complete it later from Edit Student."}</small>}</td>}
-      </tr>)}</tbody></table></div>{!rows.length && <p>No players found. Check the chosen sheets and Name mapping.</p>}<div className={styles.actions}><button disabled={!currentPage} onClick={() => setPage(currentPage - 1)}>Previous</button><span>Page {currentPage + 1} / {pages}</span><button disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>Next</button></div>
-    </section>}
-    {phase === "review" && policy === "review" && mode !== "attendance" && <section className={styles.card}><h2>Review profile changes — current table page</h2><p>Only checked fields will be replaced. Names/admission identifiers are never changed here. Medical arrays and other hidden fields should be reviewed in Edit Student.</p>{rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(item => { const existing = students.find(s => id(s) === decisions[item.key]); if (!existing) return null; const fields = reviewFields.filter(field => field !== "medicalConditions" && item.row[field] !== undefined && String(item.row[field]).trim() && !/^[—–-]+$/.test(String(item.row[field]).trim())); return <details key={item.key}><summary>{item.name} → {studentName(existing)} ({overrides[item.key]?.length || 0} fields selected)</summary><div className={styles.table}><table><thead><tr><th>Replace</th><th>Field</th><th>Existing</th><th>Excel</th></tr></thead><tbody>{fields.map(field => <tr key={field}><td><input type="checkbox" disabled={Boolean(job)} checked={overrides[item.key]?.includes(field) || false} onChange={() => setOverrides(values => { const current = values[item.key] || []; return { ...values, [item.key]: current.includes(field) ? current.filter(value => value !== field) : [...current, field] }; })} /></td><td>{field}</td><td>{String(existing[field] ?? "Empty")}</td><td>{String(item.row[field])}</td></tr>)}</tbody></table></div></details>; })}</section>}
+      {scope === "selected" && <div className={styles.scopePicker}>
+        <div className={styles.scopePickerToolbar}>
+          <label className={styles.matchSearch}><Search size={16} /><input value={scopeQuery} onChange={e => setScopeQuery(e.target.value)} placeholder="Search workbook players…" aria-label="Search workbook players to select" /></label>
+          <button type="button" onClick={() => setSelected(values => [...new Set([...values, ...scopeRows.map(item => item.key)])])}>Select search results</button>
+          <button type="button" onClick={() => setSelected(values => values.filter(key => !scopeRows.some(item => item.key === key)))}>Clear search results</button>
+        </div>
+        <div className={styles.scopePlayerGrid}>{scopeRows.map(item => <label key={item.key} className={selected.includes(item.key) ? styles.scopePlayerSelected : ""}><input type="checkbox" checked={selected.includes(item.key)} onChange={() => toggle(item.key)} /><span><strong>{item.name}</strong><small>{item.phone || item.row.admissionNumber || "No identifier"}</small></span></label>)}</div>
+        {!scopeRows.length && <p className={styles.emptyMonthSearch}>No workbook player matches “{scopeQuery}”.</p>}
+      </div>}
+    </section>
+    <section className={`${styles.card} ${styles.matchingCard} ${styles.decisionCard}`}>
+      <div className={styles.decisionHeader}><div><h2>Players requiring your decision</h2><p>Only unmatched, new or conflicting identities appear in this table. Automatically matched players are hidden below.</p></div>{unresolved.length > 0 && <button type="button" className={styles.stageButton} disabled={Boolean(job)} onClick={() => setDecisions(values => ({ ...values, ...Object.fromEntries(unresolved.map(item => [item.key, "__new__"])) }))}>Create all unresolved as new ({unresolved.length})</button>}</div>
+      <>
+        {!students.length && !resumePlan?._id && <div className={styles.emptyAppNotice} role="status"><strong>Your app has no saved students.</strong><p>Selected Excel players are set to Create new student. No student is saved yet. You can exclude any player; saving starts only after the final Import button.</p></div>}
+        <div className={styles.decisionStats}>
+          <span><strong>{selectedItems.length}</strong> selected</span><span className={styles.matchStat}><strong>{matchedItems.length}</strong> safely matched</span><span className={styles.reviewStat}><strong>{unresolved.length}</strong> need decision</span><span><strong>{decisionItems.filter(item => category(item.key) === "new").length}</strong> new</span><span><strong>{excludedItems.length}</strong> excluded</span>
+        </div>
+      </>
+      <div className={styles.matchToolbar}>
+        <label className={styles.workbookSearch}>Find unmatched player<span className={styles.matchSearch}><Search size={17} aria-hidden="true" /><input aria-label="Search unmatched workbook players" placeholder="Search name, phone or admission…" value={query} onChange={e => { setQuery(e.target.value); setPage(0); }} /></span></label>
+      </div>
+      <div className={`${styles.table} ${styles.matchingTable}`}><table><colgroup><col style={{ width: "22%" }} /><col style={{ width: "34%" }} /><col style={{ width: "12%" }} /><col style={{ width: "32%" }} /></colgroup><thead><tr><th>Player</th><th>Information in Excel</th><th>Attendance cells</th><th>Create new, link or exclude</th></tr></thead><tbody>{rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(item => <tr key={item.key}>
+        <td><strong>{item.name}</strong><small>{item.phone || "No phone"}</small></td><td><span className={item.record ? styles.badge : styles.warnBadge}>{item.record ? "Student record found in Excel" : "Only attendance found in Excel"}</span><small>{item.sources.join(", ")}</small><small>{[item.row.schoolName, item.row.beltRank, item.row.dateOfBirth].filter(Boolean).join(" · ")}</small></td><td>{item.attendance.reduce((sum, row) => sum + (row.attendance?.length || 0), 0)}</td>
+        <td><small>{!students.length && !resumePlan?._id ? "No saved students in your app" : suggestions[item.key]?.reason}</small><select disabled={Boolean(job)} className={!decisions[item.key] ? styles.unmapped : decisions[item.key] === "__new__" ? styles.newStudentChoice : ""} value={decisions[item.key] || ""} onChange={e => setDecisions(values => ({ ...values, [item.key]: e.target.value }))}>{students.length > 0 && <option value="">Choose: create new or link existing</option>}<option value="__new__">Create new student record</option><option value="__skip__">Exclude this player</option>{students.filter(s => id(s) === decisions[item.key] || eligibleStudents.includes(s)).filter(s => id(s) === decisions[item.key] || !Object.entries(decisions).some(([key, value]) => key !== item.key && value === id(s))).sort((a, b) => studentName(a).trim().localeCompare(studentName(b).trim(), "en", { sensitivity: "base", numeric: true })).map(s => <option key={id(s)} value={id(s)}>{studentName(s)} · {s.phone || s.admissionNumber}</option>)}</select>{decisions[item.key] === "__new__" && <small>{item.record ? "Available mapped Excel details will create a new profile on Import." : "Only available name/details will create an inactive, incomplete profile on Import. Complete it later from Edit Student."}</small>}</td>
+      </tr>)}</tbody></table></div>{!rows.length && <div className={styles.allResolved}><CircleCheck size={19} /><div><strong>{decisionItems.length ? "No player matches this search." : "All selected players are resolved."}</strong><p>{decisionItems.length ? "Try another name, phone or admission number." : "Safe matches are available in the optional review panel below."}</p></div></div>}<div className={styles.actions}><button disabled={!currentPage} onClick={() => setPage(currentPage - 1)}>Previous</button><span>Page {currentPage + 1} / {pages}</span><button disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>Next</button></div>
+    </section>
+    {matchedItems.length > 0 && <details className={`${styles.card} ${styles.matchedReview}`}><summary><span><CircleCheck size={17} /> Automatically matched players <b>{matchedItems.length}</b></span><small>Optional review</small></summary><p>These identities matched safely by admission number or exact name and phone. Use Change if a match looks wrong.</p><div className={styles.table}><table><thead><tr><th>Excel player</th><th>Matched app student</th><th>Reason</th><th>Action</th></tr></thead><tbody>{matchedItems.map(item => { const existing = students.find(student => id(student) === decisions[item.key]); return <tr key={item.key}><td><strong>{item.name}</strong><small>{item.phone || "No phone"}</small></td><td>{existing ? studentName(existing) : "Saved match"}<small>{existing?.phone || existing?.admissionNumber || ""}</small></td><td>{suggestions[item.key]?.reason || "Previously confirmed match"}</td><td><button type="button" disabled={Boolean(job)} onClick={() => { setDecisions(values => ({ ...values, [item.key]: "" })); setPage(0); }}>Change</button></td></tr>; })}</tbody></table></div></details>}
+    {excludedItems.length > 0 && <details className={`${styles.card} ${styles.excludedReview}`}><summary>Excluded players ({excludedItems.length})</summary><div className={styles.scopePlayerGrid}>{excludedItems.map(item => <div key={item.key}><span><strong>{item.name}</strong><small>{item.phone || "No identifier"}</small></span><button type="button" disabled={Boolean(job)} onClick={() => setDecisions(values => ({ ...values, [item.key]: "" }))}>Restore</button></div>)}</div></details>}
+    <details className={`${styles.card} ${styles.advancedImport}`}><summary>Advanced import settings</summary><p>Defaults protect existing profiles and attendance. Change these only when you intentionally want to update saved students.</p><div className={styles.matchFilters}>
+      <label>What should be imported?<select value={importTarget} disabled={Boolean(job)} onChange={e => { setImportTarget(e.target.value); if (e.target.value === "all") { setPolicy("overwrite"); setDuplicateMode("overwrite"); } else { setPolicy("keep"); setDuplicateMode("skip"); } }}><option value="new">Only new students + their selected attendance</option><option value="all">New + existing students (update selected data)</option></select></label>
+      <label>Existing profile policy<select value={policy} onChange={e => setPolicy(e.target.value)} disabled={Boolean(job) || mode === "attendance" || importTarget === "new"}><option value="fill-empty">Fill blank supported fields only</option><option value="keep">Keep existing profile unchanged</option><option value="review">Review and select individual fields</option><option value="overwrite">Replace supported fields supplied in Excel</option></select></label>
+      <label>Existing attendance<select value={duplicateMode} onChange={e => setDuplicateMode(e.target.value)} disabled={Boolean(job)}><option value="skip">Skip existing marks (fill missing metadata)</option><option value="overwrite">Replace marks and imported metadata</option></select></label>
+    </div><p className={styles.matchHelp}>{importTarget === "new" ? "Only new identities will be imported. Existing students and their attendance will not be changed." : "Selected existing profiles and attendance may be updated according to these policies. Blank Excel fields do not erase saved data."}</p></details>
+    </>}
+    {phase === "review" && policy === "review" && mode !== "attendance" && <section className={styles.card}><h2>Review profile changes</h2><p>Only checked fields will be replaced. Names/admission identifiers are never changed here. Medical arrays and other hidden fields should be reviewed in Edit Student.</p>{matchedItems.map(item => { const existing = students.find(s => id(s) === decisions[item.key]); if (!existing) return null; const fields = reviewFields.filter(field => field !== "medicalConditions" && item.row[field] !== undefined && String(item.row[field]).trim() && !/^[—–-]+$/.test(String(item.row[field]).trim())); return <details key={item.key}><summary>{item.name} → {studentName(existing)} ({overrides[item.key]?.length || 0} fields selected)</summary><div className={styles.table}><table><thead><tr><th>Replace</th><th>Field</th><th>Existing</th><th>Excel</th></tr></thead><tbody>{fields.map(field => <tr key={field}><td><input type="checkbox" disabled={Boolean(job)} checked={overrides[item.key]?.includes(field) || false} onChange={() => setOverrides(values => { const current = values[item.key] || []; return { ...values, [item.key]: current.includes(field) ? current.filter(value => value !== field) : [...current, field] }; })} /></td><td>{field}</td><td>{String(existing[field] ?? "Empty")}</td><td>{String(item.row[field])}</td></tr>)}</tbody></table></div></details>; })}</section>}
     {phase === "confirm" && <section className={styles.card}><h2>{importTarget === "new" ? "Only NEW students will be imported" : "New + existing students will be processed"}</h2><p>{importTarget === "new" ? "Existing students and ALL their attendance are excluded from this run. No existing data will be overwritten." : `Existing profiles: ${mode === "attendance" ? "unchanged" : policy}. Existing attendance: ${duplicateMode}. Only supplied supported Excel data is updated; this is not a database reset.`}</p></section>}
     {warnings.length > 0 && <details className={styles.card}><summary>Parsing warnings ({warnings.length})</summary>{warnings.map((warning, index) => <p key={index}>{warning}</p>)}</details>}
-    {phase === "scope" && <div className={styles.actions}><button onClick={() => setPhase("mapping")}>Back to Excel columns</button><button onClick={saveDraft}>Save browser draft</button><button onClick={saveMappings}>Save mapping profile</button><button className={styles.primary} disabled={!selectedItems.length} onClick={review}>Continue: new or existing students</button></div>}
-    {phase === "review" && <div className={styles.actions}><button disabled={Boolean(job)} onClick={() => setPhase("scope")}>Back to student selection</button><button className={styles.primary} disabled={!included.length} onClick={() => setPhase("confirm")}>Continue: review & import</button></div>}
+    {phase === "review" && <div className={styles.actions}><button disabled={Boolean(job)} onClick={() => setPhase("mapping")}>Back to Excel columns</button><button onClick={saveDraft}>Save browser draft</button><button className={styles.primary} disabled={!included.length} onClick={() => setPhase("confirm")}>Continue: review & import</button></div>}
     {phase === "confirm" && <section className={styles.card}><h2>Review before saving</h2><div className={styles.stats}><article><small>New students to create</small><strong>{included.filter(item => decisions[item.key] === "__new__").length}</strong></article><article><small>Link to existing students</small><strong>{included.filter(item => decisions[item.key] !== "__new__").length}</strong></article><article><small>Still need a choice</small><strong>{unresolved.length}</strong></article><article><small>Excluded from import</small><strong>{selectedItems.filter(item => decisions[item.key] === "__skip__").length}</strong></article></div><p>Import: {({students:"Student records",attendance:"Attendance",both:"Records + attendance"})[mode]}. Destination: {batchOptions.find(item => id(item) === batch)?.batchName}. Attendance is imported only for identities whose student step succeeds.</p><div className={styles.actions}><button onClick={() => setPhase("review")}>Back to student matching</button><button onClick={saveDraft}>Save browser draft</button><button className={styles.primary} disabled={!included.length || Boolean(unresolved.length)} onClick={() => execute(false)}>Import selected records / attendance</button>{unresolved.length > 0 && <button disabled={!included.length} onClick={() => execute(true)}>Import ready students only — skip pending</button>}</div></section>}
     {phase === "result" && result && <section className={styles.card}><h2>Import result</h2><div className={styles.stats}>{Object.entries(result).filter(([key]) => key !== "errors").map(([key, value]) => <article key={key}><small>{key}</small><strong>{value}</strong></article>)}</div><p>Counts describe confirmed API responses. Review failed rows before assuming every selected player was imported. Attendance metadata is not a fee receipt.</p><div className={styles.actions}><Link to="/students">View students</Link><Link to={`/attendance?batch=${batch}`}>View attendance</Link><Link to={`/imports/fee-reconciliation${batch ? `?batch=${batch}` : ""}`}>Review imported fee data</Link><button onClick={downloadErrors}>Download errors CSV</button><button onClick={() => setPhase("review")}>Review / resume this import</button><button onClick={reset}>Start another import</button></div>{result.errors.slice(0, 100).map((e, i) => <p key={i}>{e.stage} · Row {e.rowNumber || ""}: {e.message}</p>)}</section>}
     <section className={styles.card}><h2><History size={19} /> My import history</h2><p>Latest 50 imports for your account in this academy. To resume on another device, choose the same original file. Browser drafts stay on this device.</p><div className={styles.table}><table><thead><tr><th>Workbook</th><th>Mode</th><th>Status</th><th>Started</th><th>Action</th></tr></thead><tbody>{sessions.map(session => <tr key={session._id}><td>{session.fileName}</td><td>{session.mode}</td><td>{session.status}</td><td>{new Date(session.createdAt).toLocaleString()}</td><td><div className={styles.actions}><button onClick={async () => { try { setHistoryDetail(unwrap(await api.get(`/import-sessions/${session._id}`))); } catch(e) { setError(errorText(e)); } }}>Details</button><button onClick={() => selectSession(session)}>Resume</button></div></td></tr>)}</tbody></table></div>

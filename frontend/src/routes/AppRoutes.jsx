@@ -34,7 +34,6 @@ const Attendance = lazy(() => import("../pages/attendance/Attendance.jsx"));
 const StudentAttendanceHistory = lazy(() => import("../pages/attendance/StudentAttendanceHistory.jsx"));
 const BatchAttendanceHistory = lazy(() => import("../pages/attendance/BatchAttendanceHistory.jsx"));
 const FeesDashboard = lazy(() => import("../pages/fees/FeesDashboard.jsx"));
-const FeeIntegrityCenter = lazy(() => import("../pages/fees/FeeIntegrityCenter.jsx"));
 const ExpenseManager = lazy(() => import("../pages/expenses/ExpenseManager.jsx"));
 const FeePlans = lazy(() => import("../pages/fees/FeePlans.jsx"));
 const CollectFee = lazy(() => import("../pages/fees/CollectFee.jsx"));
@@ -367,7 +366,6 @@ const AppRoutes = () => {
             {/* STUDENTS */}
             <Route path="/imports" element={<Imports />} />
             <Route path="/imports/fee-reconciliation" element={<ImportedFeeReconciliation />} />
-            <Route path="/fees/integrity" element={<FeeIntegrityCenter />} />
 
             <Route
               path="/students"

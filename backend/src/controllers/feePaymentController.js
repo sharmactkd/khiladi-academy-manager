@@ -14,6 +14,7 @@ import {
   applyPaymentStatusTransitionToMembership,
   getMonthYearNow,
 } from "../services/feeService.js";
+import { queueFeeIntegritySync } from "../services/automaticFeeIntegrityService.js";
 
 const getStudentName = (student) =>
   `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
@@ -347,6 +348,8 @@ export const collectFee = asyncHandler(async (req, res) => {
       .populate("feePlan", "name monthlyAmount amount dueDay")
       .lean();
 
+    queueFeeIntegritySync(req.academyId);
+
     return successResponse(
       res,
       periodCount > 1 ? `${periodCount} months fee collected successfully` : "Fee collected successfully",
@@ -604,6 +607,7 @@ export const updateFeePayment = asyncHandler(async (req, res) => {
   await applyPaymentStatusTransitionToMembership({ academyId: req.academyId, studentId: payment.student, oldStatus: previousStatus, newStatus: payment.status, payment, session });
   updatedPayment = payment;
     });
+    queueFeeIntegritySync(req.academyId);
     return successResponse(res, "Fee payment updated successfully", updatedPayment);
   } catch (error) {
     return errorResponse(res, error.message || "Fee payment update failed", error.statusCode || 400);
@@ -645,6 +649,7 @@ export const deleteFeePayment = asyncHandler(async (req, res) => {
   await applyPaymentStatusTransitionToMembership({ academyId: req.academyId, studentId: payment.student, oldStatus: previousStatus, newStatus: "cancelled", payment, session });
   cancelledPayment = payment;
     });
+    queueFeeIntegritySync(req.academyId);
     return successResponse(res, "Fee payment reversed successfully", cancelledPayment);
   } catch (error) {
     return errorResponse(res, error.message || "Fee payment reversal failed", error.statusCode || 400);

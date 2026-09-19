@@ -189,7 +189,7 @@ const DateMetaInput = ({
 
 const getPaidDateValue = (row) =>
   row.rowType === "student" && row.studentId
-    ? row.feePaidDate || row.paidDate || row.importedPaidDate || "-"
+    ? row.importedPaidDate || row.feePaidDate || row.paidDate || "-"
     : row.importedPaidDate || row.paidDate || row.feePaidDate || "-";
 
 const isFutureDay = (day) => {
@@ -814,6 +814,7 @@ const AttendanceTable = ({
                         dateOnly
                         membership={row.membership}
                         fallbackDueDate={getDueDateValue(row)}
+                        dateOverride={row.importedDueDate || ""}
                         dateFormat={dueDateFormat}
                         onClick={
                           canManageMembership
@@ -850,7 +851,7 @@ const AttendanceTable = ({
                         title={`Collect fee for ${row.name || "student"}`}
                         aria-label={`Open fee collection for ${row.name || "student"}`}
                       >
-                        {formatDateDDMMYYYY(getPaidDateValue(row))}
+                        {row.importedPaidDate || formatDateDDMMYYYY(getPaidDateValue(row))}
                       </button>
                     ) : (
                       <DateMetaInput

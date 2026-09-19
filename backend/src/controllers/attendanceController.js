@@ -3,6 +3,7 @@ import Batch from "../models/Batch.js";
 import Student from "../models/Student.js";
 import AttendanceDayNote from "../models/AttendanceDayNote.js";
 import AttendanceImportMapping from "../models/AttendanceImportMapping.js";
+import AttendanceMonthMetadata from "../models/AttendanceMonthMetadata.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import {
@@ -42,6 +43,18 @@ const clean = (value) =>
   String(value ?? "")
     .trim()
     .replace(/\s+/g, " ");
+
+export const getImportedAttendancePeriod = (row = {}) => {
+  const year = Number(row.importedYear);
+  const month = Number(row.importedMonth);
+  if (Number.isInteger(year) && year >= 1900 && year <= 2200 && Number.isInteger(month) && month >= 1 && month <= 12) {
+    return { year, month };
+  }
+  const match = clean(row.blockId).match(/:(\d{4})-(\d{2})$/);
+  if (!match) return null;
+  const parsed = { year: Number(match[1]), month: Number(match[2]) };
+  return parsed.month >= 1 && parsed.month <= 12 ? parsed : null;
+};
 
 const normalizePhone = (value) => clean(value).replace(/\D/g, "").slice(-10);
 
@@ -849,6 +862,55 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
         message: error.message || "Group import failed",
       });
     }
+  }
+
+  const monthMetadataOperations = rows.flatMap((row, rowIndex) => {
+    const match = assessAttendanceRowMatch({
+      row,
+      rowIndex,
+      studentLookups,
+      batchNameLookup,
+      fallbackBatch: batch._id,
+      resolutions,
+      savedMappings,
+    });
+    const period = getImportedAttendancePeriod(row);
+    if (!match.student?._id || !period) return [];
+
+    return [{
+      updateOne: {
+        filter: {
+          academy: req.academyId,
+          batch: batch._id,
+          student: match.student._id,
+          year: period.year,
+          month: period.month,
+        },
+        update: {
+          $set: {
+            sourceSheet: clean(row.sourceSheet),
+            importedRowNumber: Number(row.importedRowNumber || row.rowNumber || 0) || null,
+            importedDueDate: clean(row.importedDueDate),
+            importedPaidDate: clean(row.importedPaidDate),
+            importedFeePaid: clean(row.importedFeePaid),
+            importedFeeStatus: clean(row.importedFeeStatus),
+            importedExtraNote: clean(row.importedExtraNote),
+            updatedBy: req.user._id,
+          },
+        },
+        upsert: true,
+      },
+    }];
+  });
+
+  if (monthMetadataOperations.length) {
+    const metadataResult = await AttendanceMonthMetadata.bulkWrite(monthMetadataOperations, {
+      ordered: false,
+    });
+    summary.metadataMonthsImported =
+      Number(metadataResult.upsertedCount || 0) + Number(metadataResult.modifiedCount || 0);
+  } else {
+    summary.metadataMonthsImported = 0;
   }
 
   const confirmedMappingOperations = rows.flatMap((row, rowIndex) => {

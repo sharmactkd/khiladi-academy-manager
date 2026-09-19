@@ -56,9 +56,10 @@ const MembershipBadge = ({
   className = "",
   dateOnly = false,
   dateFormat = "full",
+  dateOverride = "",
 }) => {
   const badge = dateOnly
-    ? remainingDaysDisplay(membership) || {
+    ? (dateOverride ? { label: String(dateOverride), tone: "neutral" } : remainingDaysDisplay(membership)) || {
         label: formatDueDate(
           membership?.effectiveDueDate || fallbackDueDate || "-",
           dateFormat,

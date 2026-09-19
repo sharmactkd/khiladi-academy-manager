@@ -2,6 +2,7 @@ import { attendanceSourceKey } from "../../utils/attendanceImportActions.js";
 
 export const norm = value => String(value || "").normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 const phone = value => String(value || "").replace(/\D/g, "");
+const date = value => value ? String(value).slice(0, 10) : "";
 export const studentName = s => s.name || [s.firstName, s.lastName].filter(Boolean).join(" ");
 export const id = value => String(value?._id || value || "");
 export const unwrap = response => response?.data?.data ?? response?.data ?? response;
@@ -37,7 +38,12 @@ export function directory(records, blocks) {
   for (const block of blocks) for (const row of block.rows || []) {
     const key = JSON.stringify([norm(row.name), phone(row.phone), norm(row.admissionNumber)]);
     if (!groups.has(key)) groups.set(key, { row, entries: [] });
-    groups.get(key).entries.push({ ...row, blockId: block.blockId });
+    groups.get(key).entries.push({
+      ...row,
+      blockId: block.blockId,
+      importedYear: block.year,
+      importedMonth: block.month,
+    });
   }
   for (const [key, group] of groups) {
     const matches = items.filter(item => item.record && norm(item.name) === norm(group.row.name) && (!phone(item.phone) || !phone(group.row.phone) || phone(item.phone) === phone(group.row.phone)));
@@ -52,21 +58,35 @@ export function directory(records, blocks) {
 // Conflicting identifiers and name-only matches require a human decision.
 export function suggest(item, students, batchId) {
   const eligible = students.filter(s => (!s.batch || id(s.batch) === id(batchId)) && s.status !== "left");
+  const itemName = norm(item.name);
+  const itemPhone = phone(item.phone);
+  const itemDob = date(item.row.dateOfBirth);
   const admission = norm(item.row.admissionNumber || item.row.studentCode);
   const candidates = eligible.filter(s => admission && norm(s.admissionNumber) === admission);
+  if (candidates.length > 1) return { value: "", reason: "Admission number is used by multiple app students — choose explicitly" };
   if (candidates.length === 1) {
     const candidate = candidates[0];
-    if (norm(studentName(candidate)) !== norm(item.name) || (phone(item.phone) && phone(candidate.phone) && phone(item.phone) !== phone(candidate.phone)) || (item.row.dateOfBirth && candidate.dateOfBirth && String(item.row.dateOfBirth).slice(0, 10) !== String(candidate.dateOfBirth).slice(0, 10))) return { value: "", reason: "Admission matches but name/phone/DOB differs — review required" };
+    if (norm(studentName(candidate)) !== itemName) return { value: "", reason: "Admission number matches, but the name differs — choose explicitly" };
+    if (itemPhone && phone(candidate.phone) && itemPhone !== phone(candidate.phone)) return { value: "", reason: "Admission and name match, but the phone differs — choose explicitly" };
+    if (itemDob && date(candidate.dateOfBirth) && itemDob !== date(candidate.dateOfBirth)) return { value: "", reason: "Admission and name match, but DOB differs — choose explicitly" };
     return { value: id(candidate), reason: "Admission and name agree" };
   }
-  const samePhone = eligible.filter(s => phone(item.phone) && phone(s.phone) === phone(item.phone));
-  const exact = samePhone.filter(s => norm(studentName(s)) === norm(item.name));
-  if (exact.length === 1 && samePhone.length === 1) {
-    if (item.row.dateOfBirth && exact[0].dateOfBirth && String(item.row.dateOfBirth).slice(0, 10) !== String(exact[0].dateOfBirth).slice(0, 10)) return { value: "", reason: "Name/phone match but DOB differs — review required" };
-    return { value: id(exact[0]), reason: "Name and phone agree" };
+  const samePhone = eligible.filter(s => itemPhone && phone(s.phone) === itemPhone);
+  const exact = samePhone.filter(s => norm(studentName(s)) === itemName);
+  if (exact.length === 1) {
+    if (itemDob && date(exact[0].dateOfBirth) && itemDob !== date(exact[0].dateOfBirth)) return { value: "", reason: "Exact name and phone match, but DOB differs — choose explicitly" };
+    return { value: id(exact[0]), reason: samePhone.length > 1 ? "Exact name and phone agree (shared phone safely resolved by name)" : "Exact name and phone agree" };
   }
-  const names = eligible.filter(s => norm(studentName(s)) === norm(item.name));
-  return { value: "", reason: names.length || samePhone.length || candidates.length ? "Possible existing student / conflicting identity — choose explicitly" : "No safe existing match — create or exclude explicitly" };
+  if (exact.length > 1) return { value: "", reason: "Multiple app students have this exact name and phone — choose explicitly" };
+  const names = eligible.filter(s => norm(studentName(s)) === itemName);
+  if (names.length > 1) return { value: "", reason: "Multiple app students have this name; phone does not identify one safely" };
+  if (names.length === 1) return { value: "", reason: itemPhone ? "Name exists in the app, but the phone differs or is missing — choose explicitly" : "Name exists in the app, but Excel has no phone — choose explicitly" };
+  if (samePhone.length) return { value: "", reason: "Phone is already used by another name (possibly a family number) — choose explicitly" };
+
+  const sameIdentityOutsideScope = students.filter(s => norm(studentName(s)) === itemName && (!itemPhone || !phone(s.phone) || phone(s.phone) === itemPhone));
+  if (sameIdentityOutsideScope.some(s => s.status === "left")) return { value: "", reason: "A matching student is marked Left — restore or choose explicitly" };
+  if (sameIdentityOutsideScope.some(s => s.batch && id(s.batch) !== id(batchId))) return { value: "", reason: "A matching student exists in another batch — choose explicitly" };
+  return { value: "", reason: "No safe existing match — create new or exclude" };
 }
 
 export function chunks(rows, size = 100) {

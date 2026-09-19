@@ -6,6 +6,7 @@ import Batch from "../models/Batch.js";
 import FeePayment from "../models/FeePayment.js";
 import AttendanceDayNote from "../models/AttendanceDayNote.js";
 import AttendanceRowOrder from "../models/AttendanceRowOrder.js";
+import AttendanceMonthMetadata from "../models/AttendanceMonthMetadata.js";
 import { applyRowOrder, moveRowKeys } from "../utils/attendanceRowOrder.js";
 import { getMembershipMap } from "./membershipService.js";
 import { resolveFeeStatus } from "../utils/feeStatus.js";
@@ -318,7 +319,7 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
     importedPhone,
     importedAdmissionNumber: identity.importedAdmissionNumber,
     importedDueDate: normalizedDueDate,
-    importedPaidDate: formatDisplayDate(normalizedPaidDate),
+    importedPaidDate: normalizedPaidDate,
     importedFeePaid: "",
     importedFeeStatus: identity.importedFeeStatus,
     importedExtraNote: identity.importedExtraNote,
@@ -358,6 +359,7 @@ const buildMonthlyRows = async ({
   year,
   days,
   attendanceDocs,
+  monthMetadataDocs = [],
 }) => {
   const markedStudentIds = [];
 
@@ -417,6 +419,25 @@ const buildMonthlyRows = async ({
     if (!attendanceByRow.has(key)) {
       attendanceByRow.set(key, buildBlankAttendance(days));
     }
+  });
+
+  monthMetadataDocs.forEach((metadata) => {
+    const studentId = String(metadata.student || "");
+    const key = getAttendanceRegisterRowKey({ student: studentId });
+    const existing = rowIdentityMap.get(key);
+    if (!existing) return;
+    rowIdentityMap.set(key, mergeMonthlyRecordIdentity(existing, {
+      studentId,
+      rowType: "student",
+      source: "excel-import",
+      importedRowNumber: metadata.importedRowNumber,
+      importedSourceSheet: metadata.sourceSheet,
+      importedDueDate: metadata.importedDueDate,
+      importedPaidDate: metadata.importedPaidDate,
+      importedFeePaid: metadata.importedFeePaid,
+      importedFeeStatus: metadata.importedFeeStatus,
+      importedExtraNote: metadata.importedExtraNote,
+    }));
   });
 
   attendanceDocs.forEach((doc) => {
@@ -523,11 +544,12 @@ export const getMonthlyAttendanceRegister = async ({
   const days = buildDays({ year: numericYear, month: numericMonth });
   const { start, end } = getMonthRange({ year: numericYear, month: numericMonth });
   const orderId = `${academyObjectId}:${batchObjectId}:${numericYear}:${numericMonth}`;
-  const [batch, attendanceDocs, dayNoteDocs, order] = await Promise.all([
+  const [batch, attendanceDocs, dayNoteDocs, order, monthMetadataDocs] = await Promise.all([
     Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).select("batchName martialArt branch isActive").lean(),
     Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date records").lean(),
     AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date type title description color createdAt updatedAt").lean(),
     AttendanceRowOrder.findById(orderId).select("keys revision").lean(),
+    AttendanceMonthMetadata.find({ academy: academyObjectId, batch: batchObjectId, year: numericYear, month: numericMonth }).lean(),
   ]);
 
   if (!batch) {
@@ -558,6 +580,7 @@ export const getMonthlyAttendanceRegister = async ({
     year: numericYear,
     days,
     attendanceDocs,
+    monthMetadataDocs,
   });
 
   const orderedRows = applyRowOrder(rows.map((row) => ({ ...row, registerOrderKey: getAttendanceRegisterRowKey(row) })), order?.keys || []);
@@ -696,13 +719,15 @@ export const getStudentYearlyAttendanceProfile = async ({
   const yearStart = new Date(Date.UTC(numericYear, 0, 1));
   const yearEnd = new Date(Date.UTC(numericYear + 1, 0, 1));
 
-  const attendanceDocs = await Attendance.find({
-    academy: academyObjectId,
-    date: { $gte: yearStart, $lt: yearEnd },
-    "records.student": studentObjectId,
-  })
-    .populate("batch", "batchName martialArt")
-    .lean();
+  const [attendanceDocs, monthMetadataDocs] = await Promise.all([
+    Attendance.find({
+      academy: academyObjectId,
+      date: { $gte: yearStart, $lt: yearEnd },
+      "records.student": studentObjectId,
+    }).populate("batch", "batchName martialArt").lean(),
+    AttendanceMonthMetadata.find({ academy: academyObjectId, student: studentObjectId, year: numericYear }).lean(),
+  ]);
+  const monthMetadataMap = new Map(monthMetadataDocs.map((item) => [Number(item.month), item]));
 
   const firstImportedRecord =
     attendanceDocs
@@ -723,9 +748,11 @@ export const getStudentYearlyAttendanceProfile = async ({
       return date.getUTCMonth() + 1 === monthInfo.value;
     });
 
-    let importedPaidDate = "";
-    let importedFeePaid = "";
-    let importedFeeStatus = "";
+    const monthMetadata = monthMetadataMap.get(monthInfo.value);
+    let importedDueDate = clean(monthMetadata?.importedDueDate);
+    let importedPaidDate = clean(monthMetadata?.importedPaidDate);
+    let importedFeePaid = clean(monthMetadata?.importedFeePaid);
+    let importedFeeStatus = clean(monthMetadata?.importedFeeStatus);
 
     monthDocs.forEach((doc) => {
       const dateKey = getLocalDateKey(doc.date);
@@ -737,8 +764,12 @@ export const getStudentYearlyAttendanceProfile = async ({
 
       attendance[dateKey] = toShortStatus(record.status);
 
+      if (!importedDueDate && record.importedDueDate) {
+        importedDueDate = clean(record.importedDueDate);
+      }
+
       if (!importedPaidDate && record.importedPaidDate) {
-        importedPaidDate = formatDisplayDate(record.importedPaidDate);
+        importedPaidDate = clean(record.importedPaidDate);
       }
 
       if (!importedFeePaid && record.importedFeePaid) {
@@ -755,6 +786,7 @@ export const getStudentYearlyAttendanceProfile = async ({
       days,
       attendance,
       importedPaidDate,
+      importedDueDate,
       importedFeePaid,
       importedFeeStatus,
       ...calculateCounts(attendance),

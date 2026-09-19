@@ -73,6 +73,8 @@ const getSummary = (months = []) => {
 const buildExportRows = (months = []) => months.map((month) => {
   const row = {
     Month: month.fullLabel,
+    "Due Date": month.importedDueDate || "",
+    "Paid Date": month.importedPaidDate || "",
     "Fee Paid": month.importedFeePaid || "",
     "Fee Status": month.importedFeeStatus || "",
   };

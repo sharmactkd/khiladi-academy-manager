@@ -21,6 +21,110 @@
 .actions label { min-width:160px; }
 .mapping,.sheetGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:13px; margin:16px 0; }
 .page .unmapped { border-color:#e9858f; background:#fffafb; }
+.classificationCard,.mappingCard { overflow:hidden; }
+.classificationHeader,.mappingHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; }
+.classificationHeader h2,.mappingHeader h2 { margin-bottom:5px; }
+.classificationHeader p,.mappingHeader p { margin:0; }
+.detectedPill { display:inline-flex; align-items:center; gap:7px; flex:0 0 auto; padding:7px 10px; border-radius:999px; color:#13734b; background:#eaf8f0; font-size:11px; font-weight:750; }
+.classificationStats { display:flex; flex-wrap:wrap; gap:9px; padding:15px 0; margin:16px 0 0; border-top:1px solid #e8edf3; }
+.classificationStats span { display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border:1px solid #dce5ee; border-radius:8px; color:#5b6c81; background:#f9fbfd; font-size:11px; }
+.classificationStats strong { color:#1f344c; font-size:13px; }
+.classificationActions { display:flex; align-items:center; gap:12px; padding-bottom:15px; }
+.sheetGroups { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.sheetRoleCard { min-width:0; border:1px solid #dde6ef; border-radius:12px; background:#fbfcfe; overflow:hidden; }
+.sheetRoleCard>header { display:flex; align-items:center; gap:10px; padding:13px 14px; border-bottom:1px solid #e5ebf1; background:#f6f9fc; }
+.sheetRoleCard>header div,.mappingGroupTitle>span:last-child { display:flex; flex-direction:column; min-width:0; gap:2px; }
+.sheetRoleCard>header strong,.mappingGroupTitle strong { color:#223750; font-size:12px; }
+.sheetRoleCard>header small,.mappingGroupTitle small { color:#78879a; font-size:10px; }
+.sheetGroupIcon,.mappingGroupIcon { display:grid; place-items:center; width:34px; height:34px; flex:0 0 34px; border-radius:9px; color:#b60008; background:#fff0f1; }
+.sheetRoleList { padding:6px 12px 10px; }
+.sheetRoleRow { display:grid; grid-template-columns:minmax(130px,1fr) minmax(145px,190px) 82px; align-items:center; gap:10px; min-height:52px; padding:6px 0; border-bottom:1px solid #edf1f5; }
+.sheetRoleRow:last-child { border-bottom:0; }
+.sheetName { display:flex; align-items:center; gap:8px; min-width:0; color:#31465f; }
+.sheetName svg { flex:0 0 auto; color:#718198; }
+.sheetName strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+.page .sheetRoleRow select { min-width:0; height:36px; min-height:36px; padding:6px 9px; }
+.detectedBadge,.changedBadge,.mutedBadge { display:inline-flex; align-items:center; justify-content:center; gap:4px; padding:5px 7px; border-radius:999px; color:#13734b; background:#eaf8f0; font-size:9px; font-weight:750; white-space:nowrap; }
+.changedBadge { color:#8a5a00; background:#fff4dc; }
+.mutedBadge { color:#65758a; background:#edf1f5; }
+.emptySheetGroup { padding:15px 2px; margin:0; }
+.ignoredSheetCard { background:#fff; }
+.page .ignoredGroupButton { justify-content:space-between; width:100%; padding:12px 14px; border:0; border-radius:0; background:#f8fafc; }
+.ignoredGroupButton>span { display:flex; align-items:center; gap:9px; min-width:0; }
+.ignoredGroupButton>span>span { display:flex; align-items:flex-start; flex-direction:column; gap:2px; }
+.ignoredGroupButton strong { color:#31465f; font-size:12px; }
+.ignoredGroupButton small { color:#7c8999; font-size:10px; }
+.ignoredGroupButton b { min-width:26px; padding:4px 7px; border-radius:999px; color:#5d6d81; background:#e9eef4; font-size:10px; }
+.classificationNote { display:flex; align-items:flex-start; gap:8px; padding:11px 13px; margin:15px 0 0; border:1px solid #e4eaf0; border-radius:9px; background:#f8fafc; }
+.classificationNote svg { flex:0 0 auto; margin-top:2px; }
+.eyebrow { display:block; margin-bottom:6px; color:#c30008; font-size:10px; font-weight:800; letter-spacing:1.2px; }
+.page .headerRowControl { width:115px; flex:0 0 115px; color:#52647a; font-weight:700; }
+.mappingSummary { display:flex; flex-wrap:wrap; gap:9px; padding:14px 0; margin-top:14px; border-top:1px solid #e8edf3; }
+.mappingSummary>span { display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border-radius:8px; font-size:10px; font-weight:650; }
+.mappingSummary strong { font-size:12px; }
+.summaryMapped,.summaryReady { color:#176e49; background:#eaf8f0; }
+.summaryRecommended { color:#8a5a00; background:#fff4dc; }
+.summaryRequired { color:#a10008; background:#fff0f1; }
+.page .mappingSearch { display:flex; align-items:center; flex-direction:row; gap:9px; width:100%; max-width:420px; height:42px; padding:0 12px; margin:2px 0 16px; border:1px solid #cbd7e5; border-radius:8px; color:#718198; background:#fff; }
+.page .mappingSearch input { min-width:0; height:100%; min-height:0; padding:0; border:0; outline:0; background:transparent; }
+.mappingSearch:focus-within { border-color:#d00009; box-shadow:0 0 0 3px #d000090d; }
+.mappingGroups { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; gap:14px; }
+.mappingGroup { min-width:0; border:1px solid #dce5ee; border-radius:12px; overflow:hidden; background:#fff; }
+.page .mappingGroupHeader { justify-content:space-between; width:100%; min-height:62px; padding:11px 13px; border:0; border-radius:0; background:#f8fafc; }
+.mappingGroupTitle { display:flex; align-items:center; gap:10px; min-width:0; text-align:left; }
+.mappingGroupCount { display:flex; align-items:center; gap:7px; flex:0 0 auto; color:#65758a; font-size:10px; font-weight:750; }
+.mappingRows { padding:0 12px 8px; border-top:1px solid #e8edf3; }
+.mappingColumnHead,.mappingRow { display:grid; grid-template-columns:minmax(120px,.85fr) minmax(160px,1.15fr) 72px; align-items:center; gap:10px; }
+.mappingColumnHead { padding:9px 0 7px; color:#8a96a6; font-size:9px; font-weight:750; letter-spacing:.4px; text-transform:uppercase; }
+.mappingRow { min-height:59px; padding:7px 0; border-top:1px solid #edf1f5; }
+.mappingField { display:flex; flex-direction:column; min-width:0; gap:2px; }
+.mappingField strong { color:#30465f; font-size:11px; }
+.mappingField small { color:#8996a6; font-size:9px; line-height:1.3; }
+.page .mappingRow select { min-width:0; height:36px; min-height:36px; padding:6px 8px; }
+.statusMapped,.statusRequired,.statusOptional { display:inline-flex; align-items:center; justify-content:center; gap:3px; justify-self:start; padding:5px 7px; border-radius:999px; font-size:9px; font-weight:750; white-space:nowrap; }
+.statusMapped { color:#13734b; background:#eaf8f0; }
+.statusRequired { color:#a10008; background:#fff0f1; }
+.statusOptional { color:#68788b; background:#edf1f5; }
+.mappingFooter { display:flex; align-items:center; gap:12px; padding-top:15px; margin-top:15px; border-top:1px solid #e7edf3; }
+.sourcePreview { margin-top:14px; color:#40546d; font-size:11px; }
+.sourcePreview summary { cursor:pointer; font-weight:700; }
+.monthsCard { overflow:hidden; }
+.monthsHeader { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.monthsTitle { display:flex; align-items:center; gap:11px; min-width:0; }
+.monthsTitle>span { display:grid; place-items:center; width:38px; height:38px; flex:0 0 38px; border-radius:10px; color:#173452; background:#edf4fb; }
+.monthsTitle h2 { margin:0 0 3px; }
+.monthsTitle p { margin:0; }
+.monthsHeaderActions { display:flex; align-items:center; justify-content:flex-end; gap:10px; }
+.page .monthSearch { display:flex; align-items:center; flex-direction:row; gap:8px; width:260px; height:40px; padding:0 11px; border:1px solid #cbd7e5; border-radius:8px; color:#738399; background:#fff; }
+.page .monthSearch input { height:100%; min-height:0; min-width:0; padding:0; border:0; outline:0; background:transparent; }
+.monthSearch:focus-within { border-color:#d00009; box-shadow:0 0 0 3px #d000090d; }
+.monthsSummary { display:flex; align-items:center; gap:0; min-height:50px; padding:7px 12px; margin:16px 0 14px; border:1px solid #dce6ef; border-radius:10px; background:#f8fafc; }
+.monthsSummary>span { display:inline-flex; align-items:center; gap:5px; padding:5px 16px; border-right:1px solid #d8e0e9; color:#52647a; font-size:11px; white-space:nowrap; }
+.monthsSummary>span:first-child { padding-left:6px; }
+.monthsSummary strong { color:#20364f; }
+.monthsSummary .monthsSelected { margin:0 14px; border:0; border-radius:999px; color:#197149; background:#e5f7ed; }
+.monthsSummary .monthsSelected strong { color:#197149; }
+.monthsSummary .monthsWarning { margin-left:auto; padding:8px 10px; border:1px solid #f2d098; border-radius:8px; color:#905408; background:#fff7e8; white-space:normal; }
+.monthsWarning svg { flex:0 0 auto; }
+.monthYearGroups { display:flex; flex-direction:column; gap:11px; }
+.monthYearGroup { border:1px solid #dce5ee; border-radius:11px; overflow:hidden; background:#fbfcfe; }
+.monthYearHeader { display:flex; align-items:center; min-height:48px; padding:0 12px; background:#f6f9fc; }
+.page .monthExpandButton { width:30px; min-height:30px; flex:0 0 30px; padding:0; border:0; background:transparent; }
+.page .monthYearCheck { display:flex; align-items:center; flex-direction:row; min-width:130px; gap:2px; color:#1e3550; font-size:13px; }
+.monthYearHeader>span { color:#718198; font-size:10px; }
+.monthTiles { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; padding:10px 12px 12px; border-top:1px solid #e5ebf1; background:#fff; }
+.page .monthTile { display:flex; align-items:center; flex-direction:row; gap:7px; min-width:0; min-height:48px; padding:8px 10px; border:1px solid #dce5ee; border-radius:9px; background:#fff; cursor:pointer; transition:border-color .15s ease,background .15s ease,box-shadow .15s ease; }
+.page .monthTile:hover { border-color:#e6a1a7; box-shadow:0 3px 10px #1c35500a; }
+.page .monthTileSelected { border-color:#eb8189; background:#fff5f5; }
+.monthTile>input { flex:0 0 16px; }
+.monthTile>span { display:flex; flex-direction:column; min-width:0; gap:2px; }
+.monthTile strong { color:#223850; font-size:11px; }
+.monthTile small { overflow:hidden; color:#718198; font-size:9px; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; }
+.earlierYears { padding:4px 12px 12px; border-top:1px solid #e5ebf1; background:#fff; }
+.earlierYear { padding-top:10px; }
+.earlierYear>strong { display:block; padding:0 2px 7px; color:#253b53; font-size:11px; }
+.earlierYear .monthTiles { padding:0; border:0; }
+.emptyMonthSearch { padding:18px; margin:12px 0 0; border:1px dashed #ccd7e3; border-radius:10px; text-align:center; background:#fafbfd; }
 .table { width:100%; overflow:auto; max-height:550px; border:1px solid #dce5ee; border-radius:10px; margin:14px 0; }
 .table table { width:100%; min-width:700px; border-collapse:collapse; }
 .table th { position:sticky; top:0; text-align:left; padding:13px; background:#f4f7fa; font-size:11px; text-transform:uppercase; z-index:1; }
@@ -34,6 +138,46 @@
 .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }.stats article { padding:14px; border:1px solid #dce5ee; border-radius:10px; }.stats strong { display:block; font-size:23px; }
 .page a { color:#cf0009; font-size:12px; }
 .matchingCard { min-width:0; }
+.studentScopeCard { overflow:hidden; }
+.studentScopeHeader,.decisionHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+.studentScopeHeader h2,.decisionHeader h2 { margin-bottom:5px; }
+.studentScopeHeader p,.decisionHeader p { margin:0; }
+.studentScopeHeader>strong { padding:7px 10px; border-radius:999px; color:#285172; background:#edf4fa; font-size:10px; white-space:nowrap; }
+.scopeChoiceRow { display:flex; flex-wrap:wrap; gap:10px; padding-top:15px; margin-top:15px; border-top:1px solid #e7edf3; }
+.scopePicker { padding:14px; margin-top:14px; border:1px solid #dce5ee; border-radius:11px; background:#f8fafc; }
+.scopePickerToolbar { display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin-bottom:12px; }
+.scopePickerToolbar .matchSearch { flex:1 1 260px; max-width:440px; }
+.scopePlayerGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; max-height:330px; overflow:auto; padding:2px; }
+.scopePlayerGrid>label,.scopePlayerGrid>div { display:flex; align-items:center; flex-direction:row; gap:8px; min-width:0; min-height:48px; padding:8px 10px; border:1px solid #dce5ee; border-radius:9px; background:#fff; }
+.scopePlayerGrid>label { cursor:pointer; }
+.scopePlayerGrid>label:hover { border-color:#e7a1a7; }
+.scopePlayerGrid>label.scopePlayerSelected { border-color:#e48890; background:#fff5f5; }
+.scopePlayerGrid span { display:flex; flex-direction:column; min-width:0; gap:2px; }
+.scopePlayerGrid strong,.scopePlayerGrid small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.scopePlayerGrid strong { color:#2b4059; font-size:11px; }
+.scopePlayerGrid small { color:#7d8a9c; font-size:9px; }
+.scopePlayerGrid>div button { margin-left:auto; flex:0 0 auto; min-height:32px; padding:6px 9px; }
+.decisionCard { overflow:hidden; }
+.decisionHeader { padding-bottom:14px; border-bottom:1px solid #e7edf3; }
+.decisionStats { display:flex; flex-wrap:wrap; gap:8px; padding:13px 0 2px; }
+.decisionStats span { display:inline-flex; align-items:center; gap:4px; padding:7px 9px; border-radius:8px; color:#56677b; background:#f1f4f8; font-size:10px; }
+.decisionStats strong { color:#263c55; font-size:12px; }
+.decisionStats .matchStat { color:#176e49; background:#eaf8f0; }
+.decisionStats .matchStat strong { color:#176e49; }
+.decisionStats .reviewStat { color:#955c08; background:#fff4dc; }
+.decisionStats .reviewStat strong { color:#955c08; }
+.allResolved { display:flex; align-items:flex-start; gap:10px; padding:16px; margin:12px 0; border:1px solid #bcdccc; border-radius:10px; color:#176e49; background:#f1faf5; }
+.allResolved p { margin:3px 0 0; }
+.matchedReview>summary,.advancedImport>summary { display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; color:#2a4058; font-size:12px; font-weight:750; }
+.matchedReview>summary>span { display:flex; align-items:center; gap:7px; }
+.matchedReview>summary svg { color:#178654; }
+.matchedReview>summary b { padding:4px 7px; border-radius:999px; color:#176e49; background:#e5f7ed; font-size:9px; }
+.matchedReview>summary small { font-weight:500; }
+.excludedReview>summary { cursor:pointer; color:#52647a; font-size:12px; font-weight:700; }
+.excludedReview .scopePlayerGrid { margin-top:14px; }
+.advancedImport { background:#fbfcfe; }
+.advancedImport>p { margin:12px 0; }
+.advancedImport .matchFilters { margin-top:14px; }
 .emptyAppNotice { padding:16px; margin:0 0 18px; border:1px solid #bcdccc; border-radius:10px; background:#f1faf5; color:#215c3c; }
 .page .emptyAppNotice p { margin:6px 0 0; color:#446c56; }
 .page select.newStudentChoice { border-color:#a9d4bc; background:#f5fbf7; }
@@ -63,4 +207,7 @@
 .page .matchingCard button:focus-visible,.page .matchingCard select:focus-visible { outline:2px solid #d00009; outline-offset:2px; }
 @media(max-width:1000px) { .matchFilters { grid-template-columns:repeat(2,minmax(0,1fr)); }.matchFilters > label:last-child { grid-column:1/-1; } }
 @media(max-width:600px) { .matchFilters { grid-template-columns:1fr; }.page .workbookSearch { max-width:none; flex-basis:100%; }.page .stageButton { margin-left:0; width:100%; }.matchTabs { gap:8px; }.page .matchTabs button { padding:8px 10px; } }
-@media(max-width:800px) { .mapping,.sheetGrid { grid-template-columns:1fr; }.stats { grid-template-columns:repeat(2,1fr); }.heading { align-items:flex-start; }.card { padding:14px; } }
+@media(max-width:1200px) { .monthTiles { grid-template-columns:repeat(4,minmax(0,1fr)); }.monthsHeader { align-items:flex-start; }.monthsHeaderActions { flex-wrap:wrap; }.monthsSummary { flex-wrap:wrap; }.monthsSummary .monthsWarning { width:100%; margin:7px 0 0; } }
+@media(max-width:1050px) { .sheetGroups,.mappingGroups { grid-template-columns:1fr; }.ignoredSheetCard { grid-column:auto; }.monthTiles,.scopePlayerGrid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:800px) { .mapping,.sheetGrid { grid-template-columns:1fr; }.stats { grid-template-columns:repeat(2,1fr); }.heading,.classificationHeader,.mappingHeader,.monthsHeader,.studentScopeHeader,.decisionHeader { align-items:flex-start; flex-direction:column; }.card { padding:14px; }.page .headerRowControl { width:100%; flex-basis:auto; }.sheetRoleRow { grid-template-columns:minmax(110px,1fr) minmax(130px,170px); }.sheetRoleRow>span:last-child { display:none; }.monthsHeaderActions { width:100%; justify-content:flex-start; }.page .monthSearch { flex:1 1 240px; width:auto; }.monthTiles { grid-template-columns:repeat(2,minmax(0,1fr)); }.decisionHeader .stageButton { margin-left:0; } }
+@media(max-width:560px) { .classificationStats { display:grid; grid-template-columns:1fr; }.classificationActions,.mappingFooter { align-items:stretch; flex-direction:column; }.mappingColumnHead { display:none; }.mappingRow { grid-template-columns:1fr 78px; gap:7px; }.mappingRow select { grid-column:1/-1; grid-row:2; }.mappingRow>span:last-child { grid-column:2; grid-row:1; justify-self:end; }.sheetRoleRow { grid-template-columns:1fr; padding:10px 0; }.page .sheetRoleRow select { width:100%; }.page .mappingSearch { max-width:none; }.monthsHeaderActions { display:grid; grid-template-columns:1fr 1fr; }.page .monthSearch { grid-column:1/-1; width:100%; }.monthsSummary>span { border:0; padding:5px 8px; }.monthsSummary .monthsSelected { margin:0; }.monthYearHeader { flex-wrap:wrap; padding:7px 9px; }.page .monthYearCheck { min-width:0; flex:1; }.monthYearHeader>span { width:100%; padding-left:32px; }.monthTiles,.scopePlayerGrid { grid-template-columns:1fr; }.page .monthTile { min-height:45px; }.scopeChoiceRow>button,.scopePickerToolbar>button { width:100%; }.scopePickerToolbar .matchSearch { max-width:none; flex-basis:100%; } }

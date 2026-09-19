@@ -64,7 +64,6 @@ export const ownerNavigation = [
       { id: "students", label: "Students", to: "/students", icon: GraduationCap },
       { id: "attendance", label: "Attendance", to: "/attendance", icon: CalendarCheck2 },
       { id: "imports", label: "Imports", to: "/imports", icon: FileStack },
-      { id: "fee-integrity", label: "Fee Integrity", to: "/fees/integrity", icon: ShieldCheck, roles: OWNER_ROLES },
       {
         id: "fees",
         label: "Fees",

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildRowFromRecord, mergeMonthlyRecordIdentity } from "../src/services/monthlyAttendanceService.js";
-import { backfillImportedAttendanceMetadata } from "../src/controllers/attendanceController.js";
+import { backfillImportedAttendanceMetadata, getImportedAttendancePeriod } from "../src/controllers/attendanceController.js";
 
 test("student dates do not fabricate missing fee data", () => {
   const row = buildRowFromRecord({
@@ -22,6 +22,27 @@ test("real imported fee data remains visible", () => {
   });
   assert.equal(row.feeDueDate, "10-09-2026");
   assert.equal(row.feeStatus, "due");
+});
+
+test("Excel due and paid text is preserved exactly for display", () => {
+  const row = buildRowFromRecord({
+    identity: {
+      rowType: "student",
+      studentId: "student-1",
+      importedDueDate: "10 DaysExtra",
+      importedPaidDate: "1/9/25",
+      importedFeeStatus: "DUE",
+    },
+    attendance: {},
+    index: 0,
+  });
+  assert.equal(row.importedDueDate, "10 DaysExtra");
+  assert.equal(row.importedPaidDate, "1/9/25");
+});
+
+test("attendance import period is carried explicitly or recovered from its block id", () => {
+  assert.deepEqual(getImportedAttendancePeriod({ importedYear: 2025, importedMonth: 9 }), { year: 2025, month: 9 });
+  assert.deepEqual(getImportedAttendancePeriod({ blockId: "25 - Attandance:2025-09" }), { year: 2025, month: 9 });
 });
 
 test("linked Excel metadata enriches a pre-seeded student roster row", () => {

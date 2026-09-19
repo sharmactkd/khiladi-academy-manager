@@ -164,6 +164,8 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
           <table className={styles.yearTable}>
             <colgroup>
               <col className={styles.monthColumn} />
+              <col className={styles.metaColumn} />
+              <col className={styles.metaColumn} />
               <col className={styles.feeColumn} />
               {DAYS.map((day) => <col key={day} className={styles.dayColumn} />)}
               <col className={styles.summaryColumn} /><col className={styles.summaryColumn} />
@@ -171,7 +173,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
               <col className={styles.rateColumn} />
             </colgroup>
             <thead><tr>
-              <th className={styles.stickyMonth}>Month</th><th className={styles.stickyFee}>Fee Status</th>
+              <th className={styles.stickyMonth}>Month</th><th className={styles.stickyDue}>Due Date</th><th className={styles.stickyPaid}>Paid Date</th><th className={styles.stickyFee}>Fee Status</th>
               {DAYS.map((day) => <th key={day}>{String(day).padStart(2, "0")}</th>)}
               <th>Present</th><th>Absent</th><th>Leave</th><th>Late</th><th>%</th>
             </tr></thead>
@@ -181,6 +183,8 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
                 return (
                   <tr key={month.value}>
                     <th className={styles.stickyMonth}>{month.fullLabel}</th>
+                    <td className={styles.stickyDue}>{month.importedDueDate || "–"}</td>
+                    <td className={styles.stickyPaid}>{month.importedPaidDate || "–"}</td>
                     <td className={styles.stickyFee}><span className={`${styles.feeBadge} ${toneClass("fee", getFeeTone(feeStatus))}`}>{feeStatus}</span></td>
                     {DAYS.map((day) => {
                       const dayInfo = getDayInfo(month, day);

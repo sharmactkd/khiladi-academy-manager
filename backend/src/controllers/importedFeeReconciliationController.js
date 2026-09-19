@@ -9,6 +9,7 @@ import StudentMembership from "../models/StudentMembership.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { errorResponse, successResponse } from "../utils/apiResponse.js";
 import { normalizeFeeStatus } from "../utils/feeStatus.js";
+import { queueFeeIntegritySync } from "../services/automaticFeeIntegrityService.js";
 import { parseImportedFeeBalance } from "../utils/importedFee.js";
 
 const clean = value => String(value ?? "").trim();
@@ -104,6 +105,7 @@ export const applyImportedFees = asyncHandler(async (req, res) => {
         summary.applied += 1;
       }
     });
+    queueFeeIntegritySync(req.academyId);
     return successResponse(res, "Imported fee data reconciled", summary);
   } finally { await session.endSession(); }
 });
