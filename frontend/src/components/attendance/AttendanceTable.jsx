@@ -261,6 +261,16 @@ const AttendanceTable = ({
       ),
     [safeRows, searchQuery, sort, suppliedDays, preserveManualOrder],
   );
+  const serialBySourceIndex = useMemo(() => {
+    const completeView = buildAttendanceRowView(
+      safeRows,
+      "",
+      [],
+      suppliedDays[0]?.dateKey,
+      preserveManualOrder,
+    );
+    return new Map(completeView.map((entry, index) => [entry.sourceIndex, index + 1]));
+  }, [safeRows, suppliedDays, preserveManualOrder]);
   const toggleSort = (key, event) =>
     setSort((current) =>
       cycleAttendanceSort(current, key, event.ctrlKey || event.metaKey),
@@ -690,6 +700,7 @@ const AttendanceTable = ({
             {virtualRows.map((virtualRow) => {
               const { row, sourceIndex: rowIndex } = viewRows[virtualRow.index];
               const rowKey = rowIndex;
+              const displayedSerial = serialBySourceIndex.get(rowIndex) || virtualRow.index + 1;
               const isInactive =
                 String(row.status).toLowerCase() === "inactive";
 
@@ -706,22 +717,22 @@ const AttendanceTable = ({
                     <button
                       type="button"
                       className="attendance-serial-button"
-                      disabled={!onMoveRow || reorderDisabled || Boolean(searchQuery) || sort.length > 0}
+                      disabled={!onMoveRow || reorderDisabled || sort.length > 0}
                       title="Double-click to move this student to another serial number (Enter also works)"
-                      aria-label={`Serial ${virtualRow.index + 1}: move ${row.name || row.importedName || "student"}`}
+                      aria-label={`Serial ${displayedSerial}: move ${row.name || row.importedName || "student"}`}
                       onDoubleClick={async () => {
-                        if (await onMoveRow?.(row, virtualRow.index + 1))
+                        if (await onMoveRow?.(row, displayedSerial))
                           setSort([]);
                       }}
                       onKeyDown={async (event) => {
                         if (event.key === "Enter") {
                           event.preventDefault();
-                          if (await onMoveRow?.(row, virtualRow.index + 1))
+                          if (await onMoveRow?.(row, displayedSerial))
                             setSort([]);
                         }
                       }}
                     >
-                      {virtualRow.index + 1}
+                      {displayedSerial}
                     </button>
                   </td>
 

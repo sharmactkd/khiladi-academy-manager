@@ -653,8 +653,10 @@ export const reconcileMembershipAfterCollection = async ({
   membership.autoMonthlyDue = true;
   membership.effectiveDueDate = nextState.effectiveDueDate;
   membership.nextDueDate = nextState.nextDueDate;
+  membership.dueDateCleared = false;
   membership.feeStatus = nextState.feeStatus;
   membership.feeRequired = true;
+  membership.feeStatusCleared = false;
   await membership.save({ session });
   return membership;
 };
@@ -680,6 +682,7 @@ export const applyPaymentStatusTransitionToMembership = async ({
   }
   const stillDue = Number(membership.unpaidMonths || 0) > 0 || Number(membership.unpaidDays || 0) > 0;
   membership.feeStatus = stillDue ? "due" : isPaid ? "paid" : (newStatus === "cancelled" ? "due" : newStatus);
+  membership.feeStatusCleared = false;
   if (!stillDue && isPaid && payment) {
     const next = Number(payment.feeMonth) === 12
       ? { month: 1, year: Number(payment.feeYear) + 1 }

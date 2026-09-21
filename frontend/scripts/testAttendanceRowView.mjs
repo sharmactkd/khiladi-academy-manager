@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { applyMembershipToAttendanceRow, applyStudentStatusToAttendanceRows, buildAttendanceRowView, cycleAttendanceSort, dueDateSortValue, patchAttendanceRow, getFeeStatusValue } from "../src/components/attendance/attendanceRowView.js";
+import { applyMembershipToAttendanceRow, applyStudentStatusToAttendanceRows, buildAttendanceRowView, cycleAttendanceSort, dueDateSortValue, patchAttendanceRow, getDueDateValue, getFeeStatusValue } from "../src/components/attendance/attendanceRowView.js";
 
 test("unpaid months display in fee status while table requests date-only membership badge", () => {
   const row = {rowType:'student', studentId:'prachi', feeStatus:'Due', membership:{unpaidMonths:24, effectiveDueDate:'2026-09-15'}};
@@ -35,6 +35,34 @@ test("membership adjustment immediately replaces stale fee status and summary", 
   assert.equal(updated.feeStatus, "due");
   assert.equal(updated.feeStatusSummary.label, "1M DUE");
   assert.equal(getFeeStatusValue(updated), "DUE");
+});
+
+test("due date and fee status can be cleared independently", () => {
+  const original = {
+    studentId: "stopped",
+    rowType: "student",
+    importedDueDate: "25 Days Left",
+    feeDueDate: "2026-10-01",
+    feeStatus: "due",
+    feeStatusSummary: { code: "due", label: "DUE" },
+  };
+  const dueCleared = applyMembershipToAttendanceRow(original, {
+    dueDateCleared: true,
+    feeStatus: "due",
+    feeStatusSummary: { code: "due", label: "DUE" },
+  });
+  assert.equal(getDueDateValue(dueCleared), "-");
+  assert.equal(getFeeStatusValue(dueCleared), "DUE");
+
+  const feeCleared = applyMembershipToAttendanceRow(original, {
+    effectiveDueDate: "2026-10-01",
+    lastAdjustedAt: "2026-09-21T10:00:00.000Z",
+    feeStatusCleared: true,
+    feeStatus: "",
+    feeStatusSummary: null,
+  });
+  assert.equal(getDueDateValue(feeCleared), "2026-10-01");
+  assert.equal(getFeeStatusValue(feeCleared), "-");
 });
 
 test("student status update replaces the cached attendance row without changing other rows", () => {

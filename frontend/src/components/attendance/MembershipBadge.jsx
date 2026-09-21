@@ -9,6 +9,7 @@ export const formatDueDate = (value, format = "full") => {
 export const getMembershipDisplay = (membership, fallbackDueDate) => {
   const dueDate = membership?.effectiveDueDate || fallbackDueDate;
   if (!membership) return { label: formatDueDate(dueDate), tone: "neutral" };
+  if (membership.feeStatusCleared) return { label: "-", tone: "neutral" };
 
   const remainingDays = Number(membership.remainingTrainingDays || 0);
   const unpaidMonths = Number(membership.unpaidMonths || 0);
@@ -57,7 +58,9 @@ const MembershipBadge = ({
   monthDate = "",
 }) => {
   const badge = dateOnly
-    ? (dateOverride ? { label: formatAttendanceDate(dateOverride, { format: dateFormat, monthDate }), tone: "neutral" } : remainingDaysDisplay(membership)) || {
+    ? membership?.dueDateCleared
+      ? { label: "-", tone: "neutral" }
+      : (dateOverride ? { label: formatAttendanceDate(dateOverride, { format: dateFormat, monthDate }), tone: "neutral" } : remainingDaysDisplay(membership)) || {
         label: formatDueDate(
           membership?.effectiveDueDate || fallbackDueDate || "-",
           dateFormat,

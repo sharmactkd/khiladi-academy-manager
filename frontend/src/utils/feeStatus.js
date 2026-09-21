@@ -32,6 +32,7 @@ export const getCanonicalFeeDisplay = (row = {}) => {
     return imported.toUpperCase().replace(/OVERDUE/g, "DUE").replace(/PENDING/g, "DUE");
   }
   const membership = row.membership || {};
+  if (membership.feeStatusCleared) return "-";
   const status = normalizeFeeStatus(row.feeStatus || membership.feeStatus);
   if (["waived", "complimentary"].includes(status)) return status === "waived" ? "FEE WAIVED" : "COMPLIMENTARY";
   if (Number(membership.remainingTrainingDays || 0) > 0) return "PAID";

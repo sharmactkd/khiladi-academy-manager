@@ -32,6 +32,7 @@ const studentMembershipSchema = new mongoose.Schema(
     // The next cycle that has not yet been accrued. Kept separate from the
     // outstanding balance so manual arrears and future billing can coexist.
     nextDueDate: { type: Date, default: null, index: true },
+    dueDateCleared: { type: Boolean, default: false },
     pausedAt: { type: Date, default: null },
     remainingTrainingDays: { type: Number, default: 0, min: 0 },
     unpaidMonths: { type: Number, default: 0, min: 0 },
@@ -44,6 +45,7 @@ const studentMembershipSchema = new mongoose.Schema(
       default: "due",
       index: true,
     },
+    feeStatusCleared: { type: Boolean, default: false },
     internalNote: { type: String, trim: true, maxlength: 1000, default: "" },
     lastAdjustedAt: { type: Date, default: null },
     lastAdjustedBy: {

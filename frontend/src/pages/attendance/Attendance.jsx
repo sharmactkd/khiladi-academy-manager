@@ -16,7 +16,7 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import AttendanceControls from "../../components/attendance/AttendanceControls.jsx";
 import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
 import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
-import { applyMembershipToAttendanceRow, applyStudentStatusToAttendanceRows, buildAttendanceRowView, getFeeStatusValue } from "../../components/attendance/attendanceRowView.js";
+import { applyMembershipToAttendanceRow, applyStudentStatusToAttendanceRows, buildAttendanceRowView, getDueDateValue, getFeeStatusValue } from "../../components/attendance/attendanceRowView.js";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import { formatAttendanceDate } from "../../utils/attendanceDate.js";
@@ -90,7 +90,7 @@ const buildExportRows = ({ rows, days }) => {
       No: row.no,
       Name: row.name,
       Contact: row.contact,
-      "Due Date": formatAttendanceDate(row.importedDueDate || row.feeDueDate),
+      "Due Date": formatAttendanceDate(getDueDateValue(row)),
       "Paid Date": formatAttendanceDate(row.importedPaidDate || row.feePaidDate),
       "Fee Paid": row.feePaid || "",
       "Fee Status": getFeeStatusValue(row),

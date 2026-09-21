@@ -14,6 +14,7 @@ const MEMBERSHIP_FIELDS = [
   "originalDueDate",
   "effectiveDueDate",
   "nextDueDate",
+  "dueDateCleared",
   "pausedAt",
   "remainingTrainingDays",
   "unpaidMonths",
@@ -21,6 +22,7 @@ const MEMBERSHIP_FIELDS = [
   "autoMonthlyDue",
   "feeRequired",
   "feeStatus",
+  "feeStatusCleared",
   "internalNote",
 ];
 
@@ -109,7 +111,7 @@ export const serializeMembership = (membership) => {
   const displayedDueDate = unpaidMonths > 0 || Number(source.unpaidDays || 0) > 0
     ? source.effectiveDueDate || source.nextDueDate
     : accrual.nextDueDate || source.nextDueDate || source.effectiveDueDate;
-  const feeStatusSummary = resolveFeeStatus({
+  const feeStatusSummary = source.feeStatusCleared === true ? null : resolveFeeStatus({
     membership: { ...source, unpaidMonths },
     fallbackStatus: source.feeStatus || "due",
   });
@@ -120,15 +122,17 @@ export const serializeMembership = (membership) => {
     status: source.status,
     startDate: source.startDate,
     originalDueDate: source.originalDueDate,
-    effectiveDueDate: displayedDueDate,
-    nextDueDate: accrual.nextDueDate || source.nextDueDate || source.effectiveDueDate,
+    effectiveDueDate: source.dueDateCleared === true ? null : displayedDueDate,
+    nextDueDate: source.dueDateCleared === true ? null : accrual.nextDueDate || source.nextDueDate || source.effectiveDueDate,
+    dueDateCleared: source.dueDateCleared === true,
     pausedAt: source.pausedAt || null,
     remainingTrainingDays: Number(source.remainingTrainingDays || 0),
     unpaidMonths,
     unpaidDays: Number(source.unpaidDays || 0),
     feeRequired: source.feeRequired !== false,
-    feeStatus: feeStatusSummary.code,
+    feeStatus: feeStatusSummary?.code || "",
     feeStatusSummary,
+    feeStatusCleared: source.feeStatusCleared === true,
     autoMonthlyDue: source.autoMonthlyDue === true,
     internalNote: source.internalNote || "",
     lastAdjustedAt: source.lastAdjustedAt,
@@ -242,11 +246,13 @@ export const applyMembershipAdjustment = async ({
 
   switch (type) {
     case "extend_days":
+      membership.dueDateCleared = false;
       days = boundedInteger(payload.days, "Days", 1, 3650);
       membership.nextDueDate = addDays(membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate, days);
       membership.effectiveDueDate = membership.nextDueDate;
       break;
     case "reduce_days":
+      membership.dueDateCleared = false;
       days = boundedInteger(payload.days, "Days", 1, 3650);
       membership.nextDueDate = addDays(membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate, -days);
       membership.effectiveDueDate = membership.nextDueDate;
@@ -258,7 +264,16 @@ export const applyMembershipAdjustment = async ({
       // remaining-training-days display. Keeping both makes the register show
       // stale "Days Left" instead of the newly selected date.
       membership.remainingTrainingDays = 0;
+      membership.dueDateCleared = false;
       membership.autoMonthlyDue = true;
+      break;
+    case "clear_due_date":
+      membership.originalDueDate = null;
+      membership.effectiveDueDate = null;
+      membership.nextDueDate = null;
+      membership.remainingTrainingDays = 0;
+      membership.autoMonthlyDue = false;
+      membership.dueDateCleared = true;
       break;
     case "set_remaining_days":
       membership.remainingTrainingDays = boundedInteger(payload.remainingTrainingDays, "Remaining days", 0, 3650);
@@ -271,6 +286,7 @@ export const applyMembershipAdjustment = async ({
         membership.unpaidDays = days;
         membership.feeStatus = months > 0 || days > 0 ? "due" : "paid";
         membership.feeRequired = true;
+        membership.feeStatusCleared = false;
         // The operator has set the exact balance as of today. Move the next
         // automatic cycle into the future so today's cycle is not added again.
         membership.nextDueDate = moveDueDateToNextCycle(
@@ -315,6 +331,7 @@ export const applyMembershipAdjustment = async ({
       if (!allowed.includes(feeStatus)) throw createError("Fee status is invalid");
       const wasFeeRequired = membership.feeRequired !== false;
       membership.feeStatus = feeStatus;
+      membership.feeStatusCleared = false;
       membership.feeRequired = !["waived", "complimentary"].includes(feeStatus);
       if (feeStatus === "complimentary") membership.status = "complimentary";
       else if (membership.status === "complimentary") membership.status = "active";
@@ -334,6 +351,13 @@ export const applyMembershipAdjustment = async ({
       }
       break;
     }
+    case "clear_fee_status":
+      membership.unpaidMonths = 0;
+      membership.unpaidDays = 0;
+      membership.feeStatus = "paid";
+      membership.feeRequired = false;
+      membership.feeStatusCleared = true;
+      break;
     case "set_note":
       membership.internalNote = clean(payload.internalNote ?? payload.note);
       break;

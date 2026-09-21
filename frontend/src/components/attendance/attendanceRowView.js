@@ -5,7 +5,9 @@ const text = (value) => String(value ?? "").trim();
 const missing = (value) => !text(value) || ["-", "—"].includes(text(value));
 
 export const getDueDateValue = (row) =>
-  row.rowType === "student" && row.studentId && row.membership?.lastAdjustedAt
+  row.membership?.dueDateCleared
+    ? "-"
+    : row.rowType === "student" && row.studentId && row.membership?.lastAdjustedAt
     ? row.membership.effectiveDueDate || row.feeDueDate || row.importedDueDate || "-"
     : row.importedDueDate || row.feeDueDate || row.membership?.effectiveDueDate || "-";
 export const getFeeStatusValue = getCanonicalFeeDisplay;
@@ -81,8 +83,8 @@ export const patchAttendanceRow = (rows, sourceIndex, update) =>
 export const applyMembershipToAttendanceRow = (row, membership) => ({
   ...row,
   membership,
-  feeDueDate: membership?.effectiveDueDate || row.feeDueDate,
-  feeStatus: membership?.feeStatus || row.feeStatus,
+  feeDueDate: membership?.dueDateCleared ? null : membership?.effectiveDueDate || row.feeDueDate,
+  feeStatus: membership?.feeStatusCleared ? "" : membership?.feeStatus || row.feeStatus,
   feeStatusSummary: membership?.feeStatusSummary || null,
 });
 

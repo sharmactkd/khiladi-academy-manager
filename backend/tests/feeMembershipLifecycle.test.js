@@ -89,3 +89,20 @@ test("custom due date replaces a stale remaining-days display", () => {
   const setDueDateCase = source.match(/case "set_due_date":[\s\S]*?break;/)?.[0] || "";
   assert.match(setDueDateCase, /membership\.remainingTrainingDays\s*=\s*0/);
 });
+
+test("cleared fee status serializes as an intentional blank", () => {
+  const result = serializeMembership({
+    status: "active",
+    feeRequired: false,
+    feeStatus: "paid",
+    feeStatusCleared: true,
+    dueDateCleared: false,
+    effectiveDueDate: new Date("2026-10-01T00:00:00.000Z"),
+    nextDueDate: new Date("2026-10-01T00:00:00.000Z"),
+    unpaidMonths: 0,
+    unpaidDays: 0,
+  });
+  assert.equal(result.feeStatus, "");
+  assert.equal(result.feeStatusSummary, null);
+  assert.equal(result.effectiveDueDate.toISOString(), "2026-10-01T00:00:00.000Z");
+});

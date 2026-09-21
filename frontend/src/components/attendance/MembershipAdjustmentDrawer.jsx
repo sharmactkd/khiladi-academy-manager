@@ -18,11 +18,13 @@ const ACTIONS = [
   { value: "extend_days", label: "Add training days" },
   { value: "reduce_days", label: "Remove training days" },
   { value: "set_due_date", label: "Set custom due date" },
+  { value: "clear_due_date", label: "Clear due date" },
   { value: "set_remaining_days", label: "Set remaining days" },
   { value: "change_unpaid_months", label: "Set unpaid months & days" },
   { value: "pause", label: "Pause membership" },
   { value: "resume", label: "Resume membership" },
   { value: "set_fee_status", label: "Set fee status" },
+  { value: "clear_fee_status", label: "Clear fee status" },
   { value: "set_note", label: "Update internal note" },
 ];
 
@@ -54,11 +56,13 @@ const formatAction = (item) => {
     extend_days: `Added ${item.days} days`,
     reduce_days: `Removed ${item.days} days`,
     set_due_date: "Custom due date set",
+    clear_due_date: "Due date cleared",
     set_remaining_days: "Remaining days updated",
     change_unpaid_months: `Set ${item.months || 0} month(s), ${item.days || 0} day(s) due`,
     pause: "Membership paused",
     resume: "Membership resumed",
     set_fee_status: "Fee status updated",
+    clear_fee_status: "Fee status cleared",
     set_note: "Internal note updated",
     reversal: "Adjustment reversed",
   };
