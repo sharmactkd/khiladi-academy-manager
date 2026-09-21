@@ -72,3 +72,11 @@ export const buildAttendanceRowView = (rows, query = "", sort = [], monthDate = 
 // Always patch the complete register, never the filtered/sorted view.
 export const patchAttendanceRow = (rows, sourceIndex, update) =>
   rows.map((row, index) => index === sourceIndex ? update(row) : row);
+
+export const applyMembershipToAttendanceRow = (row, membership) => ({
+  ...row,
+  membership,
+  feeDueDate: membership?.effectiveDueDate || row.feeDueDate,
+  feeStatus: membership?.feeStatus || row.feeStatus,
+  feeStatusSummary: membership?.feeStatusSummary || null,
+});

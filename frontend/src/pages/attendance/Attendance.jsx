@@ -16,7 +16,7 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import AttendanceControls from "../../components/attendance/AttendanceControls.jsx";
 import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
 import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
-import { buildAttendanceRowView, getFeeStatusValue } from "../../components/attendance/attendanceRowView.js";
+import { applyMembershipToAttendanceRow, buildAttendanceRowView, getFeeStatusValue } from "../../components/attendance/attendanceRowView.js";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import { formatAttendanceDate } from "../../utils/attendanceDate.js";
@@ -595,23 +595,18 @@ const Attendance = () => {
     setAutoSaveError("");
   };
 
-  const handleMembershipUpdated = (studentId, membership, adjustmentType) => {
+  const handleMembershipUpdated = (studentId, membership) => {
     registerCacheRef.current.delete(`${batch}:${year}:${month}`);
-    setRows((current) => current.map((row) =>
+    const nextRows = rowsRef.current.map((row) =>
       String(row.studentId) === String(studentId)
-        ? {
-            ...row,
-            membership,
-            feeDueDate: membership?.effectiveDueDate || row.feeDueDate,
-            feeStatus: adjustmentType === "set_fee_status" || (adjustmentType === "reversal" && row.membership?.feeStatus !== membership?.feeStatus)
-              ? membership?.feeStatus || row.feeStatus
-              : row.feeStatus,
-          }
+        ? applyMembershipToAttendanceRow(row, membership)
         : row
-    ));
+    );
+    rowsRef.current = nextRows;
+    setRows(nextRows);
     setMembershipStudent((current) =>
       current && String(current.studentId) === String(studentId)
-        ? { ...current, membership }
+        ? applyMembershipToAttendanceRow(current, membership)
         : current
     );
   };

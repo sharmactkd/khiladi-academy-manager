@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { buildAttendanceRowView, cycleAttendanceSort, dueDateSortValue, patchAttendanceRow, getFeeStatusValue } from "../src/components/attendance/attendanceRowView.js";
+import { applyMembershipToAttendanceRow, buildAttendanceRowView, cycleAttendanceSort, dueDateSortValue, patchAttendanceRow, getFeeStatusValue } from "../src/components/attendance/attendanceRowView.js";
 
 test("unpaid months display in fee status while table requests date-only membership badge", () => {
   const row = {rowType:'student', studentId:'prachi', feeStatus:'Due', membership:{unpaidMonths:24, effectiveDueDate:'2026-09-15'}};
@@ -12,6 +12,29 @@ test("unpaid months display in fee status while table requests date-only members
   assert.equal(getFeeStatusValue({...row,membership:{unpaidMonths:2}}), '2M DUE');
   const source = readFileSync(new URL('../src/components/attendance/AttendanceTable.jsx',import.meta.url),'utf8');
   assert.match(source, /<MembershipBadge\s+dateOnly/);
+});
+
+test("membership adjustment immediately replaces stale fee status and summary", () => {
+  const row = {
+    studentId: "manan",
+    feeDueDate: "2026-10-05",
+    feeStatus: "paid",
+    feeStatusSummary: { code: "paid", label: "PAID" },
+    membership: { feeStatus: "paid", unpaidMonths: 0 },
+  };
+  const membership = {
+    effectiveDueDate: "2026-09-05T00:00:00.000Z",
+    nextDueDate: "2026-10-05T00:00:00.000Z",
+    feeStatus: "due",
+    unpaidMonths: 1,
+    unpaidDays: 0,
+    feeStatusSummary: { code: "due", label: "1M DUE", unpaidMonths: 1, unpaidDays: 0 },
+  };
+  const updated = applyMembershipToAttendanceRow(row, membership);
+  assert.equal(updated.feeDueDate, membership.effectiveDueDate);
+  assert.equal(updated.feeStatus, "due");
+  assert.equal(updated.feeStatusSummary.label, "1M DUE");
+  assert.equal(getFeeStatusValue(updated), "DUE");
 });
 
 const rows = [
