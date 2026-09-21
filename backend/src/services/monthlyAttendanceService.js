@@ -569,47 +569,25 @@ export const getMonthlyAttendanceRegister = async ({
         : { academy: academyObjectId, batch: batchObjectId, year: numericYear, month: numericMonth }
     ).sort(isCurrentRegister ? { updatedAt: -1 } : {}).lean(),
     isCurrentRegister
-      ? Attendance.aggregate([
-          {
-            $match: {
-              academy: academyObjectId,
-              batch: batchObjectId,
-              date: { $lt: end },
-              records: {
-                $elemMatch: {
-                  $or: [
-                    { importedDueDate: { $exists: true, $nin: [null, ""] } },
-                    { importedPaidDate: { $exists: true, $nin: [null, ""] } },
-                    { importedFeePaid: { $exists: true, $nin: [null, ""] } },
-                    { importedFeeStatus: { $exists: true, $nin: [null, ""] } },
-                  ],
-                },
-              },
+      ? Attendance.find({
+          academy: academyObjectId,
+          batch: batchObjectId,
+          date: { $lt: end },
+          records: {
+            $elemMatch: {
+              $or: [
+                { importedDueDate: { $exists: true, $nin: [null, ""] } },
+                { importedPaidDate: { $exists: true, $nin: [null, ""] } },
+                { importedFeePaid: { $exists: true, $nin: [null, ""] } },
+                { importedFeeStatus: { $exists: true, $nin: [null, ""] } },
+              ],
             },
           },
-          { $sort: { date: -1, updatedAt: -1 } },
-          {
-            $project: {
-              date: 1,
-              "records.student": 1,
-              "records.importedDueDate": 1,
-              "records.importedPaidDate": 1,
-              "records.importedFeePaid": 1,
-              "records.importedFeeStatus": 1,
-              periodYear: { $year: "$date" },
-              periodMonth: { $month: "$date" },
-            },
-          },
-          {
-            $group: {
-              _id: { year: "$periodYear", month: "$periodMonth" },
-              snapshot: { $first: "$$ROOT" },
-            },
-          },
-          { $sort: { "snapshot.date": -1 } },
-          { $limit: 24 },
-          { $replaceRoot: { newRoot: "$snapshot" } },
-        ]).allowDiskUse(true)
+        })
+          .select("date records.student records.importedDueDate records.importedPaidDate records.importedFeePaid records.importedFeeStatus")
+          .sort({ date: -1, updatedAt: -1 })
+          .limit(40)
+          .lean()
       : Promise.resolve([]),
   ]);
 
