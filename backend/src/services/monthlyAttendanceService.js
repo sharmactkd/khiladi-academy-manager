@@ -594,7 +594,21 @@ export const getMonthlyAttendanceRegister = async ({
   const effectiveMonthMetadataDocs = isCurrentRegister
     ? [...monthMetadataDocs.reduce((map, item) => {
         const studentId = String(item.student);
-        if (!map.has(studentId)) map.set(studentId, item);
+        if (!map.has(studentId)) {
+          map.set(studentId, { ...item });
+          return map;
+        }
+
+        const latest = map.get(studentId);
+        [
+          "importedDueDate",
+          "importedPaidDate",
+          "importedFeePaid",
+          "importedFeeStatus",
+          "importedExtraNote",
+        ].forEach((field) => {
+          if (!clean(latest[field]) && clean(item[field])) latest[field] = item[field];
+        });
         return map;
       }, new Map()).values()]
     : monthMetadataDocs;
@@ -834,6 +848,38 @@ export const getStudentYearlyAttendanceProfile = async ({
       ...calculateCounts(attendance),
     };
   });
+
+  const now = new Date();
+  if (numericYear === now.getUTCFullYear()) {
+    const currentMonth = now.getUTCMonth() + 1;
+    const currentMonthRow = months.find((item) => Number(item.value) === currentMonth);
+    if (currentMonthRow) {
+      const latestNonEmpty = [...monthMetadataDocs]
+        .sort((left, right) => new Date(right.updatedAt || 0) - new Date(left.updatedAt || 0))
+        .reduce((result, item) => {
+          [
+            "importedDueDate",
+            "importedPaidDate",
+            "importedFeePaid",
+            "importedFeeStatus",
+          ].forEach((field) => {
+            if (!clean(result[field]) && clean(item[field])) result[field] = item[field];
+          });
+          return result;
+        }, {});
+
+      [
+        "importedDueDate",
+        "importedPaidDate",
+        "importedFeePaid",
+        "importedFeeStatus",
+      ].forEach((field) => {
+        if (!clean(currentMonthRow[field]) && clean(latestNonEmpty[field])) {
+          currentMonthRow[field] = latestNonEmpty[field];
+        }
+      });
+    }
+  }
 
   return {
     year: numericYear,
