@@ -1879,27 +1879,24 @@ button:disabled,
   border: 4px solid #e5e7eb;
 }
 
-/* FINAL OVERRIDE: Sunday always blue */
+/* Sunday uses the same cell language as yearly attendance history. */
 .monthly-register-table .day-heading--sunday,
-.monthly-register-table .day-number--sunday,
+.monthly-register-table .day-number--sunday {
+  background: #eaf4ff !important;
+  color: #175eaa !important;
+}
+
 .monthly-register-table .attendance-day-cell--sunday {
-  background: #123a7a !important;
-  color: #ffffff !important;
+  background: inherit !important;
+  color: inherit !important;
 }
 
-/* Sunday ke andar blank cell bhi blue column feel de */
-.monthly-register-table .attendance-day-cell--sunday .attendance-cell,
-.monthly-register-table .attendance-day-cell--sunday .attendance-cell--blank {
-  background: #f8fafc !important;
-  color: #0f172a !important;
-}
-
-/* Future Sunday bhi blue hi rahe */
+/* Future dates remain disabled, including Sundays. */
 .monthly-register-table .day-heading--sunday.day-heading--future,
 .monthly-register-table .day-number--sunday.day-number--future,
 .monthly-register-table .attendance-day-cell--sunday.attendance-day-cell--future {
-  background: #123a7a !important;
-  color: #ffffff !important;
+  background: #f1f3f6 !important;
+  color: #a1acba !important;
 }
 
 /* KHILADI unified product theme */
@@ -2145,6 +2142,11 @@ tbody tr:hover { background: #fffafa; }
 
 .monthly-register-table .attendance-day-cell--noted .attendance-cell--blank {
   background: rgba(255, 255, 255, 0.48);
+}
+.monthly-register-table .attendance-day-cell--noted .attendance-cell--holiday {
+  border-color: #c59b38;
+  color: #775209;
+  background: rgba(255, 255, 255, 0.58);
 }
 
 .day-heading--noted { position: relative; cursor: context-menu; }

@@ -150,6 +150,7 @@ const MonthlyInsights = ({ bestMonth, attentionMonth, totals }) => (
 
 const StudentYearlyAttendanceProfile = ({ data, summary }) => {
   const months = Array.isArray(data?.months) ? data.months : [];
+  const dayNotes = data?.dayNotes || {};
   const year = data?.year || new Date().getFullYear();
   const todayKey = getTodayKey();
   const today = new Date();
@@ -192,6 +193,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
               <span key={value}><i className={toneClass("cell", meta.tone)}>{meta.short}</i>{meta.label}</span>
             ))}
             <span><i className={styles.cellSunday}>S</i>Sunday</span>
+            <span><i className={styles.cellHoliday}>H</i>Holiday</span>
             <span><i className={styles.cellBlank}>–</i>Not Marked</span>
           </div>
         </header>
@@ -228,6 +230,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
                       const dayInfo = getDayInfo(month, day);
                       const value = getMonthValue(month, day);
                       const meta = STATUS_META[value];
+                      const holiday = dayNotes[dayInfo?.dateKey];
                       const isSunday = Boolean(dayInfo?.isSunday);
                       const isFutureDay = Boolean(dayInfo?.dateKey && dayInfo.dateKey > todayKey);
                       const classNames = [
@@ -236,19 +239,24 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
                           ? styles.dayFuture
                           : meta
                           ? toneClass("cell", meta.tone)
+                          : holiday
+                            ? styles.cellHoliday
                           : isSunday
                             ? styles.cellSunday
                             : styles.cellBlank,
                       ];
                       if (!dayInfo) classNames.push(styles.dayDisabled);
                       else if (isSunday && !isFutureDay) classNames.push(styles.daySunday);
-                      const label = isFutureDay ? "" : meta?.short || (isSunday ? "S" : "–");
+                      const label = isFutureDay ? "" : meta?.short || (holiday ? "H" : isSunday ? "S" : "–");
                       const title = isFutureDay
                         ? `${dayInfo.dateKey}: Future date`
                         : dayInfo
-                        ? `${dayInfo.dateKey}: ${isSunday ? `Sunday · ${meta?.label || "Not marked"}` : meta?.label || "Not marked"}`
+                        ? holiday && !meta
+                          ? `${dayInfo.dateKey}: Holiday · ${holiday.title || "Holiday"}${holiday.description ? ` — ${holiday.description}` : ""}`
+                          : `${dayInfo.dateKey}: ${isSunday ? `Sunday · ${meta?.label || "Not marked"}` : meta?.label || "Not marked"}`
                         : "Date unavailable";
-                      return <td key={day}><span className={classNames.join(" ")} title={title}>{label}</span></td>;
+                      const style = holiday && !meta && !isFutureDay ? { "--holiday-color": holiday.color || "#e2e8f0" } : undefined;
+                      return <td key={day} className={holiday && !isFutureDay ? styles.holidayColumnCell : undefined} style={style}><span className={classNames.join(" ")} title={title}>{label}</span></td>;
                     })}
                     <td className={styles.countPresent}>{isFutureMonth ? "" : month.presentCount || 0}</td>
                     <td className={styles.countAbsent}>{isFutureMonth ? "" : month.absentCount || 0}</td>

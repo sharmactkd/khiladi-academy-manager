@@ -197,16 +197,20 @@ const buildBlankAttendance = (days = []) => {
   return attendance;
 };
 
-const getMonthlyFeeMap = async ({ academyId, studentIds, month, year }) => {
+const getMonthlyFeeMap = async ({ academyId, studentIds, month, year, latest = false }) => {
   if (!studentIds.length) return new Map();
 
-  const payments = await FeePayment.find({
+  const query = {
     academy: academyId,
     student: { $in: studentIds },
-    feeMonth: Number(month),
-    feeYear: Number(year),
     status: { $ne: "cancelled" },
-  })
+  };
+  if (!latest) {
+    query.feeMonth = Number(month);
+    query.feeYear = Number(year);
+  }
+
+  const payments = await FeePayment.find(query)
     .sort({ paymentDate: -1, createdAt: -1 })
     .lean();
 
@@ -360,6 +364,7 @@ const buildMonthlyRows = async ({
   days,
   attendanceDocs,
   monthMetadataDocs = [],
+  latestFeeValues = false,
 }) => {
   const markedStudentIds = [];
 
@@ -384,7 +389,7 @@ const buildMonthlyRows = async ({
 
   const studentIds = students.map((student) => student._id);
   const [feeMap, membershipMap] = await Promise.all([
-    getMonthlyFeeMap({ academyId: academyObjectId, studentIds, month, year }),
+    getMonthlyFeeMap({ academyId: academyObjectId, studentIds, month, year, latest: latestFeeValues }),
     getMembershipMap({ academyId: academyObjectId, studentIds }),
   ]);
 
@@ -541,6 +546,8 @@ export const getMonthlyAttendanceRegister = async ({
   }
 
   const startedAt = performance.now();
+  const now = new Date();
+  const isCurrentRegister = numericYear === now.getUTCFullYear() && numericMonth === now.getUTCMonth() + 1;
   const days = buildDays({ year: numericYear, month: numericMonth });
   const { start, end } = getMonthRange({ year: numericYear, month: numericMonth });
   const orderId = `${academyObjectId}:${batchObjectId}:${numericYear}:${numericMonth}`;
@@ -549,7 +556,18 @@ export const getMonthlyAttendanceRegister = async ({
     Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date records").lean(),
     AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date type title description color createdAt updatedAt").lean(),
     AttendanceRowOrder.findById(orderId).select("keys revision").lean(),
-    AttendanceMonthMetadata.find({ academy: academyObjectId, batch: batchObjectId, year: numericYear, month: numericMonth }).lean(),
+    AttendanceMonthMetadata.find(
+      isCurrentRegister
+        ? {
+            academy: academyObjectId,
+            batch: batchObjectId,
+            $or: [
+              { year: { $lt: numericYear } },
+              { year: numericYear, month: { $lte: numericMonth } },
+            ],
+          }
+        : { academy: academyObjectId, batch: batchObjectId, year: numericYear, month: numericMonth }
+    ).sort(isCurrentRegister ? { updatedAt: -1 } : {}).lean(),
   ]);
 
   if (!batch) {
@@ -573,6 +591,14 @@ export const getMonthlyAttendanceRegister = async ({
     return map;
   }, {});
 
+  const effectiveMonthMetadataDocs = isCurrentRegister
+    ? [...monthMetadataDocs.reduce((map, item) => {
+        const studentId = String(item.student);
+        if (!map.has(studentId)) map.set(studentId, item);
+        return map;
+      }, new Map()).values()]
+    : monthMetadataDocs;
+
   const { rows, students } = await buildMonthlyRows({
     academyObjectId,
     batchObjectId,
@@ -580,7 +606,8 @@ export const getMonthlyAttendanceRegister = async ({
     year: numericYear,
     days,
     attendanceDocs,
-    monthMetadataDocs,
+    monthMetadataDocs: effectiveMonthMetadataDocs,
+    latestFeeValues: isCurrentRegister,
   });
 
   const orderedRows = applyRowOrder(rows.map((row) => ({ ...row, registerOrderKey: getAttendanceRegisterRowKey(row) })), order?.keys || []);
@@ -719,15 +746,30 @@ export const getStudentYearlyAttendanceProfile = async ({
   const yearStart = new Date(Date.UTC(numericYear, 0, 1));
   const yearEnd = new Date(Date.UTC(numericYear + 1, 0, 1));
 
-  const [attendanceDocs, monthMetadataDocs] = await Promise.all([
+  const [attendanceDocs, monthMetadataDocs, dayNoteDocs] = await Promise.all([
     Attendance.find({
       academy: academyObjectId,
       date: { $gte: yearStart, $lt: yearEnd },
       "records.student": studentObjectId,
     }).populate("batch", "batchName martialArt").lean(),
     AttendanceMonthMetadata.find({ academy: academyObjectId, student: studentObjectId, year: numericYear }).lean(),
+    AttendanceDayNote.find({
+      academy: academyObjectId,
+      batch: student.batch?._id || student.batch,
+      date: { $gte: yearStart, $lt: yearEnd },
+    }).select("date type title description color").lean(),
   ]);
   const monthMetadataMap = new Map(monthMetadataDocs.map((item) => [Number(item.month), item]));
+  const dayNotes = dayNoteDocs.reduce((map, note) => {
+    const dateKey = getLocalDateKey(note.date);
+    map[dateKey] = {
+      type: note.type,
+      title: note.title,
+      description: note.description || "",
+      color: note.color || "#e2e8f0",
+    };
+    return map;
+  }, {});
 
   const firstImportedRecord =
     attendanceDocs
@@ -821,6 +863,7 @@ export const getStudentYearlyAttendanceProfile = async ({
       importedFeeStatus: firstImportedRecord?.importedFeeStatus || "",
     },
     months,
+    dayNotes,
   };
 };
 

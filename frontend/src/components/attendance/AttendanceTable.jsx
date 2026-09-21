@@ -926,6 +926,8 @@ const AttendanceTable = ({
                         ) : (
                           <AttendanceCell
                             value={row.attendance?.[day.dateKey] || ""}
+                            isSunday={day.isSunday}
+                            holiday={note}
                             onChange={(value) =>
                               updateCell(rowIndex, day.dateKey, value)
                             }

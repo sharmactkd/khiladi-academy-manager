@@ -831,10 +831,13 @@
   padding: 5px !important;
 }
 .attendance-page .day-heading--sunday,
-.attendance-page .day-number--sunday,
+.attendance-page .day-number--sunday {
+  color: #175eaa !important;
+  background: #eaf4ff !important;
+}
 .attendance-page .attendance-day-cell--sunday {
-  color: #bf111a !important;
-  background: #fff1f2 !important;
+  color: inherit !important;
+  background: inherit !important;
 }
 .attendance-page .day-heading--saturday,
 .attendance-page .day-number--saturday,
@@ -906,6 +909,22 @@
 }
 .attendance-page .attendance-cell--blank {
   color: #93a0b1;
+}
+.attendance-page .attendance-cell--sunday {
+  border-color: #4b94db;
+  color: #175eaa;
+  background: #eaf4ff;
+}
+.attendance-page .attendance-cell--sunday-day {
+  border-color: #4b94db;
+}
+.attendance-page .attendance-cell--holiday {
+  border-color: #c59b38;
+  color: #775209;
+  background: rgba(255, 255, 255, 0.58);
+}
+.attendance-page .attendance-cell--holiday-day {
+  font-weight: 950;
 }
 .attendance-page .fee-status {
   font-size: 13px;
