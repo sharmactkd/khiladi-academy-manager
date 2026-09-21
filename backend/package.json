@@ -12,6 +12,7 @@
     "test:expenses": "node --test tests/expenseUtils.test.js",
     "test:cloudinary": "node scripts/testCloudinaryConnection.js",
     "performance:indexes": "node scripts/createPerformanceIndexes.js",
+    "membership:migrate-next-due": "node scripts/migrateMembershipNextDueDate.js",
     "security:verify-audit": "node scripts/verifyAuditIntegrity.js",
     "security:verify-production": "node scripts/verifyProductionReadiness.js",
     "security:verify-headers": "node scripts/verifySecurityHeaders.js",

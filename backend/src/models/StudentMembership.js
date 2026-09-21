@@ -29,6 +29,10 @@ const studentMembershipSchema = new mongoose.Schema(
     startDate: { type: Date, default: null },
     originalDueDate: { type: Date, default: null },
     effectiveDueDate: { type: Date, default: null, index: true },
+    // The next cycle that has not yet been accrued. Kept separate from the
+    // outstanding balance so manual arrears and future billing can coexist.
+    nextDueDate: { type: Date, default: null, index: true },
+    pausedAt: { type: Date, default: null },
     remainingTrainingDays: { type: Number, default: 0, min: 0 },
     unpaidMonths: { type: Number, default: 0, min: 0 },
     unpaidDays: { type: Number, default: 0, min: 0, max: 29 },

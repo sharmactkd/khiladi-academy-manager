@@ -8,7 +8,7 @@ import FeePayment from "../models/FeePayment.js";
 import StudentMembership from "../models/StudentMembership.js";
 import Sequence from "../models/Sequence.js";
 import { getCurrencySymbol } from "../utils/currency.js";
-import { addBillingMonthsClamped, calculateAccruedUnpaidMonths } from "../utils/membershipMonthlyDue.js";
+import { addBillingMonthsClamped, calculateMembershipAccrualState } from "../utils/membershipMonthlyDue.js";
 import { resolveFeeStatus } from "../utils/feeStatus.js";
 import { getMembershipMap, serializeMembership } from "./membershipService.js";
 
@@ -35,9 +35,9 @@ export const buildDueDate = (month, year, dueDay = 10) => {
   const safeMonth = Number(month);
   const safeYear = Number(year);
   const safeDueDay = Math.min(Math.max(Number(dueDay || 10), 1), 31);
-  const lastDay = new Date(safeYear, safeMonth, 0).getDate();
+  const lastDay = new Date(Date.UTC(safeYear, safeMonth, 0)).getUTCDate();
 
-  return new Date(safeYear, safeMonth - 1, Math.min(safeDueDay, lastDay));
+  return new Date(Date.UTC(safeYear, safeMonth - 1, Math.min(safeDueDay, lastDay)));
 };
 
 export const generateReceiptNumber = async (academyId, session = null) => {
@@ -582,20 +582,42 @@ export const deriveMembershipCollectionState = ({
   now = new Date(),
 }) => {
   const completed = Math.max(0, Number(completedPeriods || 0));
-  const accrued = calculateAccruedUnpaidMonths(membership, now);
+  const accrual = calculateMembershipAccrualState(membership, now);
+  const accrued = accrual.unpaidMonths;
   const unpaidMonths = Math.max(0, accrued - completed);
   const unpaidDays = Math.max(0, Number(membership?.unpaidDays || 0));
-  const anchor = membership?.effectiveDueDate || membership?.originalDueDate || latestDueDate;
-  const effectiveDueDate = completed > 0
-    ? addBillingMonthsClamped(anchor, completed)
-    : anchor ? new Date(anchor) : null;
+  const storedBeforeAccrual = Math.max(0, Number(membership?.unpaidMonths || 0));
+  const accrualStartDate = membership?.nextDueDate || membership?.effectiveDueDate || membership?.originalDueDate || latestDueDate;
+  let nextDueDate = accrual.nextDueDate || accrualStartDate;
+  // If a future cycle is paid before it becomes due, move the next accrual
+  // date by only the advance periods not already consumed by overdue cycles.
+  const advancePeriods = Math.max(0, completed - accrued);
+  if (nextDueDate && advancePeriods > 0) {
+    nextDueDate = addBillingMonthsClamped(nextDueDate, advancePeriods);
+  }
+  let oldestDueDate = membership?.effectiveDueDate || accrualStartDate;
+  if (storedBeforeAccrual === 0 && accrual.accruedCycles > 0 && accrualStartDate) {
+    oldestDueDate = new Date(accrualStartDate);
+  }
+  if (completed > 0 && oldestDueDate) {
+    oldestDueDate = addBillingMonthsClamped(oldestDueDate, Math.min(completed, accrued));
+  }
+  const effectiveDueDate = unpaidMonths > 0 || unpaidDays > 0
+    ? oldestDueDate ? new Date(oldestDueDate) : null
+    : nextDueDate ? new Date(nextDueDate) : null;
   const stillDue = unpaidMonths > 0 || unpaidDays > 0;
   const feeStatus = latestStatus === "partial"
     ? "partial"
     : latestStatus === "paid" && !stillDue
       ? "paid"
       : stillDue ? "due" : latestStatus || membership?.feeStatus || "due";
-  return { unpaidMonths, unpaidDays, effectiveDueDate, feeStatus };
+  return {
+    unpaidMonths,
+    unpaidDays,
+    effectiveDueDate,
+    nextDueDate: nextDueDate ? new Date(nextDueDate) : null,
+    feeStatus,
+  };
 };
 
 export const reconcileMembershipAfterCollection = async ({
@@ -615,6 +637,7 @@ export const reconcileMembershipAfterCollection = async ({
       startDate: student.joiningDate || student.createdAt || new Date(),
       originalDueDate: latestPayment?.dueDate || student.joiningDate || new Date(),
       effectiveDueDate: latestPayment?.dueDate || student.joiningDate || new Date(),
+      nextDueDate: latestPayment?.dueDate || student.joiningDate || new Date(),
       feeRequired: true,
     });
   }
@@ -629,6 +652,7 @@ export const reconcileMembershipAfterCollection = async ({
   membership.unpaidDays = nextState.unpaidDays;
   membership.autoMonthlyDue = true;
   membership.effectiveDueDate = nextState.effectiveDueDate;
+  membership.nextDueDate = nextState.nextDueDate;
   membership.feeStatus = nextState.feeStatus;
   membership.feeRequired = true;
   await membership.save({ session });
@@ -647,6 +671,10 @@ export const applyPaymentStatusTransitionToMembership = async ({
   if (!membership) return null;
   const wasPaid = oldStatus === "paid";
   const isPaid = newStatus === "paid";
+  const accrual = calculateMembershipAccrualState(membership);
+  membership.unpaidMonths = accrual.unpaidMonths;
+  membership.nextDueDate = accrual.nextDueDate || membership.nextDueDate || membership.effectiveDueDate;
+  membership.effectiveDueDate = membership.nextDueDate || membership.effectiveDueDate;
   if (wasPaid !== isPaid) {
     membership.unpaidMonths = Math.max(0, Number(membership.unpaidMonths || 0) + (isPaid ? -1 : 1));
   }
@@ -657,7 +685,8 @@ export const applyPaymentStatusTransitionToMembership = async ({
       ? { month: 1, year: Number(payment.feeYear) + 1 }
       : { month: Number(payment.feeMonth) + 1, year: Number(payment.feeYear) };
     const sourceDue = new Date(payment.dueDate || 0);
-    membership.effectiveDueDate = buildDueDate(next.month, next.year, Number.isNaN(sourceDue.getTime()) ? 10 : sourceDue.getUTCDate());
+    membership.nextDueDate = buildDueDate(next.month, next.year, Number.isNaN(sourceDue.getTime()) ? 10 : sourceDue.getUTCDate());
+    membership.effectiveDueDate = membership.nextDueDate;
   }
   await membership.save({ session });
   return membership;

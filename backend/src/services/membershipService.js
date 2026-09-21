@@ -4,7 +4,7 @@ import FeePayment from "../models/FeePayment.js";
 import MembershipAdjustment from "../models/MembershipAdjustment.js";
 import Student from "../models/Student.js";
 import StudentMembership from "../models/StudentMembership.js";
-import { calculateAccruedUnpaidMonths } from "../utils/membershipMonthlyDue.js";
+import { calculateMembershipAccrualState } from "../utils/membershipMonthlyDue.js";
 import { resolveFeeStatus } from "../utils/feeStatus.js";
 import { queueFeeIntegritySync } from "./automaticFeeIntegrityService.js";
 
@@ -13,6 +13,8 @@ const MEMBERSHIP_FIELDS = [
   "startDate",
   "originalDueDate",
   "effectiveDueDate",
+  "nextDueDate",
+  "pausedAt",
   "remainingTrainingDays",
   "unpaidMonths",
   "unpaidDays",
@@ -102,7 +104,11 @@ const snapshot = (membership) =>
 export const serializeMembership = (membership) => {
   if (!membership) return null;
   const source = typeof membership.toObject === "function" ? membership.toObject() : membership;
-  const unpaidMonths = calculateAccruedUnpaidMonths(source);
+  const accrual = calculateMembershipAccrualState(source);
+  const unpaidMonths = accrual.unpaidMonths;
+  const displayedDueDate = unpaidMonths > 0 || Number(source.unpaidDays || 0) > 0
+    ? source.effectiveDueDate || source.nextDueDate
+    : accrual.nextDueDate || source.nextDueDate || source.effectiveDueDate;
   const feeStatusSummary = resolveFeeStatus({
     membership: { ...source, unpaidMonths },
     fallbackStatus: source.feeStatus || "due",
@@ -114,7 +120,9 @@ export const serializeMembership = (membership) => {
     status: source.status,
     startDate: source.startDate,
     originalDueDate: source.originalDueDate,
-    effectiveDueDate: source.effectiveDueDate,
+    effectiveDueDate: displayedDueDate,
+    nextDueDate: accrual.nextDueDate || source.nextDueDate || source.effectiveDueDate,
+    pausedAt: source.pausedAt || null,
     remainingTrainingDays: Number(source.remainingTrainingDays || 0),
     unpaidMonths,
     unpaidDays: Number(source.unpaidDays || 0),
@@ -159,6 +167,7 @@ export const getOrCreateMembership = async ({ academyId, studentId }) => {
       startDate: student.joiningDate || student.createdAt || null,
       originalDueDate: initialDueDate,
       effectiveDueDate: initialDueDate,
+      nextDueDate: initialDueDate,
       feeStatus: latestFee?.status || "due",
       feeRequired: true,
     });
@@ -214,20 +223,37 @@ export const applyMembershipAdjustment = async ({
   }
 
   const previousState = snapshot(membership);
+  const storedMonthsBeforeAccrual = Math.max(0, Number(membership.unpaidMonths || 0));
+  const accrualStartDate = membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate;
+  const currentAccrual = calculateMembershipAccrualState(membership);
+  membership.unpaidMonths = currentAccrual.unpaidMonths;
+  if (currentAccrual.nextDueDate) {
+    membership.nextDueDate = currentAccrual.nextDueDate;
+  }
+  if (
+    storedMonthsBeforeAccrual === 0 &&
+    currentAccrual.accruedCycles > 0 &&
+    accrualStartDate
+  ) {
+    membership.effectiveDueDate = accrualStartDate;
+  }
   let days = 0;
   let months = 0;
 
   switch (type) {
     case "extend_days":
       days = boundedInteger(payload.days, "Days", 1, 3650);
-      membership.effectiveDueDate = addDays(membership.effectiveDueDate || membership.originalDueDate, days);
+      membership.nextDueDate = addDays(membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate, days);
+      membership.effectiveDueDate = membership.nextDueDate;
       break;
     case "reduce_days":
       days = boundedInteger(payload.days, "Days", 1, 3650);
-      membership.effectiveDueDate = addDays(membership.effectiveDueDate || membership.originalDueDate, -days);
+      membership.nextDueDate = addDays(membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate, -days);
+      membership.effectiveDueDate = membership.nextDueDate;
       break;
     case "set_due_date":
       membership.effectiveDueDate = parseMembershipDate(payload.dueDate, "Due date");
+      membership.nextDueDate = membership.effectiveDueDate;
       membership.autoMonthlyDue = true;
       break;
     case "set_remaining_days":
@@ -243,13 +269,17 @@ export const applyMembershipAdjustment = async ({
         membership.feeRequired = true;
         // The operator has set the exact balance as of today. Move the next
         // automatic cycle into the future so today's cycle is not added again.
-        membership.effectiveDueDate = moveDueDateToNextCycle(
-          membership.effectiveDueDate || membership.originalDueDate,
+        membership.nextDueDate = moveDueDateToNextCycle(
+          membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate,
         );
+        if (months === 0 && days === 0) {
+          membership.effectiveDueDate = membership.nextDueDate;
+        }
       }
       break;
     case "pause":
       membership.status = "paused";
+      membership.pausedAt = new Date();
       break;
     case "resume": {
       membership.status = "active";
@@ -258,16 +288,28 @@ export const applyMembershipAdjustment = async ({
         // Inclusive academy rule: 20 paid days resumed on Sep 1 become due
         // on Sep 20 (Sep 1 is day one), not Sep 21.
         membership.effectiveDueDate = addDays(resumeDate, Math.max(0, membership.remainingTrainingDays - 1));
+        membership.nextDueDate = membership.effectiveDueDate;
         membership.remainingTrainingDays = 0;
         membership.autoMonthlyDue = true;
         membership.feeStatus = "paid";
+      } else if (membership.pausedAt) {
+        const pausedAt = new Date(membership.pausedAt);
+        const today = new Date();
+        const pausedDays = Math.max(0, Math.floor((Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()) - Date.UTC(pausedAt.getUTCFullYear(), pausedAt.getUTCMonth(), pausedAt.getUTCDate())) / 86400000));
+        membership.nextDueDate = addDays(
+          membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate,
+          pausedDays,
+        );
+        membership.effectiveDueDate = membership.nextDueDate;
       }
+      membership.pausedAt = null;
       break;
     }
     case "set_fee_status": {
       const allowed = ["paid", "due", "partial", "waived", "complimentary"];
       const feeStatus = clean(payload.feeStatus).toLowerCase();
       if (!allowed.includes(feeStatus)) throw createError("Fee status is invalid");
+      const wasFeeRequired = membership.feeRequired !== false;
       membership.feeStatus = feeStatus;
       membership.feeRequired = !["waived", "complimentary"].includes(feeStatus);
       if (feeStatus === "complimentary") membership.status = "complimentary";
@@ -275,6 +317,16 @@ export const applyMembershipAdjustment = async ({
       if (feeStatus === "paid") {
         membership.unpaidMonths = 0;
         membership.unpaidDays = 0;
+        const accrual = calculateMembershipAccrualState(membership);
+        membership.nextDueDate = moveDueDateToNextCycle(
+          accrual.nextDueDate || membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate,
+        );
+        membership.effectiveDueDate = membership.nextDueDate;
+      } else if (!wasFeeRequired && membership.feeRequired) {
+        membership.nextDueDate = moveDueDateToNextCycle(
+          membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate,
+        );
+        membership.effectiveDueDate = membership.nextDueDate;
       }
       break;
     }
