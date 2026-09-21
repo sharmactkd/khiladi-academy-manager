@@ -30,13 +30,34 @@ const createError = (message, statusCode = 400) => {
 
 const clean = (value) => String(value ?? "").trim();
 
-const parseDate = (value, fieldName) => {
+export const parseMembershipDate = (value, fieldName) => {
   if (!value) return null;
-  const date = new Date(value);
+
+  const raw = String(value).trim();
+  const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = dateOnlyMatch
+    ? new Date(Date.UTC(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3]),
+      ))
+    : new Date(value);
+
   if (Number.isNaN(date.getTime())) {
     throw createError(`${fieldName} is invalid`);
   }
-  date.setHours(0, 0, 0, 0);
+
+  if (dateOnlyMatch && (
+    date.getUTCFullYear() !== Number(dateOnlyMatch[1]) ||
+    date.getUTCMonth() !== Number(dateOnlyMatch[2]) - 1 ||
+    date.getUTCDate() !== Number(dateOnlyMatch[3])
+  )) {
+    throw createError(`${fieldName} is invalid`);
+  }
+
+  // Membership due/resume dates are calendar dates, not moments in the
+  // server's timezone. UTC normalization prevents 01-09 becoming 31-08.
+  date.setUTCHours(0, 0, 0, 0);
   return date;
 };
 
@@ -50,8 +71,8 @@ const boundedInteger = (value, fieldName, min, max) => {
 
 const addDays = (value, days) => {
   const date = value ? new Date(value) : new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + days);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() + days);
   return date;
 };
 
@@ -206,7 +227,7 @@ export const applyMembershipAdjustment = async ({
       membership.effectiveDueDate = addDays(membership.effectiveDueDate || membership.originalDueDate, -days);
       break;
     case "set_due_date":
-      membership.effectiveDueDate = parseDate(payload.dueDate, "Due date");
+      membership.effectiveDueDate = parseMembershipDate(payload.dueDate, "Due date");
       membership.autoMonthlyDue = true;
       break;
     case "set_remaining_days":
@@ -233,7 +254,7 @@ export const applyMembershipAdjustment = async ({
     case "resume": {
       membership.status = "active";
       if (payload.resumeDate && Number(membership.remainingTrainingDays || 0) > 0) {
-        const resumeDate = parseDate(payload.resumeDate, "Resume date");
+        const resumeDate = parseMembershipDate(payload.resumeDate, "Resume date");
         // Inclusive academy rule: 20 paid days resumed on Sep 1 become due
         // on Sep 20 (Sep 1 is day one), not Sep 21.
         membership.effectiveDueDate = addDays(resumeDate, Math.max(0, membership.remainingTrainingDays - 1));
