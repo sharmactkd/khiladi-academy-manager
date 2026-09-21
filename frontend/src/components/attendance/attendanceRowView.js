@@ -42,7 +42,12 @@ export const buildAttendanceRowView = (rows, query = "", sort = [], monthDate = 
   const activeRows = view.filter(isActive);
   const inactiveRows = view.filter(({ row }) => text(row.status).toLowerCase() === "inactive" && row.rowType !== "raw-import");
   const timestamp = row => Number.isFinite(Date.parse(row.statusUpdatedAt)) ? Date.parse(row.statusUpdatedAt) : 0;
-  inactiveRows.sort((a, b) => timestamp(b.row) - timestamp(a.row) || a.sourceIndex - b.sourceIndex);
+  // Once a register has a saved manual order, its source order is already the
+  // database order. Re-sorting inactive rows by statusUpdatedAt here made a
+  // successfully moved inactive student jump back to the old serial number.
+  if (!preserveManualOrder) {
+    inactiveRows.sort((a, b) => timestamp(b.row) - timestamp(a.row) || a.sourceIndex - b.sourceIndex);
+  }
   const otherRows = view.filter(entry => !isActive(entry) && !(text(entry.row.status).toLowerCase() === "inactive" && entry.row.rowType !== "raw-import"));
   const sortValues = new Map(activeRows.map(({ row, sourceIndex }) => [sourceIndex, sorts.map((item) =>
     item.key === "dueDate" ? dueDateSortValue(row, monthDate)

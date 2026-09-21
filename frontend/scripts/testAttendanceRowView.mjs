@@ -149,6 +149,21 @@ test("newly inactive row moves directly below last active, retaining edit identi
   const reactivated = data.map(r=>r.studentId === 'changed' ? {...r,status:'active'} : r);
   assert.deepEqual(buildAttendanceRowView(reactivated).map(x=>x.row.studentId), ['a','changed','b','old']);
 });
+test("saved manual order is preserved inside the inactive student group", () => {
+  const ordered = [
+    { studentId: "active", rowType: "student", status: "active" },
+    { studentId: "inactive-old", rowType: "student", status: "inactive", statusUpdatedAt: "2026-09-01" },
+    { studentId: "inactive-new", rowType: "student", status: "inactive", statusUpdatedAt: "2026-09-20" },
+  ];
+  assert.deepEqual(
+    buildAttendanceRowView(ordered, "", [], "", true).map(({ row }) => row.studentId),
+    ["active", "inactive-old", "inactive-new"],
+  );
+  assert.deepEqual(
+    buildAttendanceRowView(ordered).map(({ row }) => row.studentId),
+    ["active", "inactive-new", "inactive-old"],
+  );
+});
 test("an adjusted membership date takes precedence; imported dates and day-only data stay aligned with display", () => {
   assert.equal(dueDateSortValue({ ...rows[0], membership: { effectiveDueDate: "2026-09-01" } }), Date.UTC(2026, 8, 20));
   assert.equal(dueDateSortValue({ ...rows[0], membership: { effectiveDueDate: "2026-09-01", lastAdjustedAt: "2026-09-02" } }), Date.UTC(2026, 8, 1));

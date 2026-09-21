@@ -543,21 +543,30 @@ const Attendance = () => {
     orderedRows.splice(position - 1, 0, row);
     const orderedKeys = orderedRows.map((item) => item.registerOrderKey);
     const context = registerContextRef.current;
+    const previousRows = rowsRef.current;
+    const previousRevision = orderRevision;
     reorderingRef.current = true;
     setReordering(true);
+    // Keep the table visible and move the row immediately. The request only
+    // confirms persistence; it must not replace the table with a loading view.
+    rowsRef.current = orderedRows;
+    setRows(orderedRows);
+    setOrderRevision(previousRevision + 1);
     try {
-      const response = await attendanceApi.moveMonthlyRow({ batch, month, year, rowKey: row.registerOrderKey, position, orderedKeys, revision: orderRevision });
+      const response = await attendanceApi.moveMonthlyRow({ batch, month, year, rowKey: row.registerOrderKey, position, orderedKeys, revision: previousRevision });
       const data = normalizeResponseData(response);
       if (registerContextRef.current !== context) return false;
-      if (!Array.isArray(data.rows)) throw new Error("Server did not return the saved row order");
+      if (!Number.isInteger(data.orderRevision)) throw new Error("Server did not confirm the saved row order");
       registerCacheRef.current.delete(`${batch}:${year}:${month}`);
-      rowsRef.current = data.rows;
-      setRows(data.rows);
       setOrderRevision(data.orderRevision);
-      setStudentSearch("");
       toast.success(`Moved to position ${position}. Order saved.`);
       return true;
     } catch (error) {
+      if (registerContextRef.current === context) {
+        rowsRef.current = previousRows;
+        setRows(previousRows);
+        setOrderRevision(previousRevision);
+      }
       toast.error(error?.response?.data?.message || error.message || "Order could not be saved");
       return false;
     } finally {
@@ -779,7 +788,7 @@ const Attendance = () => {
             onOpenFeeCollection={openFeeCollection}
             canManageMembership={["academy_owner", "super_admin"].includes(user?.role)}
             statusUpdatingIds={statusUpdatingIds}
-            loading={loading || reordering}
+            loading={loading}
           />
         </div>
 
