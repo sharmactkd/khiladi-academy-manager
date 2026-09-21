@@ -179,6 +179,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
             {Object.entries(STATUS_META).map(([value, meta]) => (
               <span key={value}><i className={toneClass("cell", meta.tone)}>{meta.short}</i>{meta.label}</span>
             ))}
+            <span><i className={styles.cellSunday}>S</i>Sunday</span>
             <span><i className={styles.cellBlank}>–</i>Not Marked</span>
           </div>
         </header>
@@ -213,10 +214,22 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
                       const dayInfo = getDayInfo(month, day);
                       const value = getMonthValue(month, day);
                       const meta = STATUS_META[value];
-                      const classNames = [styles.dayCell, meta ? toneClass("cell", meta.tone) : styles.cellBlank];
+                      const isSunday = Boolean(dayInfo?.isSunday);
+                      const classNames = [
+                        styles.dayCell,
+                        meta
+                          ? toneClass("cell", meta.tone)
+                          : isSunday
+                            ? styles.cellSunday
+                            : styles.cellBlank,
+                      ];
                       if (!dayInfo) classNames.push(styles.dayDisabled);
-                      else if (dayInfo.isSunday) classNames.push(styles.daySunday);
-                      return <td key={day}><span className={classNames.join(" ")} title={dayInfo ? `${dayInfo.dateKey}: ${meta?.label || "Not marked"}` : "Date unavailable"}>{meta?.short || "–"}</span></td>;
+                      else if (isSunday) classNames.push(styles.daySunday);
+                      const label = meta?.short || (isSunday ? "S" : "–");
+                      const title = dayInfo
+                        ? `${dayInfo.dateKey}: ${isSunday ? `Sunday · ${meta?.label || "Not marked"}` : meta?.label || "Not marked"}`
+                        : "Date unavailable";
+                      return <td key={day}><span className={classNames.join(" ")} title={title}>{label}</span></td>;
                     })}
                     <td className={styles.countPresent}>{month.presentCount || 0}</td>
                     <td className={styles.countAbsent}>{month.absentCount || 0}</td>
