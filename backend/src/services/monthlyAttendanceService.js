@@ -347,7 +347,9 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
       : formatDisplayDate(normalizedPaidDate) || fee?.paidDate || fee?.paymentDate || null,
     feePaid: formatDisplayDate(identity.importedFeePaid) || fee?.amountPaid || fee?.amount || "",
     feeStatus: isLinkedStudent
-      ? feeStatusSummary?.code || ""
+      ? fee
+        ? feeStatusSummary?.code || ""
+        : identity.importedFeeStatus || feeStatusSummary?.code || ""
       : identity.importedFeeStatus || fee?.status || membership?.feeStatus || "",
     feeStatusSummary: isLinkedStudent ? feeStatusSummary : null,
     membership,
@@ -551,7 +553,7 @@ export const getMonthlyAttendanceRegister = async ({
   const days = buildDays({ year: numericYear, month: numericMonth });
   const { start, end } = getMonthRange({ year: numericYear, month: numericMonth });
   const orderId = `${academyObjectId}:${batchObjectId}:${numericYear}:${numericMonth}`;
-  const [batch, attendanceDocs, dayNoteDocs, order, monthMetadataDocs] = await Promise.all([
+  const [batch, attendanceDocs, dayNoteDocs, order, monthMetadataDocs, historicalFeeContextDocs] = await Promise.all([
     Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).select("batchName martialArt branch isActive").lean(),
     Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date records").lean(),
     AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date type title description color createdAt updatedAt").lean(),
@@ -568,6 +570,22 @@ export const getMonthlyAttendanceRegister = async ({
           }
         : { academy: academyObjectId, batch: batchObjectId, year: numericYear, month: numericMonth }
     ).sort(isCurrentRegister ? { updatedAt: -1 } : {}).lean(),
+    isCurrentRegister
+      ? Attendance.find({
+          academy: academyObjectId,
+          batch: batchObjectId,
+          date: { $lt: end },
+          $or: [
+            { "records.importedDueDate": { $exists: true, $nin: [null, ""] } },
+            { "records.importedPaidDate": { $exists: true, $nin: [null, ""] } },
+            { "records.importedFeePaid": { $exists: true, $nin: [null, ""] } },
+            { "records.importedFeeStatus": { $exists: true, $nin: [null, ""] } },
+          ],
+        })
+          .select("date records.student records.importedDueDate records.importedPaidDate records.importedFeePaid records.importedFeeStatus")
+          .sort({ date: -1, updatedAt: -1 })
+          .lean()
+      : Promise.resolve([]),
   ]);
 
   if (!batch) {
@@ -592,7 +610,24 @@ export const getMonthlyAttendanceRegister = async ({
   }, {});
 
   const effectiveMonthMetadataDocs = isCurrentRegister
-    ? [...monthMetadataDocs.reduce((map, item) => {
+    ? [...historicalFeeContextDocs.reduce((map, doc) => {
+        (doc.records || []).forEach((record) => {
+          const studentId = String(record.student || "");
+          if (!studentId) return;
+
+          const latest = map.get(studentId) || { student: record.student };
+          [
+            "importedDueDate",
+            "importedPaidDate",
+            "importedFeePaid",
+            "importedFeeStatus",
+          ].forEach((field) => {
+            if (!clean(latest[field]) && clean(record[field])) latest[field] = record[field];
+          });
+          map.set(studentId, latest);
+        });
+        return map;
+      }, monthMetadataDocs.reduce((map, item) => {
         const studentId = String(item.student);
         if (!map.has(studentId)) {
           map.set(studentId, { ...item });
@@ -610,7 +645,7 @@ export const getMonthlyAttendanceRegister = async ({
           if (!clean(latest[field]) && clean(item[field])) latest[field] = item[field];
         });
         return map;
-      }, new Map()).values()]
+      }, new Map())).values()]
     : monthMetadataDocs;
 
   const { rows, students } = await buildMonthlyRows({
