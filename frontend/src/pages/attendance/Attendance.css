@@ -911,12 +911,21 @@
   color: #93a0b1;
 }
 .attendance-page .attendance-cell--sunday {
-  border-color: #4b94db;
+  border-color: transparent;
   color: #175eaa;
-  background: #eaf4ff;
+  background: transparent;
 }
 .attendance-page .attendance-cell--sunday-day {
-  border-color: #4b94db;
+  border-color: transparent;
+}
+.attendance-page .attendance-cell--inactive-blank {
+  border-color: transparent;
+  color: transparent;
+  background: #eef2f6;
+  cursor: not-allowed;
+}
+.attendance-page .attendance-cell--inactive-blank:disabled {
+  opacity: 0.72;
 }
 .attendance-page .attendance-cell--holiday {
   border-color: #c59b38;

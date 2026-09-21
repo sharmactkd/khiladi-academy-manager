@@ -845,6 +845,8 @@ const AttendanceTable = ({
                   {days.map((day) => {
                     const future = isFutureDay(day);
                     const note = dayNotes[day.dateKey];
+                    const attendanceValue = row.attendance?.[day.dateKey] || "";
+                    const inactiveBlank = isInactive && !attendanceValue;
 
                     return (
                       <td
@@ -862,14 +864,15 @@ const AttendanceTable = ({
                           </span>
                         ) : (
                           <AttendanceCell
-                            value={row.attendance?.[day.dateKey] || ""}
+                            value={attendanceValue}
                             isSunday={day.isSunday}
                             holiday={note}
+                            inactiveBlank={inactiveBlank}
                             onChange={(value) =>
                               updateCell(rowIndex, day.dateKey, value)
                             }
                             // A holiday/note never disables attendance.
-                            disabled={!onRowsChange}
+                            disabled={!onRowsChange || inactiveBlank}
                           />
                         )}
                       </td>

@@ -16,11 +16,20 @@ const nextStatus = {
   LT: "",
 };
 
-const AttendanceCell = React.memo(({ value = "", onChange, disabled = false, isSunday = false, holiday = null }) => {
+const AttendanceCell = React.memo(({
+  value = "",
+  onChange,
+  disabled = false,
+  isSunday = false,
+  holiday = null,
+  inactiveBlank = false,
+}) => {
   const status = statusLabels[value] !== undefined ? value : "";
-  const emptyLabel = holiday ? "H" : isSunday ? "S" : statusLabels[""];
-  const visualStatus = status || (holiday ? "holiday" : isSunday ? "sunday" : "blank");
-  const title = holiday
+  const emptyLabel = inactiveBlank ? "" : holiday ? "H" : isSunday ? "S" : statusLabels[""];
+  const visualStatus = status || (inactiveBlank ? "inactive-blank" : holiday ? "holiday" : isSunday ? "sunday" : "blank");
+  const title = inactiveBlank
+    ? "Attendance disabled for inactive student"
+    : holiday
     ? `${holiday.title || "Holiday"}${holiday.description ? ` — ${holiday.description}` : ""}`
     : isSunday
       ? "Sunday — click to mark attendance"
@@ -63,7 +72,7 @@ const AttendanceCell = React.memo(({ value = "", onChange, disabled = false, isS
   return (
     <button
       type="button"
-      className={`attendance-cell attendance-cell--${visualStatus}${isSunday ? " attendance-cell--sunday-day" : ""}${holiday ? " attendance-cell--holiday-day" : ""}`}
+      className={`attendance-cell attendance-cell--${visualStatus}${isSunday && !inactiveBlank ? " attendance-cell--sunday-day" : ""}${holiday && !inactiveBlank ? " attendance-cell--holiday-day" : ""}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       disabled={disabled}
