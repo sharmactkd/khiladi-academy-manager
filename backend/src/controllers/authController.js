@@ -628,7 +628,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
           logger.error(`Refresh replay alert email failed: ${error.message}`);
         }
       }
-      clearRefreshTokenCookie(res);
+      if (!inConcurrencyGrace) clearRefreshTokenCookie(res);
       return errorResponse(
         res,
         inConcurrencyGrace ? "Refresh is already in progress" : "Session reuse detected. Sign in again",

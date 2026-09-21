@@ -575,15 +575,20 @@ export const getMonthlyAttendanceRegister = async ({
           academy: academyObjectId,
           batch: batchObjectId,
           date: { $lt: end },
-          $or: [
-            { "records.importedDueDate": { $exists: true, $nin: [null, ""] } },
-            { "records.importedPaidDate": { $exists: true, $nin: [null, ""] } },
-            { "records.importedFeePaid": { $exists: true, $nin: [null, ""] } },
-            { "records.importedFeeStatus": { $exists: true, $nin: [null, ""] } },
-          ],
+          records: {
+            $elemMatch: {
+              $or: [
+                { importedDueDate: { $exists: true, $nin: [null, ""] } },
+                { importedPaidDate: { $exists: true, $nin: [null, ""] } },
+                { importedFeePaid: { $exists: true, $nin: [null, ""] } },
+                { importedFeeStatus: { $exists: true, $nin: [null, ""] } },
+              ],
+            },
+          },
         })
           .select("date records.student records.importedDueDate records.importedPaidDate records.importedFeePaid records.importedFeeStatus")
           .sort({ date: -1, updatedAt: -1 })
+          .limit(40)
           .lean()
       : Promise.resolve([]),
   ]);
@@ -614,14 +619,8 @@ export const getMonthlyAttendanceRegister = async ({
         (doc.records || []).forEach((record) => {
           const studentId = String(record.student || "");
           if (!studentId) return;
-
           const latest = map.get(studentId) || { student: record.student };
-          [
-            "importedDueDate",
-            "importedPaidDate",
-            "importedFeePaid",
-            "importedFeeStatus",
-          ].forEach((field) => {
+          ["importedDueDate", "importedPaidDate", "importedFeePaid", "importedFeeStatus"].forEach((field) => {
             if (!clean(latest[field]) && clean(record[field])) latest[field] = record[field];
           });
           map.set(studentId, latest);

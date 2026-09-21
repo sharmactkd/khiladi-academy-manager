@@ -1,4 +1,4 @@
-import api from "./api.js";
+import api, { requestTokenRefresh } from "./api.js";
 
 export const authApi = {
   register: (payload) => api.post("/auth/register", payload),
@@ -17,7 +17,7 @@ export const authApi = {
   enableMfa: (payload) => api.post("/auth/mfa/enable", payload),
   disableMfa: (payload) => api.post("/auth/mfa/disable", payload),
   stepUp: (payload) => api.post("/auth/step-up", payload),
-  refresh: () => api.post("/auth/refresh"),
+  refresh: () => requestTokenRefresh(),
   logout: () => api.post("/auth/logout"),
   me: () => api.get("/auth/me"),
 };

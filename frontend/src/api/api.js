@@ -6,6 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
 let accessToken = null;
 let isRefreshing = false;
 let failedQueue = [];
+let directRefreshPromise = null;
 
 export const setAccessToken = (token) => {
   accessToken = token || null;
@@ -36,6 +37,21 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+// React StrictMode and simultaneous protected requests can ask for a refresh
+// at the same time. Keep one browser-side refresh request in flight so a
+// rotating HttpOnly token is never submitted twice by the same tab.
+export const requestTokenRefresh = () => {
+  if (!directRefreshPromise) {
+    directRefreshPromise = api
+      .post("/auth/refresh")
+      .finally(() => {
+        directRefreshPromise = null;
+      });
+  }
+
+  return directRefreshPromise;
+};
 
 api.interceptors.request.use((config) => {
   if (accessToken) {
@@ -73,7 +89,7 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const response = await api.post("/auth/refresh");
+      const response = await requestTokenRefresh();
       const newAccessToken = response.data?.data?.accessToken;
 
       setAccessToken(newAccessToken);
