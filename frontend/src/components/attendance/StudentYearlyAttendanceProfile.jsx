@@ -34,6 +34,29 @@ const getFeeTone = (value) => {
   return "neutral";
 };
 
+const formatImportedPaidDate = (value) => {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) return "–";
+
+  const slashDate = rawValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  const isoDate = rawValue.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:T.*)?$/);
+  if (!slashDate && !isoDate) return rawValue;
+
+  const day = Number(slashDate?.[2] || isoDate[3]);
+  const month = Number(slashDate?.[1] || isoDate[2]);
+  const rawYear = Number(slashDate?.[3] || isoDate[1]);
+  const year = rawYear < 100 ? 2000 + rawYear : rawYear;
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    candidate.getUTCFullYear() !== year ||
+    candidate.getUTCMonth() !== month - 1 ||
+    candidate.getUTCDate() !== day
+  ) return rawValue;
+
+  return `${String(day).padStart(2, "0")}-${String(month).padStart(2, "0")}-${year}`;
+};
+
 const createTrendPoints = (months) => {
   const width = 620;
   const height = 132;
@@ -183,8 +206,8 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
                 return (
                   <tr key={month.value}>
                     <th className={styles.stickyMonth}>{month.fullLabel}</th>
-                    <td className={styles.stickyDue}>{month.importedDueDate || "–"}</td>
-                    <td className={styles.stickyPaid}>{month.importedPaidDate || "–"}</td>
+                    <td className={styles.stickyDue}><span className={`${styles.metaValue} ${styles.dueValue}`}>{month.importedDueDate || "–"}</span></td>
+                    <td className={styles.stickyPaid}><span className={`${styles.metaValue} ${styles.paidValue}`}>{formatImportedPaidDate(month.importedPaidDate)}</span></td>
                     <td className={styles.stickyFee}><span className={`${styles.feeBadge} ${toneClass("fee", getFeeTone(feeStatus))}`}>{feeStatus}</span></td>
                     {DAYS.map((day) => {
                       const dayInfo = getDayInfo(month, day);
