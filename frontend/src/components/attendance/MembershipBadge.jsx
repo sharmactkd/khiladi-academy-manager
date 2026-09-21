@@ -1,12 +1,9 @@
 import { remainingDaysDisplay } from "./remainingDaysDisplay.js";
 import { formatFeeDueBalance, normalizeFeeStatus } from "../../utils/feeStatus.js";
+import { formatAttendanceDate } from "../../utils/attendanceDate.js";
 
 export const formatDueDate = (value, format = "full") => {
-  if (!value) return "Not set";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  if (format === "day") return String(date.getDate()).padStart(2, "0");
-  return date.toLocaleDateString("en-GB").replaceAll("/", "-");
+  return formatAttendanceDate(value, { format, fallback: "Not set" });
 };
 
 export const getMembershipDisplay = (membership, fallbackDueDate) => {
@@ -57,9 +54,10 @@ const MembershipBadge = ({
   dateOnly = false,
   dateFormat = "full",
   dateOverride = "",
+  monthDate = "",
 }) => {
   const badge = dateOnly
-    ? (dateOverride ? { label: String(dateOverride), tone: "neutral" } : remainingDaysDisplay(membership)) || {
+    ? (dateOverride ? { label: formatAttendanceDate(dateOverride, { format: dateFormat, monthDate }), tone: "neutral" } : remainingDaysDisplay(membership)) || {
         label: formatDueDate(
           membership?.effectiveDueDate || fallbackDueDate || "-",
           dateFormat,

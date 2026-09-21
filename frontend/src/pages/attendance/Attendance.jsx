@@ -16,9 +16,10 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import AttendanceControls from "../../components/attendance/AttendanceControls.jsx";
 import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
 import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
-import { buildAttendanceRowView } from "../../components/attendance/attendanceRowView.js";
+import { buildAttendanceRowView, getFeeStatusValue } from "../../components/attendance/attendanceRowView.js";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
+import { formatAttendanceDate } from "../../utils/attendanceDate.js";
 import "./Attendance.css";
 
 const now = new Date();
@@ -89,11 +90,10 @@ const buildExportRows = ({ rows, days }) => {
       No: row.no,
       Name: row.name,
       Contact: row.contact,
-      "Due Date": row.feeDueDate
-        ? new Date(row.feeDueDate).toLocaleDateString("en-GB")
-        : "-",
+      "Due Date": formatAttendanceDate(row.importedDueDate || row.feeDueDate),
+      "Paid Date": formatAttendanceDate(row.importedPaidDate || row.feePaidDate),
       "Fee Paid": row.feePaid || "",
-      "Fee Status": row.feeStatus || "",
+      "Fee Status": getFeeStatusValue(row),
     };
 
     days.forEach((day) => {

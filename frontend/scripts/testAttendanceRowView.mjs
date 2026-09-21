@@ -115,12 +115,18 @@ test("newly inactive row moves directly below last active, retaining edit identi
   const reactivated = data.map(r=>r.studentId === 'changed' ? {...r,status:'active'} : r);
   assert.deepEqual(buildAttendanceRowView(reactivated).map(x=>x.row.studentId), ['a','changed','b','old']);
 });
-test("membership effective due date takes precedence; day-only legacy data uses selected month", () => {
-  assert.equal(dueDateSortValue({ ...rows[0], membership: { effectiveDueDate: "2026-09-01" } }), Date.UTC(2026, 8, 1));
+test("an adjusted membership date takes precedence; imported dates and day-only data stay aligned with display", () => {
+  assert.equal(dueDateSortValue({ ...rows[0], membership: { effectiveDueDate: "2026-09-01" } }), Date.UTC(2026, 8, 20));
+  assert.equal(dueDateSortValue({ ...rows[0], membership: { effectiveDueDate: "2026-09-01", lastAdjustedAt: "2026-09-02" } }), Date.UTC(2026, 8, 1));
   assert.equal(dueDateSortValue({ importedDueDate: "9" }, "2026-09-01"), Date.UTC(2026, 8, 9));
   assert.equal(dueDateSortValue({ importedDueDate: "09/02/2026" }), Date.UTC(2026, 8, 2));
   assert.equal(dueDateSortValue({ importedDueDate: "31-02-2026" }), null);
   assert.equal(dueDateSortValue({ importedDueDate: "Not set" }), null);
+});
+test("linked imported fee status wins until a real membership adjustment exists", () => {
+  const imported = { rowType: "student", studentId: "x", importedFeeStatus: "Paid", feeStatus: "due", membership: { feeStatus: "due" } };
+  assert.equal(getFeeStatusValue(imported), "PAID");
+  assert.equal(getFeeStatusValue({ ...imported, membership: { feeStatus: "due", lastAdjustedAt: "2026-09-20" } }), "DUE");
 });
 test("filter + sort + edit preserves hidden rows and targets original source row", () => {
   const before = JSON.stringify(rows);

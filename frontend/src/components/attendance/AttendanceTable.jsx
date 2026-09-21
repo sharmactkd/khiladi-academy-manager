@@ -29,6 +29,11 @@ import {
 import AttendanceDayNoteDialog, {
   DAY_NOTE_OPTIONS,
 } from "./AttendanceDayNoteDialog.jsx";
+import {
+  formatAttendanceDate,
+  fromAttendanceDateInputValue,
+  toAttendanceDateInputValue,
+} from "../../utils/attendanceDate.js";
 
 const recalculateRow = (row, days) => {
   const values = days.map((day) => row.attendance?.[day.dateKey] || "");
@@ -55,85 +60,16 @@ const displayValue = (value, fallback = "-") => {
   return text || fallback;
 };
 
-const pad = (value) => String(value).padStart(2, "0");
-
-const formatDateDDMMYYYY = (value) => {
-  if (!value) return "-";
-
-  const raw = String(value).trim();
-  if (!raw || raw === "-") return "-";
-
-  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) {
-    const [, yyyy, mm, dd] = isoMatch;
-    return `${dd}-${mm}-${yyyy}`;
-  }
-
-  const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-  if (slashMatch) {
-    const [, mm, dd, yy] = slashMatch;
-    const yyyy = String(yy).length === 2 ? `20${yy}` : yy;
-    return `${pad(dd)}-${pad(mm)}-${yyyy}`;
-  }
-
-  const dashMatch = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
-  if (dashMatch) {
-    const [, dd, mm, yy] = dashMatch;
-    const yyyy = String(yy).length === 2 ? `20${yy}` : yy;
-    return `${pad(dd)}-${pad(mm)}-${yyyy}`;
-  }
-
-  const date = new Date(raw);
-  if (!Number.isNaN(date.getTime())) {
-    return `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
-  }
-
-  return raw;
-};
+const formatDateDDMMYYYY = (value) => formatAttendanceDate(value);
 
 const formatEditableDueValue = (value) => {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "-") return raw;
 
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
-    return formatDateDDMMYYYY(raw);
-  }
-
   // Old imported registers may contain only a day number or text.
   if (/^\d{1,2}$/.test(raw) || /[A-Za-z]/.test(raw)) return raw;
 
-  return formatDateDDMMYYYY(raw);
-};
-
-const toDateInputValue = (value) => {
-  const raw = String(value ?? "").trim();
-  if (!raw || raw === "-") return "";
-
-  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
-
-  const dashMatch = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
-  if (dashMatch) {
-    const [, dd, mm, rawYear] = dashMatch;
-    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
-    return `${year}-${pad(mm)}-${pad(dd)}`;
-  }
-
-  const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-  if (slashMatch) {
-    const [, mm, dd, rawYear] = slashMatch;
-    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
-    return `${year}-${pad(mm)}-${pad(dd)}`;
-  }
-
-  return "";
-};
-
-const formatSelectedDate = (isoDate) => {
-  const match = String(isoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-
-  if (!match) return "";
-  return `${match[3]}-${match[2]}-${match[1]}`;
+  return formatAttendanceDate(raw);
 };
 
 const DateMetaInput = ({
@@ -177,8 +113,8 @@ const DateMetaInput = ({
       <DateInput
         ref={pickerRef}
         className="monthly-register__native-date"
-        value={toDateInputValue(value)}
-        onChange={(event) => onChange(formatSelectedDate(event.target.value))}
+        value={toAttendanceDateInputValue(value)}
+        onChange={(event) => onChange(fromAttendanceDateInputValue(event.target.value))}
         disabled={disabled}
         tabIndex={-1}
         aria-hidden="true"
@@ -189,7 +125,7 @@ const DateMetaInput = ({
 
 const getPaidDateValue = (row) =>
   row.rowType === "student" && row.studentId
-    ? row.importedPaidDate || row.feePaidDate || row.paidDate || "-"
+    ? row.feePaidDate || row.paidDate || row.importedPaidDate || "-"
     : row.importedPaidDate || row.paidDate || row.feePaidDate || "-";
 
 const isFutureDay = (day) => {
@@ -627,7 +563,7 @@ const AttendanceTable = ({
                     title="Click to change Due Date format"
                   >
                     <CalendarDays size={12} aria-hidden="true" />
-                    <span>{dueDateFormat === "day" }</span>
+                    <span>{dueDateFormat === "day" ? "DD" : "Date"}</span>
                   </button>
                 </div>
               </th>
@@ -814,8 +750,9 @@ const AttendanceTable = ({
                         dateOnly
                         membership={row.membership}
                         fallbackDueDate={getDueDateValue(row)}
-                        dateOverride={row.importedDueDate || ""}
+                        dateOverride={row.membership?.lastAdjustedAt ? "" : row.importedDueDate || ""}
                         dateFormat={dueDateFormat}
+                        monthDate={suppliedDays[0]?.dateKey || ""}
                         onClick={
                           canManageMembership
                             ? () => onOpenMembership?.(row)
@@ -851,7 +788,7 @@ const AttendanceTable = ({
                         title={`Collect fee for ${row.name || "student"}`}
                         aria-label={`Open fee collection for ${row.name || "student"}`}
                       >
-                        {row.importedPaidDate || formatDateDDMMYYYY(getPaidDateValue(row))}
+                        {formatDateDDMMYYYY(getPaidDateValue(row))}
                       </button>
                     ) : (
                       <DateMetaInput

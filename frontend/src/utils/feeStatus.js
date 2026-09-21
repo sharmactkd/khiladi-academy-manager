@@ -27,8 +27,12 @@ export const getCanonicalFeeDisplay = (row = {}) => {
     return imported.replace(/OVERDUE/g, "DUE").replace(/PENDING/g, "DUE");
   }
   if (row.feeStatusSummary?.label) return compactAttendanceDueLabel(row.feeStatusSummary.label);
+  const imported = text(row.importedFeeStatus);
+  if (!row.membership?.lastAdjustedAt && imported && !["-", "—"].includes(imported)) {
+    return imported.toUpperCase().replace(/OVERDUE/g, "DUE").replace(/PENDING/g, "DUE");
+  }
   const membership = row.membership || {};
-  const status = normalizeFeeStatus(membership.feeStatus || row.feeStatus);
+  const status = normalizeFeeStatus(row.feeStatus || membership.feeStatus);
   if (["waived", "complimentary"].includes(status)) return status === "waived" ? "FEE WAIVED" : "COMPLIMENTARY";
   if (Number(membership.remainingTrainingDays || 0) > 0) return "PAID";
   const months = Number(membership.unpaidMonths || 0);

@@ -24,6 +24,7 @@ import useAuth from "../../hooks/useAuth.js";
 import { exportReportToExcel } from "../../utils/exportUtils.js";
 import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
 import styles from "./StudentAttendanceHistory.module.css";
+import { formatAttendanceDate } from "../../utils/attendanceDate.js";
 
 const DAYS = Array.from({ length: 31 }, (_, index) => index + 1);
 
@@ -73,8 +74,8 @@ const getSummary = (months = []) => {
 const buildExportRows = (months = []) => months.map((month) => {
   const row = {
     Month: month.fullLabel,
-    "Due Date": month.importedDueDate || "",
-    "Paid Date": month.importedPaidDate || "",
+    "Due Date": formatAttendanceDate(month.importedDueDate, { fallback: "", monthDate: month.days?.[0]?.dateKey || "" }),
+    "Paid Date": formatAttendanceDate(month.importedPaidDate, { fallback: "", monthDate: month.days?.[0]?.dateKey || "" }),
     "Fee Paid": month.importedFeePaid || "",
     "Fee Status": month.importedFeeStatus || "",
   };

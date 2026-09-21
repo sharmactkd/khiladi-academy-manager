@@ -1,39 +1,20 @@
 import { getCanonicalFeeDisplay } from "../../utils/feeStatus.js";
+import { attendanceDateTimestamp } from "../../utils/attendanceDate.js";
 
 const text = (value) => String(value ?? "").trim();
 const missing = (value) => !text(value) || ["-", "—"].includes(text(value));
 
-export const getDueDateValue = (row) => row.importedDueDate || row.feeDueDate || "-";
+export const getDueDateValue = (row) =>
+  row.rowType === "student" && row.studentId && row.membership?.lastAdjustedAt
+    ? row.membership.effectiveDueDate || row.feeDueDate || row.importedDueDate || "-"
+    : row.importedDueDate || row.feeDueDate || row.membership?.effectiveDueDate || "-";
 export const getFeeStatusValue = getCanonicalFeeDisplay;
 
 // Follow the register's date conventions: DD-MM-YYYY, ISO, MM/DD/YYYY.
 export const dueDateSortValue = (row, monthDate = "") => {
-  const raw = text(row.rowType === "student" && row.studentId
-    ? row.membership?.effectiveDueDate || getDueDateValue(row)
-    : getDueDateValue(row));
+  const raw = text(getDueDateValue(row));
   if (missing(raw)) return null;
-  let year, month, day;
-  let match;
-  if ((match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/))) {
-    [, year, month, day] = match;
-  } else if ((match = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/))) {
-    [, day, month, year] = match;
-  } else if ((match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/))) {
-    [, month, day, year] = match;
-  } else if (/^\d{1,2}$/.test(raw) && /^\d{4}-\d{2}-/.test(monthDate)) {
-    [year, month] = monthDate.split("-");
-    day = raw;
-  } else {
-    // Preserve historic human-readable dates; unknown text sorts last.
-    if (!/[A-Za-z]/.test(raw) || !/\d{4}/.test(raw)) return null;
-    const parsed = new Date(raw);
-    if (Number.isNaN(parsed.getTime())) return null;
-    return Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
-  }
-  if (String(year).length === 2) year = `20${year}`;
-  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-  return date.getUTCFullYear() === Number(year) && date.getUTCMonth() === Number(month) - 1 && date.getUTCDate() === Number(day)
-    ? date.getTime() : null;
+  return attendanceDateTimestamp(raw, { monthDate });
 };
 
 export const cycleAttendanceSort = (sorts, key, additive = false) => {

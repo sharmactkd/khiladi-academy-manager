@@ -40,6 +40,26 @@ test("Excel due and paid text is preserved exactly for display", () => {
   assert.equal(row.importedPaidDate, "1/9/25");
 });
 
+test("a missing due date never shifts the paid date into the due column", () => {
+  const row = buildRowFromRecord({
+    identity: {
+      rowType: "student",
+      studentId: "student-1",
+      importedDueDate: "",
+      importedPaidDate: "5/2/26",
+      importedFeeStatus: "PAID",
+    },
+    attendance: {},
+    index: 0,
+    membership: { feeStatus: "due" },
+  });
+  assert.equal(row.importedDueDate, "");
+  assert.equal(row.importedPaidDate, "5/2/26");
+  assert.equal(row.feeDueDate, null);
+  assert.equal(row.feeStatus, "PAID");
+  assert.equal(row.feeStatusSummary, null);
+});
+
 test("attendance import period is carried explicitly or recovered from its block id", () => {
   assert.deepEqual(getImportedAttendancePeriod({ importedYear: 2025, importedMonth: 9 }), { year: 2025, month: 9 });
   assert.deepEqual(getImportedAttendancePeriod({ blockId: "25 - Attandance:2025-09" }), { year: 2025, month: 9 });

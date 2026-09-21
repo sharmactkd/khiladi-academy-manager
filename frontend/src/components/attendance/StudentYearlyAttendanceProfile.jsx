@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import styles from "./StudentYearlyAttendanceProfile.module.css";
+import { formatAttendanceDate } from "../../utils/attendanceDate.js";
 
 const STATUS_META = {
   P: { label: "Present", short: "P", tone: "present" },
@@ -40,29 +41,6 @@ const getFeeTone = (value) => {
   if (normalized.includes("paid") && !normalized.includes("unpaid")) return "paid";
   if (normalized.includes("due") || normalized.includes("unpaid")) return "due";
   return "neutral";
-};
-
-const formatImportedPaidDate = (value) => {
-  const rawValue = String(value || "").trim();
-  if (!rawValue) return "–";
-
-  const slashDate = rawValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
-  const isoDate = rawValue.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:T.*)?$/);
-  if (!slashDate && !isoDate) return rawValue;
-
-  const day = Number(slashDate?.[2] || isoDate[3]);
-  const month = Number(slashDate?.[1] || isoDate[2]);
-  const rawYear = Number(slashDate?.[3] || isoDate[1]);
-  const year = rawYear < 100 ? 2000 + rawYear : rawYear;
-  const candidate = new Date(Date.UTC(year, month - 1, day));
-
-  if (
-    candidate.getUTCFullYear() !== year ||
-    candidate.getUTCMonth() !== month - 1 ||
-    candidate.getUTCDate() !== day
-  ) return rawValue;
-
-  return `${String(day).padStart(2, "0")}-${String(month).padStart(2, "0")}-${year}`;
 };
 
 const createTrendPoints = (months) => {
@@ -223,8 +201,8 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
                 return (
                   <tr key={month.value} className={isFutureMonth ? styles.futureMonthRow : undefined} aria-disabled={isFutureMonth || undefined}>
                     <th className={styles.stickyMonth}>{month.fullLabel}</th>
-                    <td className={styles.stickyDue}><span className={`${styles.metaValue} ${isFutureMonth ? styles.futureMetaValue : styles.dueValue}`}>{isFutureMonth ? "–" : month.importedDueDate || "–"}</span></td>
-                    <td className={styles.stickyPaid}><span className={`${styles.metaValue} ${isFutureMonth ? styles.futureMetaValue : styles.paidValue}`}>{isFutureMonth ? "–" : formatImportedPaidDate(month.importedPaidDate)}</span></td>
+                    <td className={styles.stickyDue}><span className={`${styles.metaValue} ${isFutureMonth ? styles.futureMetaValue : styles.dueValue}`}>{isFutureMonth ? "–" : formatAttendanceDate(month.importedDueDate, { fallback: "–", monthDate: month.days?.[0]?.dateKey || "" })}</span></td>
+                    <td className={styles.stickyPaid}><span className={`${styles.metaValue} ${isFutureMonth ? styles.futureMetaValue : styles.paidValue}`}>{isFutureMonth ? "–" : formatAttendanceDate(month.importedPaidDate, { fallback: "–", monthDate: month.days?.[0]?.dateKey || "" })}</span></td>
                     <td className={styles.stickyFee}>{isFutureMonth ? <span className={styles.futureMetaValue}>–</span> : <span className={`${styles.feeBadge} ${toneClass("fee", getFeeTone(feeStatus))}`}>{feeStatus}</span>}</td>
                     {DAYS.map((day) => {
                       const dayInfo = getDayInfo(month, day);
