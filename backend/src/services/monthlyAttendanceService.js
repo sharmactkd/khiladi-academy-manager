@@ -868,14 +868,34 @@ export const getStudentYearlyAttendanceProfile = async ({
           return result;
         }, {});
 
+      // Older imports can keep fee context on attendance records without a
+      // matching AttendanceMonthMetadata document. The month rows above have
+      // already normalised both sources, so use the most recent prior row as a
+      // second fallback for each still-empty current-month field.
+      const latestPriorMonthValues = months
+        .filter((item) => Number(item.value) < currentMonth)
+        .sort((left, right) => Number(right.value) - Number(left.value))
+        .reduce((result, item) => {
+          [
+            "importedDueDate",
+            "importedPaidDate",
+            "importedFeePaid",
+            "importedFeeStatus",
+          ].forEach((field) => {
+            if (!clean(result[field]) && clean(item[field])) result[field] = item[field];
+          });
+          return result;
+        }, {});
+
       [
         "importedDueDate",
         "importedPaidDate",
         "importedFeePaid",
         "importedFeeStatus",
       ].forEach((field) => {
-        if (!clean(currentMonthRow[field]) && clean(latestNonEmpty[field])) {
-          currentMonthRow[field] = latestNonEmpty[field];
+        const fallbackValue = clean(latestNonEmpty[field]) || clean(latestPriorMonthValues[field]);
+        if (!clean(currentMonthRow[field]) && fallbackValue) {
+          currentMonthRow[field] = fallbackValue;
         }
       });
     }
