@@ -837,7 +837,7 @@
 }
 .attendance-page .attendance-day-cell--sunday {
   color: inherit !important;
-  background: inherit !important;
+  background: #f3f8ff !important;
 }
 .attendance-page .day-heading--saturday,
 .attendance-page .day-number--saturday,
