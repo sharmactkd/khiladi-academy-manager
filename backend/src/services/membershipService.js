@@ -254,6 +254,10 @@ export const applyMembershipAdjustment = async ({
     case "set_due_date":
       membership.effectiveDueDate = parseMembershipDate(payload.dueDate, "Due date");
       membership.nextDueDate = membership.effectiveDueDate;
+      // A custom due date is an explicit replacement for any temporary
+      // remaining-training-days display. Keeping both makes the register show
+      // stale "Days Left" instead of the newly selected date.
+      membership.remainingTrainingDays = 0;
       membership.autoMonthlyDue = true;
       break;
     case "set_remaining_days":

@@ -80,3 +80,10 @@ export const applyMembershipToAttendanceRow = (row, membership) => ({
   feeStatus: membership?.feeStatus || row.feeStatus,
   feeStatusSummary: membership?.feeStatusSummary || null,
 });
+
+export const applyStudentStatusToAttendanceRows = (rows, studentId, status, statusUpdatedAt) =>
+  rows.map((row) =>
+    String(row.studentId) === String(studentId)
+      ? { ...row, status, statusUpdatedAt: statusUpdatedAt || row.statusUpdatedAt }
+      : row
+  );

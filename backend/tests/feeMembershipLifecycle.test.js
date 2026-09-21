@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 process.env.MONGO_URI ||= "mongodb://127.0.0.1:27017/khiladi_fee_test";
 process.env.JWT_ACCESS_SECRET ||= "fee-lifecycle-access-secret-with-at-least-32-chars";
@@ -81,4 +82,10 @@ test("one manual unpaid month stays due while the next cycle remains internal", 
   assert.equal(result.effectiveDueDate.toISOString(), "2026-09-05T00:00:00.000Z");
   assert.equal(result.nextDueDate.toISOString(), "2026-10-05T00:00:00.000Z");
   assert.equal(result.feeStatusSummary.label, "1M DUE");
+});
+
+test("custom due date replaces a stale remaining-days display", () => {
+  const source = readFileSync(new URL("../src/services/membershipService.js", import.meta.url), "utf8");
+  const setDueDateCase = source.match(/case "set_due_date":[\s\S]*?break;/)?.[0] || "";
+  assert.match(setDueDateCase, /membership\.remainingTrainingDays\s*=\s*0/);
 });

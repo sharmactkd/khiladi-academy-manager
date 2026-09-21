@@ -16,7 +16,7 @@ import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import AttendanceControls from "../../components/attendance/AttendanceControls.jsx";
 import AttendanceTable from "../../components/attendance/AttendanceTable.jsx";
 import MembershipAdjustmentDrawer from "../../components/attendance/MembershipAdjustmentDrawer.jsx";
-import { applyMembershipToAttendanceRow, buildAttendanceRowView, getFeeStatusValue } from "../../components/attendance/attendanceRowView.js";
+import { applyMembershipToAttendanceRow, applyStudentStatusToAttendanceRows, buildAttendanceRowView, getFeeStatusValue } from "../../components/attendance/attendanceRowView.js";
 import useAuth from "../../hooks/useAuth.js";
 import { getAcademyLogoUrl } from "../../utils/fileUrl.js";
 import { formatAttendanceDate } from "../../utils/attendanceDate.js";
@@ -460,15 +460,33 @@ const Attendance = () => {
   const toggleStudentStatus = async (row, status) => {
     if (!row.studentId || statusUpdatingIds.includes(row.studentId)) return;
     const changedAt = new Date().toISOString();
-    const previous = rows;
+    const previous = rowsRef.current;
     setStatusUpdatingIds((ids) => [...ids, row.studentId]);
-    setRows((current) => sortRegisterRows(current.map((item) => item.studentId === row.studentId ? { ...item, status, statusUpdatedAt: changedAt } : item), orderRevision > 0));
+    registerCacheRef.current.delete(`${batch}:${year}:${month}`);
+    const optimisticRows = sortRegisterRows(
+      applyStudentStatusToAttendanceRows(previous, row.studentId, status, changedAt),
+      orderRevision > 0,
+    );
+    rowsRef.current = optimisticRows;
+    setRows(optimisticRows);
     try {
       const response = await studentApi.updateStatus(row.studentId, status);
       const saved = normalizeResponseData(response);
-      setRows((current) => sortRegisterRows(current.map((item) => item.studentId === row.studentId ? { ...item, status: saved.status || status, statusUpdatedAt: saved.statusUpdatedAt || changedAt } : item), orderRevision > 0));
+      registerCacheRef.current.delete(`${batch}:${year}:${month}`);
+      const persistedRows = sortRegisterRows(
+        applyStudentStatusToAttendanceRows(
+          rowsRef.current,
+          row.studentId,
+          saved.status || status,
+          saved.statusUpdatedAt || changedAt,
+        ),
+        orderRevision > 0,
+      );
+      rowsRef.current = persistedRows;
+      setRows(persistedRows);
       toast.success(`${row.name || "Student"} marked ${status}`);
     } catch (error) {
+      rowsRef.current = previous;
       setRows(previous);
       toast.error(error?.response?.data?.message || "Student status update failed");
     } finally { setStatusUpdatingIds((ids) => ids.filter((id) => id !== row.studentId)); }

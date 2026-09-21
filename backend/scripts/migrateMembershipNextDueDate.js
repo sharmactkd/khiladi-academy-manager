@@ -19,6 +19,7 @@ let examined = 0;
 let migrated = 0;
 let manualBalanceAnchors = 0;
 let repairedDisplayDates = 0;
+let clearedStaleRemainingDays = 0;
 
 try {
   await connectDB();
@@ -105,7 +106,30 @@ try {
     repairedDisplayDates += 1;
   }
 
-  process.stdout.write(`${apply ? "Applied" : "Dry run"}: examined=${examined}, eligible=${migrated}, manualAnchors=${manualBalanceAnchors}, repairedDisplayDates=${repairedDisplayDates}\n`);
+  // Older set_due_date adjustments retained remainingTrainingDays, causing
+  // Attendance to keep displaying "Days Left" instead of the chosen date.
+  // Only repair memberships whose latest live adjustment is set_due_date;
+  // a later explicit set_remaining_days must remain untouched.
+  const remainingDayCandidates = await StudentMembership.find({
+    remainingTrainingDays: { $gt: 0 },
+  }).select("_id").lean();
+  for (const membership of remainingDayCandidates) {
+    const latestAdjustment = await MembershipAdjustment.findOne({
+      membership: membership._id,
+      reversedAt: null,
+      type: { $ne: "reversal" },
+    }).sort({ createdAt: -1 }).select("type").lean();
+    if (latestAdjustment?.type !== "set_due_date") continue;
+    if (apply) {
+      await StudentMembership.updateOne(
+        { _id: membership._id, remainingTrainingDays: { $gt: 0 } },
+        { $set: { remainingTrainingDays: 0 } },
+      );
+    }
+    clearedStaleRemainingDays += 1;
+  }
+
+  process.stdout.write(`${apply ? "Applied" : "Dry run"}: examined=${examined}, eligible=${migrated}, manualAnchors=${manualBalanceAnchors}, repairedDisplayDates=${repairedDisplayDates}, clearedStaleRemainingDays=${clearedStaleRemainingDays}\n`);
   if (!apply) process.stdout.write("No database changes made. Re-run with --apply after reviewing the counts.\n");
 } finally {
   await mongoose.disconnect();
