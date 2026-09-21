@@ -152,6 +152,9 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
   const months = Array.isArray(data?.months) ? data.months : [];
   const year = data?.year || new Date().getFullYear();
   const todayKey = getTodayKey();
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
   const totals = summary || { present: 0, absent: 0, leave: 0, late: 0, marked: 0, rate: 0 };
   const markedMonths = months.filter((month) =>
     Number(month.presentCount || 0) + Number(month.absentCount || 0) +
@@ -213,12 +216,14 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
             <tbody>
               {months.map((month) => {
                 const feeStatus = month.importedFeeStatus || "Not added";
+                const isFutureMonth = Number(year) > currentYear ||
+                  (Number(year) === currentYear && Number(month.value) > currentMonth);
                 return (
-                  <tr key={month.value}>
+                  <tr key={month.value} className={isFutureMonth ? styles.futureMonthRow : undefined} aria-disabled={isFutureMonth || undefined}>
                     <th className={styles.stickyMonth}>{month.fullLabel}</th>
-                    <td className={styles.stickyDue}><span className={`${styles.metaValue} ${styles.dueValue}`}>{month.importedDueDate || "–"}</span></td>
-                    <td className={styles.stickyPaid}><span className={`${styles.metaValue} ${styles.paidValue}`}>{formatImportedPaidDate(month.importedPaidDate)}</span></td>
-                    <td className={styles.stickyFee}><span className={`${styles.feeBadge} ${toneClass("fee", getFeeTone(feeStatus))}`}>{feeStatus}</span></td>
+                    <td className={styles.stickyDue}><span className={`${styles.metaValue} ${isFutureMonth ? styles.futureMetaValue : styles.dueValue}`}>{isFutureMonth ? "–" : month.importedDueDate || "–"}</span></td>
+                    <td className={styles.stickyPaid}><span className={`${styles.metaValue} ${isFutureMonth ? styles.futureMetaValue : styles.paidValue}`}>{isFutureMonth ? "–" : formatImportedPaidDate(month.importedPaidDate)}</span></td>
+                    <td className={styles.stickyFee}>{isFutureMonth ? <span className={styles.futureMetaValue}>–</span> : <span className={`${styles.feeBadge} ${toneClass("fee", getFeeTone(feeStatus))}`}>{feeStatus}</span>}</td>
                     {DAYS.map((day) => {
                       const dayInfo = getDayInfo(month, day);
                       const value = getMonthValue(month, day);
@@ -245,11 +250,11 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
                         : "Date unavailable";
                       return <td key={day}><span className={classNames.join(" ")} title={title}>{label}</span></td>;
                     })}
-                    <td className={styles.countPresent}>{month.presentCount || 0}</td>
-                    <td className={styles.countAbsent}>{month.absentCount || 0}</td>
-                    <td className={styles.countLeave}>{month.leaveCount || 0}</td>
-                    <td className={styles.countLate}>{month.lateCount || 0}</td>
-                    <td><strong className={styles.rateValue}>{month.attendancePercentage || 0}%</strong></td>
+                    <td className={styles.countPresent}>{isFutureMonth ? "" : month.presentCount || 0}</td>
+                    <td className={styles.countAbsent}>{isFutureMonth ? "" : month.absentCount || 0}</td>
+                    <td className={styles.countLeave}>{isFutureMonth ? "" : month.leaveCount || 0}</td>
+                    <td className={styles.countLate}>{isFutureMonth ? "" : month.lateCount || 0}</td>
+                    <td>{isFutureMonth ? "" : <strong className={styles.rateValue}>{month.attendancePercentage || 0}%</strong>}</td>
                   </tr>
                 );
               })}
