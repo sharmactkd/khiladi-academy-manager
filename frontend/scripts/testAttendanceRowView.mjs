@@ -124,6 +124,11 @@ test("search lives in batch/year controls, not a duplicate toolbar", () => {
   const controls = readFileSync(new URL("../src/components/attendance/AttendanceControls.jsx", import.meta.url), "utf8");
   assert.match(controls, /Search attendance students/);
 });
+test("attendance page keeps saved manual order while search is active", () => {
+  const source = readFileSync(new URL("../src/pages/attendance/Attendance.jsx", import.meta.url), "utf8");
+  assert.match(source, /preserveManualOrder=\{orderRevision > 0\}/);
+  assert.doesNotMatch(source, /preserveManualOrder=\{orderRevision > 0 && !studentSearch\}/);
+});
 test("active rows sort first; inactive follow, then unknown/raw-import rows", () => {
   const data = [
     { status: "active", feeDueDate: "2026-09-20", feeStatus: "Paid" },

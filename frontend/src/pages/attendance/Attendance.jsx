@@ -778,7 +778,7 @@ const Attendance = () => {
             searchQuery={studentSearch}
             onMoveRow={moveRegisterRow}
             reorderDisabled={loading || saving || hasUnsavedChanges || reordering}
-            preserveManualOrder={orderRevision > 0 && !studentSearch}
+            preserveManualOrder={orderRevision > 0}
             dayNotes={dayNotes}
             onRowsChange={handleRowsChange}
             onSaveDayNote={saveDayNote}
