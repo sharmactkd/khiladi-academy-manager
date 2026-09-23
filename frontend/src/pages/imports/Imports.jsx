@@ -450,7 +450,7 @@ export default function Imports() {
       <div className={styles.studentScopeHeader}><div><h2>Select students to import</h2><p>Import everyone, or open the individual picker to choose specific workbook players.</p></div><strong>{selectedItems.length} of {directoryItems.length} selected</strong></div>
       <div className={styles.scopeChoiceRow}>
         <button type="button" aria-pressed={scope === "all"} onClick={() => { setScope("all"); setPage(0); }}>Import all players</button>
-        <button type="button" aria-pressed={scope === "selected"} onClick={() => { setScope("selected"); if (!selected.length) setSelected(directoryItems.map(item => item.key)); setPage(0); }}>Choose individual players</button>
+        <button type="button" aria-pressed={scope === "selected"} onClick={() => { setScope("selected"); setPage(0); }}>Choose individual players</button>
       </div>
       {scope === "selected" && <div className={styles.scopePicker}>
         <div className={styles.scopePickerToolbar}>

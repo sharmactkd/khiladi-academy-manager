@@ -15,6 +15,12 @@ test('wizard separates mapping, selection, matching and final save steps', () =>
  const final = source.split('\n').find(line => line.includes('onClick={() => execute(false)}'));
  assert.match(final, /phase === "confirm"/);
 });
+test('individual player mode never auto-selects the whole workbook', () => {
+ const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
+ const individualButton = source.split('\n').find(line => line.includes('Choose individual players'));
+ assert.match(individualButton, /setScope\("selected"\)/);
+ assert.doesNotMatch(individualButton, /directoryItems\.map|setSelected/);
+});
 test('empty app stages all selected Excel profiles without creating any records', () => {
  const input = [{ ...item, key:'a', record:true }, { name:'Prachi', row:{}, key:'b', record:false }];
  const before = JSON.stringify(input);
