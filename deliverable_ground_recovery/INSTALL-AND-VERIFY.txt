@@ -5,7 +5,7 @@ cd "D:\Website\Khiladi Project\khiladi-academy-manager"
 Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
 
 Expand-Archive `
-  -Path "$env:USERPROFILE\Downloads\khiladi-complete-attendance-timeline-v29.zip" `
+  -Path "$env:USERPROFILE\Downloads\khiladi-attendance-history-premium-ui-v30.zip" `
   -DestinationPath (Get-Location).Path `
   -Force
 
@@ -30,7 +30,7 @@ git diff --check
 git diff --stat
 
 git add -A
-git commit -m "Add complete paginated student attendance timeline"
+git commit -m "Redesign complete attendance history UI"
 git push origin main
 
 git status

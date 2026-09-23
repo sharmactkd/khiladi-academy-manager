@@ -52,7 +52,18 @@ const createTrendPoints = (months) => {
   const bottom = 22;
   const chartWidth = width - left - right;
   const chartHeight = height - top - bottom;
-  const values = months.map((month) => Number(month.attendancePercentage || 0));
+  const yearly = [...months.reduce((map, month) => {
+    const itemYear = Number(month.year || new Date().getFullYear());
+    if (!map.has(itemYear)) map.set(itemYear, { year: itemYear, present: 0, marked: 0 });
+    const item = map.get(itemYear);
+    item.present += Number(month.presentCount || 0);
+    item.marked += Number(month.presentCount || 0) + Number(month.absentCount || 0) + Number(month.leaveCount || 0) + Number(month.lateCount || 0);
+    return map;
+  }, new Map()).values()].map((item) => ({
+    ...item,
+    value: item.marked ? Math.round((item.present / item.marked) * 100) : 0,
+  }));
+  const values = yearly.map((item) => item.value);
 
   return {
     width,
@@ -61,7 +72,7 @@ const createTrendPoints = (months) => {
       x: left + (index * chartWidth) / Math.max(values.length - 1, 1),
       y: top + chartHeight - (Math.max(0, Math.min(value, 100)) / 100) * chartHeight,
       value,
-      label: months[index]?.label || "",
+      label: String(yearly[index]?.year || ""),
     })),
   };
 };
@@ -148,6 +159,16 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
     (lowest, month) => !lowest || Number(month.attendancePercentage || 0) < Number(lowest.attendancePercentage || 0) ? month : lowest,
     null
   );
+  const yearGroups = [...markedMonths.reduce((groups, month) => {
+    const groupYear = Number(month.year || year);
+    if (!groups.has(groupYear)) groups.set(groupYear, []);
+    groups.get(groupYear).push(month);
+    return groups;
+  }, new Map()).entries()].map(([groupYear, groupMonths]) => {
+    const present = groupMonths.reduce((sum, month) => sum + Number(month.presentCount || 0), 0);
+    const marked = groupMonths.reduce((sum, month) => sum + Number(month.presentCount || 0) + Number(month.absentCount || 0) + Number(month.leaveCount || 0) + Number(month.lateCount || 0), 0);
+    return { year: groupYear, months: groupMonths, present, marked, rate: marked ? Math.round((present / marked) * 100) : 0 };
+  });
 
   if (!months.length) {
     return (
@@ -178,6 +199,12 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
         </header>
 
         <div className={styles.tableWrap}>
+          <div className={styles.yearStack}>
+          {yearGroups.map((group) => <section key={group.year} className={styles.yearGroup}>
+            <header className={styles.yearGroupHeader}>
+              <div><strong>{group.year}</strong><span>{group.months.length} active month{group.months.length === 1 ? "" : "s"}</span></div>
+              <div className={styles.yearRate} style={{ "--year-rate-color": group.rate < 50 ? "#ef4d58" : "#1eaa60" }}><span>Attendance rate</span><strong>{group.rate}%</strong><i><b style={{ width: `${group.rate}%` }} /></i><small>{group.present} / {group.marked} days</small></div>
+            </header>
           <table className={styles.yearTable}>
             <colgroup>
               <col className={styles.monthColumn} />
@@ -195,7 +222,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
               <th>Present</th><th>Absent</th><th>Leave</th><th>Late</th><th>%</th>
             </tr></thead>
             <tbody>
-              {months.map((month) => {
+              {group.months.map((month) => {
                 const feeStatus = month.importedFeeStatus || "Not added";
                 const rowYear = Number(month.year || year);
                 const isFutureMonth = rowYear > currentYear ||
@@ -248,6 +275,8 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
               })}
             </tbody>
           </table>
+          </section>)}
+          </div>
         </div>
       </section>
 

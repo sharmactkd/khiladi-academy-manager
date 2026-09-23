@@ -248,8 +248,8 @@ const StudentAttendanceHistory = () => {
             <div className={styles.metrics}>
               <article className={styles.metricPresent}><span><CheckCircle2 /></span><div><small>Present</small><strong>{summary.present}</strong></div></article>
               <article className={styles.metricAbsent}><span><UserX /></span><div><small>Absent</small><strong>{summary.absent}</strong></div></article>
-              <article className={styles.metricLeave}><span><CalendarDays /></span><div><small>Leave</small><strong>{summary.leave}</strong></div></article>
-              <article className={styles.metricRate}><span><CalendarCheck2 /></span><div><small>Attendance</small><strong>{summary.rate}%</strong></div></article>
+              <article className={styles.metricLeave}><span><CalendarDays /></span><div><small>Marked Days</small><strong>{summary.marked}</strong></div></article>
+              <article className={styles.metricRate}><span><CalendarCheck2 /></span><div><small>Attendance Rate</small><strong>{summary.rate}%</strong></div></article>
             </div>
           </section>
 
