@@ -40,6 +40,7 @@ export default function Imports() {
   const [scopeQuery, setScopeQuery] = useState("");
   const [policy, setPolicy] = useState("fill-empty"), [duplicateMode, setDuplicateMode] = useState("skip");
   const [importTarget, setImportTarget] = useState("new");
+  const [reconciliationMode, setReconciliationMode] = useState(false);
   const [sessions, setSessions] = useState([]), [job, setJob] = useState(null), [result, setResult] = useState(null), [resumePlan, setResumePlan] = useState(null);
   const [warnings, setWarnings] = useState([]), [draftExists, setDraftExists] = useState(false);
   const [historyDetail, setHistoryDetail] = useState(null);
@@ -93,8 +94,8 @@ export default function Imports() {
       setFile(source); setHash(digest); loadedHash.current = digest; setSheetRoles(expected?.plan?.sheetRoles || roles);
       setRecords({}); setBlocks([]); setResult(null); setPhase("setup"); setSelected([]); setDecisions({}); setQuery(""); setScopeQuery(""); setPage(0);
       setMonthQuery(""); setExpandedMonthGroups(new Set());
-      if (expected) { setResumePlan(expected); setMode(expected.mode); setBranch(expected.plan.branch); setBatch(expected.plan.batch); setScope(expected.plan.scope); setPolicy(expected.plan.policy); setDuplicateMode(expected.plan.duplicateMode); setOverrides(expected.plan.overrides || {}); setImportTarget(expected.plan.importTarget || "all"); }
-      else { setJob(null); setResumePlan(null); setOverrides({}); setImportTarget("new"); setPolicy("keep"); setDuplicateMode("skip"); }
+      if (expected) { setResumePlan(expected); setMode(expected.mode); setBranch(expected.plan.branch); setBatch(expected.plan.batch); setScope(expected.plan.scope); setPolicy(expected.plan.policy); setDuplicateMode(expected.plan.duplicateMode); setOverrides(expected.plan.overrides || {}); setImportTarget(expected.plan.importTarget || "all"); setReconciliationMode(Boolean(expected.plan.reconciliationMode)); }
+      else { setJob(null); setResumePlan(null); setOverrides({}); setImportTarget("new"); setPolicy("keep"); setDuplicateMode("skip"); setReconciliationMode(false); }
     } catch (e) { setError(errorText(e)); }
     finally { flight.current = false; setBusy(false); setProgress(""); }
   };
@@ -123,7 +124,7 @@ export default function Imports() {
       }
       if (mode !== "students" && !nextBlocks.length) throw new Error("No supported attendance blocks. Nothing imported. Check worksheet roles/layout.");
       const attendanceYears = [...new Set(nextBlocks.map(block => Number(block.year)))].filter(Number.isFinite).sort((a, b) => b - a);
-      setRecords(nextRecords); setBlocks(nextBlocks); setMonths(resumePlan?.plan?.months || nextBlocks.map(block => block.blockId)); setWarnings(notes);
+      setRecords(nextRecords); setBlocks(nextBlocks); setMonths(resumePlan?.plan?.months || nextBlocks.filter(block => !reconciliationMode || Number(block.month) !== 9).map(block => block.blockId)); setWarnings(notes);
       setMonthQuery(""); setExpandedMonthGroups(new Set(attendanceYears.slice(0, 2).map(String)));
       setSelected(resumePlan?.plan?.selected || []); setDecisions(resumePlan?.plan?.decisions || {}); setPhase("mapping"); setPage(0);
     } catch (e) { setError(errorText(e)); }
@@ -177,9 +178,10 @@ export default function Imports() {
   const blocksForYear = year => sortedAttendanceBlocks.filter(block => Number(block.year) === Number(year) && monthMatches(block));
   const earlierBlocks = sortedAttendanceBlocks.filter(block => earlierAttendanceYears.includes(Number(block.year)) && monthMatches(block));
   const changeMonths = updater => { setMonths(updater); setDecisions({}); setSelected([]); };
+  const allowedAttendanceBlocks = values => values.filter(block => !reconciliationMode || Number(block.month) !== 9);
   const toggleMonth = blockId => changeMonths(values => values.includes(blockId) ? values.filter(value => value !== blockId) : [...values, blockId]);
   const setMonthGroupSelection = (groupBlocks, shouldSelect) => {
-    const ids = new Set(groupBlocks.map(block => block.blockId));
+    const ids = new Set(allowedAttendanceBlocks(groupBlocks).map(block => block.blockId));
     changeMonths(values => shouldSelect ? [...new Set([...values, ...ids])] : values.filter(value => !ids.has(value)));
   };
   const toggleMonthGroup = key => setExpandedMonthGroups(values => {
@@ -200,7 +202,7 @@ export default function Imports() {
     } catch (e) { setError(errorText(e)); }
     finally { flight.current = false; setBusy(false); setProgress(""); }
   };
-  const plan = () => ({ sheetRoles, branch, batch, scope, selected, decisions, months, policy, duplicateMode, overrides, importTarget, mappings: Object.fromEntries(Object.entries(records).map(([sheet, data]) => [sheet, { headerIndex: data.headerIndex, mapping: data.mapping }])) });
+  const plan = () => ({ sheetRoles, branch, batch, scope, selected, decisions, months, policy, duplicateMode, overrides, importTarget, reconciliationMode, mappings: Object.fromEntries(Object.entries(records).map(([sheet, data]) => [sheet, { headerIndex: data.headerIndex, mapping: data.mapping }])) });
   const saveDraft = async () => {
     try { await draftStore(draftKey, { file, fileHash: hash, mode, plan: plan(), _id: job?._id }); setDraftExists(true); setProgress("Draft saved on this browser. Use Resume draft to continue."); }
     catch (e) { setError(`Draft not saved: ${errorText(e)}`); }
@@ -244,7 +246,7 @@ export default function Imports() {
         setResult({ ...totals });
       }
       if (!stop.current && mode !== "students") {
-        const tasks = attendancePayloads(included, links, batch, duplicateMode);
+        const tasks = attendancePayloads(included, links, batch, duplicateMode, reconciliationMode);
         for (let i = 0; i < tasks.length; i++) {
           if (stop.current) break;
           setProgress(`Saving attendance: chunk ${i + 1} / ${tasks.length}…`);
@@ -289,6 +291,7 @@ export default function Imports() {
       {hash && sessions.some(session => session.fileHash === hash) && <p className={styles.notice}>This exact workbook was imported before. Review history below; duplicate handling still depends on student/date identity.</p>}
       </section>
       <section className={styles.card}><h2>What do you want to import?</h2><div className={styles.actions}>{[["students", "Student Records"], ["attendance", "Attendance"], ["both", "Records + Attendance"]].map(([value, label]) => <button key={value} aria-pressed={mode === value} disabled={Boolean(resumePlan)} onClick={() => setMode(value)}>{label}</button>)}</div><p>Attendance fee labels are historical information, not payment transactions or receipts.</p></section>
+      <section className={styles.card}><h2>Temporary Ground.xlsx recovery</h2><label><input type="checkbox" checked={reconciliationMode} disabled={Boolean(resumePlan)} onChange={e => { const enabled = e.target.checked; setReconciliationMode(enabled); if (enabled) { setMode("both"); setImportTarget("all"); setPolicy("fill-empty"); setDuplicateMode("skip"); setScope("all"); } }} /> Safely merge missing records and historical attendance</label><p>Existing profile fields and attendance marks are never replaced. Every September is excluded here and blocked again by the backend.</p></section>
       {file && <section className={`${styles.card} ${styles.classificationCard}`}>
         <div className={styles.classificationHeader}>
           <div><h2>Worksheet classification</h2><p>We grouped your worksheets automatically. Review only the sheets that look incorrect.</p></div>
@@ -385,7 +388,7 @@ export default function Imports() {
           <div className={styles.monthsHeaderActions}>
             <label className={styles.monthSearch}><Search size={16} /><input value={monthQuery} onChange={e => setMonthQuery(e.target.value)} placeholder="Find month or year" aria-label="Find attendance month or year" /></label>
             <button type="button" onClick={() => changeMonths([])} disabled={!months.length}>Clear all</button>
-            <button type="button" className={styles.primary} onClick={() => changeMonths(sortedAttendanceBlocks.map(block => block.blockId))} disabled={months.length === sortedAttendanceBlocks.length}>Select all</button>
+            <button type="button" className={styles.primary} onClick={() => changeMonths(sortedAttendanceBlocks.filter(block => !reconciliationMode || Number(block.month) !== 9).map(block => block.blockId))}>Select all allowed</button>
           </div>
         </div>
         <div className={styles.monthsSummary}>
@@ -397,10 +400,11 @@ export default function Imports() {
         <div className={styles.monthYearGroups}>
           {recentAttendanceYears.map(year => {
             const allYearBlocks = sortedAttendanceBlocks.filter(block => Number(block.year) === Number(year));
+            const allowedYearBlocks = allowedAttendanceBlocks(allYearBlocks);
             const visibleYearBlocks = blocksForYear(year);
             if (normalizedMonthQuery && !visibleYearBlocks.length) return null;
             const selectedCount = allYearBlocks.filter(block => months.includes(block.blockId)).length;
-            const allSelected = selectedCount === allYearBlocks.length;
+            const allSelected = allowedYearBlocks.length > 0 && selectedCount === allowedYearBlocks.length;
             const expanded = Boolean(normalizedMonthQuery) || expandedMonthGroups.has(String(year));
             return <article key={year} className={styles.monthYearGroup}>
               <div className={styles.monthYearHeader}>
@@ -409,15 +413,16 @@ export default function Imports() {
                 <span>{selectedCount} of {allYearBlocks.length} selected</span>
               </div>
               {expanded && <div className={styles.monthTiles}>{visibleYearBlocks.map(block => <label key={block.blockId} className={`${styles.monthTile} ${months.includes(block.blockId) ? styles.monthTileSelected : ""}`}>
-                <input type="checkbox" checked={months.includes(block.blockId)} onChange={() => toggleMonth(block.blockId)} />
-                <span><strong>{monthLabels[Number(block.month)] || `Month ${block.month}`}</strong><small>{block.sheetName}</small></span>
+                <input type="checkbox" checked={months.includes(block.blockId)} disabled={reconciliationMode && Number(block.month) === 9} onChange={() => toggleMonth(block.blockId)} />
+                <span><strong>{monthLabels[Number(block.month)] || `Month ${block.month}`}</strong><small>{reconciliationMode && Number(block.month) === 9 ? "Protected — not imported" : block.sheetName}</small></span>
               </label>)}</div>}
             </article>;
           })}
           {earlierAttendanceYears.length > 0 && (!normalizedMonthQuery || earlierBlocks.length > 0) && (() => {
             const allEarlierBlocks = sortedAttendanceBlocks.filter(block => earlierAttendanceYears.includes(Number(block.year)));
             const selectedCount = allEarlierBlocks.filter(block => months.includes(block.blockId)).length;
-            const allSelected = selectedCount === allEarlierBlocks.length;
+            const allowedEarlierBlocks = allowedAttendanceBlocks(allEarlierBlocks);
+            const allSelected = allowedEarlierBlocks.length > 0 && selectedCount === allowedEarlierBlocks.length;
             const expanded = Boolean(normalizedMonthQuery) || expandedMonthGroups.has("earlier");
             return <article className={styles.monthYearGroup}>
               <div className={styles.monthYearHeader}>
@@ -428,7 +433,7 @@ export default function Imports() {
               {expanded && <div className={styles.earlierYears}>{earlierAttendanceYears.map(year => {
                 const yearBlocks = blocksForYear(year);
                 if (!yearBlocks.length) return null;
-                return <div key={year} className={styles.earlierYear}><strong>{year}</strong><div className={styles.monthTiles}>{yearBlocks.map(block => <label key={block.blockId} className={`${styles.monthTile} ${months.includes(block.blockId) ? styles.monthTileSelected : ""}`}><input type="checkbox" checked={months.includes(block.blockId)} onChange={() => toggleMonth(block.blockId)} /><span><strong>{monthLabels[Number(block.month)] || `Month ${block.month}`}</strong><small>{block.sheetName}</small></span></label>)}</div></div>;
+                return <div key={year} className={styles.earlierYear}><strong>{year}</strong><div className={styles.monthTiles}>{yearBlocks.map(block => <label key={block.blockId} className={`${styles.monthTile} ${months.includes(block.blockId) ? styles.monthTileSelected : ""}`}><input type="checkbox" checked={months.includes(block.blockId)} disabled={reconciliationMode && Number(block.month) === 9} onChange={() => toggleMonth(block.blockId)} /><span><strong>{monthLabels[Number(block.month)] || `Month ${block.month}`}</strong><small>{reconciliationMode && Number(block.month) === 9 ? "Protected — not imported" : block.sheetName}</small></span></label>)}</div></div>;
               })}</div>}
             </article>;
           })()}
@@ -473,9 +478,9 @@ export default function Imports() {
     {matchedItems.length > 0 && <details className={`${styles.card} ${styles.matchedReview}`}><summary><span><CircleCheck size={17} /> Automatically matched players <b>{matchedItems.length}</b></span><small>Optional review</small></summary><p>These identities matched safely by admission number or exact name and phone. Use Change if a match looks wrong.</p><div className={styles.table}><table><thead><tr><th>Excel player</th><th>Matched app student</th><th>Reason</th><th>Action</th></tr></thead><tbody>{matchedItems.map(item => { const existing = students.find(student => id(student) === decisions[item.key]); return <tr key={item.key}><td><strong>{item.name}</strong><small>{item.phone || "No phone"}</small></td><td>{existing ? studentName(existing) : "Saved match"}<small>{existing?.phone || existing?.admissionNumber || ""}</small></td><td>{suggestions[item.key]?.reason || "Previously confirmed match"}</td><td><button type="button" disabled={Boolean(job)} onClick={() => { setDecisions(values => ({ ...values, [item.key]: "" })); setPage(0); }}>Change</button></td></tr>; })}</tbody></table></div></details>}
     {excludedItems.length > 0 && <details className={`${styles.card} ${styles.excludedReview}`}><summary>Excluded players ({excludedItems.length})</summary><div className={styles.scopePlayerGrid}>{excludedItems.map(item => <div key={item.key}><span><strong>{item.name}</strong><small>{item.phone || "No identifier"}</small></span><button type="button" disabled={Boolean(job)} onClick={() => setDecisions(values => ({ ...values, [item.key]: "" }))}>Restore</button></div>)}</div></details>}
     <details className={`${styles.card} ${styles.advancedImport}`}><summary>Advanced import settings</summary><p>Defaults protect existing profiles and attendance. Change these only when you intentionally want to update saved students.</p><div className={styles.matchFilters}>
-      <label>What should be imported?<select value={importTarget} disabled={Boolean(job)} onChange={e => { setImportTarget(e.target.value); if (e.target.value === "all") { setPolicy("overwrite"); setDuplicateMode("overwrite"); } else { setPolicy("keep"); setDuplicateMode("skip"); } }}><option value="new">Only new students + their selected attendance</option><option value="all">New + existing students (update selected data)</option></select></label>
-      <label>Existing profile policy<select value={policy} onChange={e => setPolicy(e.target.value)} disabled={Boolean(job) || mode === "attendance" || importTarget === "new"}><option value="fill-empty">Fill blank supported fields only</option><option value="keep">Keep existing profile unchanged</option><option value="review">Review and select individual fields</option><option value="overwrite">Replace supported fields supplied in Excel</option></select></label>
-      <label>Existing attendance<select value={duplicateMode} onChange={e => setDuplicateMode(e.target.value)} disabled={Boolean(job)}><option value="skip">Skip existing marks (fill missing metadata)</option><option value="overwrite">Replace marks and imported metadata</option></select></label>
+      <label>What should be imported?<select value={importTarget} disabled={Boolean(job) || reconciliationMode} onChange={e => { setImportTarget(e.target.value); if (e.target.value === "all") { setPolicy("overwrite"); setDuplicateMode("overwrite"); } else { setPolicy("keep"); setDuplicateMode("skip"); } }}><option value="new">Only new students + their selected attendance</option><option value="all">New + existing students (update selected data)</option></select></label>
+      <label>Existing profile policy<select value={policy} onChange={e => setPolicy(e.target.value)} disabled={Boolean(job) || mode === "attendance" || importTarget === "new" || reconciliationMode}><option value="fill-empty">Fill blank supported fields only</option><option value="keep">Keep existing profile unchanged</option><option value="review">Review and select individual fields</option><option value="overwrite">Replace supported fields supplied in Excel</option></select></label>
+      <label>Existing attendance<select value={duplicateMode} onChange={e => setDuplicateMode(e.target.value)} disabled={Boolean(job) || reconciliationMode}><option value="skip">Skip existing marks (fill missing metadata)</option><option value="overwrite">Replace marks and imported metadata</option></select></label>
     </div><p className={styles.matchHelp}>{importTarget === "new" ? "Only new identities will be imported. Existing students and their attendance will not be changed." : "Selected existing profiles and attendance may be updated according to these policies. Blank Excel fields do not erase saved data."}</p></details>
     </>}
     {phase === "review" && policy === "review" && mode !== "attendance" && <section className={styles.card}><h2>Review profile changes</h2><p>Only checked fields will be replaced. Names/admission identifiers are never changed here. Medical arrays and other hidden fields should be reviewed in Edit Student.</p>{matchedItems.map(item => { const existing = students.find(s => id(s) === decisions[item.key]); if (!existing) return null; const fields = reviewFields.filter(field => field !== "medicalConditions" && item.row[field] !== undefined && String(item.row[field]).trim() && !/^[—–-]+$/.test(String(item.row[field]).trim())); return <details key={item.key}><summary>{item.name} → {studentName(existing)} ({overrides[item.key]?.length || 0} fields selected)</summary><div className={styles.table}><table><thead><tr><th>Replace</th><th>Field</th><th>Existing</th><th>Excel</th></tr></thead><tbody>{fields.map(field => <tr key={field}><td><input type="checkbox" disabled={Boolean(job)} checked={overrides[item.key]?.includes(field) || false} onChange={() => setOverrides(values => { const current = values[item.key] || []; return { ...values, [item.key]: current.includes(field) ? current.filter(value => value !== field) : [...current, field] }; })} /></td><td>{field}</td><td>{String(existing[field] ?? "Empty")}</td><td>{String(item.row[field])}</td></tr>)}</tbody></table></div></details>; })}</section>}

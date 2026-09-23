@@ -291,6 +291,9 @@ const normalizeImportStatus = (status) => {
   return null;
 };
 
+export const isProtectedReconciliationPeriod = (row = {}, reconciliationMode = false) =>
+  reconciliationMode && getImportedAttendancePeriod(row)?.month === 9;
+
 const getRecordIdentityKey = (record) => {
   if (record.student) {
     return `student:${String(record.student)}`;
@@ -361,11 +364,18 @@ const buildImportGroups = ({
   fallbackBatch,
   resolutions = {},
   savedMappings = {},
+  reconciliationMode = false,
 }) => {
   const groups = new Map();
 
   rows.forEach((row, rowIndex) => {
     try {
+      if (isProtectedReconciliationPeriod(row, reconciliationMode)) {
+        summary.protectedSeptemberRows += 1;
+        summary.protectedSeptemberCells += (Array.isArray(row.attendance) ? row.attendance : [])
+          .filter((item) => normalizeImportStatus(item.status)).length;
+        return;
+      }
       const rowNumber = row.rowNumber || rowIndex + 2;
       const match = assessAttendanceRowMatch({
         row,
@@ -768,6 +778,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
     req.body?.resolutions && typeof req.body.resolutions === "object"
       ? req.body.resolutions
       : {};
+  const reconciliationMode = req.body?.reconciliationMode === true;
 
   const summary = {
     totalRows: rows.length,
@@ -781,6 +792,8 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
     unmatchedStudents: [],
     warnings: [],
     errors: [],
+    protectedSeptemberRows: 0,
+    protectedSeptemberCells: 0,
   };
 
   if (!rows.length) {
@@ -843,6 +856,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
     fallbackBatch: batch._id,
     resolutions,
     savedMappings,
+    reconciliationMode,
   });
 
   for (const group of groups.values()) {
@@ -864,7 +878,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
     }
   }
 
-  const monthMetadataOperations = rows.flatMap((row, rowIndex) => {
+  const metadataCandidates = rows.flatMap((row, rowIndex) => {
     const match = assessAttendanceRowMatch({
       row,
       rowIndex,
@@ -875,32 +889,46 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
       savedMappings,
     });
     const period = getImportedAttendancePeriod(row);
-    if (!match.student?._id || !period) return [];
+    if (!match.student?._id || !period || isProtectedReconciliationPeriod(row, reconciliationMode)) return [];
 
     return [{
-      updateOne: {
-        filter: {
-          academy: req.academyId,
-          batch: batch._id,
-          student: match.student._id,
-          year: period.year,
-          month: period.month,
-        },
-        update: {
-          $set: {
-            sourceSheet: clean(row.sourceSheet),
-            importedRowNumber: Number(row.importedRowNumber || row.rowNumber || 0) || null,
-            importedDueDate: clean(row.importedDueDate),
-            importedPaidDate: clean(row.importedPaidDate),
-            importedFeePaid: clean(row.importedFeePaid),
-            importedFeeStatus: clean(row.importedFeeStatus),
-            importedExtraNote: clean(row.importedExtraNote),
-            updatedBy: req.user._id,
-          },
-        },
-        upsert: true,
+      filter: {
+        academy: req.academyId, batch: batch._id, student: match.student._id,
+        year: period.year, month: period.month,
+      },
+      values: {
+        sourceSheet: clean(row.sourceSheet),
+        importedRowNumber: Number(row.importedRowNumber || row.rowNumber || 0) || null,
+        importedDueDate: clean(row.importedDueDate),
+        importedPaidDate: clean(row.importedPaidDate),
+        importedFeePaid: clean(row.importedFeePaid),
+        importedFeeStatus: clean(row.importedFeeStatus),
+        importedExtraNote: clean(row.importedExtraNote),
       },
     }];
+  });
+
+  const metadataKeys = metadataCandidates.map(({ filter }) => ({
+    student: filter.student, year: filter.year, month: filter.month,
+  }));
+  const existingMetadata = metadataKeys.length
+    ? await AttendanceMonthMetadata.find({ academy: req.academyId, batch: batch._id, $or: metadataKeys }).lean()
+    : [];
+  const existingMetadataByKey = new Map(existingMetadata.map((item) => [
+    `${item.student}:${item.year}:${item.month}`, item,
+  ]));
+  const monthMetadataOperations = metadataCandidates.flatMap(({ filter, values }) => {
+    const existing = existingMetadataByKey.get(`${filter.student}:${filter.year}:${filter.month}`);
+    if (!existing || duplicateMode === "overwrite") {
+      return [{ updateOne: { filter, update: { $set: { ...values, updatedBy: req.user._id } }, upsert: true } }];
+    }
+    const fill = {};
+    Object.entries(values).forEach(([field, value]) => {
+      const current = existing[field];
+      if ((current === undefined || current === null || clean(current) === "") && value !== null && clean(value) !== "") fill[field] = value;
+    });
+    if (!Object.keys(fill).length) return [];
+    return [{ updateOne: { filter, update: { $set: { ...fill, updatedBy: req.user._id } } } }];
   });
 
   if (monthMetadataOperations.length) {

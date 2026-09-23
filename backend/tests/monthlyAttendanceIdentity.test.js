@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildRowFromRecord, mergeMonthlyRecordIdentity } from "../src/services/monthlyAttendanceService.js";
-import { backfillImportedAttendanceMetadata, getImportedAttendancePeriod } from "../src/controllers/attendanceController.js";
+import { backfillImportedAttendanceMetadata, getImportedAttendancePeriod, isProtectedReconciliationPeriod } from "../src/controllers/attendanceController.js";
 
 test("student dates do not fabricate missing fee data", () => {
   const row = buildRowFromRecord({
@@ -63,6 +63,13 @@ test("a missing due date never shifts the paid date into the due column", () => 
 test("attendance import period is carried explicitly or recovered from its block id", () => {
   assert.deepEqual(getImportedAttendancePeriod({ importedYear: 2025, importedMonth: 9 }), { year: 2025, month: 9 });
   assert.deepEqual(getImportedAttendancePeriod({ blockId: "25 - Attandance:2025-09" }), { year: 2025, month: 9 });
+});
+
+test("temporary reconciliation protects every September on the server", () => {
+  assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 9 }, true), true);
+  assert.equal(isProtectedReconciliationPeriod({ blockId: "25 - Attandance:2025-09" }, true), true);
+  assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 8 }, true), false);
+  assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 9 }, false), false);
 });
 
 test("linked Excel metadata enriches a pre-seeded student roster row", () => {

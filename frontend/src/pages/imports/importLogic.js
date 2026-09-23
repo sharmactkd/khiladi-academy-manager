@@ -101,7 +101,7 @@ export function chunks(rows, size = 100) {
   return result;
 }
 
-export function attendancePayloads(items, links, batchId, duplicateMode) {
+export function attendancePayloads(items, links, batchId, duplicateMode, reconciliationMode = false) {
   const byBlock = new Map();
   for (const item of items) {
     const student = links[item.key];
@@ -114,7 +114,7 @@ export function attendancePayloads(items, links, batchId, duplicateMode) {
   const result = [];
   for (const [blockId, entries] of byBlock) for (const part of chunks(entries)) {
     const rows = part.map(entry => entry.row);
-    result.push({ blockId, fallbackBatch: batchId, duplicateMode, rows, resolutions: Object.fromEntries(part.map(entry => [attendanceSourceKey(entry.row), entry.student])) });
+    result.push({ blockId, fallbackBatch: batchId, duplicateMode, reconciliationMode, rows, resolutions: Object.fromEntries(part.map(entry => [attendanceSourceKey(entry.row), entry.student])) });
   }
   return result;
 }

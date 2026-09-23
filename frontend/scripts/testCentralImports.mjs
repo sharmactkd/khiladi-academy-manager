@@ -65,6 +65,7 @@ test('record and attendance-only players are both discoverable', () => {
  assert.equal(result.length,2); assert.equal(result[0].attendance.length,1); assert.equal(result[1].name,'Adi Jain'); assert.equal(result[1].record,false);
  const payloads=attendancePayloads([result[1]],{[result[1].key]:'s1'},'b1','skip');
  assert.equal(payloads.length,1); assert.equal(payloads[0].rows.length,1); assert.deepEqual(Object.values(payloads[0].resolutions),['s1']);
+ assert.equal(attendancePayloads([result[1]],{[result[1].key]:'s1'},'b1','skip',true)[0].reconciliationMode,true);
  assert.deepEqual(attendancePayloads(result,{},'b1','skip'),[]);
 });
 test('same-name record ambiguity is not silently merged with attendance', () => {
