@@ -25,6 +25,9 @@ const mappingGroups = [
 const recommendedMappingKeys = new Set(["dateOfBirth", "phone", "joiningDate", "beltRank"]);
 const fieldByKey = Object.fromEntries(STUDENT_IMPORT_FIELDS.map(field => [field.key, field]));
 const monthLabels = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const reconciliationProtectedYear = new Date().getFullYear();
+const isProtectedReconciliationBlock = (block, enabled) =>
+  enabled && Number(block?.year) === reconciliationProtectedYear && Number(block?.month) === 9;
 
 export default function Imports() {
   const { user } = useAuth();
@@ -124,7 +127,7 @@ export default function Imports() {
       }
       if (mode !== "students" && !nextBlocks.length) throw new Error("No supported attendance blocks. Nothing imported. Check worksheet roles/layout.");
       const attendanceYears = [...new Set(nextBlocks.map(block => Number(block.year)))].filter(Number.isFinite).sort((a, b) => b - a);
-      setRecords(nextRecords); setBlocks(nextBlocks); setMonths(resumePlan?.plan?.months || nextBlocks.filter(block => !reconciliationMode || Number(block.month) !== 9).map(block => block.blockId)); setWarnings(notes);
+      setRecords(nextRecords); setBlocks(nextBlocks); setMonths(resumePlan?.plan?.months || nextBlocks.filter(block => !isProtectedReconciliationBlock(block, reconciliationMode)).map(block => block.blockId)); setWarnings(notes);
       setMonthQuery(""); setExpandedMonthGroups(new Set(attendanceYears.slice(0, 2).map(String)));
       setSelected(resumePlan?.plan?.selected || []); setDecisions(resumePlan?.plan?.decisions || {}); setPhase("mapping"); setPage(0);
     } catch (e) { setError(errorText(e)); }
@@ -178,7 +181,7 @@ export default function Imports() {
   const blocksForYear = year => sortedAttendanceBlocks.filter(block => Number(block.year) === Number(year) && monthMatches(block));
   const earlierBlocks = sortedAttendanceBlocks.filter(block => earlierAttendanceYears.includes(Number(block.year)) && monthMatches(block));
   const changeMonths = updater => { setMonths(updater); setDecisions({}); setSelected([]); };
-  const allowedAttendanceBlocks = values => values.filter(block => !reconciliationMode || Number(block.month) !== 9);
+  const allowedAttendanceBlocks = values => values.filter(block => !isProtectedReconciliationBlock(block, reconciliationMode));
   const toggleMonth = blockId => changeMonths(values => values.includes(blockId) ? values.filter(value => value !== blockId) : [...values, blockId]);
   const setMonthGroupSelection = (groupBlocks, shouldSelect) => {
     const ids = new Set(allowedAttendanceBlocks(groupBlocks).map(block => block.blockId));
@@ -291,7 +294,7 @@ export default function Imports() {
       {hash && sessions.some(session => session.fileHash === hash) && <p className={styles.notice}>This exact workbook was imported before. Review history below; duplicate handling still depends on student/date identity.</p>}
       </section>
       <section className={styles.card}><h2>What do you want to import?</h2><div className={styles.actions}>{[["students", "Student Records"], ["attendance", "Attendance"], ["both", "Records + Attendance"]].map(([value, label]) => <button key={value} aria-pressed={mode === value} disabled={Boolean(resumePlan)} onClick={() => setMode(value)}>{label}</button>)}</div><p>Attendance fee labels are historical information, not payment transactions or receipts.</p></section>
-      <section className={styles.card}><h2>Temporary Ground.xlsx recovery</h2><label><input type="checkbox" checked={reconciliationMode} disabled={Boolean(resumePlan)} onChange={e => { const enabled = e.target.checked; setReconciliationMode(enabled); if (enabled) { setMode("both"); setImportTarget("all"); setPolicy("fill-empty"); setDuplicateMode("skip"); setScope("all"); } }} /> Safely merge missing records and historical attendance</label><p>Existing profile fields and attendance marks are never replaced. Every September is excluded here and blocked again by the backend.</p></section>
+      <section className={styles.card}><h2>Temporary Ground.xlsx recovery</h2><label><input type="checkbox" checked={reconciliationMode} disabled={Boolean(resumePlan)} onChange={e => { const enabled = e.target.checked; setReconciliationMode(enabled); if (enabled) { setMode("both"); setImportTarget("all"); setPolicy("fill-empty"); setDuplicateMode("skip"); setScope("all"); } }} /> Safely merge missing records and historical attendance</label><p>Existing profile fields and attendance marks are never replaced. Only September {reconciliationProtectedYear} is excluded here and blocked again by the backend; older September records remain importable.</p></section>
       {file && <section className={`${styles.card} ${styles.classificationCard}`}>
         <div className={styles.classificationHeader}>
           <div><h2>Worksheet classification</h2><p>We grouped your worksheets automatically. Review only the sheets that look incorrect.</p></div>
@@ -388,7 +391,7 @@ export default function Imports() {
           <div className={styles.monthsHeaderActions}>
             <label className={styles.monthSearch}><Search size={16} /><input value={monthQuery} onChange={e => setMonthQuery(e.target.value)} placeholder="Find month or year" aria-label="Find attendance month or year" /></label>
             <button type="button" onClick={() => changeMonths([])} disabled={!months.length}>Clear all</button>
-            <button type="button" className={styles.primary} onClick={() => changeMonths(sortedAttendanceBlocks.filter(block => !reconciliationMode || Number(block.month) !== 9).map(block => block.blockId))}>Select all allowed</button>
+            <button type="button" className={styles.primary} onClick={() => changeMonths(allowedAttendanceBlocks(sortedAttendanceBlocks).map(block => block.blockId))}>Select all allowed</button>
           </div>
         </div>
         <div className={styles.monthsSummary}>
@@ -413,8 +416,8 @@ export default function Imports() {
                 <span>{selectedCount} of {allYearBlocks.length} selected</span>
               </div>
               {expanded && <div className={styles.monthTiles}>{visibleYearBlocks.map(block => <label key={block.blockId} className={`${styles.monthTile} ${months.includes(block.blockId) ? styles.monthTileSelected : ""}`}>
-                <input type="checkbox" checked={months.includes(block.blockId)} disabled={reconciliationMode && Number(block.month) === 9} onChange={() => toggleMonth(block.blockId)} />
-                <span><strong>{monthLabels[Number(block.month)] || `Month ${block.month}`}</strong><small>{reconciliationMode && Number(block.month) === 9 ? "Protected — not imported" : block.sheetName}</small></span>
+                <input type="checkbox" checked={months.includes(block.blockId)} disabled={isProtectedReconciliationBlock(block, reconciliationMode)} onChange={() => toggleMonth(block.blockId)} />
+                <span><strong>{monthLabels[Number(block.month)] || `Month ${block.month}`}</strong><small>{isProtectedReconciliationBlock(block, reconciliationMode) ? "Protected — not imported" : block.sheetName}</small></span>
               </label>)}</div>}
             </article>;
           })}
@@ -433,7 +436,7 @@ export default function Imports() {
               {expanded && <div className={styles.earlierYears}>{earlierAttendanceYears.map(year => {
                 const yearBlocks = blocksForYear(year);
                 if (!yearBlocks.length) return null;
-                return <div key={year} className={styles.earlierYear}><strong>{year}</strong><div className={styles.monthTiles}>{yearBlocks.map(block => <label key={block.blockId} className={`${styles.monthTile} ${months.includes(block.blockId) ? styles.monthTileSelected : ""}`}><input type="checkbox" checked={months.includes(block.blockId)} disabled={reconciliationMode && Number(block.month) === 9} onChange={() => toggleMonth(block.blockId)} /><span><strong>{monthLabels[Number(block.month)] || `Month ${block.month}`}</strong><small>{reconciliationMode && Number(block.month) === 9 ? "Protected — not imported" : block.sheetName}</small></span></label>)}</div></div>;
+                return <div key={year} className={styles.earlierYear}><strong>{year}</strong><div className={styles.monthTiles}>{yearBlocks.map(block => <label key={block.blockId} className={`${styles.monthTile} ${months.includes(block.blockId) ? styles.monthTileSelected : ""}`}><input type="checkbox" checked={months.includes(block.blockId)} disabled={isProtectedReconciliationBlock(block, reconciliationMode)} onChange={() => toggleMonth(block.blockId)} /><span><strong>{monthLabels[Number(block.month)] || `Month ${block.month}`}</strong><small>{isProtectedReconciliationBlock(block, reconciliationMode) ? "Protected — not imported" : block.sheetName}</small></span></label>)}</div></div>;
               })}</div>}
             </article>;
           })()}

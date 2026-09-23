@@ -5,7 +5,7 @@ cd "D:\Website\Khiladi Project\khiladi-academy-manager"
 Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
 
 Expand-Archive `
-  -Path "$env:USERPROFILE\Downloads\khiladi-ground-reconciliation-complete-v26.zip" `
+  -Path "$env:USERPROFILE\Downloads\khiladi-ground-reconciliation-current-september-v27.zip" `
   -DestinationPath (Get-Location).Path `
   -Force
 
@@ -43,5 +43,5 @@ USAGE
 4. Enable "Temporary Ground.xlsx recovery".
 5. Select the correct destination branch and batch, then Analyse.
 6. Review every unresolved identity. Do not create a new student when the app already has that person; link it manually.
-7. September tiles are disabled. Existing profile values and attendance marks are preserved; only blank profile fields, missing marks, and blank month metadata are filled.
+7. Only the current year's September tile is disabled. Older years' September records remain importable. Existing profile values and attendance marks are preserved; only blank profile fields, missing marks, and blank month metadata are filled.
 8. Confirm the preview, then import. Review the result counts and errors before removing this temporary feature.

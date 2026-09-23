@@ -65,11 +65,11 @@ test("attendance import period is carried explicitly or recovered from its block
   assert.deepEqual(getImportedAttendancePeriod({ blockId: "25 - Attandance:2025-09" }), { year: 2025, month: 9 });
 });
 
-test("temporary reconciliation protects every September on the server", () => {
-  assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 9 }, true), true);
-  assert.equal(isProtectedReconciliationPeriod({ blockId: "25 - Attandance:2025-09" }, true), true);
-  assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 8 }, true), false);
-  assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 9 }, false), false);
+test("temporary reconciliation protects only the selected current-year September", () => {
+  assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 9 }, true, 2026), true);
+  assert.equal(isProtectedReconciliationPeriod({ blockId: "25 - Attandance:2025-09" }, true, 2026), false);
+  assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 8 }, true, 2026), false);
+  assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 9 }, false, 2026), false);
 });
 
 test("linked Excel metadata enriches a pre-seeded student roster row", () => {

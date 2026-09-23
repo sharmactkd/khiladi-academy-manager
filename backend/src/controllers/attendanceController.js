@@ -291,8 +291,14 @@ const normalizeImportStatus = (status) => {
   return null;
 };
 
-export const isProtectedReconciliationPeriod = (row = {}, reconciliationMode = false) =>
-  reconciliationMode && getImportedAttendancePeriod(row)?.month === 9;
+export const isProtectedReconciliationPeriod = (
+  row = {},
+  reconciliationMode = false,
+  protectedYear = new Date().getUTCFullYear()
+) => {
+  const period = getImportedAttendancePeriod(row);
+  return reconciliationMode && period?.year === Number(protectedYear) && period.month === 9;
+};
 
 const getRecordIdentityKey = (record) => {
   if (record.student) {
@@ -365,12 +371,13 @@ const buildImportGroups = ({
   resolutions = {},
   savedMappings = {},
   reconciliationMode = false,
+  reconciliationProtectedYear = new Date().getUTCFullYear(),
 }) => {
   const groups = new Map();
 
   rows.forEach((row, rowIndex) => {
     try {
-      if (isProtectedReconciliationPeriod(row, reconciliationMode)) {
+      if (isProtectedReconciliationPeriod(row, reconciliationMode, reconciliationProtectedYear)) {
         summary.protectedSeptemberRows += 1;
         summary.protectedSeptemberCells += (Array.isArray(row.attendance) ? row.attendance : [])
           .filter((item) => normalizeImportStatus(item.status)).length;
@@ -779,6 +786,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
       ? req.body.resolutions
       : {};
   const reconciliationMode = req.body?.reconciliationMode === true;
+  const reconciliationProtectedYear = new Date().getUTCFullYear();
 
   const summary = {
     totalRows: rows.length,
@@ -857,6 +865,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
     resolutions,
     savedMappings,
     reconciliationMode,
+    reconciliationProtectedYear,
   });
 
   for (const group of groups.values()) {
@@ -889,7 +898,7 @@ export const importOldAttendance = asyncHandler(async (req, res) => {
       savedMappings,
     });
     const period = getImportedAttendancePeriod(row);
-    if (!match.student?._id || !period || isProtectedReconciliationPeriod(row, reconciliationMode)) return [];
+    if (!match.student?._id || !period || isProtectedReconciliationPeriod(row, reconciliationMode, reconciliationProtectedYear)) return [];
 
     return [{
       filter: {
