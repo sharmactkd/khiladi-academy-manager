@@ -9,6 +9,7 @@ import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import {
   getMonthlyAttendanceRegister,
   getStudentYearlyAttendanceProfile,
+  getStudentAttendanceTimeline,
   getYearlyAttendanceRegister,
   saveMonthlyAttendanceRegister,
   moveMonthlyAttendanceRow,
@@ -1065,6 +1066,16 @@ export const getStudentAttendance = asyncHandler(async (req, res) => {
 
 export const getStudentYearlyProfile = asyncHandler(async (req, res) => {
   const { year } = req.query;
+
+  if (req.query.timeline === "true") {
+    const timeline = await getStudentAttendanceTimeline({
+      academyId: req.academyId,
+      studentId: req.params.studentId,
+      offset: req.query.offset,
+      limit: req.query.limit,
+    });
+    return successResponse(res, "Student attendance timeline fetched", timeline);
+  }
 
   const data = await getStudentYearlyAttendanceProfile({
     academyId: req.academyId,

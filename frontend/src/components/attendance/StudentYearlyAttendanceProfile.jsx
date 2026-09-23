@@ -74,7 +74,7 @@ const AttendanceTrend = ({ months }) => {
     <article className={styles.insightCard}>
       <header className={styles.insightHeader}>
         <span><TrendingUp size={18} /></span>
-        <div><small>Yearly performance</small><h3>Attendance Trend</h3></div>
+        <div><small>Complete history</small><h3>Attendance Trend</h3></div>
       </header>
       <div className={styles.chart} aria-label="Monthly attendance percentage chart">
         <svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img">
@@ -130,6 +130,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
   const months = Array.isArray(data?.months) ? data.months : [];
   const dayNotes = data?.dayNotes || {};
   const year = data?.year || new Date().getFullYear();
+  const timeline = data?.timeline === true;
   const todayKey = getTodayKey();
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -153,7 +154,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
       <section className={styles.emptyState}>
         <CalendarCheck2 size={34} />
         <h2>No attendance data available</h2>
-        <p>Attendance records for {year} have not been created yet.</p>
+        <p>{timeline ? "No marked attendance is available for this student." : `Attendance records for ${year} have not been created yet.`}</p>
       </section>
     );
   }
@@ -164,7 +165,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
         <header className={styles.cardHeader}>
           <div>
             <span className={styles.sectionIcon}><CalendarDays size={20} /></span>
-            <div><small>Complete year · {year}</small><h2 id="yearly-attendance-heading">Yearly Attendance Overview</h2><p>Month-by-month training consistency and fee context.</p></div>
+            <div><small>{timeline ? "Oldest to newest" : `Complete year · ${year}`}</small><h2 id="yearly-attendance-heading">{timeline ? "Complete Attendance History" : "Yearly Attendance Overview"}</h2><p>Only months containing marked attendance are shown.</p></div>
           </div>
           <div className={styles.legend} aria-label="Attendance legend">
             {Object.entries(STATUS_META).map(([value, meta]) => (
@@ -196,10 +197,11 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
             <tbody>
               {months.map((month) => {
                 const feeStatus = month.importedFeeStatus || "Not added";
-                const isFutureMonth = Number(year) > currentYear ||
-                  (Number(year) === currentYear && Number(month.value) > currentMonth);
+                const rowYear = Number(month.year || year);
+                const isFutureMonth = rowYear > currentYear ||
+                  (rowYear === currentYear && Number(month.value) > currentMonth);
                 return (
-                  <tr key={month.value} className={isFutureMonth ? styles.futureMonthRow : undefined} aria-disabled={isFutureMonth || undefined}>
+                  <tr key={`${rowYear}-${month.value}`} className={isFutureMonth ? styles.futureMonthRow : undefined} aria-disabled={isFutureMonth || undefined}>
                     <th className={styles.stickyMonth}>{month.fullLabel}</th>
                     <td className={styles.stickyDue}><span className={`${styles.metaValue} ${isFutureMonth ? styles.futureMetaValue : styles.dueValue}`}>{isFutureMonth ? "–" : formatAttendanceDate(month.importedDueDate, { fallback: "–", monthDate: month.days?.[0]?.dateKey || "" })}</span></td>
                     <td className={styles.stickyPaid}><span className={`${styles.metaValue} ${isFutureMonth ? styles.futureMetaValue : styles.paidValue}`}>{isFutureMonth ? "–" : formatAttendanceDate(month.importedPaidDate, { fallback: "–", monthDate: month.days?.[0]?.dateKey || "" })}</span></td>

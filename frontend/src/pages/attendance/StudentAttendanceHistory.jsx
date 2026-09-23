@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -71,14 +71,6 @@ const getSummary = (months = []) => {
   return { ...totals, marked, rate: marked ? Math.round((totals.present / marked) * 100) : 0 };
 };
 
-export const monthsFromFirstAvailableAttendance = (months = []) => {
-  const firstMarkedIndex = months.findIndex((month) =>
-    Number(month?.presentCount || 0) + Number(month?.absentCount || 0) +
-    Number(month?.leaveCount || 0) + Number(month?.lateCount || 0) > 0
-  );
-  return firstMarkedIndex < 0 ? [] : months.slice(firstMarkedIndex);
-};
-
 const buildExportRows = (months = []) => months.map((month) => {
   const row = {
     Month: month.fullLabel,
@@ -102,26 +94,20 @@ const buildExportRows = (months = []) => months.map((month) => {
 const StudentAttendanceHistory = () => {
   const { studentId } = useParams();
   const { user } = useAuth();
-  const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(currentYear);
   const [profile, setProfile] = useState(null);
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
-
-  const yearOptions = useMemo(() => {
-    const start = currentYear - 30;
-    const end = currentYear + 2;
-    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
-  }, [currentYear]);
+  const loadMoreRef = useRef(null);
 
   const fetchProfile = useCallback(async ({ quiet = false } = {}) => {
     quiet ? setRefreshing(true) : setLoading(true);
     setError("");
     try {
-      const response = await attendanceApi.getStudentYearlyProfile(studentId, { year });
+      const response = await attendanceApi.getStudentYearlyProfile(studentId, { timeline: true, offset: 0, limit: 12 });
       setProfile(response.data?.data || null);
     } catch (requestError) {
       const message = requestError.response?.data?.message || "Student yearly attendance could not be loaded.";
@@ -131,9 +117,43 @@ const StudentAttendanceHistory = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [studentId, year]);
+  }, [studentId]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !profile?.pagination?.hasMore) return;
+    setLoadingMore(true);
+    try {
+      const response = await attendanceApi.getStudentYearlyProfile(studentId, {
+        timeline: true,
+        offset: profile.months?.length || 0,
+        limit: 12,
+      });
+      const next = response.data?.data;
+      if (!next) return;
+      setProfile((current) => ({
+        ...current,
+        ...next,
+        student: current?.student || next.student,
+        months: [...(current?.months || []), ...(next.months || [])],
+        dayNotes: { ...(current?.dayNotes || {}), ...(next.dayNotes || {}) },
+      }));
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "More attendance could not be loaded.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, profile, studentId]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !profile?.pagination?.hasMore) return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) loadMore();
+    }, { rootMargin: "240px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadMore, profile?.pagination?.hasMore]);
 
   useEffect(() => {
     let mounted = true;
@@ -147,9 +167,7 @@ const StudentAttendanceHistory = () => {
   }, []);
 
   const student = profile?.student || {};
-  const allMonths = Array.isArray(profile?.months) ? profile.months : [];
-  const months = useMemo(() => monthsFromFirstAvailableAttendance(allMonths), [allMonths]);
-  const visibleProfile = useMemo(() => profile ? { ...profile, months } : null, [profile, months]);
+  const months = Array.isArray(profile?.months) ? profile.months : [];
   const summary = useMemo(() => getSummary(months), [months]);
   const studentName = getStudentName(student);
   const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0];
@@ -158,13 +176,19 @@ const StudentAttendanceHistory = () => {
   const studentBatch = student.batch?.batchName || "Not assigned";
   const studentStatus = getStudentStatus(student.status);
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
     if (!months.length) return;
-    exportReportToExcel({
-      rows: buildExportRows(months),
-      fileName: `${studentName}-${year}-attendance`,
-      sheetName: String(year),
-    });
+    try {
+      const response = await attendanceApi.getStudentYearlyProfile(studentId, { timeline: true, offset: 0, limit: 240 });
+      const allHistoryMonths = response.data?.data?.months || [];
+      exportReportToExcel({
+        rows: buildExportRows(allHistoryMonths),
+        fileName: `${studentName}-complete-attendance-history`,
+        sheetName: "Attendance History",
+      });
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Attendance export could not be prepared.");
+    }
   };
 
   return (
@@ -179,7 +203,7 @@ const StudentAttendanceHistory = () => {
         address={academyAddress || "Complete main branch address not available"}
         summaryItems={[
           { key: "student", icon: UserRound, value: studentName, label: "Student" },
-          { key: "year", icon: CalendarDays, value: year, label: "Year" },
+          { key: "period", icon: CalendarDays, value: "All History", label: "Period" },
         ]}
       />
 
@@ -195,7 +219,7 @@ const StudentAttendanceHistory = () => {
           <div><small>Attendance insights</small><h1>Student Attendance</h1><p>Yearly attendance, fee context and training consistency.</p></div>
         </div>
         <div className={styles.actions}>
-          <label className={styles.yearSelect}><CalendarDays size={16} /><span>Year</span><select value={year} onChange={(event) => setYear(Number(event.target.value))}>{yearOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <span className={styles.yearSelect}><CalendarDays size={16} /><span>All History</span></span>
           <button type="button" onClick={() => fetchProfile({ quiet: true })} disabled={refreshing}><RefreshCw size={16} className={refreshing ? styles.spinning : ""} />Refresh</button>
           <button type="button" onClick={() => window.print()} disabled={!profile}><Printer size={16} />Print</button>
           <button type="button" className={styles.primaryAction} onClick={exportExcel} disabled={!months.length}><FileSpreadsheet size={16} />Export Excel</button>
@@ -229,7 +253,10 @@ const StudentAttendanceHistory = () => {
             </div>
           </section>
 
-          <StudentYearlyAttendanceProfile data={visibleProfile} summary={summary} />
+          <StudentYearlyAttendanceProfile data={profile} summary={summary} />
+          <div ref={loadMoreRef} className={styles.loadMoreHistory}>
+            {profile?.pagination?.hasMore ? <button type="button" onClick={loadMore} disabled={loadingMore}>{loadingMore ? "Loading more months…" : "Load more attendance"}</button> : months.length ? <span>Complete attendance history loaded</span> : null}
+          </div>
         </>
       ) : null}
 

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildRowFromRecord, mergeMonthlyRecordIdentity } from "../src/services/monthlyAttendanceService.js";
+import { buildRowFromRecord, hasMarkedAttendanceCounts, mergeMonthlyRecordIdentity } from "../src/services/monthlyAttendanceService.js";
 import { backfillImportedAttendanceMetadata, getImportedAttendancePeriod, isProtectedReconciliationPeriod } from "../src/controllers/attendanceController.js";
 
 test("student dates do not fabricate missing fee data", () => {
@@ -70,6 +70,12 @@ test("temporary reconciliation protects only the selected current-year September
   assert.equal(isProtectedReconciliationPeriod({ blockId: "25 - Attandance:2025-09" }, true, 2026), false);
   assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 8 }, true, 2026), false);
   assert.equal(isProtectedReconciliationPeriod({ importedYear: 2026, importedMonth: 9 }, false, 2026), false);
+});
+
+test("attendance timeline excludes months without P, A, L or LT marks", () => {
+  assert.equal(hasMarkedAttendanceCounts({ presentCount: 0, absentCount: 0, leaveCount: 0, lateCount: 0, importedFeeStatus: "PAID" }), false);
+  assert.equal(hasMarkedAttendanceCounts({ absentCount: 1 }), true);
+  assert.equal(hasMarkedAttendanceCounts({ lateCount: 1 }), true);
 });
 
 test("linked Excel metadata enriches a pre-seeded student roster row", () => {

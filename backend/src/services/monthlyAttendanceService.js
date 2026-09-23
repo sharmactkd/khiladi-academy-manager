@@ -184,6 +184,10 @@ const calculateCounts = (attendance = {}) => {
   };
 };
 
+export const hasMarkedAttendanceCounts = (month = {}) =>
+  Number(month.presentCount || 0) + Number(month.absentCount || 0) +
+  Number(month.leaveCount || 0) + Number(month.lateCount || 0) > 0;
+
 const getStudentName = (student) => {
   return `${student.firstName || ""} ${student.lastName || ""}`.trim() || "-";
 };
@@ -978,6 +982,155 @@ export const getStudentYearlyAttendanceProfile = async ({
     },
     months,
     dayNotes,
+  };
+};
+
+export const getStudentAttendanceTimeline = async ({
+  academyId,
+  studentId,
+  offset = 0,
+  limit = 12,
+}) => {
+  const academyObjectId = toObjectId(academyId);
+  const studentObjectId = toObjectId(studentId);
+  if (!academyObjectId || !studentObjectId) {
+    const error = new Error("Valid academy and student are required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const student = await Student.findOne({ _id: studentObjectId, academy: academyObjectId })
+    .populate("branch", "branchName address city state country isMainBranch")
+    .populate("batch", "batchName martialArt")
+    .lean();
+  if (!student) {
+    const error = new Error("Student not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const attendanceDocs = await Attendance.find({
+    academy: academyObjectId,
+    "records.student": studentObjectId,
+  }).select({
+    date: 1,
+    batch: 1,
+    records: { $elemMatch: { student: studentObjectId } },
+  }).sort({ date: 1 }).populate("batch", "batchName martialArt").lean();
+
+  const markedDocs = attendanceDocs.filter((doc) =>
+    (doc.records || []).some((record) =>
+      String(record.student) === String(studentObjectId) && Boolean(toShortStatus(record.status))
+    )
+  );
+  const firstImportedRecord = markedDocs
+    .flatMap((doc) => doc.records || [])
+    .find((record) => String(record.student) === String(studentObjectId) && record.source === "excel-import") || null;
+  const studentPayload = {
+    _id: student._id,
+    name: getStudentName(student),
+    firstName: student.firstName || "",
+    lastName: student.lastName || "",
+    admissionNumber: student.admissionNumber || "",
+    profilePhoto: student.profilePhoto || "",
+    status: student.status || "active",
+    age: student.age ?? null,
+    ageCategory: student.ageCategory || "",
+    phone: student.phone || "",
+    contact: firstImportedRecord?.importedPhone || student.phone || "",
+    branch: student.branch || null,
+    batch: student.batch || null,
+    dob: student.dob || student.dateOfBirth || null,
+    fatherName: student.fatherName || "",
+    schoolName: student.schoolName || "",
+    address: student.address || "",
+    joiningDate: student.joiningDate || student.createdAt || null,
+    importedName: firstImportedRecord?.importedName || "",
+    importedPhone: firstImportedRecord?.importedPhone || "",
+  };
+
+  if (!markedDocs.length) {
+    return { timeline: true, student: studentPayload, months: [], dayNotes: {}, pagination: { offset: 0, limit: Number(limit), total: 0, hasMore: false } };
+  }
+
+  const monthKeys = [...new Set(markedDocs.map((doc) => {
+    const date = new Date(doc.date);
+    return `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}`;
+  }))];
+  const years = [...new Set(monthKeys.map((key) => Number(key.split("-")[0])))];
+  const metadataDocs = await AttendanceMonthMetadata.find({
+    academy: academyObjectId,
+    student: studentObjectId,
+    year: { $in: years },
+  }).lean();
+  const metadataMap = new Map(metadataDocs.map((item) => [`${item.year}-${item.month}`, item]));
+  const groupedDocs = markedDocs.reduce((map, doc) => {
+    const date = new Date(doc.date);
+    const key = `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(doc);
+    return map;
+  }, new Map());
+
+  const months = monthKeys.map((key) => {
+    const [year, month] = key.split("-").map(Number);
+    const monthInfo = REGISTER_MONTHS[month - 1];
+    const days = buildDays({ year, month });
+    const attendance = Object.fromEntries(days.map((day) => [day.dateKey, ""]));
+    const metadata = metadataMap.get(key);
+    let importedDueDate = clean(metadata?.importedDueDate);
+    let importedPaidDate = clean(metadata?.importedPaidDate);
+    let importedFeePaid = clean(metadata?.importedFeePaid);
+    let importedFeeStatus = clean(metadata?.importedFeeStatus);
+    (groupedDocs.get(key) || []).forEach((doc) => {
+      const record = (doc.records || []).find((item) => String(item.student) === String(studentObjectId));
+      if (!record) return;
+      attendance[getLocalDateKey(doc.date)] = toShortStatus(record.status);
+      if (!importedDueDate && record.importedDueDate) importedDueDate = clean(record.importedDueDate);
+      if (!importedPaidDate && record.importedPaidDate) importedPaidDate = clean(record.importedPaidDate);
+      if (!importedFeePaid && record.importedFeePaid) importedFeePaid = formatDisplayDate(record.importedFeePaid);
+      if (!importedFeeStatus && record.importedFeeStatus) importedFeeStatus = clean(record.importedFeeStatus);
+    });
+    return {
+      ...monthInfo,
+      year,
+      fullLabel: `${monthInfo.fullLabel} ${year}`,
+      days,
+      attendance,
+      importedDueDate,
+      importedPaidDate,
+      importedFeePaid,
+      importedFeeStatus,
+      ...calculateCounts(attendance),
+    };
+  }).filter(hasMarkedAttendanceCounts);
+
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const safeLimit = Math.min(240, Math.max(1, Number(limit) || 12));
+  const visibleMonths = months.slice(safeOffset, safeOffset + safeLimit);
+  const visibleDateKeys = new Set(visibleMonths.flatMap((month) => month.days.map((day) => day.dateKey)));
+  const relevantBatchIds = [...new Set(markedDocs.map((doc) => String(doc.batch?._id || doc.batch || "")).filter(Boolean))];
+  const firstDate = visibleMonths[0]?.days?.[0]?.dateKey;
+  const lastMonth = visibleMonths.at(-1);
+  const lastDate = lastMonth?.days?.at(-1)?.dateKey;
+  const noteDocs = firstDate && lastDate && relevantBatchIds.length ? await AttendanceDayNote.find({
+    academy: academyObjectId,
+    batch: { $in: relevantBatchIds },
+    date: { $gte: new Date(`${firstDate}T00:00:00.000Z`), $lte: new Date(`${lastDate}T23:59:59.999Z`) },
+  }).select("date type title description color").lean() : [];
+  const dayNotes = noteDocs.reduce((map, note) => {
+    const dateKey = getLocalDateKey(note.date);
+    if (visibleDateKeys.has(dateKey) && !map[dateKey]) map[dateKey] = { type: note.type, title: note.title, description: note.description || "", color: note.color || "#e2e8f0" };
+    return map;
+  }, {});
+
+  return {
+    timeline: true,
+    student: studentPayload,
+    months: visibleMonths,
+    dayNotes,
+    availableYears: years.sort((a, b) => a - b),
+    pagination: { offset: safeOffset, limit: safeLimit, total: months.length, hasMore: safeOffset + safeLimit < months.length },
   };
 };
 
