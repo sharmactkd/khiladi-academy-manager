@@ -28,6 +28,13 @@ test('student link dropdown only blocks links owned by currently selected rows',
  assert.match(source, /already linked to \$\{owner\.name\}/);
  assert.doesNotMatch(source, /eligibleStudents\.includes/);
 });
+test('recovery mode hides the normal matching table and clears resolved duplicate prompts', () => {
+ const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
+ assert.match(source, /pendingDuplicateGroups = duplicateGroups\.filter/);
+ assert.match(source, /!reconciliationMode && <section className=\{`\$\{styles\.card\} \$\{styles\.matchingCard\}/);
+ assert.match(source, /Missing or unresolved student records/);
+ assert.match(source, /Only Excel students that need a new record or manual identity confirmation/);
+});
 test('empty app stages all selected Excel profiles without creating any records', () => {
  const input = [{ ...item, key:'a', record:true }, { name:'Prachi', row:{}, key:'b', record:false }];
  const before = JSON.stringify(input);
