@@ -21,6 +21,13 @@ test('individual player mode never auto-selects the whole workbook', () => {
  assert.match(individualButton, /setScope\("selected"\)/);
  assert.doesNotMatch(individualButton, /directoryItems\.map|setSelected/);
 });
+test('student link dropdown only blocks links owned by currently selected rows', () => {
+ const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
+ assert.match(source, /selectedItemByKey\[key\]/);
+ assert.match(source, /linked to same-name Excel row/);
+ assert.match(source, /already linked to \$\{owner\.name\}/);
+ assert.doesNotMatch(source, /eligibleStudents\.includes/);
+});
 test('empty app stages all selected Excel profiles without creating any records', () => {
  const input = [{ ...item, key:'a', record:true }, { name:'Prachi', row:{}, key:'b', record:false }];
  const before = JSON.stringify(input);

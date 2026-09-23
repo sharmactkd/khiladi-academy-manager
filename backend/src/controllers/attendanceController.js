@@ -747,6 +747,82 @@ export const previewAttendanceImport = asyncHandler(async (req, res) => {
     };
   });
 
+  const matchedStudentIds = [...new Set(matches.map((match) => match.student?._id).filter(Boolean))];
+  const sourceDates = [...new Set(rows.flatMap((row) =>
+    (Array.isArray(row.attendance) ? row.attendance : [])
+      .filter((cell) => normalizeImportStatus(cell.status) && parseDateKey(cell.date))
+      .map((cell) => clean(cell.date))
+  ))];
+  const existingAttendance = matchedStudentIds.length && sourceDates.length
+    ? await Attendance.find({
+        academy: req.academyId,
+        batch: batch._id,
+        date: { $in: sourceDates.map((value) => parseDateKey(value)) },
+        "records.student": { $in: matchedStudentIds },
+      }).select("date records.student records.status").lean()
+    : [];
+  const existingCellByKey = new Map();
+  existingAttendance.forEach((day) => {
+    const dateKey = new Date(day.date).toISOString().slice(0, 10);
+    (day.records || []).forEach((record) => {
+      if (record.student) existingCellByKey.set(`${record.student}:${dateKey}`, record.status);
+    });
+  });
+
+  const metadataPeriods = rows.flatMap((row, rowIndex) => {
+    const studentId = matches[rowIndex]?.student?._id;
+    const period = getImportedAttendancePeriod(row);
+    return studentId && period ? [{ studentId, ...period }] : [];
+  });
+  const existingMetadata = metadataPeriods.length
+    ? await AttendanceMonthMetadata.find({
+        academy: req.academyId,
+        batch: batch._id,
+        student: { $in: [...new Set(metadataPeriods.map((item) => item.studentId))] },
+        year: { $in: [...new Set(metadataPeriods.map((item) => item.year))] },
+        month: { $in: [...new Set(metadataPeriods.map((item) => item.month))] },
+      }).select("student year month importedDueDate importedPaidDate importedFeePaid importedFeeStatus importedExtraNote").lean()
+    : [];
+  const metadataByKey = new Map(existingMetadata.map((item) => [`${item.student}:${item.year}:${item.month}`, item]));
+  const auditRows = rows.map((row, rowIndex) => {
+    const match = matches[rowIndex];
+    const studentId = match.student?._id || "";
+    const period = getImportedAttendancePeriod(row);
+    const validCells = (Array.isArray(row.attendance) ? row.attendance : []).filter((cell) =>
+      normalizeImportStatus(cell.status) && parseDateKey(cell.date)
+    );
+    const missingDates = [];
+    const conflicts = [];
+    let existingCells = 0;
+    validCells.forEach((cell) => {
+      const dateKey = clean(cell.date);
+      const savedStatus = studentId ? existingCellByKey.get(`${studentId}:${dateKey}`) : null;
+      if (!savedStatus) missingDates.push(dateKey);
+      else {
+        existingCells += 1;
+        if (savedStatus !== normalizeImportStatus(cell.status)) conflicts.push({ date: dateKey, excel: normalizeImportStatus(cell.status), app: savedStatus });
+      }
+    });
+    const metadata = studentId && period ? metadataByKey.get(`${studentId}:${period.year}:${period.month}`) : null;
+    const incomingMetadata = [row.importedDueDate, row.importedPaidDate, row.importedFeePaid, row.importedFeeStatus, row.importedExtraNote].some((value) => clean(value));
+    const savedMetadata = metadata && [metadata.importedDueDate, metadata.importedPaidDate, metadata.importedFeePaid, metadata.importedFeeStatus, metadata.importedExtraNote].some((value) => clean(value));
+    return {
+      rowKey: match.rowKey,
+      name: match.name,
+      sourceSheet: match.sourceSheet,
+      year: period?.year || null,
+      month: period?.month || null,
+      matchStatus: match.status,
+      student: match.student,
+      excelCells: validCells.length,
+      existingCells,
+      missingCells: missingDates.length,
+      missingDates,
+      conflicts,
+      metadataMissing: Boolean(incomingMetadata && !savedMetadata),
+    };
+  });
+
   const availableStudents = studentLookups.normalizedStudents
     .map((item) => item.student)
     .filter(
@@ -773,6 +849,18 @@ export const previewAttendanceImport = asyncHandler(async (req, res) => {
       excluded: count("excluded"),
     },
     matches,
+    audit: {
+      rows: auditRows,
+      summary: {
+        missingStudents: matches.filter((match) => !match.student && match.status !== "excluded").length,
+        matchedStudents: matches.filter((match) => Boolean(match.student)).length,
+        missingMonths: auditRows.filter((row) => row.excelCells > 0 && row.existingCells === 0).length,
+        partialMonths: auditRows.filter((row) => row.existingCells > 0 && row.missingCells > 0).length,
+        missingCells: auditRows.reduce((sum, row) => sum + row.missingCells, 0),
+        conflicts: auditRows.reduce((sum, row) => sum + row.conflicts.length, 0),
+        missingMetadataMonths: auditRows.filter((row) => row.metadataMissing).length,
+      },
+    },
     availableStudents,
   });
 });

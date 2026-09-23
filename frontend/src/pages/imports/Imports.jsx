@@ -6,6 +6,7 @@ import api from "../../api/api.js";
 import { getDefaultStudentSheet, buildAutoMapping, STUDENT_IMPORT_FIELDS } from "../../utils/studentExcelImport.js";
 import { selectableRecordRows } from "../../utils/selectiveWorkbookImport.js";
 import { isHistoricalAttendanceSheet } from "../../utils/attendanceExcelImport.js";
+import { attendanceSourceKey } from "../../utils/attendanceImportActions.js";
 import { directory, suggest, prepareImportChoices, importCandidates, chunks, attendancePayloads, id, list, norm, studentName, unwrap, safeCsv, journalSummary } from "./importLogic.js";
 import { draftStore } from "./draftStore.js";
 import styles from "./Imports.module.css";
@@ -47,6 +48,8 @@ export default function Imports() {
   const [sessions, setSessions] = useState([]), [job, setJob] = useState(null), [result, setResult] = useState(null), [resumePlan, setResumePlan] = useState(null);
   const [warnings, setWarnings] = useState([]), [draftExists, setDraftExists] = useState(false);
   const [historyDetail, setHistoryDetail] = useState(null);
+  const [recoveryAudit, setRecoveryAudit] = useState(null), [auditBusy, setAuditBusy] = useState(false);
+  const [duplicateChoices, setDuplicateChoices] = useState({});
   const [mappingProfiles, setMappingProfiles] = useState({});
   const [overrides, setOverrides] = useState({});
   const [mappingQuery, setMappingQuery] = useState("");
@@ -97,8 +100,8 @@ export default function Imports() {
       setFile(source); setHash(digest); loadedHash.current = digest; setSheetRoles(expected?.plan?.sheetRoles || roles);
       setRecords({}); setBlocks([]); setResult(null); setPhase("setup"); setSelected([]); setDecisions({}); setQuery(""); setScopeQuery(""); setPage(0);
       setMonthQuery(""); setExpandedMonthGroups(new Set());
-      if (expected) { setResumePlan(expected); setMode(expected.mode); setBranch(expected.plan.branch); setBatch(expected.plan.batch); setScope(expected.plan.scope); setPolicy(expected.plan.policy); setDuplicateMode(expected.plan.duplicateMode); setOverrides(expected.plan.overrides || {}); setImportTarget(expected.plan.importTarget || "all"); setReconciliationMode(Boolean(expected.plan.reconciliationMode)); }
-      else { setJob(null); setResumePlan(null); setOverrides({}); setImportTarget("new"); setPolicy("keep"); setDuplicateMode("skip"); setReconciliationMode(false); }
+      if (expected) { setResumePlan(expected); setMode(expected.mode); setBranch(expected.plan.branch); setBatch(expected.plan.batch); setScope(expected.plan.scope); setPolicy(expected.plan.policy); setDuplicateMode(expected.plan.duplicateMode); setOverrides(expected.plan.overrides || {}); setDuplicateChoices(expected.plan.duplicateChoices || {}); setImportTarget(expected.plan.importTarget || "all"); setReconciliationMode(Boolean(expected.plan.reconciliationMode)); }
+      else { setJob(null); setResumePlan(null); setOverrides({}); setDuplicateChoices({}); setImportTarget("new"); setPolicy("keep"); setDuplicateMode("skip"); setReconciliationMode(false); }
     } catch (e) { setError(errorText(e)); }
     finally { flight.current = false; setBusy(false); setProgress(""); }
   };
@@ -136,7 +139,39 @@ export default function Imports() {
 
   const recordRows = useMemo(() => Object.entries(records).flatMap(([sheet, data]) => selectableRecordRows(data.grid, data.headerIndex, data.mapping, sheet)), [records]);
   const directoryItems = useMemo(() => directory(recordRows, blocks.filter(block => months.includes(block.blockId))), [recordRows, blocks, months]);
-  const selectedItems = useMemo(() => directoryItems.filter(item => scope === "all" || selected.includes(item.key)), [directoryItems, scope, selected]);
+  const rawSelectedItems = useMemo(() => directoryItems.filter(item => scope === "all" || selected.includes(item.key)), [directoryItems, scope, selected]);
+  const duplicateGroups = useMemo(() => {
+    const grouped = new Map();
+    rawSelectedItems.forEach((item) => {
+      const key = norm(item.name);
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(item);
+    });
+    return [...grouped.entries()].filter(([, items]) => items.length > 1);
+  }, [rawSelectedItems]);
+  const selectedItems = useMemo(() => {
+    const consumed = new Set();
+    const merged = [];
+    rawSelectedItems.forEach((item) => {
+      if (consumed.has(item.key)) return;
+      const nameKey = norm(item.name);
+      const group = rawSelectedItems.filter((candidate) => norm(candidate.name) === nameKey);
+      if (group.length > 1 && duplicateChoices[nameKey] === "same") {
+        const primary = group.find((candidate) => candidate.record) || group.find((candidate) => candidate.phone) || group[0];
+        group.forEach((candidate) => consumed.add(candidate.key));
+        merged.push({
+          ...primary,
+          attendance: group.flatMap((candidate) => candidate.attendance || []),
+          sources: [...new Set(group.flatMap((candidate) => candidate.sources || []))],
+          mergedSourceKeys: group.map((candidate) => candidate.key),
+        });
+      } else {
+        consumed.add(item.key);
+        merged.push(item);
+      }
+    });
+    return merged;
+  }, [rawSelectedItems, duplicateChoices]);
   const suggestions = useMemo(() => Object.fromEntries(selectedItems.map(item => [item.key, suggest(item, students, batch)])), [selectedItems, students, batch]);
   const category = key => decisions[key] === "__skip__" ? "excluded" : decisions[key] === "__new__" ? "new" : decisions[key] ? "matched" : "review";
   const decisionItems = selectedItems.filter(item => category(item.key) === "review" || category(item.key) === "new");
@@ -145,9 +180,13 @@ export default function Imports() {
   const rows = decisionItems.filter(item => norm(`${item.name} ${item.phone} ${item.row.admissionNumber || ""}`).includes(norm(query)));
   const scopeRows = directoryItems.filter(item => norm(`${item.name} ${item.phone} ${item.row.admissionNumber || ""}`).includes(norm(scopeQuery)));
   const pages = Math.max(1, Math.ceil(rows.length / pageSize)), currentPage = Math.min(page, pages - 1);
-  const eligibleStudents = students.filter(s => (!s.batch || id(s.batch) === batch) && s.status !== "left");
   const unresolved = selectedItems.filter(item => !decisions[item.key]);
   const included = importCandidates(selectedItems, decisions, importTarget);
+  const selectedItemByKey = useMemo(() => Object.fromEntries(selectedItems.map(item => [item.key, item])), [selectedItems]);
+  const linkedOwner = (studentId, itemKey) => Object.entries(decisions)
+    .map(([key, value]) => value === studentId && key !== itemKey ? selectedItemByKey[key] : null)
+    .find(Boolean);
+  useEffect(() => { setRecoveryAudit(null); }, [selected, decisions, months]);
   const toggle = key => setSelected(values => values.includes(key) ? values.filter(value => value !== key) : [...values, key]);
   const worksheetNames = Object.keys(sheetRoles);
   const suggestedRecordSheet = getDefaultStudentSheet(worksheetNames);
@@ -205,7 +244,37 @@ export default function Imports() {
     } catch (e) { setError(errorText(e)); }
     finally { flight.current = false; setBusy(false); setProgress(""); }
   };
-  const plan = () => ({ sheetRoles, branch, batch, scope, selected, decisions, months, policy, duplicateMode, overrides, importTarget, reconciliationMode, mappings: Object.fromEntries(Object.entries(records).map(([sheet, data]) => [sheet, { headerIndex: data.headerIndex, mapping: data.mapping }])) });
+  const runRecoveryAudit = async () => {
+    const auditRows = selectedItems.flatMap((item) => item.attendance || []);
+    if (!auditRows.length) { setError("Selected players have no attendance rows to compare."); return; }
+    setAuditBusy(true); setError(""); setProgress("Comparing Excel attendance with saved app data…");
+    try {
+      const combined = { rows: [], summary: { missingMonths: 0, partialMonths: 0, missingCells: 0, conflicts: 0, missingMetadataMonths: 0 } };
+      for (const part of chunks(auditRows, 300)) {
+        const resolutions = {};
+        selectedItems.forEach((item) => {
+          const choice = decisions[item.key];
+          if (!choice || choice.startsWith("__")) return;
+          (item.attendance || []).forEach((row) => {
+            if (part.includes(row)) resolutions[attendanceSourceKey(row)] = choice;
+          });
+        });
+        const response = unwrap(await api.post("/attendance/import/preview", { rows: part, fallbackBatch: batch, resolutions }));
+        combined.rows.push(...(response.audit?.rows || []));
+        Object.keys(combined.summary).forEach((key) => { combined.summary[key] += Number(response.audit?.summary?.[key] || 0); });
+      }
+      combined.identity = {
+        selected: selectedItems.length,
+        missing: selectedItems.filter((item) => decisions[item.key] === "__new__").length,
+        unresolved: selectedItems.filter((item) => !decisions[item.key]).length,
+        linked: selectedItems.filter((item) => decisions[item.key] && !decisions[item.key].startsWith("__")).length,
+        duplicateGroups: duplicateGroups.length,
+      };
+      setRecoveryAudit(combined);
+    } catch (e) { setError(errorText(e)); }
+    finally { setAuditBusy(false); setProgress(""); }
+  };
+  const plan = () => ({ sheetRoles, branch, batch, scope, selected, decisions, months, policy, duplicateMode, overrides, duplicateChoices, importTarget, reconciliationMode, mappings: Object.fromEntries(Object.entries(records).map(([sheet, data]) => [sheet, { headerIndex: data.headerIndex, mapping: data.mapping }])) });
   const saveDraft = async () => {
     try { await draftStore(draftKey, { file, fileHash: hash, mode, plan: plan(), _id: job?._id }); setDraftExists(true); setProgress("Draft saved on this browser. Use Resume draft to continue."); }
     catch (e) { setError(`Draft not saved: ${errorText(e)}`); }
@@ -273,7 +342,7 @@ export default function Imports() {
     const rows = [["Stage", "Row", "Message"], ...(result?.errors || []).map(e => [e.stage, e.rowNumber || e.date || "", e.message])];
     const url = URL.createObjectURL(new Blob(["\uFEFF" + safeCsv(rows)], { type: "text/csv;charset=utf-8" })); const a = document.createElement("a"); a.href = url; a.download = "import-errors.csv"; a.click(); URL.revokeObjectURL(url);
   };
-  const reset = () => { if (!busy) { setJob(null); setResumePlan(null); setFile(null); setHash(""); setRecords({}); setBlocks([]); setResult(null); setPhase("setup"); setError(""); setProgress(""); } };
+  const reset = () => { if (!busy) { setJob(null); setResumePlan(null); setFile(null); setHash(""); setRecords({}); setBlocks([]); setResult(null); setRecoveryAudit(null); setDuplicateChoices({}); setPhase("setup"); setError(""); setProgress(""); } };
 
   return <div className={styles.page}>
     <header className={styles.heading}><div><span>DATA MANAGEMENT</span><h1>Imports</h1><p>One workspace for student records and attendance. Nothing is saved until you confirm.</p></div><div className={styles.actions}><Link to="/imports/fee-reconciliation">Reconcile imported fees</Link><button disabled={busy} onClick={reset}>New import</button></div></header>
@@ -447,7 +516,7 @@ export default function Imports() {
     </>}
     {phase === "review" && <>
     <section className={`${styles.card} ${styles.studentScopeCard}`}>
-      <div className={styles.studentScopeHeader}><div><h2>Select students to import</h2><p>Import everyone, or open the individual picker to choose specific workbook players.</p></div><strong>{selectedItems.length} of {directoryItems.length} selected</strong></div>
+      <div className={styles.studentScopeHeader}><div><h2>Select students to import</h2><p>Import everyone, or open the individual picker to choose specific workbook players.</p></div><strong>{rawSelectedItems.length} of {directoryItems.length} selected</strong></div>
       <div className={styles.scopeChoiceRow}>
         <button type="button" aria-pressed={scope === "all"} onClick={() => { setScope("all"); setPage(0); }}>Import all players</button>
         <button type="button" aria-pressed={scope === "selected"} onClick={() => { setScope("selected"); setPage(0); }}>Choose individual players</button>
@@ -462,6 +531,13 @@ export default function Imports() {
         {!scopeRows.length && <p className={styles.emptyMonthSearch}>No workbook player matches “{scopeQuery}”.</p>}
       </div>}
     </section>
+    {duplicateGroups.length > 0 && <section className={styles.card}>
+      <div className={styles.decisionHeader}><div><h2>Same-name records need confirmation</h2><p>Confirm whether repeated Excel identities belong to one student or different students. Nothing is merged automatically.</p></div><strong>{duplicateGroups.length} groups</strong></div>
+      <div className={styles.scopePlayerGrid}>{duplicateGroups.map(([nameKey, items]) => {
+        const choice = duplicateChoices[nameKey];
+        return <div key={nameKey} className={choice ? styles.scopePlayerSelected : ""}><span><strong>{items[0].name} · {items.length} Excel identities</strong><small>{items.map((item) => item.phone || item.row.admissionNumber || "No identifier").join(" · ")}</small><small>{choice === "same" ? "Will be merged into one selected student before import." : choice === "different" ? "Will remain separate students." : "Choose Same or Different."}</small></span><div className={styles.actions}><button type="button" onClick={() => { const primary = items.find((item) => item.record) || items.find((item) => item.phone) || items[0]; const linked = items.map((item) => decisions[item.key]).find((value) => value && !value.startsWith("__")); setDuplicateChoices((values) => ({ ...values, [nameKey]: "same" })); setDecisions((values) => { const next = { ...values }; items.forEach((item) => delete next[item.key]); next[primary.key] = linked || "__new__"; return next; }); }}>Same student</button><button type="button" onClick={() => { setDuplicateChoices((values) => ({ ...values, [nameKey]: "different" })); setDecisions((values) => { const next = { ...values }; items.forEach((item) => delete next[item.key]); return next; }); }}>Different students</button></div></div>;
+      })}</div>
+    </section>}
     <section className={`${styles.card} ${styles.matchingCard} ${styles.decisionCard}`}>
       <div className={styles.decisionHeader}><div><h2>Players requiring your decision</h2><p>Only unmatched, new or conflicting identities appear in this table. Automatically matched players are hidden below.</p></div>{unresolved.length > 0 && <button type="button" className={styles.stageButton} disabled={Boolean(job)} onClick={() => setDecisions(values => ({ ...values, ...Object.fromEntries(unresolved.map(item => [item.key, "__new__"])) }))}>Create all unresolved as new ({unresolved.length})</button>}</div>
       <>
@@ -475,11 +551,21 @@ export default function Imports() {
       </div>
       <div className={`${styles.table} ${styles.matchingTable}`}><table><colgroup><col style={{ width: "22%" }} /><col style={{ width: "34%" }} /><col style={{ width: "12%" }} /><col style={{ width: "32%" }} /></colgroup><thead><tr><th>Player</th><th>Information in Excel</th><th>Attendance cells</th><th>Create new, link or exclude</th></tr></thead><tbody>{rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(item => <tr key={item.key}>
         <td><strong>{item.name}</strong><small>{item.phone || "No phone"}</small></td><td><span className={item.record ? styles.badge : styles.warnBadge}>{item.record ? "Student record found in Excel" : "Only attendance found in Excel"}</span><small>{item.sources.join(", ")}</small><small>{[item.row.schoolName, item.row.beltRank, item.row.dateOfBirth].filter(Boolean).join(" · ")}</small></td><td>{item.attendance.reduce((sum, row) => sum + (row.attendance?.length || 0), 0)}</td>
-        <td><small>{!students.length && !resumePlan?._id ? "No saved students in your app" : suggestions[item.key]?.reason}</small><select disabled={Boolean(job)} className={!decisions[item.key] ? styles.unmapped : decisions[item.key] === "__new__" ? styles.newStudentChoice : ""} value={decisions[item.key] || ""} onChange={e => setDecisions(values => ({ ...values, [item.key]: e.target.value }))}>{students.length > 0 && <option value="">Choose: create new or link existing</option>}<option value="__new__">Create new student record</option><option value="__skip__">Exclude this player</option>{students.filter(s => id(s) === decisions[item.key] || eligibleStudents.includes(s)).filter(s => id(s) === decisions[item.key] || !Object.entries(decisions).some(([key, value]) => key !== item.key && value === id(s))).sort((a, b) => studentName(a).trim().localeCompare(studentName(b).trim(), "en", { sensitivity: "base", numeric: true })).map(s => <option key={id(s)} value={id(s)}>{studentName(s)} · {s.phone || s.admissionNumber}</option>)}</select>{decisions[item.key] === "__new__" && <small>{item.record ? "Available mapped Excel details will create a new profile on Import." : "Only available name/details will create an inactive, incomplete profile on Import. Complete it later from Edit Student."}</small>}</td>
+        <td><small>{!students.length && !resumePlan?._id ? "No saved students in your app" : suggestions[item.key]?.reason}</small><select disabled={Boolean(job)} className={!decisions[item.key] ? styles.unmapped : decisions[item.key] === "__new__" ? styles.newStudentChoice : ""} value={decisions[item.key] || ""} onChange={e => setDecisions(values => ({ ...values, [item.key]: e.target.value }))}>{students.length > 0 && <option value="">Choose: create new or link existing</option>}<option value="__new__">Create new student record</option><option value="__skip__">Exclude this player</option>{[...students].sort((a, b) => studentName(a).trim().localeCompare(studentName(b).trim(), "en", { sensitivity: "base", numeric: true })).map(s => { const owner = linkedOwner(id(s), item.key); const sameNameSource = owner && norm(owner.name) === norm(item.name); const unavailable = Boolean(owner && !sameNameSource && id(s) !== decisions[item.key]); const state = s.status && s.status !== "active" ? ` · ${s.status}` : ""; const usage = owner ? sameNameSource ? " · linked to same-name Excel row" : ` · already linked to ${owner.name}` : ""; return <option key={id(s)} value={id(s)} disabled={unavailable}>{studentName(s)} · {s.phone || s.admissionNumber || "No identifier"}{state}{usage}</option>; })}</select>{decisions[item.key] === "__new__" && <small>{item.record ? "Available mapped Excel details will create a new profile on Import." : "Only available name/details will create an inactive, incomplete profile on Import. Complete it later from Edit Student."}</small>}</td>
       </tr>)}</tbody></table></div>{!rows.length && <div className={styles.allResolved}><CircleCheck size={19} /><div><strong>{decisionItems.length ? "No player matches this search." : "All selected players are resolved."}</strong><p>{decisionItems.length ? "Try another name, phone or admission number." : "Safe matches are available in the optional review panel below."}</p></div></div>}<div className={styles.actions}><button disabled={!currentPage} onClick={() => setPage(currentPage - 1)}>Previous</button><span>Page {currentPage + 1} / {pages}</span><button disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>Next</button></div>
     </section>
     {matchedItems.length > 0 && <details className={`${styles.card} ${styles.matchedReview}`}><summary><span><CircleCheck size={17} /> Automatically matched players <b>{matchedItems.length}</b></span><small>Optional review</small></summary><p>These identities matched safely by admission number or exact name and phone. Use Change if a match looks wrong.</p><div className={styles.table}><table><thead><tr><th>Excel player</th><th>Matched app student</th><th>Reason</th><th>Action</th></tr></thead><tbody>{matchedItems.map(item => { const existing = students.find(student => id(student) === decisions[item.key]); return <tr key={item.key}><td><strong>{item.name}</strong><small>{item.phone || "No phone"}</small></td><td>{existing ? studentName(existing) : "Saved match"}<small>{existing?.phone || existing?.admissionNumber || ""}</small></td><td>{suggestions[item.key]?.reason || "Previously confirmed match"}</td><td><button type="button" disabled={Boolean(job)} onClick={() => { setDecisions(values => ({ ...values, [item.key]: "" })); setPage(0); }}>Change</button></td></tr>; })}</tbody></table></div></details>}
     {excludedItems.length > 0 && <details className={`${styles.card} ${styles.excludedReview}`}><summary>Excluded players ({excludedItems.length})</summary><div className={styles.scopePlayerGrid}>{excludedItems.map(item => <div key={item.key}><span><strong>{item.name}</strong><small>{item.phone || "No identifier"}</small></span><button type="button" disabled={Boolean(job)} onClick={() => setDecisions(values => ({ ...values, [item.key]: "" }))}>Restore</button></div>)}</div></details>}
+    {reconciliationMode && <section className={styles.card}>
+      <div className={styles.decisionHeader}><div><h2>Excel recovery audit</h2><p>Compare selected Excel identities and attendance with the app before saving anything.</p></div><button type="button" className={styles.stageButton} disabled={auditBusy || !selectedItems.length} onClick={runRecoveryAudit}>{auditBusy ? "Comparing…" : "Run comparison"}</button></div>
+      {!recoveryAudit && <p>This read-only check reports missing student records, completely missing months, partial months, missing cells and conflicts.</p>}
+      {recoveryAudit && <>
+        <div className={styles.stats}><article><small>Missing student records</small><strong>{recoveryAudit.identity.missing}</strong></article><article><small>Unresolved identities</small><strong>{recoveryAudit.identity.unresolved}</strong></article><article><small>Missing months</small><strong>{recoveryAudit.summary.missingMonths}</strong></article><article><small>Partial months</small><strong>{recoveryAudit.summary.partialMonths}</strong></article><article><small>Missing cells</small><strong>{recoveryAudit.summary.missingCells}</strong></article><article><small>Conflicts protected</small><strong>{recoveryAudit.summary.conflicts}</strong></article></div>
+        <div className={styles.table}><table><thead><tr><th>Student</th><th>Excel month</th><th>App status</th><th>Excel/App cells</th><th>Missing dates</th><th>Conflicts</th></tr></thead><tbody>{recoveryAudit.rows.filter((row) => row.missingCells || row.conflicts.length || row.metadataMissing || row.matchStatus !== "matched").slice(0, 500).map((row, index) => <tr key={`${row.rowKey}:${index}`}><td><strong>{row.name}</strong><small>{row.student?.name || "No linked app student"}</small></td><td>{row.month && row.year ? `${monthLabels[row.month]} ${row.year}` : row.sourceSheet}</td><td>{row.matchStatus === "matched" ? row.missingCells === 0 ? "Complete" : row.existingCells === 0 ? "Month missing" : "Partially missing" : "Student missing / unresolved"}{row.metadataMissing ? " · metadata missing" : ""}</td><td>{row.excelCells} / {row.existingCells}</td><td>{row.missingDates.slice(0, 8).join(", ")}{row.missingDates.length > 8 ? ` +${row.missingDates.length - 8}` : ""}</td><td>{row.conflicts.length}</td></tr>)}</tbody></table></div>
+        {!recoveryAudit.rows.some((row) => row.missingCells || row.conflicts.length || row.metadataMissing || row.matchStatus !== "matched") && <div className={styles.allResolved}><CircleCheck size={19} /><div><strong>No missing attendance found.</strong><p>Selected Excel attendance is already present in the app.</p></div></div>}
+        <p>Final import uses “skip existing”: saved attendance remains unchanged; only missing selected records, cells and blank imported metadata are added.</p>
+      </>}
+    </section>}
     <details className={`${styles.card} ${styles.advancedImport}`}><summary>Advanced import settings</summary><p>Defaults protect existing profiles and attendance. Change these only when you intentionally want to update saved students.</p><div className={styles.matchFilters}>
       <label>What should be imported?<select value={importTarget} disabled={Boolean(job) || reconciliationMode} onChange={e => { setImportTarget(e.target.value); if (e.target.value === "all") { setPolicy("overwrite"); setDuplicateMode("overwrite"); } else { setPolicy("keep"); setDuplicateMode("skip"); } }}><option value="new">Only new students + their selected attendance</option><option value="all">New + existing students (update selected data)</option></select></label>
       <label>Existing profile policy<select value={policy} onChange={e => setPolicy(e.target.value)} disabled={Boolean(job) || mode === "attendance" || importTarget === "new" || reconciliationMode}><option value="fill-empty">Fill blank supported fields only</option><option value="keep">Keep existing profile unchanged</option><option value="review">Review and select individual fields</option><option value="overwrite">Replace supported fields supplied in Excel</option></select></label>
