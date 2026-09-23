@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Activity, ArrowLeft, Award, CircleDollarSign as BadgeIndianRupee, BookOpen, CalendarCheck2,
   CalendarDays, CheckCircle2, Clock3, Edit3, ExternalLink, GraduationCap,
   HeartPulse, IdCard, MapPin, Percent as ReceiptIndianRupee, Phone, Ruler,
-  ShieldCheck, ShieldPlus, UserRound, UsersRound, WalletCards, Weight, XCircle,
+  ShieldCheck, ShieldPlus, Trash2, UserRound, UsersRound, WalletCards, Weight, XCircle,
 } from "lucide-react";
 
 import { studentApi } from "../../api/studentApi.js";
@@ -96,11 +97,13 @@ const ContactCard = ({ contact, index }) => (
 
 const StudentProfile = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [membershipOpen, setMembershipOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loadPage = useCallback(async () => {
     setLoading(true);
@@ -135,6 +138,21 @@ const StudentProfile = () => {
     [student]
   );
   const phones = useMemo(() => normalizePhones(student), [student]);
+
+  const canDeleteStudent = ["academy_owner", "super_admin"].includes(String(user?.role || "").toLowerCase());
+  const handleDeleteStudent = async () => {
+    const name = studentName(student);
+    if (!window.confirm(`Kya aap sach me "${name}" student ko delete karna chahte hain? Yeh action undo nahi hoga.`)) return;
+    try {
+      setDeleting(true);
+      await studentApi.remove(student._id);
+      toast.success("Student delete ho gaya");
+      navigate("/students", { replace: true });
+    } catch (requestError) {
+      toast.error(requestError?.response?.data?.message || "Student delete nahi hua");
+      setDeleting(false);
+    }
+  };
 
   if (loading) return <PageState className="student-detail-state" loading title="Loading student profile…" />;
   if (error || !student) return <PageState className="student-detail-state student-detail-state--error" icon={XCircle} title={error || "Student not found."} action={<button className="btn btn-primary" type="button" onClick={loadPage}>Try Again</button>} />;
@@ -185,6 +203,7 @@ const StudentProfile = () => {
         <div className="student-detail-heading__actions">
           <Link className="btn btn-outline" to="/students"><ArrowLeft size={16} /> Back</Link>
           <Link className="btn btn-primary" to={`/students/${student._id}/edit`}><Edit3 size={16} /> Edit Student</Link>
+          {canDeleteStudent ? <button className="btn student-detail-delete-button" type="button" onClick={handleDeleteStudent} disabled={deleting}><Trash2 size={16} />{deleting ? "Deleting…" : "Delete Student"}</button> : null}
         </div>
       </header>
 

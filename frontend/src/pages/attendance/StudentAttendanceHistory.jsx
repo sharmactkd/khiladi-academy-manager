@@ -71,6 +71,14 @@ const getSummary = (months = []) => {
   return { ...totals, marked, rate: marked ? Math.round((totals.present / marked) * 100) : 0 };
 };
 
+export const monthsFromFirstAvailableAttendance = (months = []) => {
+  const firstMarkedIndex = months.findIndex((month) =>
+    Number(month?.presentCount || 0) + Number(month?.absentCount || 0) +
+    Number(month?.leaveCount || 0) + Number(month?.lateCount || 0) > 0
+  );
+  return firstMarkedIndex < 0 ? [] : months.slice(firstMarkedIndex);
+};
+
 const buildExportRows = (months = []) => months.map((month) => {
   const row = {
     Month: month.fullLabel,
@@ -139,7 +147,9 @@ const StudentAttendanceHistory = () => {
   }, []);
 
   const student = profile?.student || {};
-  const months = Array.isArray(profile?.months) ? profile.months : [];
+  const allMonths = Array.isArray(profile?.months) ? profile.months : [];
+  const months = useMemo(() => monthsFromFirstAvailableAttendance(allMonths), [allMonths]);
+  const visibleProfile = useMemo(() => profile ? { ...profile, months } : null, [profile, months]);
   const summary = useMemo(() => getSummary(months), [months]);
   const studentName = getStudentName(student);
   const mainBranch = branches.find((item) => item?.isMainBranch) || branches[0];
@@ -219,7 +229,7 @@ const StudentAttendanceHistory = () => {
             </div>
           </section>
 
-          <StudentYearlyAttendanceProfile data={profile} summary={summary} />
+          <StudentYearlyAttendanceProfile data={visibleProfile} summary={summary} />
         </>
       ) : null}
 

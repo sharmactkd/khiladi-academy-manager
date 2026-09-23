@@ -6,6 +6,7 @@
 .student-detail-heading__title>span{flex:0 0 48px;width:48px;height:48px;display:grid;place-items:center;border-radius:13px;background:#feecee;color:var(--sd-red)}
 .student-detail-heading__name-row{min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px}.student-detail-heading h1{margin:0;color:var(--sd-navy);font-size:clamp(23px,2.2vw,31px);line-height:1.1;letter-spacing:-.035em}.student-detail-heading p{margin:2px 0 0;color:var(--sd-muted);font-size:13px}
 .student-detail-heading__badges,.student-detail-heading__actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
+.student-detail-delete-button{border:1px solid #fecaca;background:#fff;color:#dc2626}.student-detail-delete-button:hover:not(:disabled){border-color:#dc2626;background:#fef2f2;color:#b91c1c}.student-detail-delete-button:disabled{cursor:not-allowed;opacity:.65}
 .student-detail-heading__badges code,.student-detail-heading__badges b,.student-detail-heading__badges i{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:5px 9px;border-radius:999px;font-family:inherit;font-size:12px;font-weight:800;font-style:normal;line-height:1}
 .student-detail-heading__badges code{background:#eef2f7;color:#334155}.student-detail-heading__badges b{background:#fff7df;color:#9a6700}.student-detail-heading__badges i.is-active{background:#e8f7ed;color:#15803d}.student-detail-heading__badges i.is-inactive{background:#f1f5f9;color:#64748b}
 .student-detail-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.student-detail-metrics article{min-width:0;min-height:88px;display:flex;align-items:center;gap:11px;padding:14px;border:1px solid var(--sd-line);border-radius:13px;background:#fff;box-shadow:0 5px 18px rgba(8,22,47,.045)}
@@ -122,4 +123,3 @@
     grid-template-columns: 1fr;
   }
 }
-
