@@ -8,6 +8,40 @@ export const id = value => String(value?._id || value || "");
 export const unwrap = response => response?.data?.data ?? response?.data ?? response;
 export const list = (response, key) => { const data = unwrap(response); return Array.isArray(data) ? data : data?.[key] || []; };
 
+const compactName = value => norm(value).replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
+const levenshtein = (left, right) => {
+  if (!left) return right.length;
+  if (!right) return left.length;
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= left.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= right.length; j += 1) current[j] = Math.min(current[j - 1] + 1, previous[j] + 1, previous[j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1));
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length];
+};
+export const nameSimilarity = (left, right) => {
+  const a = compactName(left), b = compactName(right);
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  const editScore = 1 - levenshtein(a, b) / Math.max(a.length, b.length);
+  const aTokens = new Set(a.split(" ")), bTokens = new Set(b.split(" "));
+  const shared = [...aTokens].filter((token) => bTokens.has(token)).length;
+  const tokenScore = shared / Math.max(aTokens.size, bTokens.size);
+  const prefixScore = a.startsWith(b) || b.startsWith(a) ? Math.min(a.length, b.length) / Math.max(a.length, b.length) : 0;
+  const closestTokenScore = Math.max(...[...aTokens].flatMap((aToken) => [...bTokens].map((bToken) => 1 - levenshtein(aToken, bToken) / Math.max(aToken.length, bToken.length))));
+  return Math.max(editScore, tokenScore * 0.9 + prefixScore * 0.1, closestTokenScore * 0.92);
+};
+export function nameVariantCandidates(item, students, batchId, threshold = 0.68) {
+  const itemPhone = phone(item.phone);
+  return students
+    .filter((student) => !student.batch || id(student.batch) === id(batchId))
+    .map((student) => ({ student, score: nameSimilarity(item.name, studentName(student)), phoneMatch: Boolean(itemPhone && phone(student.phone) === itemPhone) }))
+    .filter(({ score, phoneMatch }) => phoneMatch || score >= threshold)
+    .sort((left, right) => Number(right.phoneMatch) - Number(left.phoneMatch) || right.score - left.score)
+    .slice(0, 5);
+}
+
 export function importCandidates(items, decisions, target = "all") {
   return items.filter(item => decisions[item.key] && decisions[item.key] !== "__skip__" && (target !== "new" || decisions[item.key] === "__new__"));
 }
@@ -24,7 +58,7 @@ export function prepareImportChoices(items, students, batch, previous = {}) {
     if (!students.length) { next[item.key] = "__new__"; continue; }
     const value = suggest(item, students, batch)?.value;
     if (value && !used.has(value)) { next[item.key] = value; used.add(value); }
-    else if (!value && !students.some(s => norm(studentName(s)) === norm(item.name) || (item.row.admissionNumber && norm(s.admissionNumber) === norm(item.row.admissionNumber)))) {
+    else if (!value && !students.some(s => norm(studentName(s)) === norm(item.name) || (item.row.admissionNumber && norm(s.admissionNumber) === norm(item.row.admissionNumber))) && !nameVariantCandidates(item, students, batch, 0.72).length) {
       // A different name sharing a parent's phone is a new identity, not a match.
       next[item.key] = "__new__";
     }

@@ -804,8 +804,19 @@ export const previewAttendanceImport = asyncHandler(async (req, res) => {
       }
     });
     const metadata = studentId && period ? metadataByKey.get(`${studentId}:${period.year}:${period.month}`) : null;
-    const incomingMetadata = [row.importedDueDate, row.importedPaidDate, row.importedFeePaid, row.importedFeeStatus, row.importedExtraNote].some((value) => clean(value));
-    const savedMetadata = metadata && [metadata.importedDueDate, metadata.importedPaidDate, metadata.importedFeePaid, metadata.importedFeeStatus, metadata.importedExtraNote].some((value) => clean(value));
+    const metadataFields = [
+      ["dueDate", "Due Date", row.importedDueDate, metadata?.importedDueDate],
+      ["paidDate", "Paid Date", row.importedPaidDate, metadata?.importedPaidDate],
+      ["feePaid", "Fee Paid", row.importedFeePaid, metadata?.importedFeePaid],
+      ["feeStatus", "Fee Status", row.importedFeeStatus, metadata?.importedFeeStatus],
+      ["extraNote", "Extra Note", row.importedExtraNote, metadata?.importedExtraNote],
+    ];
+    const metadataDiffs = metadataFields.flatMap(([field, label, excelValue, appValue]) => {
+      const excel = clean(excelValue), app = clean(appValue);
+      if (!excel && !app) return [];
+      if (excel === app) return [];
+      return [{ field, label, excel, app, type: !app && excel ? "missing-in-app" : app && !excel ? "missing-in-excel" : "different" }];
+    });
     return {
       rowKey: match.rowKey,
       name: match.name,
@@ -819,7 +830,8 @@ export const previewAttendanceImport = asyncHandler(async (req, res) => {
       missingCells: missingDates.length,
       missingDates,
       conflicts,
-      metadataMissing: Boolean(incomingMetadata && !savedMetadata),
+      metadataMissing: metadataDiffs.some((item) => item.type === "missing-in-app"),
+      metadataDiffs,
     };
   });
 
@@ -859,6 +871,7 @@ export const previewAttendanceImport = asyncHandler(async (req, res) => {
         missingCells: auditRows.reduce((sum, row) => sum + row.missingCells, 0),
         conflicts: auditRows.reduce((sum, row) => sum + row.conflicts.length, 0),
         missingMetadataMonths: auditRows.filter((row) => row.metadataMissing).length,
+        metadataDifferences: auditRows.reduce((sum, row) => sum + row.metadataDiffs.length, 0),
       },
     },
     availableStudents,

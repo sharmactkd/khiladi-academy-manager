@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { directory, suggest, prepareImportChoices, importCandidates, attendancePayloads, chunks, safeCsv } from '../src/pages/imports/importLogic.js';
+import { directory, suggest, prepareImportChoices, importCandidates, nameSimilarity, nameVariantCandidates, attendancePayloads, chunks, safeCsv } from '../src/pages/imports/importLogic.js';
 import { fillImportedStudentFields, replaceReviewedStudentFields, overwriteImportedStudentFields } from '../../backend/src/utils/fillImportedStudentFields.js';
 const existing = [{ _id:'s1', firstName:'Adi', lastName:'Jain', phone:'9999999999', batch:'b1', dateOfBirth:'2010-01-01' }];
 const item = { name:'Adi Jain', phone:'9999999999', row:{} };
@@ -32,8 +32,23 @@ test('recovery mode hides the normal matching table and clears resolved duplicat
  const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
  assert.match(source, /pendingDuplicateGroups = duplicateGroups\.filter/);
  assert.match(source, /!reconciliationMode && <section className=\{`\$\{styles\.card\} \$\{styles\.matchingCard\}/);
- assert.match(source, /Missing or unresolved student records/);
- assert.match(source, /Only Excel students that need a new record or manual identity confirmation/);
+ assert.match(source, /Student records missing in app/);
+ assert.match(source, /No safe exact or similar app identity was found/);
+});
+test('recovery finds incomplete and slightly misspelled name variants without auto-merging', () => {
+ const students = [{ _id:'p1', firstName:'Prangel', lastName:'Jain', batch:'b1' }];
+ const short = { name:'Pranjel', phone:'', row:{} };
+ assert.ok(nameSimilarity(short.name, 'Prangel Jain') >= 0.68);
+ assert.equal(nameVariantCandidates(short, students, 'b1')[0].student._id, 'p1');
+ assert.deepEqual(prepareImportChoices([{...short,key:'variant'}], students, 'b1'), {});
+});
+test('recovery UI separates identity, missing attendance and metadata difference tables', () => {
+ const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
+ assert.match(source, /Name and spelling variants/);
+ assert.match(source, /Student records missing in app/);
+ assert.match(source, /Missing attendance by student and month/);
+ assert.match(source, /Due date, paid date and fee metadata differences/);
+ assert.match(source, /Select all missing/);
 });
 test('empty app stages all selected Excel profiles without creating any records', () => {
  const input = [{ ...item, key:'a', record:true }, { name:'Prachi', row:{}, key:'b', record:false }];
