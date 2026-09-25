@@ -22,8 +22,8 @@ const finishPrint = (printWindow) => {
   }, 250);
 };
 
-export const printDomElement = ({ element, title = "Print" }) => {
-  const printWindow = createPrintWindow(title);
+export const printDomElement = ({ element, title = "Print", targetWindow = null, landscape = false }) => {
+  const printWindow = createPrintWindow(title, targetWindow);
   if (!printWindow) return false;
 
   const doc = printWindow.document;
@@ -33,10 +33,13 @@ export const printDomElement = ({ element, title = "Print" }) => {
 
   const style = doc.createElement("style");
   style.textContent = `
-    @page { size: A4 landscape; margin: 10mm; }
+    @page { size: ${landscape ? "A3 landscape" : "A4 landscape"}; margin: 8mm; }
     body { margin: 0; padding: 0; color: #111827; background: #fff; }
     table { width: 100%; border-collapse: collapse; }
     button, details, .no-print { display: none !important; }
+    [data-attendance-export-root] { position: static !important; left: auto !important; width: 100% !important; }
+    [data-attendance-year] { break-inside: avoid; page-break-inside: avoid; margin-bottom: 8mm; }
+    [data-attendance-export-root] > header { display: flex !important; }
   `;
   doc.head.append(style);
   doc.body.append(element.cloneNode(true));

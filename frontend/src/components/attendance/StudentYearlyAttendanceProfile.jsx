@@ -137,7 +137,7 @@ const MonthlyInsights = ({ bestMonth, attentionMonth, totals }) => (
   </article>
 );
 
-const StudentYearlyAttendanceProfile = ({ data, summary }) => {
+const StudentYearlyAttendanceProfile = ({ data, summary, exportMode = false }) => {
   const months = Array.isArray(data?.months) ? data.months : [];
   const dayNotes = data?.dayNotes || {};
   const year = data?.year || new Date().getFullYear();
@@ -182,7 +182,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
 
   return (
     <>
-      <section className={styles.overviewCard} aria-labelledby="yearly-attendance-heading">
+      <section className={`${styles.overviewCard} ${exportMode ? styles.exportMode : ""}`} aria-labelledby="yearly-attendance-heading">
         <header className={styles.cardHeader}>
           <div>
             <span className={styles.sectionIcon}><CalendarDays size={20} /></span>
@@ -200,7 +200,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
 
         <div className={styles.tableWrap}>
           <div className={styles.yearStack}>
-          {yearGroups.map((group) => <section key={group.year} className={styles.yearGroup}>
+          {yearGroups.map((group) => <section key={group.year} className={styles.yearGroup} data-attendance-year={group.year}>
             <header className={styles.yearGroupHeader}>
               <div><strong>{group.year}</strong><span>{group.months.length} active month{group.months.length === 1 ? "" : "s"}</span></div>
               <div className={styles.yearRate} style={{ "--year-rate-color": group.rate < 50 ? "#ef4d58" : "#1eaa60" }}><span>Attendance rate</span><strong>{group.rate}%</strong><i><b style={{ width: `${group.rate}%` }} /></i><small>{group.present} / {group.marked} days</small></div>
@@ -280,10 +280,10 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
         </div>
       </section>
 
-      <section className={styles.insightsGrid}>
+      {!exportMode ? <section className={styles.insightsGrid}>
         <AttendanceTrend months={months} />
         <MonthlyInsights bestMonth={bestMonth} attentionMonth={attentionMonth} totals={totals} />
-      </section>
+      </section> : null}
     </>
   );
 };

@@ -5,7 +5,7 @@ cd "D:\Website\Khiladi Project\khiladi-academy-manager"
 Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
 
 Expand-Archive `
-  -Path "$env:USERPROFILE\Downloads\khiladi-attendance-history-complete-export-v39.zip" `
+  -Path "$env:USERPROFILE\Downloads\khiladi-attendance-history-visual-export-search-v40.zip" `
   -DestinationPath (Get-Location).Path `
   -Force
 
@@ -30,7 +30,7 @@ git diff --check
 git diff --stat
 
 git add -A
-git commit -m "Add complete attendance history PDF print and Excel export"
+git commit -m "Match attendance exports to screen UI and add student search"
 git push origin main
 
 git status
@@ -51,3 +51,5 @@ USAGE
 12. Pending or unconfirmed identities are safely skipped when other resolved attendance or metadata selections are ready to import.
 13. The current month in attendance history uses the same live membership fee balance as the attendance table; older imported months remain unchanged.
 14. PDF, Print and Excel each support complete history, an inclusive month range, a particular year or a particular month, independent of screen pagination.
+15. PDF and Print use the same year-wise colored attendance layout as the screen; Excel mirrors the same grouped structure and status colors.
+16. "Custom date range" uses Start month and End month. Search another student directly from the attendance-history page by name, phone or admission number.

@@ -5,8 +5,8 @@ const monthKey = (month = {}) => {
 };
 
 export const validateAttendanceExportScope = ({ scope, from, to, year, month } = {}) => {
-  if (scope === "range" && (!from || !to)) return "From aur To month select karein.";
-  if (scope === "range" && from > to) return "From month, To month se baad ka nahi ho sakta.";
+  if (scope === "range" && (!from || !to)) return "Start month aur End month select karein.";
+  if (scope === "range" && from > to) return "Start month, End month se baad ka nahi ho sakta.";
   if (scope === "year" && !Number(year)) return "Attendance year select karein.";
   if (scope === "month" && !month) return "Attendance month select karein.";
   return "";

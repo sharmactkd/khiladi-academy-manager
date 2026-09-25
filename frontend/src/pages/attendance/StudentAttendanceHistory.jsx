@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   ArrowLeft,
@@ -12,24 +12,23 @@ import {
   MapPin,
   Printer,
   RefreshCw,
+  Search,
   UserRound,
   UserX,
 } from "lucide-react";
 
 import { academyApi } from "../../api/academyApi.js";
 import { attendanceApi } from "../../api/attendanceApi.js";
+import { studentApi } from "../../api/studentApi.js";
 import { getBranches } from "../../api/branchApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import StudentYearlyAttendanceProfile from "../../components/attendance/StudentYearlyAttendanceProfile.jsx";
 import useAuth from "../../hooks/useAuth.js";
-import { exportReportToExcel, exportReportToPdf } from "../../utils/exportUtils.js";
-import { printDataTable } from "../../utils/securePrint.js";
+import { printDomElement } from "../../utils/securePrint.js";
 import { attendanceExportPeriodLabel, filterAttendanceHistoryMonths, validateAttendanceExportScope } from "../../utils/attendanceHistoryExport.js";
+import { exportAttendanceHistoryPdf, exportAttendanceHistoryWorkbook } from "../../utils/attendanceHistoryVisualExport.js";
 import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
 import styles from "./StudentAttendanceHistory.module.css";
-import { formatAttendanceDate } from "../../utils/attendanceDate.js";
-
-const DAYS = Array.from({ length: 31 }, (_, index) => index + 1);
 
 const getStudentName = (student) =>
   String(student?.importedName || student?.name || "Student").trim() || "Student";
@@ -74,28 +73,9 @@ const getSummary = (months = []) => {
   return { ...totals, marked, rate: marked ? Math.round((totals.present / marked) * 100) : 0 };
 };
 
-const buildExportRows = (months = []) => months.map((month) => {
-  const row = {
-    Month: month.fullLabel,
-    "Due Date": formatAttendanceDate(month.importedDueDate, { fallback: "", monthDate: month.days?.[0]?.dateKey || "" }),
-    "Paid Date": formatAttendanceDate(month.importedPaidDate, { fallback: "", monthDate: month.days?.[0]?.dateKey || "" }),
-    "Fee Paid": month.importedFeePaid || "",
-    "Fee Status": month.displayFeeStatus || month.importedFeeStatus || "",
-  };
-  DAYS.forEach((day) => {
-    const dayInfo = month.days?.find((item) => Number(item.day) === day);
-    row[String(day).padStart(2, "0")] = dayInfo ? month.attendance?.[dayInfo.dateKey] || "" : "";
-  });
-  row.Present = month.presentCount || 0;
-  row.Absent = month.absentCount || 0;
-  row.Leave = month.leaveCount || 0;
-  row.Late = month.lateCount || 0;
-  row["Attendance %"] = month.attendancePercentage || 0;
-  return row;
-});
-
 const StudentAttendanceHistory = () => {
   const { studentId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [academy, setAcademy] = useState(null);
@@ -106,8 +86,13 @@ const StudentAttendanceHistory = () => {
   const [error, setError] = useState("");
   const [exportType, setExportType] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [exportProfile, setExportProfile] = useState(null);
+  const [studentQuery, setStudentQuery] = useState("");
+  const [studentResults, setStudentResults] = useState([]);
+  const [searchingStudents, setSearchingStudents] = useState(false);
   const [exportOptions, setExportOptions] = useState({ scope: "complete", from: "", to: "", year: "", month: "" });
   const loadMoreRef = useRef(null);
+  const exportRef = useRef(null);
 
   const fetchProfile = useCallback(async ({ quiet = false } = {}) => {
     quiet ? setRefreshing(true) : setLoading(true);
@@ -152,6 +137,20 @@ const StudentAttendanceHistory = () => {
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
   useEffect(() => {
+    const query = studentQuery.trim();
+    if (query.length < 2) { setStudentResults([]); return undefined; }
+    const timer = window.setTimeout(async () => {
+      setSearchingStudents(true);
+      try {
+        const response = await studentApi.getAll({ search: query, limit: 12, paginated: true });
+        const list = response?.data?.students || response?.students || response?.data || [];
+        setStudentResults(Array.isArray(list) ? list : []);
+      } catch { setStudentResults([]); }
+      finally { setSearchingStudents(false); }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [studentQuery]);
+  useEffect(() => {
     const target = loadMoreRef.current;
     if (!target || !profile?.pagination?.hasMore) return undefined;
     const observer = new IntersectionObserver((entries) => {
@@ -190,6 +189,7 @@ const StudentAttendanceHistory = () => {
 
   const fetchCompleteHistory = async () => {
     const allMonths = [];
+    const allDayNotes = {};
     let offset = 0;
     let hasMore = true;
     while (hasMore) {
@@ -197,11 +197,12 @@ const StudentAttendanceHistory = () => {
       const data = response.data?.data || {};
       const batch = Array.isArray(data.months) ? data.months : [];
       allMonths.push(...batch);
+      Object.assign(allDayNotes, data.dayNotes || {});
       hasMore = Boolean(data.pagination?.hasMore);
       offset += batch.length;
       if (!batch.length) break;
     }
-    return allMonths;
+    return { months: allMonths, dayNotes: allDayNotes };
   };
 
   const runExport = async () => {
@@ -211,25 +212,28 @@ const StudentAttendanceHistory = () => {
     if (exportType === "print" && !printWindow) { toast.error("Print popup block ho gaya. Browser me popups allow karein."); return; }
     setExporting(true);
     try {
-      const completeMonths = await fetchCompleteHistory();
-      const selectedMonths = filterAttendanceHistoryMonths(completeMonths, exportOptions);
+      const completeHistory = await fetchCompleteHistory();
+      const selectedMonths = filterAttendanceHistoryMonths(completeHistory.months, exportOptions);
       if (!selectedMonths.length) { printWindow?.close(); toast.error("Selected period me attendance record nahi mila."); return; }
-      const rows = buildExportRows(selectedMonths);
       const period = attendanceExportPeriodLabel(exportOptions);
       const fileName = `${studentName}-attendance-history-${period}`;
+      const preparedProfile = { ...profile, timeline: true, months: selectedMonths, dayNotes: completeHistory.dayNotes, pagination: { hasMore: false } };
       if (exportType === "excel") {
-        exportReportToExcel({ rows, fileName, sheetName: "Attendance History" });
+        exportAttendanceHistoryWorkbook({ months: selectedMonths, dayNotes: completeHistory.dayNotes, studentName, academyName: academy?.academyName || "KHILADI Academy", period });
       } else if (exportType === "pdf") {
-        exportReportToPdf({ rows, fileName, title: `${studentName} Attendance History — ${period}`, academyName: academy?.academyName || "KHILADI Academy", pageFormat: "a3", fontSize: 6, cellPadding: 2 });
+        setExportProfile(preparedProfile);
+        await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+        await exportAttendanceHistoryPdf({ root: exportRef.current, fileName, studentName, academyName: academy?.academyName || "KHILADI Academy", period });
       } else {
-        const columns = Object.keys(rows[0] || {});
-        printDataTable({ title: `${studentName} Attendance History`, subtitle: `${academy?.academyName || "KHILADI Academy"} · ${period}`, columns, rows: rows.map((row) => columns.map((column) => row[column])), compact: true, targetWindow: printWindow });
+        setExportProfile(preparedProfile);
+        await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+        printDomElement({ element: exportRef.current, title: `${studentName} Attendance History`, targetWindow: printWindow, landscape: true });
       }
       setExportType("");
     } catch (requestError) {
       printWindow?.close();
       toast.error(requestError.response?.data?.message || "Attendance export could not be prepared.");
-    } finally { setExporting(false); }
+    } finally { setExporting(false); setExportProfile(null); }
   };
 
   return (
@@ -268,13 +272,24 @@ const StudentAttendanceHistory = () => {
         </div>
       </header>
 
+      <section className={styles.studentSearch}>
+        <Search size={18} />
+        <div><small>Switch student</small><input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder="Search by name, phone or admission number…" aria-label="Search another student's attendance history" /></div>
+        {searchingStudents ? <span className={styles.searchLoader} /> : null}
+        {studentQuery.trim().length >= 2 ? <div className={styles.searchResults}>
+          {studentResults.length ? studentResults.map((result) => <button key={result._id} type="button" onMouseDown={() => { setStudentQuery(""); setStudentResults([]); navigate(`/attendance/student/${result._id}`); }}>
+            <img src={getStudentPhotoUrl(result)} alt="" /><span><strong>{getStudentName(result)}</strong><small>{result.admissionNumber || result.phone || "No identifier"}</small></span><em>{getStudentStatus(result.status).label}</em>
+          </button>) : !searchingStudents ? <p>No matching student found.</p> : null}
+        </div> : null}
+      </section>
+
       {exportType ? <div className={styles.exportOverlay} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !exporting) setExportType(""); }}>
         <section className={styles.exportDialog} role="dialog" aria-modal="true" aria-labelledby="attendance-export-title">
           <header><div><small>Attendance export</small><h2 id="attendance-export-title">{exportType === "pdf" ? "Save attendance PDF" : exportType === "print" ? "Print attendance history" : "Export attendance Excel"}</h2><p>Screen par loaded months se independent, selected period ka complete record export hoga.</p></div><button type="button" onClick={() => setExportType("")} disabled={exporting} aria-label="Close export options">×</button></header>
           <div className={styles.exportScopes}>
-            {[["complete", "Complete history"], ["range", "From – To"], ["year", "Particular year"], ["month", "Particular month"]].map(([value, label]) => <label key={value} className={exportOptions.scope === value ? styles.exportScopeActive : ""}><input type="radio" name="attendance-export-scope" value={value} checked={exportOptions.scope === value} onChange={(event) => setExportOptions((current) => ({ ...current, scope: event.target.value }))} /><span>{label}</span></label>)}
+            {[["complete", "Complete history", "Every available attendance month"], ["range", "Custom date range", "Choose a start and end month"], ["year", "Specific year", "One complete calendar year"], ["month", "Specific month", "One attendance month"]].map(([value, label, help]) => <label key={value} className={exportOptions.scope === value ? styles.exportScopeActive : ""}><input type="radio" name="attendance-export-scope" value={value} checked={exportOptions.scope === value} onChange={(event) => setExportOptions((current) => ({ ...current, scope: event.target.value }))} /><span><strong>{label}</strong><small>{help}</small></span></label>)}
           </div>
-          {exportOptions.scope === "range" ? <div className={styles.exportFields}><label>From month<input type="month" value={exportOptions.from} onChange={(event) => setExportOptions((current) => ({ ...current, from: event.target.value }))} /></label><label>To month<input type="month" value={exportOptions.to} onChange={(event) => setExportOptions((current) => ({ ...current, to: event.target.value }))} /></label></div> : null}
+          {exportOptions.scope === "range" ? <div className={styles.exportFields}><label>Start month<input type="month" value={exportOptions.from} onChange={(event) => setExportOptions((current) => ({ ...current, from: event.target.value }))} /></label><label>End month<input type="month" value={exportOptions.to} onChange={(event) => setExportOptions((current) => ({ ...current, to: event.target.value }))} /></label></div> : null}
           {exportOptions.scope === "year" ? <div className={styles.exportFields}><label>Attendance year<select value={exportOptions.year} onChange={(event) => setExportOptions((current) => ({ ...current, year: event.target.value }))}>{(profile?.availableYears || []).map((year) => <option key={year} value={year}>{year}</option>)}</select></label></div> : null}
           {exportOptions.scope === "month" ? <div className={styles.exportFields}><label>Attendance month<input type="month" value={exportOptions.month} onChange={(event) => setExportOptions((current) => ({ ...current, month: event.target.value }))} /></label></div> : null}
           <footer><button type="button" onClick={() => setExportType("")} disabled={exporting}>Cancel</button><button type="button" className={styles.primaryAction} onClick={runExport} disabled={exporting}>{exporting ? "Preparing complete history…" : exportType === "pdf" ? "Save PDF" : exportType === "print" ? "Open Print" : "Export Excel"}</button></footer>
@@ -316,6 +331,10 @@ const StudentAttendanceHistory = () => {
       ) : null}
 
       <Link className={styles.backLink} to="/attendance"><ArrowLeft size={15} />Back to Attendance</Link>
+      {exportProfile ? <div ref={exportRef} className={styles.exportSurface} data-attendance-export-root>
+        <header><div><small>{academy?.academyName || "KHILADI Academy"}</small><h1>{studentName} Attendance History</h1><p>{attendanceExportPeriodLabel(exportOptions)} · Generated {new Date().toLocaleDateString("en-IN")}</p></div></header>
+        <StudentYearlyAttendanceProfile data={exportProfile} summary={getSummary(exportProfile.months)} exportMode />
+      </div> : null}
     </div>
   );
 };
