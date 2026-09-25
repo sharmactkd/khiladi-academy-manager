@@ -50,6 +50,15 @@ test('recovery UI separates identity, missing attendance and metadata difference
  assert.match(source, /Due date, paid date and fee metadata differences/);
  assert.match(source, /Select all missing/);
 });
+test('unchecked recovery identities do not block review or final import', () => {
+ const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
+ assert.match(source, /actionableUnresolved = reconciliationMode/);
+ assert.match(source, /unresolved\.filter\(\(item\) => recoveryStudentSelection\.includes\(item\.key\)\)/);
+ const reviewAction = source.split('\n').find(line => line.includes('Continue: review & import'));
+ const finalAction = source.split('\n').find(line => line.includes('Import selected records / attendance'));
+ assert.match(reviewAction, /actionableUnresolved\.length/);
+ assert.match(finalAction, /actionableUnresolved\.length/);
+});
 test('empty app stages all selected Excel profiles without creating any records', () => {
  const input = [{ ...item, key:'a', record:true }, { name:'Prachi', row:{}, key:'b', record:false }];
  const before = JSON.stringify(input);
