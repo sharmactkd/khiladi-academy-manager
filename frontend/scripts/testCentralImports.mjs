@@ -52,12 +52,12 @@ test('recovery UI separates identity, missing attendance and metadata difference
 });
 test('unchecked recovery identities do not block review or final import', () => {
  const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
- assert.match(source, /actionableUnresolved = reconciliationMode/);
- assert.match(source, /unresolved\.filter\(\(item\) => recoveryStudentSelection\.includes\(item\.key\)\)/);
+ assert.match(source, /blockingUnresolved = reconciliationMode \? \[\] : unresolved/);
  const reviewAction = source.split('\n').find(line => line.includes('Continue: review & import'));
  const finalAction = source.split('\n').find(line => line.includes('Import selected records / attendance'));
- assert.match(reviewAction, /actionableUnresolved\.length/);
- assert.match(finalAction, /actionableUnresolved\.length/);
+ assert.doesNotMatch(reviewAction, /pendingDuplicateGroups\.length|blockingUnresolved\.length/);
+ assert.match(finalAction, /blockingUnresolved\.length/);
+ assert.match(source, /Unresolved or unconfirmed identities will be safely skipped/);
 });
 test('empty app stages all selected Excel profiles without creating any records', () => {
  const input = [{ ...item, key:'a', record:true }, { name:'Prachi', row:{}, key:'b', record:false }];
