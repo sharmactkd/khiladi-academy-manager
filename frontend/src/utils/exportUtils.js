@@ -85,11 +85,14 @@ export const exportReportToPdf = ({
   title = "Report",
   academyName = "KHILADI Academy",
   generatedAt = new Date(),
+  pageFormat = "a4",
+  fontSize = 8,
+  cellPadding = 4,
 }) => {
   const doc = new jsPDF({
     orientation: "landscape",
     unit: "pt",
-    format: "a4",
+    format: pageFormat,
   });
 
   doc.setTextColor(229, 9, 20);
@@ -121,8 +124,8 @@ export const exportReportToPdf = ({
     body: tableRows,
     startY: 74,
     styles: {
-      fontSize: 8,
-      cellPadding: 4,
+      fontSize,
+      cellPadding,
     },
     headStyles: {
       fontStyle: "bold",

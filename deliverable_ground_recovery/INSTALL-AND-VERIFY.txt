@@ -5,7 +5,7 @@ cd "D:\Website\Khiladi Project\khiladi-academy-manager"
 Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
 
 Expand-Archive `
-  -Path "$env:USERPROFILE\Downloads\khiladi-attendance-history-live-fee-status-v38.zip" `
+  -Path "$env:USERPROFILE\Downloads\khiladi-attendance-history-complete-export-v39.zip" `
   -DestinationPath (Get-Location).Path `
   -Force
 
@@ -30,7 +30,7 @@ git diff --check
 git diff --stat
 
 git add -A
-git commit -m "Sync current month fee status in attendance history"
+git commit -m "Add complete attendance history PDF print and Excel export"
 git push origin main
 
 git status
@@ -50,3 +50,4 @@ USAGE
 11. Unchecked name/spelling variants are treated as intentionally skipped and do not block Continue.
 12. Pending or unconfirmed identities are safely skipped when other resolved attendance or metadata selections are ready to import.
 13. The current month in attendance history uses the same live membership fee balance as the attendance table; older imported months remain unchanged.
+14. PDF, Print and Excel each support complete history, an inclusive month range, a particular year or a particular month, independent of screen pagination.

@@ -1,5 +1,5 @@
-const createPrintWindow = (title) => {
-  const printWindow = window.open("about:blank", "_blank", "width=1200,height=800");
+const createPrintWindow = (title, targetWindow = null) => {
+  const printWindow = targetWindow || window.open("about:blank", "_blank", "width=1200,height=800");
   if (!printWindow) return null;
 
   const doc = printWindow.document;
@@ -44,8 +44,8 @@ export const printDomElement = ({ element, title = "Print" }) => {
   return true;
 };
 
-export const printDataTable = ({ title, subtitle, columns, rows }) => {
-  const printWindow = createPrintWindow(title);
+export const printDataTable = ({ title, subtitle, columns, rows, compact = false, targetWindow = null }) => {
+  const printWindow = createPrintWindow(title, targetWindow);
   if (!printWindow) return false;
   const doc = printWindow.document;
 
@@ -55,10 +55,10 @@ export const printDataTable = ({ title, subtitle, columns, rows }) => {
     body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
     header { display:flex; justify-content:space-between; border-bottom:2px solid #111827; padding-bottom:10px; margin-bottom:20px; }
     h1 { margin:0; font-size:22px; } p { margin:4px 0 0; font-size:13px; color:#374151; }
-    table { width:100%; border-collapse:collapse; font-size:11px; }
-    th, td { border:1px solid #d1d5db; padding:7px; text-align:left; vertical-align:top; }
+    table { width:100%; border-collapse:collapse; font-size:${compact ? "7px" : "11px"}; }
+    th, td { border:1px solid #d1d5db; padding:${compact ? "3px" : "7px"}; text-align:left; vertical-align:top; }
     th { background:#f3f4f6; font-weight:700; } tr:nth-child(even) { background:#fafafa; }
-    @page { size:A4 landscape; margin:12mm; }
+    @page { size:${compact ? "A3" : "A4"} landscape; margin:12mm; }
   `;
   doc.head.append(style);
 
