@@ -3,10 +3,18 @@ import DateInput from "../common/DateInput.jsx";
 import toast from "react-hot-toast";
 import {
   CalendarClock,
+  CalendarDays,
+  Check,
+  CircleDollarSign,
+  Gauge,
   History,
   PauseCircle,
+  ReceiptIndianRupee,
   RefreshCcw,
   Save,
+  SlidersHorizontal,
+  StickyNote,
+  TimerReset,
   X,
 } from "lucide-react";
 
@@ -15,17 +23,26 @@ import MembershipBadge from "./MembershipBadge.jsx";
 import "../../pages/attendance/Attendance.css";
 
 const ACTIONS = [
-  { value: "extend_days", label: "Add training days" },
-  { value: "reduce_days", label: "Remove training days" },
-  { value: "set_due_date", label: "Set custom due date" },
-  { value: "clear_due_date", label: "Clear due date" },
-  { value: "set_remaining_days", label: "Set remaining days" },
-  { value: "change_unpaid_months", label: "Set unpaid months & days" },
-  { value: "pause", label: "Pause membership" },
-  { value: "resume", label: "Resume membership" },
-  { value: "set_fee_status", label: "Set fee status" },
-  { value: "clear_fee_status", label: "Clear fee status" },
-  { value: "set_note", label: "Update internal note" },
+  { value: "extend_days", label: "Add training days", help: "Move the effective due date forward." },
+  { value: "reduce_days", label: "Remove training days", help: "Reduce protected or remaining training time." },
+  { value: "set_due_date", label: "Set custom due date", help: "Replace the current effective due date." },
+  { value: "clear_due_date", label: "Clear due date", help: "Remove the due date without changing fee history." },
+  { value: "set_remaining_days", label: "Set remaining days", help: "Set the exact training-day balance." },
+  { value: "change_unpaid_months", label: "Set unpaid months & days", help: "Set the exact outstanding fee duration." },
+  { value: "pause", label: "Pause membership", help: "Temporarily stop membership progression." },
+  { value: "resume", label: "Resume membership", help: "Restart membership from a chosen date." },
+  { value: "set_fee_status", label: "Set fee status", help: "Manually assign the current fee state." },
+  { value: "clear_fee_status", label: "Clear fee status", help: "Remove Due, Paid or other fee state." },
+  { value: "set_note", label: "Update internal note", help: "Save an operational note without changing balance." },
+];
+
+const ACTION_GROUPS = [
+  { key: "due", label: "Due Date", help: "Set or clear membership due date.", icon: CalendarDays, actions: ["set_due_date", "clear_due_date"] },
+  { key: "fee", label: "Fee Status", help: "Set or clear the current fee state.", icon: ReceiptIndianRupee, actions: ["set_fee_status", "clear_fee_status"] },
+  { key: "days", label: "Training Days", help: "Add, remove or set days precisely.", icon: TimerReset, actions: ["extend_days", "reduce_days", "set_remaining_days"] },
+  { key: "balance", label: "Unpaid Balance", help: "Adjust pending months and days.", icon: CircleDollarSign, actions: ["change_unpaid_months"] },
+  { key: "access", label: "Pause / Resume", help: "Temporarily pause or restart access.", icon: PauseCircle, actions: ["pause", "resume"] },
+  { key: "note", label: "Internal Note", help: "Update an operational note only.", icon: StickyNote, actions: ["set_note"] },
 ];
 
 const initialForm = {
@@ -76,7 +93,9 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const studentName = student?.name || student?.importedName || "Student";
+  const studentName = student?.name || student?.importedName || [student?.firstName, student?.lastName].filter(Boolean).join(" ") || "Student";
+  const selectedAction = ACTIONS.find((action) => action.value === form.type) || ACTIONS[0];
+  const selectedGroup = ACTION_GROUPS.find((group) => group.actions.includes(form.type)) || ACTION_GROUPS[0];
   const latestReversibleId = useMemo(
     () => adjustments.find((item) => item.type !== "reversal" && !item.reversedAt)?._id,
     [adjustments]
@@ -122,6 +141,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
   if (!open || !student) return null;
 
   const updateForm = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const selectGroup = (group) => updateForm("type", group.actions[0]);
 
   const buildPayload = () => {
     const payload = {
@@ -193,15 +213,28 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
         {loading ? <div className="membership-drawer__loading">Loading membership…</div> : (
           <>
             <section className="membership-overview">
-              <div><small>Current State</small><MembershipBadge membership={membership} disabled /></div>
-              <div><small>Effective Due Date</small><strong>{formatDate(membership?.effectiveDueDate)}</strong></div>
-              <div><small>Days Remaining</small><strong>{membership?.remainingTrainingDays || 0}</strong></div>
-              <div><small>Unpaid Balance</small><strong>{[Number(membership?.unpaidMonths || 0) > 0 ? `${membership.unpaidMonths}M` : "", Number(membership?.unpaidDays || 0) > 0 ? `${membership.unpaidDays}D` : ""].filter(Boolean).join(", ") || "0D"}</strong></div>
+              <div className="membership-overview__state"><span><Gauge /></span><div><small>Current State</small><MembershipBadge membership={membership} disabled /></div></div>
+              <div><span><CalendarDays /></span><div><small>Effective Due Date</small><strong>{formatDate(membership?.effectiveDueDate)}</strong></div></div>
+              <div><span><CalendarClock /></span><div><small>Days Remaining</small><strong>{membership?.remainingTrainingDays || 0}<em> days</em></strong></div></div>
+              <div><span><CircleDollarSign /></span><div><small>Unpaid Balance</small><strong>{[Number(membership?.unpaidMonths || 0) > 0 ? `${membership.unpaidMonths}M` : "", Number(membership?.unpaidDays || 0) > 0 ? `${membership.unpaidDays}D` : ""].filter(Boolean).join(" ") || "Clear"}</strong></div></div>
             </section>
 
             <form className="membership-form" onSubmit={submit}>
-              <div className="membership-form__heading"><span><PauseCircle /></span><div><h3>Apply Manual Adjustment</h3><p>You remain in full control of dates, balances and fee status.</p></div></div>
-              <label className="membership-field membership-field--wide"><span>Adjustment Type</span><select value={form.type} onChange={(event) => updateForm("type", event.target.value)}>{ACTIONS.map((action) => <option key={action.value} value={action.value}>{action.label}</option>)}</select></label>
+              <div className="membership-form__heading"><span><SlidersHorizontal /></span><div><h3>What would you like to update?</h3><p>Choose a category, then select the exact adjustment.</p></div><b>{selectedAction.label}</b></div>
+              <div className="membership-action-grid" role="tablist" aria-label="Membership adjustment categories">
+                {ACTION_GROUPS.map((group) => {
+                  const Icon = group.icon;
+                  const active = group.key === selectedGroup.key;
+                  return <button key={group.key} type="button" role="tab" aria-selected={active} className={active ? "is-active" : ""} onClick={() => selectGroup(group)}><span><Icon /></span><div><strong>{group.label}</strong><small>{group.help}</small></div>{active ? <i><Check /></i> : null}</button>;
+                })}
+              </div>
+              <div className="membership-subactions" aria-label={`${selectedGroup.label} actions`}>
+                {selectedGroup.actions.map((value) => {
+                  const action = ACTIONS.find((item) => item.value === value);
+                  return <button key={value} type="button" className={form.type === value ? "is-active" : ""} onClick={() => updateForm("type", value)}>{action?.label}</button>;
+                })}
+              </div>
+              <div className="membership-action-help"><PauseCircle /><span><strong>{selectedAction.label}</strong><small>{selectedAction.help}</small></span></div>
 
               {["extend_days", "reduce_days"].includes(form.type) && <label className="membership-field"><span>Number of Days</span><input type="number" min="1" max="3650" value={form.days} onChange={(event) => updateForm("days", event.target.value)} required /></label>}
               {form.type === "set_due_date" && <label className="membership-field"><span>Custom Due Date</span><DateInput value={form.dueDate} onChange={(event) => updateForm("dueDate", event.target.value)} required /></label>}
@@ -217,11 +250,11 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
             </form>
 
             <section className="membership-history">
-              <div className="membership-history__heading"><span><History /></span><div><h3>Adjustment History</h3><p>Newest activity appears first. Records cannot be deleted.</p></div></div>
+              <div className="membership-history__heading"><span><History /></span><div><h3>Adjustment History</h3><p>Newest activity appears first. Records cannot be deleted.</p></div><b>{adjustments.length} records</b></div>
               {!adjustments.length ? <p className="membership-history__empty">No manual adjustment added yet.</p> : adjustments.map((item) => (
                 <article key={item._id} className={item.reversedAt ? "is-reversed" : ""}>
                   <span><RefreshCcw /></span>
-                  <div><strong>{formatAction(item)}</strong><p>{item.reason}</p>{item.note ? <small>{item.note}</small> : null}<time>{new Date(item.createdAt).toLocaleString("en-IN")} · {item.createdBy?.name || "Academy user"}</time></div>
+                  <div><strong>{formatAction(item)}</strong>{item.reversedAt ? <em>Reversed</em> : null}<p>{item.reason}</p>{item.note ? <small>{item.note}</small> : null}<time>{new Date(item.createdAt).toLocaleString("en-IN")} · {item.createdBy?.name || "Academy user"}</time></div>
                   {item._id === latestReversibleId && !item.reversedAt ? <button type="button" onClick={() => reverse(item._id)} disabled={saving}>Reverse</button> : null}
                 </article>
               ))}
