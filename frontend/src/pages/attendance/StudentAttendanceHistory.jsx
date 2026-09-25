@@ -30,8 +30,13 @@ import { exportAttendanceHistoryPdf, exportAttendanceHistoryWorkbook } from "../
 import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
 import styles from "./StudentAttendanceHistory.module.css";
 
-const getStudentName = (student) =>
-  String(student?.importedName || student?.name || "Student").trim() || "Student";
+const getStudentName = (student) => {
+  const composedName = [student?.firstName, student?.middleName, student?.lastName]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(" ");
+  return String(student?.importedName || student?.name || student?.fullName || composedName || "Student").trim() || "Student";
+};
 
 const getStudentStatus = (status) => {
   const normalized = String(status || "active").toLowerCase();
