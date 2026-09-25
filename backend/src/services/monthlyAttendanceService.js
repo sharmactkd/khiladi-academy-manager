@@ -188,6 +188,18 @@ export const hasMarkedAttendanceCounts = (month = {}) =>
   Number(month.presentCount || 0) + Number(month.absentCount || 0) +
   Number(month.leaveCount || 0) + Number(month.lateCount || 0) > 0;
 
+export const applyCurrentMembershipFeeStatus = ({ months = [], membership = null, todayKey = todayDateKey() } = {}) => {
+  const [year, month] = String(todayKey || "").split("-").map(Number);
+  const liveLabel = membership?.feeStatusCleared === true
+    ? "-"
+    : clean(membership?.feeStatusSummary?.label);
+  if (!year || !month || !liveLabel) return months;
+
+  return months.map((item) => Number(item.year) === year && Number(item.value) === month
+    ? { ...item, displayFeeStatus: liveLabel }
+    : item);
+};
+
 const getStudentName = (student) => {
   return `${student.firstName || ""} ${student.lastName || ""}`.trim() || "-";
 };
@@ -800,13 +812,14 @@ export const getStudentYearlyAttendanceProfile = async ({
   const yearStart = new Date(Date.UTC(numericYear, 0, 1));
   const yearEnd = new Date(Date.UTC(numericYear + 1, 0, 1));
 
-  const [attendanceDocs, monthMetadataDocs] = await Promise.all([
+  const [attendanceDocs, monthMetadataDocs, membershipMap] = await Promise.all([
     Attendance.find({
       academy: academyObjectId,
       date: { $gte: yearStart, $lt: yearEnd },
       "records.student": studentObjectId,
     }).populate("batch", "batchName martialArt").lean(),
     AttendanceMonthMetadata.find({ academy: academyObjectId, student: studentObjectId, year: numericYear }).lean(),
+    getMembershipMap({ academyId: academyObjectId, studentIds: [studentObjectId] }),
   ]);
   const relevantBatchIds = [...new Set([
     String(student.batch?._id || student.batch || ""),
@@ -843,7 +856,7 @@ export const getStudentYearlyAttendanceProfile = async ({
       .find((record) => String(record.student) === String(studentObjectId) && record.source === "excel-import") ||
     null;
 
-  const months = REGISTER_MONTHS.map((monthInfo) => {
+  let months = REGISTER_MONTHS.map((monthInfo) => {
     const days = buildDays({ year: numericYear, month: monthInfo.value });
     const attendance = {};
 
@@ -899,6 +912,11 @@ export const getStudentYearlyAttendanceProfile = async ({
       importedFeeStatus,
       ...calculateCounts(attendance),
     };
+  });
+
+  months = applyCurrentMembershipFeeStatus({
+    months: months.map((item) => ({ ...item, year: numericYear })),
+    membership: membershipMap.get(String(studentObjectId)),
   });
 
   const [businessYear, businessMonth] = todayDateKey().split("-").map(Number);
@@ -1058,11 +1076,14 @@ export const getStudentAttendanceTimeline = async ({
     return `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}`;
   }))];
   const years = [...new Set(monthKeys.map((key) => Number(key.split("-")[0])))];
-  const metadataDocs = await AttendanceMonthMetadata.find({
-    academy: academyObjectId,
-    student: studentObjectId,
-    year: { $in: years },
-  }).lean();
+  const [metadataDocs, membershipMap] = await Promise.all([
+    AttendanceMonthMetadata.find({
+      academy: academyObjectId,
+      student: studentObjectId,
+      year: { $in: years },
+    }).lean(),
+    getMembershipMap({ academyId: academyObjectId, studentIds: [studentObjectId] }),
+  ]);
   const metadataMap = new Map(metadataDocs.map((item) => [`${item.year}-${item.month}`, item]));
   const groupedDocs = markedDocs.reduce((map, doc) => {
     const date = new Date(doc.date);
@@ -1072,7 +1093,8 @@ export const getStudentAttendanceTimeline = async ({
     return map;
   }, new Map());
 
-  const months = monthKeys.map((key) => {
+  const months = applyCurrentMembershipFeeStatus({
+    months: monthKeys.map((key) => {
     const [year, month] = key.split("-").map(Number);
     const monthInfo = REGISTER_MONTHS[month - 1];
     const days = buildDays({ year, month });
@@ -1103,7 +1125,9 @@ export const getStudentAttendanceTimeline = async ({
       importedFeeStatus,
       ...calculateCounts(attendance),
     };
-  }).filter(hasMarkedAttendanceCounts);
+    }).filter(hasMarkedAttendanceCounts),
+    membership: membershipMap.get(String(studentObjectId)),
+  });
 
   const safeOffset = Math.max(0, Number(offset) || 0);
   const safeLimit = Math.min(240, Math.max(1, Number(limit) || 12));

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildRowFromRecord, hasMarkedAttendanceCounts, mergeMonthlyRecordIdentity } from "../src/services/monthlyAttendanceService.js";
+import { applyCurrentMembershipFeeStatus, buildRowFromRecord, hasMarkedAttendanceCounts, mergeMonthlyRecordIdentity } from "../src/services/monthlyAttendanceService.js";
 import { backfillImportedAttendanceMetadata, getImportedAttendancePeriod, isProtectedReconciliationPeriod } from "../src/controllers/attendanceController.js";
 
 test("student dates do not fabricate missing fee data", () => {
@@ -76,6 +76,21 @@ test("attendance timeline excludes months without P, A, L or LT marks", () => {
   assert.equal(hasMarkedAttendanceCounts({ presentCount: 0, absentCount: 0, leaveCount: 0, lateCount: 0, importedFeeStatus: "PAID" }), false);
   assert.equal(hasMarkedAttendanceCounts({ absentCount: 1 }), true);
   assert.equal(hasMarkedAttendanceCounts({ lateCount: 1 }), true);
+});
+
+test("attendance history uses live membership balance only for the current month", () => {
+  const months = [
+    { year: 2026, value: 8, importedFeeStatus: "DUE" },
+    { year: 2026, value: 9, importedFeeStatus: "DUE" },
+  ];
+  const result = applyCurrentMembershipFeeStatus({
+    months,
+    membership: { feeStatusSummary: { label: "25M DUE" } },
+    todayKey: "2026-09-25",
+  });
+  assert.equal(result[0].displayFeeStatus, undefined);
+  assert.equal(result[0].importedFeeStatus, "DUE");
+  assert.equal(result[1].displayFeeStatus, "25M DUE");
 });
 
 test("linked Excel metadata enriches a pre-seeded student roster row", () => {

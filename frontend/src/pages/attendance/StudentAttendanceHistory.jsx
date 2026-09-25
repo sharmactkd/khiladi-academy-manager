@@ -77,7 +77,7 @@ const buildExportRows = (months = []) => months.map((month) => {
     "Due Date": formatAttendanceDate(month.importedDueDate, { fallback: "", monthDate: month.days?.[0]?.dateKey || "" }),
     "Paid Date": formatAttendanceDate(month.importedPaidDate, { fallback: "", monthDate: month.days?.[0]?.dateKey || "" }),
     "Fee Paid": month.importedFeePaid || "",
-    "Fee Status": month.importedFeeStatus || "",
+    "Fee Status": month.displayFeeStatus || month.importedFeeStatus || "",
   };
   DAYS.forEach((day) => {
     const dayInfo = month.days?.find((item) => Number(item.day) === day);

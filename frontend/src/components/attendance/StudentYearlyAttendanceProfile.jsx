@@ -223,7 +223,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary }) => {
             </tr></thead>
             <tbody>
               {group.months.map((month) => {
-                const feeStatus = month.importedFeeStatus || "Not added";
+                const feeStatus = month.displayFeeStatus || month.importedFeeStatus || "Not added";
                 const rowYear = Number(month.year || year);
                 const isFutureMonth = rowYear > currentYear ||
                   (rowYear === currentYear && Number(month.value) > currentMonth);
