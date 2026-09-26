@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, ChevronLeft, ChevronRight, Layers3, Pencil, Plus, ReceiptIndianRupee, RefreshCw, Trash2, WalletCards, X } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, ChevronLeft, ChevronRight, CircleDollarSign, Fuel, Gamepad2, GraduationCap, Grid2X2, House, Layers3, Pencil, Plus, ReceiptIndianRupee, RefreshCw, Trash2, UserRound, Utensils, WalletCards, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { expenseApi } from "../../api/expenseApi.js";
 import { localDateKey } from "../../utils/localCalendarDate.js";
@@ -16,6 +16,17 @@ const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 const errorMessage = (error, fallback) => error.response?.data?.message || fallback;
 const blankForm = () => ({ type: "expense", category: "", customCategory: "", amount: "", date: localDateKey(), account: "cash", description: "", branch: null });
 const formFromTransaction = (row) => ({ type: row.type, category: row.category, customCategory: "", amount: String(row.amount), date: String(row.date).slice(0, 10), account: row.account || "cash", description: row.description || "", branch: row.branch?._id || row.branch || null });
+const categoryIcon = (category) => {
+  const value = String(category || "").trim().toLowerCase();
+  if (value.includes("food")) return Utensils;
+  if (value.includes("petrol") || value.includes("fuel") || value.includes("travel")) return Fuel;
+  if (value.includes("rent")) return Building2;
+  if (value.includes("championship") || value.includes("game") || value.includes("pele")) return Gamepad2;
+  if (value.includes("school") || value.includes("tagore") || value.includes("education")) return GraduationCap;
+  if (value.includes("home") || value.includes("mammy") || value.includes("mummy")) return House;
+  if (value.includes("papa") || value.includes("bhaiya") || value.includes("salary")) return UserRound;
+  return CircleDollarSign;
+};
 
 export default function ExpenseManager() {
   const navigate = useNavigate();
@@ -196,7 +207,28 @@ export default function ExpenseManager() {
     <header className={styles.hero}><span className={styles.heroIcon}><WalletCards size={25}/></span><div><small>ACADEMY OPERATIONS</small><h1>Expense Manager</h1><p>Academy income, daily expenses and cash flow in one secure workspace.</p></div><button type="button" className={styles.refresh} onClick={() => load(1, filter, false)} title="Refresh"><RefreshCw size={17}/></button></header>
     <section className={styles.periodPicker}><header><div><small>REPORTING PERIOD</small><h2>{periodLabel}</h2></div><div className={styles.yearPicker}><button type="button" disabled={!canMoveToPreviousYear} onClick={() => moveYear(-1)} aria-label="Previous available year"><ChevronLeft size={16}/></button><strong>{selectedYear}</strong><button type="button" disabled={!canMoveToNextYear} onClick={() => moveYear(1)} aria-label="Next available year"><ChevronRight size={16}/></button></div></header><div className={styles.monthScroll}><div className={styles.monthTabs}>{MONTHS.map((month, index) => { const monthNumber = index + 1; const enabled = enabledMonthNumbers.has(monthNumber); return <button type="button" key={month} disabled={!enabled} className={selectedMonth === monthNumber ? styles.activeMonth : ""} onClick={() => enabled && setSelectedMonth(monthNumber)}>{month}</button>; })}</div></div></section>
     <section className={styles.metrics}><article><small>Total Income</small><strong className={styles.income}>{money(data.summary?.income)}</strong><span>{periodLabel} · {data.summary?.incomeTransactions || 0} transactions</span></article><article><small>Total Expenses</small><strong className={styles.expense}>{money(data.summary?.expense)}</strong><span>{periodLabel} · {data.summary?.expenseTransactions || 0} transactions</span></article><article><small>Net Balance</small><strong>{money(data.balance)}</strong><span>Selected month income minus expenses</span></article></section>
-    <section className={styles.categorySection}><header><span><Layers3 size={19}/></span><div><small>EXPENSE BREAKDOWN</small><h2>Category-wise spending</h2><p>{periodLabel} mein har category ka total kharcha.</p></div></header>{categoryBreakdown.length ? <div className={styles.categoryGrid}>{categoryBreakdown.map((row) => <article key={row.category}><div><strong>{row.category || "Uncategorised"}</strong><span>{row.transactions} transaction{row.transactions === 1 ? "" : "s"}</span></div><b>{money(row.amount)}</b><i><em style={{ width: `${Math.max((Number(row.amount || 0) / highestCategoryAmount) * 100, 3)}%` }}/></i></article>)}</div> : <div className={styles.categoryEmpty}>Is month mein expense transaction nahi hai.</div>}</section>
+    <section className={styles.categorySection}>
+      <header className={styles.categoryHeader}>
+        <span className={styles.categoryHeaderIcon}><Layers3 size={21}/></span>
+        <div className={styles.categoryHeading}><small>EXPENSE BREAKDOWN</small><h2>Category-wise spending</h2><p>{periodLabel} mein har category ka total kharcha.</p></div>
+        <div className={styles.categorySummary}>
+          <span><BarChart3 size={20}/></span><div><small>Total expense</small><strong>{money(data.summary?.expense)}</strong></div>
+          <i/>
+          <span><Grid2X2 size={19}/></span><div><strong>{categoryBreakdown.length}</strong><small>categories</small></div>
+        </div>
+      </header>
+      {categoryBreakdown.length ? <div className={styles.categoryGrid}>{categoryBreakdown.map((row, index) => {
+        const Icon = categoryIcon(row.category);
+        const percent = Number(data.summary?.expense || 0) > 0 ? (Number(row.amount || 0) / Number(data.summary.expense)) * 100 : 0;
+        return <article key={row.category}>
+          <span className={`${styles.categoryIcon} ${styles[`categoryTint${index % 5}`]}`}><Icon size={21}/></span>
+          <div className={styles.categoryCopy}><strong>{row.category || "Uncategorised"}</strong><span>{row.transactions} transaction{row.transactions === 1 ? "" : "s"}</span></div>
+          <b>{money(row.amount)}</b>
+          <i className={styles.categoryProgress}><em style={{ width: `${Math.max((Number(row.amount || 0) / highestCategoryAmount) * 100, 2)}%` }}/></i>
+          <span className={styles.categoryPercent}>{percent.toFixed(1)}%</span>
+        </article>;
+      })}</div> : <div className={styles.categoryEmpty}>Is month mein expense transaction nahi hai.</div>}
+    </section>
     <section className={styles.toolbar}><div><h2>Transaction ledger</h2><p>Manual records can be corrected or safely deleted without losing the audit trail.</p></div><div className={styles.toolbarActions}><select value={filter} onChange={(event) => changeFilter(event.target.value)}><option value="all">All transactions</option><option value="income">Income only</option><option value="expense">Expenses only</option></select><button type="button" className={styles.primary} onClick={() => { setForm(blankForm()); setEditingId(null); setShowForm(true); }}><Plus size={17}/> Add transaction</button></div></section>
     {showForm ? <AddTransactionForm form={form} setForm={setForm} customCategories={(customCategories[form.type] || []).map((row) => row.name)} onAddCustomCategory={addCustomCategory} onRemoveCustomCategory={removeCustomCategory} onSubmit={submit} mode={editingId ? "edit" : "create"} saving={saving} onClose={() => { setShowForm(false); setEditingId(null); setForm(blankForm()); }}/> : null}
     {selectedTransaction ? <aside className={`${styles.detail} ${styles.transactionDetail}`} role="dialog" aria-label="Transaction details"><button type="button" className={styles.detailClose} onClick={() => setSelectedTransaction(null)} aria-label="Close transaction details"><X size={17}/></button><small>{selectedTransaction.type.toUpperCase()}</small><h3>{selectedTransaction.category}</h3>{selectedTransaction.sourceType === "fee_payment" ? <div className={styles.detailStudent}><strong>{selectedTransaction.studentName || "Student name unavailable"}</strong><span><ReceiptIndianRupee size={13}/>{selectedTransaction.receiptNumber || "Fee receipt"}</span></div> : <p>{selectedTransaction.description || "No description"}</p>}<strong>{money(selectedTransaction.amount)}</strong>{String(selectedTransaction.sourceType || "manual") === "manual" && !selectedTransaction.sourceId ? <><button type="button" className={styles.editButton} onClick={beginEdit}><Pencil size={15}/>Edit record</button><label>Delete reason <span>(optional)</span><textarea maxLength="300" value={deletionReason} onChange={(event) => setDeletionReason(event.target.value)} placeholder="Example: Duplicate entry"/></label><button type="button" className={styles.reverseButton} disabled={deleting} onClick={deleteSelected}><Trash2 size={15}/>{deleting ? "Deleting…" : "Delete record"}</button><p className={styles.auditHint}>Delete karne par totals update honge, lekin audit history safe rahegi.</p></> : <p className={styles.linkedHint}>Ye fee payment se linked income hai. Isko Payment History se update ya reverse karein.</p>}</aside> : null}

@@ -185,39 +185,78 @@
   margin: 8px 0;
   font-size: 25px;
 }
-.categorySection { padding: 18px; }
-.categorySection > header {
+.categorySection { padding: 24px; }
+.categoryHeader {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 15px;
+  margin-bottom: 22px;
 }
-.categorySection > header > span {
+.categoryHeaderIcon {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 13px;
   background: #fff0f1;
   color: #cf0006;
 }
-.categorySection header p { margin: 4px 0 0; color: #718096; font-size: 11px; }
-.categoryGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.categoryHeading { min-width: 0; }
+.categoryHeading p { margin: 4px 0 0; color: #718096; font-size: 11px; }
+.categorySummary {
+  display: grid;
+  grid-template-columns: auto auto 1px auto auto;
+  align-items: center;
+  gap: 11px;
+  margin-left: auto;
+  padding: 13px 16px;
+  border-radius: 13px;
+  background: #f7f9fc;
+}
+.categorySummary > span {
+  display: grid;
+  place-items: center;
+  color: #718096;
+}
+.categorySummary > div { display: flex; align-items: baseline; gap: 6px; }
+.categorySummary > div:first-of-type { display: grid; gap: 2px; }
+.categorySummary small { color: #718096; font-size: 10px; }
+.categorySummary strong { color: #10213d; font-size: 16px; }
+.categorySummary > div:first-of-type strong { color: #cf0006; font-size: 19px; }
+.categorySummary > i { width: 1px; height: 34px; background: #dce4ed; }
+.categoryGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .categoryGrid article {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 11px;
-  padding: 13px;
-  border: 1px solid #e3e9f0;
-  border-radius: 11px;
-  background: #fbfcfe;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 11px;
+  padding: 16px;
+  border: 1px solid #dde5ee;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 5px 16px rgba(16, 33, 61, .035);
 }
-.categoryGrid article div { display: grid; gap: 3px; min-width: 0; }
-.categoryGrid article div strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.categoryGrid article div span { color: #7a899c; font-size: 10px; }
-.categoryGrid article b { color: #cf0006; font-size: 13px; }
-.categoryGrid article i { grid-column: 1/-1; height: 4px; overflow: hidden; border-radius: 99px; background: #edf1f5; }
-.categoryGrid article em { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ef4444, #cf0006); }
+.categoryIcon {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  grid-row: 1;
+  border-radius: 11px;
+}
+.categoryTint0 { color: #dc2626; background: #fff0f1; }
+.categoryTint1 { color: #1478e5; background: #edf6ff; }
+.categoryTint2 { color: #059669; background: #eafaf3; }
+.categoryTint3 { color: #ea580c; background: #fff3eb; }
+.categoryTint4 { color: #7c3aed; background: #f5f0ff; }
+.categoryCopy { display: grid; gap: 3px; min-width: 0; }
+.categoryCopy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #10213d; font-size: 13px; }
+.categoryCopy span { color: #7a899c; font-size: 10px; }
+.categoryGrid article > b { align-self: start; color: #cf0006; font-size: 14px; }
+.categoryProgress { grid-column: 1/3; height: 5px; overflow: hidden; border-radius: 99px; background: #edf1f5; }
+.categoryProgress em { display: block; height: 100%; border-radius: inherit; background: #e50914; }
+.categoryPercent { justify-self: end; color: #718096; font-size: 10px; font-weight: 750; }
 .categoryEmpty { padding: 25px; border: 1px dashed #d7e0ea; border-radius: 11px; text-align: center; color: #718096; font-size: 12px; }
 .income {
   color: #12804b;
@@ -685,8 +724,13 @@
 }
 @media (max-width: 900px) {
   .categoryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .categoryHeader { align-items: flex-start; flex-wrap: wrap; }
+  .categorySummary { width: 100%; margin-left: 0; }
 }
 @media (max-width: 620px) {
   .categoryGrid { grid-template-columns: 1fr; }
+  .categorySection { padding: 16px; }
+  .categorySummary { grid-template-columns: auto 1fr; }
+  .categorySummary > i { display: none; }
   .periodPicker { padding-inline: 12px; }
 }
