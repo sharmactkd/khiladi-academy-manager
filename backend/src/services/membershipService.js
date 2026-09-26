@@ -276,7 +276,8 @@ export const applyMembershipAdjustment = async ({
       membership.dueDateCleared = true;
       break;
     case "set_remaining_days":
-      membership.remainingTrainingDays = boundedInteger(payload.remainingTrainingDays, "Remaining days", 0, 3650);
+      days = boundedInteger(payload.remainingTrainingDays, "Remaining days", 0, 3650);
+      membership.remainingTrainingDays = days;
       break;
     case "change_unpaid_months":
       months = boundedInteger(payload.months, "Unpaid months", 0, 120);

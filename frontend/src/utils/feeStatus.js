@@ -10,26 +10,26 @@ export const normalizeFeeStatus = (value, fallback = "due") => {
 export const formatFeeDueBalance = (months = 0, days = 0) => {
   const safeMonths = Math.max(0, Math.trunc(Number(months) || 0));
   const safeDays = Math.max(0, Math.trunc(Number(days) || 0));
-  if (safeMonths === 1 && safeDays === 0) return "DUE";
   const parts = [safeMonths ? `${safeMonths}M` : "", safeDays ? `${safeDays}D` : ""].filter(Boolean);
   return parts.length ? `${parts.join(", ")} DUE` : "DUE";
 };
 
-export const compactAttendanceDueLabel = (value) => {
+export const compactAttendanceDueLabel = (value, studentStatus = "active") => {
   const label = text(value).toUpperCase();
-  return /^1M(?:,\s*0D)?\s+DUE$/.test(label) ? "DUE" : label;
+  const inactive = text(studentStatus).toLowerCase() === "inactive";
+  return !inactive && /^1M(?:,\s*0D)?\s+DUE$/.test(label) ? "DUE" : label;
 };
 
 export const getCanonicalFeeDisplay = (row = {}) => {
   const linked = row.rowType === "student" && Boolean(row.studentId);
   if (!linked) {
     const imported = text(row.importedFeeStatus || row.feeStatus || "-").toUpperCase();
-    return imported.replace(/OVERDUE/g, "DUE").replace(/PENDING/g, "DUE");
+    return compactAttendanceDueLabel(imported.replace(/OVERDUE/g, "DUE").replace(/PENDING/g, "DUE"), row.status);
   }
-  if (row.feeStatusSummary?.label) return compactAttendanceDueLabel(row.feeStatusSummary.label);
+  if (row.feeStatusSummary?.label) return compactAttendanceDueLabel(row.feeStatusSummary.label, row.status);
   const imported = text(row.importedFeeStatus);
   if (!row.membership?.lastAdjustedAt && imported && !["-", "—"].includes(imported)) {
-    return imported.toUpperCase().replace(/OVERDUE/g, "DUE").replace(/PENDING/g, "DUE");
+    return compactAttendanceDueLabel(imported.toUpperCase().replace(/OVERDUE/g, "DUE").replace(/PENDING/g, "DUE"), row.status);
   }
   const membership = row.membership || {};
   if (membership.feeStatusCleared) return "-";
@@ -38,6 +38,6 @@ export const getCanonicalFeeDisplay = (row = {}) => {
   if (Number(membership.remainingTrainingDays || 0) > 0) return "PAID";
   const months = Number(membership.unpaidMonths || 0);
   const days = Number(membership.unpaidDays || 0);
-  if (months > 0 || days > 0) return formatFeeDueBalance(months, days);
+  if (months > 0 || days > 0) return compactAttendanceDueLabel(formatFeeDueBalance(months, days), row.status);
   return status.toUpperCase();
 };

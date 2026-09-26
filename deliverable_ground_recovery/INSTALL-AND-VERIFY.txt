@@ -5,7 +5,7 @@ cd "D:\Website\Khiladi Project\khiladi-academy-manager"
 Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
 
 Expand-Archive `
-  -Path "$env:USERPROFILE\Downloads\khiladi-membership-control-tile-ui-v42.zip" `
+  -Path "$env:USERPROFILE\Downloads\khiladi-membership-balance-status-fixes-v43.zip" `
   -DestinationPath (Get-Location).Path `
   -Force
 
@@ -30,7 +30,7 @@ git diff --check
 git diff --stat
 
 git add -A
-git commit -m "Redesign membership control with accessible action tiles"
+git commit -m "Improve membership balance controls and inactive fee status"
 git push origin main
 
 git status
@@ -55,3 +55,5 @@ USAGE
 16. "Custom date range" uses Start month and End month. Search another student directly from the attendance-history page by name, phone or admission number.
 17. Attendance-history search displays students' first, middle and last names instead of the generic "Student" label.
 18. Membership Control uses accessible category tiles and contextual sub-actions instead of the long adjustment dropdown.
+19. Quick actions clear Fee Status or Due Date in one click. Remaining time accepts months and days and displays as M/D even while paused.
+20. Active students show DUE for one unpaid month; inactive students retain 1M DUE and all due balances use a stronger red treatment.

@@ -15,11 +15,13 @@ import {
   SlidersHorizontal,
   StickyNote,
   TimerReset,
+  Trash2,
   X,
 } from "lucide-react";
 
 import { membershipApi } from "../../api/membershipApi.js";
 import MembershipBadge from "./MembershipBadge.jsx";
+import { formatRemainingTrainingTime } from "./remainingDaysDisplay.js";
 import "../../pages/attendance/Attendance.css";
 
 const ACTIONS = [
@@ -49,7 +51,8 @@ const initialForm = {
   type: "set_due_date",
   days: 5,
   dueDate: "",
-  remainingTrainingDays: 0,
+  remainingMonths: 0,
+  remainingDays: 0,
   months: 0,
   unpaidDays: 0,
   resumeDate: new Date().toISOString().slice(0, 10),
@@ -116,7 +119,8 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
           ...initialForm,
           internalNote: data.membership?.internalNote || "",
           feeStatus: data.membership?.feeStatus || "due",
-          remainingTrainingDays: data.membership?.remainingTrainingDays || 0,
+          remainingMonths: Math.floor(Number(data.membership?.remainingTrainingDays || 0) / 30),
+          remainingDays: Number(data.membership?.remainingTrainingDays || 0) % 30,
         });
       })
       .catch((error) => toast.error(error?.response?.data?.message || "Membership load nahi hui"))
@@ -153,7 +157,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
     };
     if (["extend_days", "reduce_days"].includes(form.type)) payload.days = Number(form.days);
     if (form.type === "set_due_date") payload.dueDate = form.dueDate;
-    if (form.type === "set_remaining_days") payload.remainingTrainingDays = Number(form.remainingTrainingDays);
+    if (form.type === "set_remaining_days") payload.remainingTrainingDays = (Number(form.remainingMonths) * 30) + Number(form.remainingDays);
     if (form.type === "change_unpaid_months") {
       payload.months = Number(form.months);
       payload.days = Number(form.unpaidDays);
@@ -177,6 +181,26 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
       toast.success("Membership adjustment saved");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Adjustment save nahi hua");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const quickClear = async (type) => {
+    try {
+      setSaving(true);
+      const response = await membershipApi.createAdjustment(student.studentId, {
+        type,
+        reason: type === "clear_due_date" ? "Quick clear due date" : "Quick clear fee status",
+        expectedVersion: membership?.version,
+      });
+      const data = unwrap(response);
+      setMembership(data.membership);
+      setAdjustments((current) => [data.adjustment, ...current]);
+      onUpdated?.(student.studentId, data.membership, type);
+      toast.success(type === "clear_due_date" ? "Due date cleared" : "Fee status cleared");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Quick action complete nahi hua");
     } finally {
       setSaving(false);
     }
@@ -215,8 +239,13 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
             <section className="membership-overview">
               <div className="membership-overview__state"><span><Gauge /></span><div><small>Current State</small><MembershipBadge membership={membership} disabled /></div></div>
               <div><span><CalendarDays /></span><div><small>Effective Due Date</small><strong>{formatDate(membership?.effectiveDueDate)}</strong></div></div>
-              <div><span><CalendarClock /></span><div><small>Days Remaining</small><strong>{membership?.remainingTrainingDays || 0}<em> days</em></strong></div></div>
+              <div><span><CalendarClock /></span><div><small>Time Remaining</small><strong>{formatRemainingTrainingTime(membership?.remainingTrainingDays || 0)}<em> left</em></strong></div></div>
               <div><span><CircleDollarSign /></span><div><small>Unpaid Balance</small><strong>{[Number(membership?.unpaidMonths || 0) > 0 ? `${membership.unpaidMonths}M` : "", Number(membership?.unpaidDays || 0) > 0 ? `${membership.unpaidDays}D` : ""].filter(Boolean).join(" ") || "Clear"}</strong></div></div>
+            </section>
+            <section className="membership-quick-actions" aria-label="Quick membership actions">
+              <div><strong>Quick actions</strong><small>Clear a value immediately with one click.</small></div>
+              <button type="button" onClick={() => quickClear("clear_fee_status")} disabled={saving || membership?.feeStatusCleared}><Trash2 />Clear Fee Status</button>
+              <button type="button" onClick={() => quickClear("clear_due_date")} disabled={saving || membership?.dueDateCleared}><Trash2 />Clear Due Date</button>
             </section>
 
             <form className="membership-form" onSubmit={submit}>
@@ -238,7 +267,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
 
               {["extend_days", "reduce_days"].includes(form.type) && <label className="membership-field"><span>Number of Days</span><input type="number" min="1" max="3650" value={form.days} onChange={(event) => updateForm("days", event.target.value)} required /></label>}
               {form.type === "set_due_date" && <label className="membership-field"><span>Custom Due Date</span><DateInput value={form.dueDate} onChange={(event) => updateForm("dueDate", event.target.value)} required /></label>}
-              {form.type === "set_remaining_days" && <label className="membership-field"><span>Remaining Training Days</span><input type="number" min="0" max="3650" value={form.remainingTrainingDays} onChange={(event) => updateForm("remainingTrainingDays", event.target.value)} required /></label>}
+              {form.type === "set_remaining_days" && <><label className="membership-field"><span>Remaining Months</span><input type="number" min="0" max="120" value={form.remainingMonths} onChange={(event) => updateForm("remainingMonths", event.target.value)} required /><small>1 month is treated as 30 training days.</small></label><label className="membership-field"><span>Remaining Days</span><input type="number" min="0" max="29" value={form.remainingDays} onChange={(event) => updateForm("remainingDays", event.target.value)} required /><small>Total: {formatRemainingTrainingTime((Number(form.remainingMonths) * 30) + Number(form.remainingDays))}</small></label></>}
               {form.type === "change_unpaid_months" && <><label className="membership-field"><span>Unpaid Months</span><input type="number" min="0" max="120" value={form.months} onChange={(event) => updateForm("months", event.target.value)} required /><small>Exact unpaid month balance.</small></label><label className="membership-field"><span>Unpaid Days</span><input type="number" min="0" max="29" value={form.unpaidDays} onChange={(event) => updateForm("unpaidDays", event.target.value)} required /><small>For 10 days due, enter 0 months and 10 days.</small></label></>}
               {form.type === "resume" && <label className="membership-field"><span>Resume Date</span><DateInput value={form.resumeDate} onChange={(event) => updateForm("resumeDate", event.target.value)} /></label>}
               {form.type === "set_fee_status" && <label className="membership-field"><span>Fee Status</span><select value={form.feeStatus === "overdue" ? "due" : form.feeStatus} onChange={(event) => updateForm("feeStatus", event.target.value)}><option value="paid">Paid</option><option value="due">Due</option><option value="partial">Partial</option><option value="waived">Waived</option><option value="complimentary">Complimentary</option></select></label>}

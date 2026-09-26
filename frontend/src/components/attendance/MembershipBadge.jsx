@@ -1,4 +1,4 @@
-import { remainingDaysDisplay } from "./remainingDaysDisplay.js";
+import { formatRemainingTrainingTime, remainingDaysDisplay } from "./remainingDaysDisplay.js";
 import { formatFeeDueBalance, normalizeFeeStatus } from "../../utils/feeStatus.js";
 import { formatAttendanceDate } from "../../utils/attendanceDate.js";
 
@@ -15,19 +15,13 @@ export const getMembershipDisplay = (membership, fallbackDueDate) => {
   const unpaidMonths = Number(membership.unpaidMonths || 0);
   const unpaidDays = Number(membership.unpaidDays || 0);
 
-  if (membership.status === "paused") {
-    return {
-      label: remainingDays > 0 ? `Paused · ${remainingDays} Days Left` : "Paused",
-      tone: "amber",
-    };
-  }
   if (membership.status === "complimentary" || membership.feeStatus === "complimentary") {
     return { label: "Complimentary", tone: "purple" };
   }
   if (membership.feeStatus === "waived") return { label: "Fee Waived", tone: "purple" };
   if (remainingDays > 0) {
     return {
-      label: `${remainingDays} Days Left`,
+      label: `${formatRemainingTrainingTime(remainingDays)} Left`,
       tone: "blue",
     };
   }
@@ -38,6 +32,7 @@ export const getMembershipDisplay = (membership, fallbackDueDate) => {
       tone: "red",
     };
   }
+  if (membership.status === "paused") return { label: "Paused", tone: "amber" };
   const status = normalizeFeeStatus(membership.feeStatus, "paid");
   if (status === "due") return { label: "Due", tone: "red" };
   if (status === "partial") return { label: "Partial", tone: "amber" };

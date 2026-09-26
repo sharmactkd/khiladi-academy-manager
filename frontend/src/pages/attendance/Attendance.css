@@ -948,6 +948,16 @@
   color: #c30e18;
   background: #fff2f3;
 }
+.attendance-page .monthly-register__row--inactive .fee-status--due {
+  color: #b30d16 !important;
+  background: #ffe9eb !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+.attendance-page .monthly-register__row--inactive .fee-status--due > * {
+  color: inherit !important;
+  opacity: 1 !important;
+}
 .attendance-page .monthly-register__summary {
   min-width: 54px;
   font-size: 12px;
@@ -1467,6 +1477,38 @@
   display: grid;
   gap: 5px;
 }
+.membership-quick-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  border: 1px solid #dce4ed;
+  border-radius: 12px;
+  background: #fff;
+}
+.membership-quick-actions > div { display: grid; gap: 2px; }
+.membership-quick-actions > div strong { color: #1b2d48; font-size: 11px; font-weight: 950; }
+.membership-quick-actions > div small { color: #758297; font-size: 9px; }
+.membership-quick-actions > button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid #efb1b5;
+  border-radius: 8px;
+  color: #ae1119;
+  background: #fff6f6;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.membership-quick-actions > button:hover:not(:disabled) { border-color: #df5c64; background: #ffebed; }
+.membership-quick-actions > button:disabled { color: #98a3b1; border-color: #dfe5ec; background: #f6f8fa; cursor: not-allowed; }
+.membership-quick-actions svg { width: 13px; }
 .membership-overview strong em {
   color: #7b8798;
   font-size: 10px;
@@ -1817,6 +1859,12 @@
 @media (max-width: 640px) {
   .membership-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .membership-quick-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+  .membership-quick-actions > div {
+    grid-column: 1/-1;
   }
   .membership-form {
     grid-template-columns: 1fr;
