@@ -4,6 +4,7 @@
   "description": "KHILADI Academy Manager backend",
   "main": "server.js",
   "scripts": {
+    "test": "npm run test:security && npm run test:expenses && node --test tests/feeMembershipLifecycle.test.js tests/membershipMonthlyDue.test.js tests/membershipDate.test.js tests/monthlyAttendanceIdentity.test.js",
     "start": "node server.js",
     "dev": "nodemon server.js",
     "security:migrate-sensitive-data": "node scripts/migrateSensitiveStudentData.js",

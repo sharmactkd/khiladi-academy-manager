@@ -44,3 +44,17 @@ export const buildBranchAccessFilter = (user) => {
     },
   };
 };
+
+export const canAccessBranch = (user, branchId) => {
+  if (!user || user.role !== "assistant_coach") return true;
+  if (!branchId) return false;
+  return getAssistantCoachBranchIds(user).includes(String(branchId));
+};
+
+export const assertBranchAccess = (user, branchId) => {
+  if (!canAccessBranch(user, branchId)) {
+    const error = new Error("You are not authorized to manage the selected branch");
+    error.statusCode = 403;
+    throw error;
+  }
+};

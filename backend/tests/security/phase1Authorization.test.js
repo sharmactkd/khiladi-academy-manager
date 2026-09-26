@@ -65,11 +65,24 @@ test("destructive and import routes require academy-owner authorization", () => 
   assert.match(studentRoutes, /"\/import",\s*requireAcademyOwner/);
   assert.match(studentRoutes, /"\/bulk\/status",\s*requireAcademyOwner/);
   assert.match(studentRoutes, /"\/bulk\/all",\s*requireAcademyOwner/);
-  assert.match(studentRoutes, /\.delete\(requireAcademyOwner/);
+  assert.match(studentRoutes, /\.delete\(\s*requireAcademyOwner,\s*requireStepUp\("students:delete-one"\)/);
+  const batchRoutes = fs.readFileSync(new URL("../../src/routes/batchRoutes.js", import.meta.url), "utf8");
+  assert.match(batchRoutes, /"\/:id\/hard-delete",\s*requireAcademyOwner,\s*requireStepUp\("batches:hard-delete"\)/);
   assert.match(attendanceRoutes, /"\/import\/preview",\s*requireAcademyOwner/);
   assert.match(attendanceRoutes, /"\/imported-fees\/preview", requireAcademyOwner/);
   assert.match(attendanceRoutes, /"\/imported-fees\/apply",\s*requireAcademyOwner/);
   assert.match(attendanceRoutes, /"\/import",\s*requireAcademyOwner/);
+});
+
+test("assistant branch writes reject unassigned branches", async () => {
+  const { canAccessBranch, assertBranchAccess } = await import("../../src/services/branchAccessService.js");
+  const assigned = "507f1f77bcf86cd799439011";
+  const unassigned = "507f191e810c19729de860ea";
+  const assistant = { role: "assistant_coach", assignedBranches: [assigned] };
+  assert.equal(canAccessBranch(assistant, assigned), true);
+  assert.equal(canAccessBranch(assistant, unassigned), false);
+  assert.throws(() => assertBranchAccess(assistant, unassigned), /not authorized/);
+  assert.equal(canAccessBranch({ role: "academy_owner" }, unassigned), true);
 });
 
 test("assistant attendance routes enforce assigned-branch scope", () => {

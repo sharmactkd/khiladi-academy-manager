@@ -3,11 +3,12 @@ import mongoose from "mongoose";
 import Batch from "../models/Batch.js";
 import Branch from "../models/Branch.js";
 import Student from "../models/Student.js";
+import Attendance from "../models/Attendance.js";
 
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 
-import { buildBranchAccessFilter } from "../services/branchAccessService.js";
+import { assertBranchAccess, buildBranchAccessFilter } from "../services/branchAccessService.js";
 
 const validateBranch = async (academyId, branchId) => {
   if (!branchId) return null;
@@ -184,7 +185,12 @@ genderGroup: ["male", "female", "both"].includes(body.genderGroup)
 export const createBatch = asyncHandler(async (req, res) => {
   const payload = normalizeBatchPayload(req.body);
 
+  if (req.user?.role === "assistant_coach" && !payload.branch) {
+    return errorResponse(res, "Assistant coaches must select an assigned branch", 403);
+  }
+
   if (payload.branch) {
+    assertBranchAccess(req.user, payload.branch);
     await validateBranch(req.academyId, payload.branch);
   }
 
@@ -266,7 +272,12 @@ export const updateBatch = asyncHandler(async (req, res) => {
 
   const payload = normalizeBatchPayload(req.body);
 
+  if (req.user?.role === "assistant_coach" && !payload.branch) {
+    return errorResponse(res, "Assistant coaches cannot remove the batch branch", 403);
+  }
+
   if (payload.branch) {
+    assertBranchAccess(req.user, payload.branch);
     await validateBranch(req.academyId, payload.branch);
   }
 
@@ -306,6 +317,19 @@ export const hardDeleteBatch = asyncHandler(async (req, res) => {
 
   if (!batch) {
     return errorResponse(res, "Batch not found", 404);
+  }
+
+  const [students, attendanceDays] = await Promise.all([
+    Student.countDocuments({ academy: req.academyId, batch: batch._id }),
+    Attendance.countDocuments({ academy: req.academyId, batch: batch._id }),
+  ]);
+  if (students > 0 || attendanceDays > 0) {
+    return errorResponse(
+      res,
+      "This batch contains students or attendance history and cannot be permanently deleted. Mark it inactive instead.",
+      409,
+      { code: "BATCH_HISTORY_EXISTS", linkedRecords: { students, attendanceDays } }
+    );
   }
 
   await batch.deleteOne();

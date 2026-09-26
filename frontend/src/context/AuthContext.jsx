@@ -53,6 +53,19 @@ export const AuthProvider = ({ children }) => {
     boot();
   }, [refreshAuth]);
 
+  useEffect(() => {
+    const handleAuthenticationExpired = () => {
+      clearAccessToken();
+      clearRequestCache();
+      setUser(null);
+      removeStoredItem(USER_KEY);
+      sessionStorage.removeItem("khiladi:last-report");
+    };
+
+    window.addEventListener("khiladi:auth-expired", handleAuthenticationExpired);
+    return () => window.removeEventListener("khiladi:auth-expired", handleAuthenticationExpired);
+  }, []);
+
   const register = async (payload) => {
     const response = await authApi.register(payload);
     const data = response.data?.data;
@@ -107,6 +120,7 @@ export const AuthProvider = ({ children }) => {
     clearRequestCache();
     setUser(null);
     removeStoredItem(USER_KEY);
+    sessionStorage.removeItem("khiladi:last-report");
   };
 
   const value = useMemo(

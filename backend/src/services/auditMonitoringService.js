@@ -11,6 +11,24 @@ export const recordAuditWriteFailure = (error) => {
   logger.error(`SECURITY_ALERT audit persistence failed: ${state.lastFailure}`);
 };
 
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+export const persistAuditLog = async (payload, { attempts = 3 } = {}) => {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const result = await AuditLog.create(payload);
+      recordAuditWriteSuccess();
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) await wait(50 * (2 ** (attempt - 1)));
+    }
+  }
+  recordAuditWriteFailure(lastError);
+  throw lastError;
+};
+
 export const verifyRecentAuditIntegrity = async ({ limit = 1000 } = {}) => {
   const logs = await AuditLog.find().select("+integrityHash").sort({ createdAt: -1 }).limit(limit).lean();
   const invalid = logs.filter((log) => !verifyAuditIntegrityHash(log));

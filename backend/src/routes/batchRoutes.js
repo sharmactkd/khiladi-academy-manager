@@ -10,13 +10,17 @@ import {
 } from "../controllers/batchController.js";
 
 import { protect } from "../middlewares/authMiddleware.js";
-import { allowAcademyManagement } from "../middlewares/roleMiddleware.js";
+import {
+  allowAcademyManagement,
+  requireAcademyOwner,
+} from "../middlewares/roleMiddleware.js";
 import {
   resolveUserAcademy,
   requireResolvedAcademy,
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
 import { enforceLimit } from "../middlewares/planLimitMiddleware.js";
+import { requireStepUp } from "../middlewares/stepUpMiddleware.js";
 
 import {
   batchIdValidator,
@@ -44,6 +48,8 @@ router
 
 router.delete(
   "/:id/hard-delete",
+  requireAcademyOwner,
+  requireStepUp("batches:hard-delete"),
   batchIdValidator,
   validateRequest,
   hardDeleteBatch
@@ -53,6 +59,6 @@ router
   .route("/:id")
   .get(batchIdValidator, validateRequest, getBatchById)
   .patch(updateBatchValidator, validateRequest, updateBatch)
-  .delete(batchIdValidator, validateRequest, deleteBatch);
+  .delete(requireAcademyOwner, batchIdValidator, validateRequest, deleteBatch);
 
 export default router;

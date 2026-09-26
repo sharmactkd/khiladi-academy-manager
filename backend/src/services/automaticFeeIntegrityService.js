@@ -12,6 +12,20 @@ export const synchronizeFeeIntegrity = async ({ academyId = null } = {}) => {
   const scopeKey = academyId ? String(academyId) : "all";
   if (running.has(scopeKey)) return running.get(scopeKey);
   const operation = (async () => {
+    if (!academyId) {
+      const academyGroups = await Promise.all([
+        FeePayment.distinct("academy"),
+        StudentMembership.distinct("academy"),
+        ExpenseTransaction.distinct("academy", { sourceType: "fee_payment" }),
+      ]);
+      const academyIds = [...new Set(academyGroups.flat().filter(Boolean).map(String))];
+      const total = { paymentRecords: 0, membershipStatuses: 0, incomeRecords: 0, skipped: 0 };
+      for (const scopedAcademyId of academyIds) {
+        const result = await synchronizeFeeIntegrity({ academyId: scopedAcademyId });
+        Object.keys(total).forEach((key) => { total[key] += Number(result[key] || 0); });
+      }
+      return total;
+    }
     const filter = academyId ? { academy: academyId } : {};
     const [payments, memberships, incomes] = await Promise.all([
       FeePayment.find(filter).lean(),

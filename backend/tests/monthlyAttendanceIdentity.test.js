@@ -1,8 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { applyCurrentMembershipFeeStatus, buildRowFromRecord, hasMarkedAttendanceCounts, mergeMonthlyRecordIdentity } from "../src/services/monthlyAttendanceService.js";
-import { backfillImportedAttendanceMetadata, getImportedAttendancePeriod, isProtectedReconciliationPeriod } from "../src/controllers/attendanceController.js";
+process.env.MONGO_URI ||= "mongodb://127.0.0.1:27017/khiladi_unit_test";
+process.env.JWT_ACCESS_SECRET ||= "unit-test-access-secret-at-least-32-characters";
+process.env.JWT_REFRESH_SECRET ||= "unit-test-refresh-secret-at-least-32-characters";
+process.env.DATA_ENCRYPTION_KEY ||= "unit-test-data-key-at-least-32-characters";
+process.env.INTEGRATION_ENCRYPTION_KEY ||= "unit-test-integration-key-at-least-32-chars";
+process.env.AUDIT_LOG_SIGNING_KEY ||= "unit-test-audit-key-at-least-32-characters";
+process.env.PRIVATE_MEDIA_SIGNING_KEY ||= "unit-test-private-media-key-at-least-32-chars";
+
+const { applyCurrentMembershipFeeStatus, buildRowFromRecord, hasMarkedAttendanceCounts, mergeMonthlyRecordIdentity } = await import("../src/services/monthlyAttendanceService.js");
+const { backfillImportedAttendanceMetadata, getImportedAttendancePeriod, isProtectedReconciliationPeriod } = await import("../src/controllers/attendanceController.js");
 
 test("student dates do not fabricate missing fee data", () => {
   const row = buildRowFromRecord({

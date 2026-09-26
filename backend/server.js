@@ -13,13 +13,15 @@ const startServer = async () => {
     await connectDB();
     await verifyRecentAuditIntegrity({ limit: 250 });
     startAuditIntegrityMonitor();
-    if (env.FEE_INTEGRITY_SYNC_ENABLED) {
-      await synchronizeFeeIntegrity().catch(error => logger.error(`Startup fee integrity sync failed: ${error.message}`));
-      startAutomaticFeeIntegrityMonitor();
-    }
 
     server.listen(env.PORT, () => {
       logger.info(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
+      if (env.FEE_INTEGRITY_SYNC_ENABLED) {
+        startAutomaticFeeIntegrityMonitor();
+        setImmediate(() => {
+          void synchronizeFeeIntegrity().catch(error => logger.error(`Startup fee integrity sync failed: ${error.message}`));
+        });
+      }
     });
   } catch (error) {
     logger.error(`Server startup failed: ${error.message}`);

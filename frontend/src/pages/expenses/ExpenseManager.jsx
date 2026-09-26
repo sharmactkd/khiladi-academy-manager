@@ -79,7 +79,15 @@ export default function ExpenseManager() {
       if (nextFilter !== "all") params.type = nextFilter;
       const response = await expenseApi.list(params);
       const payload = response.data?.data || emptyData;
-      setData((current) => append ? { ...payload, transactions: [...(current.transactions || []), ...(payload.transactions || [])] } : payload);
+      setData((current) => append ? {
+        ...current,
+        ...payload,
+        summary: payload.summary || current.summary,
+        categoryBreakdown: payload.categoryBreakdown || current.categoryBreakdown,
+        availablePeriods: payload.availablePeriods || current.availablePeriods,
+        balance: payload.balance ?? current.balance,
+        transactions: [...(current.transactions || []), ...(payload.transactions || [])],
+      } : payload);
       setPage(nextPage);
       if (!append) {
         setSelectedTransaction(null);

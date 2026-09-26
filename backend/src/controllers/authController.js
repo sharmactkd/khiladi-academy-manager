@@ -705,6 +705,8 @@ export const createStepUp = asyncHandler(async (req, res) => {
   const operation = String(req.body?.operation || "").trim();
   const allowedOperations = new Set([
     "students:delete-all",
+    "students:delete-one",
+    "batches:hard-delete",
     "students:import",
     "attendance:import",
     "fees:repair",

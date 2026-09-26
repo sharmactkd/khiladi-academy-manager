@@ -69,16 +69,21 @@ export const listExpenses = asyncHandler(async (req, res) => {
   const { page, limit } = parseExpensePagination(req.query);
   const filter = buildExpenseListFilter(req.academyId, req.query);
   const periodDate = filter.date;
+  const includeOverview = page === 1 || req.query.includeOverview === "true";
   const [rawTransactions, total, summary, categoryBreakdown, availablePeriods] = await Promise.all([
     ExpenseTransaction.find(filter).sort({ date: -1, createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate("branch", "branchName").lean(),
     ExpenseTransaction.countDocuments(filter),
-    summaryForPeriod(req.academyId, periodDate),
-    categoryTotalsForPeriod(req.academyId, periodDate),
-    availableExpensePeriods(req.academyId),
+    includeOverview ? summaryForPeriod(req.academyId, periodDate) : null,
+    includeOverview ? categoryTotalsForPeriod(req.academyId, periodDate) : null,
+    includeOverview ? availableExpensePeriods(req.academyId) : null,
   ]);
   const transactions = await attachFeePaymentDetails(req.academyId, rawTransactions);
   const pages = Math.max(1, Math.ceil(total / limit));
-  return successResponse(res, "Expense transactions fetched successfully", { transactions, summary, categoryBreakdown, availablePeriods, balance: summary.income - summary.expense, pagination: { page, limit, total, pages, hasNextPage: page < pages } });
+  return successResponse(res, "Expense transactions fetched successfully", {
+    transactions,
+    ...(includeOverview ? { summary, categoryBreakdown, availablePeriods, balance: summary.income - summary.expense } : {}),
+    pagination: { page, limit, total, pages, hasNextPage: page < pages },
+  });
 });
 
 export const createExpense = asyncHandler(async (req, res) => {

@@ -18,6 +18,12 @@ export const clearAccessToken = () => {
   accessToken = null;
 };
 
+const notifyAuthenticationExpired = () => {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("khiladi:auth-expired"));
+  }
+};
+
 const processQueue = (error, token = null) => {
   failedQueue.forEach((promise) => {
     if (error) {
@@ -101,6 +107,7 @@ api.interceptors.response.use(
     } catch (refreshError) {
       clearAccessToken();
       processQueue(refreshError, null);
+      notifyAuthenticationExpired();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

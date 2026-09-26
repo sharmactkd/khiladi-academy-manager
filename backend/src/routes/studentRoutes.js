@@ -106,6 +106,12 @@ router
     validateRequest,
     updateStudent
   )
-  .delete(requireAcademyOwner, studentIdValidator, validateRequest, deleteStudent);
+  .delete(
+    requireAcademyOwner,
+    requireStepUp("students:delete-one"),
+    studentIdValidator,
+    validateRequest,
+    deleteStudent
+  );
 
 export default router;

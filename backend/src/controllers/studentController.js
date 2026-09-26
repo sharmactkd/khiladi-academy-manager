@@ -2,13 +2,22 @@ import mongoose from "mongoose";
 import { fillImportedStudentFields, replaceReviewedStudentFields, overwriteImportedStudentFields } from "../utils/fillImportedStudentFields.js";
 
 import Student from "../models/Student.js";
+import Attendance from "../models/Attendance.js";
+import FeePayment from "../models/FeePayment.js";
+import StudentMembership from "../models/StudentMembership.js";
+import MembershipAdjustment from "../models/MembershipAdjustment.js";
+import StudentGuardian from "../models/StudentGuardian.js";
+import ChampionshipRecord from "../models/ChampionshipRecord.js";
+import BeltTest from "../models/BeltTest.js";
+import GeneratedCertificate from "../models/GeneratedCertificate.js";
+import GeneratedIdCard from "../models/GeneratedIdCard.js";
 import Branch from "../models/Branch.js";
 import Batch from "../models/Batch.js";
 
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 
-import { buildBranchAccessFilter } from "../services/branchAccessService.js";
+import { assertBranchAccess, buildBranchAccessFilter } from "../services/branchAccessService.js";
 import { buildSafeSearchRegex } from "../utils/search.js";
 import { hashSensitiveValue } from "../utils/fieldEncryption.js";
 import { getPlanLimit, isLimitUnlimited } from "../services/planService.js";
@@ -358,6 +367,28 @@ const normalizeStudentPayload = (body = {}) => {
   return payload;
 };
 
+const countLinkedStudentRecords = async (academyId, studentIds) => {
+  const filter = { academy: academyId, student: { $in: studentIds } };
+  const counts = await Promise.all([
+    Attendance.countDocuments({ academy: academyId, "records.student": { $in: studentIds } }),
+    FeePayment.countDocuments(filter),
+    StudentMembership.countDocuments(filter),
+    MembershipAdjustment.countDocuments(filter),
+    StudentGuardian.countDocuments(filter),
+    ChampionshipRecord.countDocuments(filter),
+    BeltTest.countDocuments(filter),
+    GeneratedCertificate.countDocuments(filter),
+    GeneratedIdCard.countDocuments(filter),
+  ]);
+  const keys = [
+    "attendance", "feePayments", "memberships", "membershipAdjustments",
+    "guardianLinks", "championshipRecords", "beltTests", "certificates", "idCards",
+  ];
+  const result = Object.fromEntries(keys.map((key, index) => [key, counts[index]]));
+  result.total = counts.reduce((sum, value) => sum + value, 0);
+  return result;
+};
+
 const splitName = (row = {}) => {
   const firstName = cleanString(row.firstName, 100);
   const lastName = cleanString(row.lastName, 100);
@@ -564,7 +595,14 @@ export const createStudent = asyncHandler(async (req, res) => {
   const academyId = req.academyId;
   const payload = normalizeStudentPayload(req.body);
 
-  if (payload.branch) await validateBranch(academyId, payload.branch);
+  if (req.user?.role === "assistant_coach" && !payload.branch) {
+    return errorResponse(res, "Assistant coaches must select an assigned branch", 403);
+  }
+
+  if (payload.branch) {
+    assertBranchAccess(req.user, payload.branch);
+    await validateBranch(academyId, payload.branch);
+  }
 
   if (!payload.admissionNumber) {
     payload.admissionNumber = await buildAdmissionNumber({
@@ -910,7 +948,14 @@ export const updateStudent = asyncHandler(async (req, res) => {
 
   const payload = normalizeStudentPayload(req.body);
 
-  if (payload.branch) await validateBranch(req.academyId, payload.branch);
+  if (req.user?.role === "assistant_coach" && !payload.branch) {
+    return errorResponse(res, "Assistant coaches cannot remove the student's branch", 403);
+  }
+
+  if (payload.branch) {
+    assertBranchAccess(req.user, payload.branch);
+    await validateBranch(req.academyId, payload.branch);
+  }
 
   // Admission number is system-generated when omitted during creation. An
   // empty edit field must never erase that stable identity.
@@ -1000,6 +1045,25 @@ export const updateAllStudentsStatus = asyncHandler(async (req, res) => {
 });
 
 export const deleteAllStudents = asyncHandler(async (req, res) => {
+  const studentIds = await Student.find({
+    academy: req.academyId,
+    ...buildBranchAccessFilter(req.user),
+  }).distinct("_id");
+
+  if (!studentIds.length) {
+    return successResponse(res, "No student records to delete", { deleted: 0 });
+  }
+
+  const linkedRecords = await countLinkedStudentRecords(req.academyId, studentIds);
+  if (linkedRecords.total > 0) {
+    return errorResponse(
+      res,
+      "Students with attendance, fee or academy history cannot be permanently deleted. Mark them inactive to preserve records.",
+      409,
+      { code: "STUDENT_HISTORY_EXISTS", linkedRecords }
+    );
+  }
+
   const result = await Student.deleteMany({
     academy: req.academyId,
     ...buildBranchAccessFilter(req.user),
@@ -1019,6 +1083,16 @@ export const deleteStudent = asyncHandler(async (req, res) => {
 
   if (!student) {
     return errorResponse(res, "Student not found", 404);
+  }
+
+  const linkedRecords = await countLinkedStudentRecords(req.academyId, [student._id]);
+  if (linkedRecords.total > 0) {
+    return errorResponse(
+      res,
+      "This student has attendance, fee or academy history and cannot be permanently deleted. Mark the student inactive instead.",
+      409,
+      { code: "STUDENT_HISTORY_EXISTS", linkedRecords }
+    );
   }
 
   await student.deleteOne();
