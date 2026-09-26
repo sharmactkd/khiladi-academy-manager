@@ -950,7 +950,7 @@
 }
 .attendance-page .monthly-register__row--inactive .fee-status--due {
   color: #b30d16 !important;
-  background: #ffe9eb !important;
+  background: #f8fafc !important;
   filter: none !important;
   opacity: 1 !important;
 }
