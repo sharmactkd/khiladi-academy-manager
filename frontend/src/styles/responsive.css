@@ -166,6 +166,14 @@
     width: 100%;
     max-width: calc(100vw - 32px);
     overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
   }
 
   .modal,

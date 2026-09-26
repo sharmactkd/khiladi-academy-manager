@@ -1903,6 +1903,70 @@
   }
 }
 
+/* Mobile register: keep identity visible without covering the attendance days. */
+.attendance-mobile-scroll-hint {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .attendance-mobile-scroll-hint {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 7px 12px;
+    border-top: 1px solid #e4e9f0;
+    border-bottom: 1px solid #e4e9f0;
+    color: #607087;
+    background: #f8fafc;
+    font-size: 11px;
+    font-weight: 750;
+  }
+
+  .attendance-page .monthly-register-table-wrap {
+    max-height: 66dvh;
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  .attendance-page .sticky-contact,
+  .attendance-page .sticky-due-date,
+  .attendance-page .sticky-paid-date,
+  .attendance-page .sticky-fee-status {
+    position: static !important;
+    left: auto !important;
+    z-index: auto !important;
+    box-shadow: none !important;
+  }
+
+  .attendance-page .sticky-name {
+    box-shadow: 7px 0 12px rgba(15, 23, 42, 0.09);
+  }
+
+  .attendance-page .monthly-register-table th,
+  .attendance-page .monthly-register-table td {
+    height: 46px;
+    padding: 6px;
+  }
+
+  .attendance-page .attendance-cell,
+  .attendance-page .attendance-status-button {
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 480px) {
+  .attendance-page .monthly-register-table-wrap {
+    max-height: 62dvh;
+  }
+
+  .attendance-page .attendance-register-head,
+  .attendance-page .attendance-save-bar {
+    padding-inline: 10px;
+  }
+}
+
 @media print {
   .attendance-page > .academy-hero-header,
   .attendance-breadcrumb,
@@ -1924,5 +1988,8 @@
   .attendance-page .monthly-register-table-wrap {
     max-height: none !important;
     overflow: visible !important;
+  }
+  .attendance-mobile-scroll-hint {
+    display: none !important;
   }
 }

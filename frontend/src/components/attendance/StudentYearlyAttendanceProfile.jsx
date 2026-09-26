@@ -198,6 +198,7 @@ const StudentYearlyAttendanceProfile = ({ data, summary, exportMode = false }) =
           </div>
         </header>
 
+        <div className={styles.mobileScrollHint} role="note">Swipe sideways to view the complete monthly record</div>
         <div className={styles.tableWrap}>
           <div className={styles.yearStack}>
           {yearGroups.map((group) => <section key={group.year} className={styles.yearGroup} data-attendance-year={group.year}>

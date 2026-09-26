@@ -511,6 +511,9 @@ const AttendanceTable = ({
           </button>
         </div>
       )}
+      <div className="attendance-mobile-scroll-hint" role="note">
+        Swipe sideways to view dates, fee details and attendance totals
+      </div>
       <div ref={tableScrollRef} className="monthly-register-table-wrap">
         <table
           className="monthly-register-table"
