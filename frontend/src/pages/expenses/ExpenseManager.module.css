@@ -106,50 +106,67 @@
   cursor: not-allowed;
 }
 .yearPicker strong { min-width: 58px; text-align: center; }
+.monthScroll {
+  overflow-x: auto;
+  padding-top: 10px;
+  padding-bottom: 6px;
+}
 .monthTabs {
   display: grid;
-  grid-template-columns: repeat(12, minmax(52px, 1fr));
-  overflow-x: auto;
-  border-top: 1px solid #e1e7ef;
-  border-left: 1px solid #e1e7ef;
+  grid-template-columns: repeat(12, minmax(60px, 1fr));
+  min-width: 100%;
 }
 .monthTabs button {
   position: relative;
-  min-height: 39px;
-  padding: 0;
+  min-height: 54px;
+  padding: 4px 8px 16px;
   border: 0;
-  border-right: 1px solid #e1e7ef;
-  background: #fbfcfe;
-  color: #435169;
+  border-bottom: 1px solid #bfc4cb;
+  border-radius: 0;
+  background: transparent;
+  color: #484848;
+  box-shadow: none;
   font: inherit;
-  font-size: 12px;
-  font-weight: 850;
+  font-size: 13px;
+  font-weight: 650;
   cursor: pointer;
 }
-.monthTabs button:hover:not(:disabled) { color: #cf0006; background: #fff6f6; }
+.monthTabs button::after {
+  content: "";
+  position: absolute;
+  width: 1px;
+  height: 7px;
+  bottom: -4px;
+  left: 50%;
+  background: #bfc4cb;
+}
+.monthTabs button:hover:not(:disabled) { color: #cf0006; }
 .monthTabs button:disabled {
-  color: #aeb8c5;
-  background: #f3f5f8;
+  color: #b2b7bf;
+  background: transparent;
   cursor: not-allowed;
-  opacity: .68;
+  opacity: .5;
 }
 .monthTabs .activeMonth {
-  z-index: 1;
-  color: #fff;
-  background: #cf0006;
-  box-shadow: 0 0 0 1px #cf0006;
+  color: #cf0006;
+  background: transparent;
 }
-.monthTabs button i {
+.monthTabs .activeMonth::before {
+  content: "";
   position: absolute;
-  bottom: 4px;
-  left: 50%;
-  width: 4px;
-  height: 4px;
+  height: 2px;
+  width: 50%;
+  left: 25%;
+  bottom: -1px;
+  background: #cf0006;
+}
+.monthTabs .activeMonth::after {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #f4a1a6;
+  background: #cf0006;
   transform: translateX(-50%);
 }
-.monthTabs .activeMonth i { background: #fff; }
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -668,12 +685,8 @@
 }
 @media (max-width: 900px) {
   .categoryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .monthTabs { grid-template-columns: repeat(6, 1fr); }
-  .monthTabs button:nth-child(-n + 6) { border-bottom: 1px solid #e1e7ef; }
 }
 @media (max-width: 620px) {
   .categoryGrid { grid-template-columns: 1fr; }
   .periodPicker { padding-inline: 12px; }
-  .monthTabs { grid-template-columns: repeat(4, 1fr); }
-  .monthTabs button { border-bottom: 1px solid #e1e7ef; }
 }
