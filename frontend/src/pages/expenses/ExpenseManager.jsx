@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Pencil, Plus, RefreshCw, Trash2, WalletCards, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { CalendarDays, ChevronLeft, ChevronRight, Layers3, Pencil, Plus, ReceiptIndianRupee, RefreshCw, Trash2, WalletCards, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { expenseApi } from "../../api/expenseApi.js";
 import { localDateKey } from "../../utils/localCalendarDate.js";
@@ -8,17 +9,23 @@ import styles from "./ExpenseManager.module.css";
 import "./ExpenseManagerPremium.css";
 
 const PAGE_SIZE = 25;
-const emptyData = { transactions: [], summary: { income: 0, expense: 0 }, balance: 0, pagination: { page: 1, limit: PAGE_SIZE, total: 0, pages: 1 } };
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const today = new Date();
+const emptyData = { transactions: [], summary: { income: 0, expense: 0, incomeTransactions: 0, expenseTransactions: 0 }, categoryBreakdown: [], balance: 0, pagination: { page: 1, limit: PAGE_SIZE, total: 0, pages: 1, hasNextPage: false } };
 const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 const errorMessage = (error, fallback) => error.response?.data?.message || fallback;
 const blankForm = () => ({ type: "expense", category: "", customCategory: "", amount: "", date: localDateKey(), account: "cash", description: "", branch: null });
 const formFromTransaction = (row) => ({ type: row.type, category: row.category, customCategory: "", amount: String(row.amount), date: String(row.date).slice(0, 10), account: row.account || "cash", description: row.description || "", branch: row.branch?._id || row.branch || null });
 
 export default function ExpenseManager() {
+  const navigate = useNavigate();
   const [data, setData] = useState(emptyData);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -27,6 +34,7 @@ export default function ExpenseManager() {
   const [deleting, setDeleting] = useState(false);
   const [customCategories, setCustomCategories] = useState({ income: [], expense: [] });
   const [form, setForm] = useState(blankForm);
+  const loadMoreRef = useRef(null);
 
   const loadCategories = async () => {
     try {
@@ -50,31 +58,44 @@ export default function ExpenseManager() {
     }
   };
 
-  const load = async (nextPage = page, nextFilter = filter) => {
+  const load = async (nextPage = 1, nextFilter = filter, append = false) => {
     try {
-      setLoading(true);
-      const params = { page: nextPage, limit: PAGE_SIZE };
+      if (append) setLoadingMore(true);
+      else setLoading(true);
+      const lastDay = new Date(Date.UTC(selectedYear, selectedMonth, 0)).getUTCDate();
+      const monthKey = String(selectedMonth).padStart(2, "0");
+      const params = { page: nextPage, limit: PAGE_SIZE, from: `${selectedYear}-${monthKey}-01`, to: `${selectedYear}-${monthKey}-${lastDay}` };
       if (nextFilter !== "all") params.type = nextFilter;
       const response = await expenseApi.list(params);
       const payload = response.data?.data || emptyData;
-      if (nextPage > (payload.pagination?.pages || 1)) {
-        setPage(payload.pagination?.pages || 1);
-        return;
+      setData((current) => append ? { ...payload, transactions: [...(current.transactions || []), ...(payload.transactions || [])] } : payload);
+      setPage(nextPage);
+      if (!append) {
+        setSelectedTransaction(null);
+        setDeletionReason("");
       }
-      setData(payload);
-      setSelectedTransaction(null);
-      setDeletionReason("");
     } catch (error) {
       toast.error(errorMessage(error, "Expense data load nahi hua"));
     } finally {
-      setLoading(false);
+      if (append) setLoadingMore(false);
+      else setLoading(false);
     }
   };
 
   useEffect(() => { (async () => { await migrateLocalCategories(); await loadCategories(); })(); }, []);
-  useEffect(() => { load(page, filter); }, [page, filter]);
+  useEffect(() => { load(1, filter, false); }, [filter, selectedMonth, selectedYear]);
 
-  const changeFilter = (value) => { setFilter(value); setPage(1); setSelectedTransaction(null); };
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !data.pagination?.hasNextPage) return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !loading && !loadingMore) load(page + 1, filter, true);
+    }, { rootMargin: "240px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [data.pagination?.hasNextPage, filter, loading, loadingMore, page, selectedMonth, selectedYear]);
+
+  const changeFilter = (value) => { setFilter(value); setSelectedTransaction(null); };
   const submit = async (event) => {
     event.preventDefault();
     const category = form.category;
@@ -88,8 +109,7 @@ export default function ExpenseManager() {
       setForm(blankForm());
       setEditingId(null);
       setShowForm(false);
-      setPage(1);
-      await load(1, filter);
+      await load(1, filter, false);
     } catch (error) { toast.error(errorMessage(error, "Transaction save nahi hua")); }
     finally { setSaving(false); }
   };
@@ -132,7 +152,7 @@ export default function ExpenseManager() {
       toast.success("Transaction deleted");
       setSelectedTransaction(null);
       setDeletionReason("");
-      await load(page, filter);
+      await load(1, filter, false);
     } catch (error) { toast.error(errorMessage(error, "Transaction delete nahi hua")); }
     finally { setDeleting(false); }
   };
@@ -141,18 +161,28 @@ export default function ExpenseManager() {
   const incomeTransactions = useMemo(() => transactions.filter((row) => row.type === "income"), [transactions]);
   const expenseTransactions = useMemo(() => transactions.filter((row) => row.type === "expense"), [transactions]);
   const pagination = data.pagination || emptyData.pagination;
+  const categoryBreakdown = data.categoryBreakdown || [];
+  const highestCategoryAmount = Math.max(...categoryBreakdown.map((row) => Number(row.amount || 0)), 1);
+  const periodLabel = `${MONTHS[selectedMonth - 1]} ${selectedYear}`;
+
+  const moveYear = (amount) => setSelectedYear((value) => value + amount);
+  const openReceipt = (row) => {
+    if (row.sourceType === "fee_payment" && (row.paymentId || row.sourceId)) navigate(`/fees/receipt/${row.paymentId || row.sourceId}`);
+  };
 
   const renderTransactionTable = (rows, emptyMessage) => (
-    <div className={styles.tableWrap}><table><thead><tr><th className={styles.amount}>Amount</th><th>Mode</th><th>Description</th><th>Category</th><th>Date</th></tr></thead><tbody>{loading ? <tr><td colSpan="5" className={styles.empty}>Loading transactions…</td></tr> : rows.length ? rows.map((row) => <tr key={row._id} className={selectedTransaction?._id === row._id ? styles.activeRow : ""} tabIndex="0" onClick={() => { setSelectedTransaction(row); setDeletionReason(""); }} onKeyDown={(event) => event.key === "Enter" && setSelectedTransaction(row)}><td className={styles.amount}><strong className={row.type === "income" ? styles.income : styles.expense}>{row.type === "income" ? "+" : "−"}{money(row.amount)}</strong></td><td>{String(row.account || "cash").toUpperCase()}</td><td>{row.description || "—"}</td><td><strong>{row.category}</strong></td><td className={styles.dateCell}><CalendarDays size={14}/>{new Date(row.date).toLocaleDateString("en-GB")}</td></tr>) : <tr><td colSpan="5" className={styles.empty}>{emptyMessage}</td></tr>}</tbody></table></div>
+    <div className={styles.tableWrap}><table><thead><tr><th className={styles.amount}>Amount</th><th>Mode</th><th>Description</th><th>Category</th><th>Date</th></tr></thead><tbody>{loading ? <tr><td colSpan="5" className={styles.empty}>Loading transactions…</td></tr> : rows.length ? rows.map((row) => { const linkedFee = row.sourceType === "fee_payment" && (row.paymentId || row.sourceId); return <tr key={row._id} className={`${selectedTransaction?._id === row._id ? styles.activeRow : ""} ${linkedFee ? styles.receiptRow : ""}`} tabIndex="0" title={linkedFee ? "Double-click to open fee receipt" : ""} onDoubleClick={() => openReceipt(row)} onClick={() => { setSelectedTransaction(row); setDeletionReason(""); }} onKeyDown={(event) => { if (event.key === "Enter") linkedFee ? openReceipt(row) : setSelectedTransaction(row); }}><td className={styles.amount}><strong className={row.type === "income" ? styles.income : styles.expense}>{row.type === "income" ? "+" : "−"}{money(row.amount)}</strong></td><td>{String(row.account || "cash").toUpperCase()}</td><td>{linkedFee ? <span className={styles.studentPayment}><strong>{row.studentName || "Student name unavailable"}</strong><small><ReceiptIndianRupee size={12}/>{row.receiptNumber || "Fee receipt"}</small></span> : row.description || "—"}</td><td><strong>{row.category}</strong></td><td className={styles.dateCell}><CalendarDays size={14}/>{new Date(row.date).toLocaleDateString("en-GB")}</td></tr>; }) : <tr><td colSpan="5" className={styles.empty}>{emptyMessage}</td></tr>}</tbody></table></div>
   );
 
   return <main className={`${styles.page} expense-manager-premium`}>
-    <header className={styles.hero}><span className={styles.heroIcon}><WalletCards size={25}/></span><div><small>ACADEMY OPERATIONS</small><h1>Expense Manager</h1><p>Academy income, daily expenses and cash flow in one secure workspace.</p></div><button type="button" className={styles.refresh} onClick={() => load(page, filter)} title="Refresh"><RefreshCw size={17}/></button></header>
-    <section className={styles.metrics}><article><small>Total Income</small><strong className={styles.income}>{money(data.summary?.income)}</strong><span>All active earnings</span></article><article><small>Total Expenses</small><strong className={styles.expense}>{money(data.summary?.expense)}</strong><span>All active academy costs</span></article><article><small>Net Balance</small><strong>{money(data.balance)}</strong><span>All income minus expenses</span></article></section>
+    <header className={styles.hero}><span className={styles.heroIcon}><WalletCards size={25}/></span><div><small>ACADEMY OPERATIONS</small><h1>Expense Manager</h1><p>Academy income, daily expenses and cash flow in one secure workspace.</p></div><button type="button" className={styles.refresh} onClick={() => load(1, filter, false)} title="Refresh"><RefreshCw size={17}/></button></header>
+    <section className={styles.periodPicker}><header><div><small>REPORTING PERIOD</small><h2>{periodLabel}</h2></div><div className={styles.yearPicker}><button type="button" onClick={() => moveYear(-1)} aria-label="Previous year"><ChevronLeft size={16}/></button><strong>{selectedYear}</strong><button type="button" onClick={() => moveYear(1)} aria-label="Next year"><ChevronRight size={16}/></button></div></header><div className={styles.monthTabs}>{MONTHS.map((month, index) => <button type="button" key={month} className={selectedMonth === index + 1 ? styles.activeMonth : ""} onClick={() => setSelectedMonth(index + 1)}>{month}</button>)}</div></section>
+    <section className={styles.metrics}><article><small>Total Income</small><strong className={styles.income}>{money(data.summary?.income)}</strong><span>{periodLabel} · {data.summary?.incomeTransactions || 0} transactions</span></article><article><small>Total Expenses</small><strong className={styles.expense}>{money(data.summary?.expense)}</strong><span>{periodLabel} · {data.summary?.expenseTransactions || 0} transactions</span></article><article><small>Net Balance</small><strong>{money(data.balance)}</strong><span>Selected month income minus expenses</span></article></section>
+    <section className={styles.categorySection}><header><span><Layers3 size={19}/></span><div><small>EXPENSE BREAKDOWN</small><h2>Category-wise spending</h2><p>{periodLabel} mein har category ka total kharcha.</p></div></header>{categoryBreakdown.length ? <div className={styles.categoryGrid}>{categoryBreakdown.map((row) => <article key={row.category}><div><strong>{row.category || "Uncategorised"}</strong><span>{row.transactions} transaction{row.transactions === 1 ? "" : "s"}</span></div><b>{money(row.amount)}</b><i><em style={{ width: `${Math.max((Number(row.amount || 0) / highestCategoryAmount) * 100, 3)}%` }}/></i></article>)}</div> : <div className={styles.categoryEmpty}>Is month mein expense transaction nahi hai.</div>}</section>
     <section className={styles.toolbar}><div><h2>Transaction ledger</h2><p>Manual records can be corrected or safely deleted without losing the audit trail.</p></div><div className={styles.toolbarActions}><select value={filter} onChange={(event) => changeFilter(event.target.value)}><option value="all">All transactions</option><option value="income">Income only</option><option value="expense">Expenses only</option></select><button type="button" className={styles.primary} onClick={() => { setForm(blankForm()); setEditingId(null); setShowForm(true); }}><Plus size={17}/> Add transaction</button></div></section>
     {showForm ? <AddTransactionForm form={form} setForm={setForm} customCategories={(customCategories[form.type] || []).map((row) => row.name)} onAddCustomCategory={addCustomCategory} onRemoveCustomCategory={removeCustomCategory} onSubmit={submit} mode={editingId ? "edit" : "create"} saving={saving} onClose={() => { setShowForm(false); setEditingId(null); setForm(blankForm()); }}/> : null}
     {selectedTransaction ? <aside className={`${styles.detail} ${styles.transactionDetail}`} role="dialog" aria-label="Transaction details"><button type="button" className={styles.detailClose} onClick={() => setSelectedTransaction(null)} aria-label="Close transaction details"><X size={17}/></button><small>{selectedTransaction.type.toUpperCase()}</small><h3>{selectedTransaction.category}</h3><p>{selectedTransaction.description || "No description"}</p><strong>{money(selectedTransaction.amount)}</strong>{String(selectedTransaction.sourceType || "manual") === "manual" && !selectedTransaction.sourceId ? <><button type="button" className={styles.editButton} onClick={beginEdit}><Pencil size={15}/>Edit record</button><label>Delete reason <span>(optional)</span><textarea maxLength="300" value={deletionReason} onChange={(event) => setDeletionReason(event.target.value)} placeholder="Example: Duplicate entry"/></label><button type="button" className={styles.reverseButton} disabled={deleting} onClick={deleteSelected}><Trash2 size={15}/>{deleting ? "Deleting…" : "Delete record"}</button><p className={styles.auditHint}>Delete karne par totals update honge, lekin audit history safe rahegi.</p></> : <p className={styles.linkedHint}>Ye fee payment se linked income hai. Isko Payment History se update ya reverse karein.</p>}</aside> : null}
-    <section className={styles.transactionColumns}><section className={`${styles.tableCard} ${styles.transactionPanel}`}><header className={styles.transactionPanelHeader}><div><span className={styles.incomePill}>INCOME</span><h2>Income transactions</h2></div><strong className={styles.income}>{incomeTransactions.length}</strong></header>{renderTransactionTable(incomeTransactions, "No income transactions on this page.")}</section><section className={`${styles.tableCard} ${styles.transactionPanel}`}><header className={styles.transactionPanelHeader}><div><span className={styles.expensePill}>EXPENSES</span><h2>Expense transactions</h2></div><strong className={styles.expense}>{expenseTransactions.length}</strong></header>{renderTransactionTable(expenseTransactions, "No expense transactions on this page.")}</section></section>
-    {pagination.pages > 1 ? <footer className={styles.pagination}><span>Showing {(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}</span><div><button type="button" disabled={pagination.page <= 1 || loading} onClick={() => setPage((value) => value - 1)}>Previous</button><strong>Page {pagination.page} of {pagination.pages}</strong><button type="button" disabled={pagination.page >= pagination.pages || loading} onClick={() => setPage((value) => value + 1)}>Next</button></div></footer> : null}
+    <section className={styles.transactionColumns}><section className={`${styles.tableCard} ${styles.transactionPanel}`}><header className={styles.transactionPanelHeader}><div><span className={styles.incomePill}>INCOME</span><h2>Income transactions</h2></div><strong className={styles.income}>{data.summary?.incomeTransactions || 0}</strong></header>{renderTransactionTable(incomeTransactions, `No income transactions in ${periodLabel}.`)}</section><section className={`${styles.tableCard} ${styles.transactionPanel}`}><header className={styles.transactionPanelHeader}><div><span className={styles.expensePill}>EXPENSES</span><h2>Expense transactions</h2></div><strong className={styles.expense}>{data.summary?.expenseTransactions || 0}</strong></header>{renderTransactionTable(expenseTransactions, `No expense transactions in ${periodLabel}.`)}</section></section>
+    <footer ref={loadMoreRef} className={styles.loadMore}><span>Loaded {transactions.length} of {pagination.total} transactions</span>{pagination.hasNextPage ? <button type="button" disabled={loadingMore} onClick={() => load(page + 1, filter, true)}>{loadingMore ? "Loading more…" : "Load more"}</button> : transactions.length ? <strong>All transactions loaded</strong> : null}</footer>
   </main>;
 }

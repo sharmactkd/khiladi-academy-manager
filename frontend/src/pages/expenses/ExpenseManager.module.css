@@ -4,6 +4,8 @@
   color: #10213d;
 }
 .hero,
+.periodPicker,
+.categorySection,
 .toolbar,
 .formCard,
 .tableCard,
@@ -56,6 +58,68 @@
   color: #64748b;
   cursor: pointer;
 }
+.periodPicker {
+  padding: 16px 18px 0;
+  overflow: hidden;
+}
+.periodPicker > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 2px 14px;
+}
+.periodPicker small,
+.categorySection header small {
+  color: #cf0006;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .13em;
+}
+.periodPicker h2,
+.categorySection h2 {
+  margin: 4px 0 0;
+  font-size: 18px;
+}
+.yearPicker {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid #d8e2ed;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+.yearPicker button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: #40536d;
+  cursor: pointer;
+}
+.yearPicker strong { min-width: 58px; text-align: center; }
+.monthTabs {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(54px, 1fr));
+  overflow-x: auto;
+}
+.monthTabs button {
+  min-height: 45px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #607087;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.monthTabs button:hover { color: #cf0006; background: #fff8f8; }
+.monthTabs .activeMonth { border-bottom-color: #cf0006; color: #cf0006; background: #fff5f5; }
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -74,6 +138,40 @@
   margin: 8px 0;
   font-size: 25px;
 }
+.categorySection { padding: 18px; }
+.categorySection > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+.categorySection > header > span {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: #fff0f1;
+  color: #cf0006;
+}
+.categorySection header p { margin: 4px 0 0; color: #718096; font-size: 11px; }
+.categoryGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.categoryGrid article {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid #e3e9f0;
+  border-radius: 11px;
+  background: #fbfcfe;
+}
+.categoryGrid article div { display: grid; gap: 3px; min-width: 0; }
+.categoryGrid article div strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.categoryGrid article div span { color: #7a899c; font-size: 10px; }
+.categoryGrid article b { color: #cf0006; font-size: 13px; }
+.categoryGrid article i { grid-column: 1/-1; height: 4px; overflow: hidden; border-radius: 99px; background: #edf1f5; }
+.categoryGrid article em { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ef4444, #cf0006); }
+.categoryEmpty { padding: 25px; border: 1px dashed #d7e0ea; border-radius: 11px; text-align: center; color: #718096; font-size: 12px; }
 .income {
   color: #12804b;
 }
@@ -256,6 +354,10 @@
   align-items: center;
   gap: 7px;
 }
+.studentPayment { display: grid; gap: 3px; }
+.studentPayment strong { color: #10213d; }
+.studentPayment small { display: flex; align-items: center; gap: 4px; color: #718096; font-size: 10px; }
+.tableCard tbody tr.receiptRow { cursor: zoom-in; }
 .tableCard tbody tr {
   cursor: pointer;
   transition: background 0.15s ease;
@@ -478,7 +580,7 @@
   background: #fff9ed;
   color: #805c12;
 }
-.pagination {
+.loadMore {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -490,12 +592,7 @@
   color: #64748b;
   font-size: 12px;
 }
-.pagination > div {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.pagination button {
+.loadMore button {
   min-height: 32px;
   padding: 6px 10px;
   border: 1px solid #d4dfeb;
@@ -504,15 +601,15 @@
   color: #40536d;
   font-weight: 800;
 }
-.pagination button:disabled {
+.loadMore button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.pagination strong {
+.loadMore strong {
   color: #10213d;
 }
 @media (max-width: 620px) {
-  .pagination {
+  .loadMore {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -522,4 +619,12 @@
     bottom: 14px;
     width: auto;
   }
+}
+@media (max-width: 900px) {
+  .categoryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .categoryGrid { grid-template-columns: 1fr; }
+  .periodPicker { padding-inline: 12px; }
+  .monthTabs { grid-template-columns: repeat(12, 58px); }
 }

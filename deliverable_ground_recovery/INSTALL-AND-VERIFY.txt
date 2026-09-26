@@ -5,7 +5,7 @@ cd "D:\Website\Khiladi Project\khiladi-academy-manager"
 Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
 
 Expand-Archive `
-  -Path "$env:USERPROFILE\Downloads\khiladi-inactive-due-red-text-only-v44.zip" `
+  -Path "$env:USERPROFILE\Downloads\khiladi-expense-monthly-ledger-v45.zip" `
   -DestinationPath (Get-Location).Path `
   -Force
 
@@ -13,6 +13,8 @@ cd ".\backend"
 
 npm install
 node --check ".\src\controllers\attendanceController.js"
+node --check ".\src\controllers\expenseController.js"
+npm run test:expenses
 npm run test:security
 npm audit --omit=dev
 
@@ -30,7 +32,7 @@ git diff --check
 git diff --stat
 
 git add -A
-git commit -m "Show inactive due status as red text only"
+git commit -m "Improve monthly expense ledger and fee receipt links"
 git push origin main
 
 git status
@@ -58,3 +60,7 @@ USAGE
 19. Quick actions clear Fee Status or Due Date in one click. Remaining time accepts months and days and displays as M/D even while paused.
 20. Active students show DUE for one unpaid month; inactive students retain 1M DUE and all due balances use a stronger red treatment.
 21. Inactive due status uses red text only; no special light-red fee-status background is applied.
+22. Expense Manager opens on the current month and provides attendance-style month tabs plus year navigation.
+23. All transactions for the selected month load progressively as the ledger is scrolled; the Load more button remains available as a fallback.
+24. Category-wise expense totals, transaction counts and visual spending bars use the selected month.
+25. Linked fee-income rows display the student's name and receipt number. Double-click a linked row to open its fee receipt.

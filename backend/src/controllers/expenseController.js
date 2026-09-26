@@ -2,32 +2,71 @@ import mongoose from "mongoose";
 import Branch from "../models/Branch.js";
 import ExpenseCategory from "../models/ExpenseCategory.js";
 import ExpenseTransaction from "../models/ExpenseTransaction.js";
+import FeePayment from "../models/FeePayment.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse } from "../utils/apiResponse.js";
 import { buildExpenseListFilter, buildExpenseMutationPayload, cleanCategoryName, isDefaultCategory, isManualExpenseTransaction, normalizeCategoryName, parseExpensePagination } from "../utils/expenseUtils.js";
 
 const ensureOwnedBranch = async (academy, branch) => !branch || Boolean(await Branch.exists({ _id: branch, academy }));
 
-const summaryForAcademy = async (academy) => {
+const summaryForPeriod = async (academy, date) => {
+  const match = { academy: new mongoose.Types.ObjectId(String(academy)), reversedAt: null };
+  if (date) match.date = date;
   const rows = await ExpenseTransaction.aggregate([
-    { $match: { academy: new mongoose.Types.ObjectId(String(academy)), reversedAt: null } },
-    { $group: { _id: "$type", amount: { $sum: "$amount" } } },
+    { $match: match },
+    { $group: { _id: "$type", amount: { $sum: "$amount" }, transactions: { $sum: 1 } } },
   ]);
-  const summary = { income: 0, expense: 0 };
-  rows.forEach((row) => { if (row._id in summary) summary[row._id] = Number(row.amount || 0); });
+  const summary = { income: 0, expense: 0, incomeTransactions: 0, expenseTransactions: 0 };
+  rows.forEach((row) => {
+    if (!(row._id in summary)) return;
+    summary[row._id] = Number(row.amount || 0);
+    summary[`${row._id}Transactions`] = Number(row.transactions || 0);
+  });
   return summary;
+};
+
+const categoryTotalsForPeriod = async (academy, date) => {
+  const match = { academy: new mongoose.Types.ObjectId(String(academy)), reversedAt: null, type: "expense" };
+  if (date) match.date = date;
+  return ExpenseTransaction.aggregate([
+    { $match: match },
+    { $group: { _id: "$category", amount: { $sum: "$amount" }, transactions: { $sum: 1 } } },
+    { $sort: { amount: -1, _id: 1 } },
+    { $project: { _id: 0, category: "$_id", amount: 1, transactions: 1 } },
+  ]);
+};
+
+const attachFeePaymentDetails = async (academy, transactions) => {
+  const feePaymentIds = transactions
+    .filter((row) => row.sourceType === "fee_payment" && row.sourceId)
+    .map((row) => row.sourceId);
+  if (!feePaymentIds.length) return transactions;
+  const payments = await FeePayment.find({ academy, _id: { $in: feePaymentIds } })
+    .select("_id student receiptNumber")
+    .populate("student", "firstName lastName")
+    .lean();
+  const detailsById = new Map(payments.map((payment) => [String(payment._id), payment]));
+  return transactions.map((row) => {
+    const payment = detailsById.get(String(row.sourceId || ""));
+    if (!payment) return row;
+    const studentName = [payment.student?.firstName, payment.student?.lastName].filter(Boolean).join(" ").trim();
+    return { ...row, paymentId: payment._id, receiptNumber: payment.receiptNumber || "", studentName };
+  });
 };
 
 export const listExpenses = asyncHandler(async (req, res) => {
   const { page, limit } = parseExpensePagination(req.query);
   const filter = buildExpenseListFilter(req.academyId, req.query);
-  const [transactions, total, summary] = await Promise.all([
-    ExpenseTransaction.find(filter).sort({ date: -1, createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate("branch", "branchName"),
+  const periodDate = filter.date;
+  const [rawTransactions, total, summary, categoryBreakdown] = await Promise.all([
+    ExpenseTransaction.find(filter).sort({ date: -1, createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate("branch", "branchName").lean(),
     ExpenseTransaction.countDocuments(filter),
-    summaryForAcademy(req.academyId),
+    summaryForPeriod(req.academyId, periodDate),
+    categoryTotalsForPeriod(req.academyId, periodDate),
   ]);
+  const transactions = await attachFeePaymentDetails(req.academyId, rawTransactions);
   const pages = Math.max(1, Math.ceil(total / limit));
-  return successResponse(res, "Expense transactions fetched successfully", { transactions, summary, balance: summary.income - summary.expense, pagination: { page, limit, total, pages, hasNextPage: page < pages } });
+  return successResponse(res, "Expense transactions fetched successfully", { transactions, summary, categoryBreakdown, balance: summary.income - summary.expense, pagination: { page, limit, total, pages, hasNextPage: page < pages } });
 });
 
 export const createExpense = asyncHandler(async (req, res) => {
