@@ -33,7 +33,7 @@ const AcademyHeroHeader = ({
   headingId = "academy-hero-title",
   className = "",
 }) => {
-  const rootClassName = ["owner-hero", "academy-hero-header", className]
+  const rootClassName = ["owner-hero", "academy-hero-header", action ? "academy-hero-header--has-action" : "", className]
     .filter(Boolean)
     .join(" ");
 

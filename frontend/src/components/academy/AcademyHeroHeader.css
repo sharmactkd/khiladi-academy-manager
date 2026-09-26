@@ -699,11 +699,29 @@
 }
 
 @media (max-width: 760px) {
-  .academy-hero-header { grid-template-columns: 1fr; }
+  .academy-hero-header {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    border-radius: 15px;
+  }
 }
 
 @media (max-width: 760px) {
-  .academy-hero-header__brand { min-height: 78px; padding: 8px; clip-path: none; }
+  .academy-hero-header__brand { min-height: 64px; padding: 7px; clip-path: none; }
+
+  .academy-hero-header .owner-hero__brand {
+    justify-items: center;
+  }
+
+  .academy-hero-header .owner-hero__logo-static,
+  .academy-hero-header .owner-hero__brand > button {
+    position: relative;
+    right: auto;
+    left: auto;
+    justify-self: center;
+    margin: 0;
+    transform: none;
+  }
 }
 
 @media (max-width: 760px) {
@@ -716,7 +734,8 @@
 }
 
 @media (max-width: 760px) {
-  .academy-hero-header__content { width: auto; padding: 18px 18px 66px; }
+  .academy-hero-header__content { width: auto; padding: 16px 18px 18px; }
+  .academy-hero-header--has-action .academy-hero-header__content { padding-bottom: 62px; }
 }
 
 @media (max-width: 760px) {
@@ -729,4 +748,13 @@
 
 @media (max-width: 760px) {
   .academy-hero-header__summary { flex-wrap: wrap; justify-content: center; }
+}
+
+@media (max-width: 520px) {
+  .academy-hero-header__content { padding-inline: 14px; }
+  .academy-hero-header__eyebrow { margin-bottom: 5px; font-size: 10px; }
+  .academy-hero-header h1 { font-size: clamp(20px, 7vw, 27px); line-height: 1.12; }
+  .academy-hero-header__owner,
+  .academy-hero-header__address { font-size: 12px; }
+  .academy-hero-header__summary { gap: 6px 10px; font-size: 11px; }
 }

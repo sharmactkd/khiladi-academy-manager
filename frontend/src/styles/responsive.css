@@ -44,8 +44,17 @@
    ========================================================= */
 
 @media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+  }
+
   .dashboard-shell {
     display: block;
+    width: 100%;
+    min-width: 0;
   }
 
   .dashboard-main {
@@ -125,7 +134,42 @@
   }
 
   .navbar {
+    width: 100%;
+    height: 72px;
     padding-inline: 16px;
+  }
+
+  .navbar-heading,
+  .navbar-actions {
+    min-width: 0;
+  }
+
+  .navbar-actions {
+    height: 100%;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .notification-bell,
+  .navbar-user,
+  .navbar-avatar {
+    align-self: center;
+  }
+
+  .notification-bell,
+  .navbar-avatar {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+  }
+
+  .notification-bell {
+    border-color: transparent;
+    border-radius: 10px;
   }
 
   .navbar-user-copy {
@@ -133,7 +177,11 @@
   }
 
   .navbar-user {
-    padding-left: 8px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    padding-left: 0;
+    border-left: 0;
   }
 
   .navbar-title h2 {
@@ -141,7 +189,14 @@
   }
 
   .dashboard-content {
+    width: 100%;
+    min-width: 0;
     padding: 18px 16px 28px;
+  }
+
+  .dashboard-content > div {
+    width: 100%;
+    min-width: 0;
   }
 
   .page-header {

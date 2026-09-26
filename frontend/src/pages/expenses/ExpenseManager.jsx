@@ -41,6 +41,10 @@ export default function ExpenseManager() {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryTransactions, setCategoryTransactions] = useState([]);
+  const [categoryPagination, setCategoryPagination] = useState(emptyData.pagination);
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const [deletionReason, setDeletionReason] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [customCategories, setCustomCategories] = useState({ income: [], expense: [] });
@@ -207,8 +211,53 @@ export default function ExpenseManager() {
     if (row.sourceType === "fee_payment" && (row.paymentId || row.sourceId)) navigate(`/fees/receipt/${row.paymentId || row.sourceId}`);
   };
 
-  const renderTransactionTable = (rows, emptyMessage) => (
-    <div className={styles.tableWrap}><table><thead><tr><th className={styles.amount}>Amount</th><th>Mode</th><th>Description</th><th>Category</th><th>Date</th></tr></thead><tbody>{loading ? <tr><td colSpan="5" className={styles.empty}>Loading transactions…</td></tr> : rows.length ? rows.map((row) => { const linkedFee = row.sourceType === "fee_payment" && (row.paymentId || row.sourceId); return <tr key={row._id} className={`${selectedTransaction?._id === row._id ? styles.activeRow : ""} ${linkedFee ? styles.receiptRow : ""}`} tabIndex="0" title={linkedFee ? "Double-click to open fee receipt" : ""} onDoubleClick={() => openReceipt(row)} onClick={() => { setSelectedTransaction(row); setDeletionReason(""); }} onKeyDown={(event) => { if (event.key === "Enter") linkedFee ? openReceipt(row) : setSelectedTransaction(row); }}><td className={styles.amount}><strong className={row.type === "income" ? styles.income : styles.expense}>{row.type === "income" ? "+" : "−"}{money(row.amount)}</strong></td><td>{String(row.account || "cash").toUpperCase()}</td><td>{linkedFee ? <span className={styles.studentPayment}><strong>{row.studentName || "Student name unavailable"}</strong><small><ReceiptIndianRupee size={12}/>{row.receiptNumber || "Fee receipt"}</small></span> : row.description || "—"}</td><td><strong>{row.category}</strong></td><td className={styles.dateCell}><CalendarDays size={14}/>{new Date(row.date).toLocaleDateString("en-GB")}</td></tr>; }) : <tr><td colSpan="5" className={styles.empty}>{emptyMessage}</td></tr>}</tbody></table></div>
+  const loadCategoryTransactions = async (category, nextPage = 1, append = false) => {
+    try {
+      setCategoryLoading(true);
+      const lastDay = new Date(Date.UTC(selectedYear, selectedMonth, 0)).getUTCDate();
+      const monthKey = String(selectedMonth).padStart(2, "0");
+      const response = await expenseApi.list({
+        type: "expense",
+        category,
+        page: nextPage,
+        limit: PAGE_SIZE,
+        from: `${selectedYear}-${monthKey}-01`,
+        to: `${selectedYear}-${monthKey}-${lastDay}`,
+      });
+      const payload = response.data?.data || emptyData;
+      setCategoryTransactions((current) => append ? [...current, ...(payload.transactions || [])] : (payload.transactions || []));
+      setCategoryPagination(payload.pagination || emptyData.pagination);
+    } catch (error) {
+      toast.error(errorMessage(error, "Category transactions load nahi hui"));
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
+  const openCategory = (row) => {
+    const category = row.category || "Uncategorised";
+    setSelectedCategory({ ...row, category });
+    setCategoryTransactions([]);
+    setCategoryPagination(emptyData.pagination);
+    setSelectedTransaction(null);
+    loadCategoryTransactions(category, 1, false);
+  };
+
+  const closeCategory = () => {
+    setSelectedCategory(null);
+    setCategoryTransactions([]);
+    setCategoryPagination(emptyData.pagination);
+  };
+
+  useEffect(() => {
+    if (!selectedCategory) return undefined;
+    const onKeyDown = (event) => { if (event.key === "Escape") closeCategory(); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [selectedCategory]);
+
+  const renderTransactionTable = (rows, emptyMessage, isLoading = loading) => (
+    <div className={styles.tableWrap}><table><thead><tr><th className={styles.amount}>Amount</th><th>Mode</th><th>Description</th><th>Category</th><th>Date</th></tr></thead><tbody>{isLoading && !rows.length ? <tr><td colSpan="5" className={styles.empty}>Loading transactions…</td></tr> : rows.length ? rows.map((row) => { const linkedFee = row.sourceType === "fee_payment" && (row.paymentId || row.sourceId); return <tr key={row._id} className={`${selectedTransaction?._id === row._id ? styles.activeRow : ""} ${linkedFee ? styles.receiptRow : ""}`} tabIndex="0" title={linkedFee ? "Double-click to open fee receipt" : ""} onDoubleClick={() => openReceipt(row)} onClick={() => { setSelectedTransaction(row); setDeletionReason(""); }} onKeyDown={(event) => { if (event.key === "Enter") linkedFee ? openReceipt(row) : setSelectedTransaction(row); }}><td className={styles.amount}><strong className={row.type === "income" ? styles.income : styles.expense}>{row.type === "income" ? "+" : "−"}{money(row.amount)}</strong></td><td>{String(row.account || "cash").toUpperCase()}</td><td>{linkedFee ? <span className={styles.studentPayment}><strong>{row.studentName || "Student name unavailable"}</strong><small><ReceiptIndianRupee size={12}/>{row.receiptNumber || "Fee receipt"}</small></span> : row.description || "—"}</td><td><strong>{row.category}</strong></td><td className={styles.dateCell}><CalendarDays size={14}/>{new Date(row.date).toLocaleDateString("en-GB")}</td></tr>; }) : <tr><td colSpan="5" className={styles.empty}>{emptyMessage}</td></tr>}</tbody></table></div>
   );
 
   return <main className={`${styles.page} expense-manager-premium`}>
@@ -228,7 +277,7 @@ export default function ExpenseManager() {
       {categoryBreakdown.length ? <div className={styles.categoryGrid}>{categoryBreakdown.map((row, index) => {
         const Icon = categoryIcon(row.category);
         const percent = Number(data.summary?.expense || 0) > 0 ? (Number(row.amount || 0) / Number(data.summary.expense)) * 100 : 0;
-        return <article key={row.category}>
+        return <article key={row.category} role="button" tabIndex="0" aria-label={`Open ${row.category || "Uncategorised"} transactions`} onClick={() => openCategory(row)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openCategory(row); } }}>
           <span className={`${styles.categoryIcon} ${styles[`categoryTint${index % 5}`]}`}><Icon size={21}/></span>
           <div className={styles.categoryCopy}><strong>{row.category || "Uncategorised"}</strong><span>{row.transactions} transaction{row.transactions === 1 ? "" : "s"}</span></div>
           <b>{money(row.amount)}</b>
@@ -237,6 +286,19 @@ export default function ExpenseManager() {
         </article>;
       })}</div> : <div className={styles.categoryEmpty}>Is month mein expense transaction nahi hai.</div>}
     </section>
+    {selectedCategory ? <div className={styles.categoryModalBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeCategory(); }}>
+      <section className={styles.categoryModal} role="dialog" aria-modal="true" aria-labelledby="category-transactions-title">
+        <header className={styles.categoryModalHeader}>
+          <div><small>EXPENSE TRANSACTIONS · {periodLabel}</small><h2 id="category-transactions-title">{selectedCategory.category}</h2><p>{selectedCategory.transactions} transaction{selectedCategory.transactions === 1 ? "" : "s"} · {money(selectedCategory.amount)}</p></div>
+          <button type="button" onClick={closeCategory} aria-label="Close category transactions"><X size={19}/></button>
+        </header>
+        <div className={styles.categoryModalBody}>{renderTransactionTable(categoryTransactions, `No ${selectedCategory.category} transactions in ${periodLabel}.`, categoryLoading)}</div>
+        <footer className={styles.categoryModalFooter}>
+          <span>Showing {categoryTransactions.length} of {categoryPagination.total || selectedCategory.transactions} transactions</span>
+          {categoryPagination.hasNextPage ? <button type="button" disabled={categoryLoading} onClick={() => loadCategoryTransactions(selectedCategory.category, categoryPagination.page + 1, true)}>{categoryLoading ? "Loading…" : "Load more"}</button> : <strong>All transactions loaded</strong>}
+        </footer>
+      </section>
+    </div> : null}
     <section className={styles.toolbar}><div><h2>Transaction ledger</h2><p>Manual records can be corrected or safely deleted without losing the audit trail.</p></div><div className={styles.toolbarActions}><select value={filter} onChange={(event) => changeFilter(event.target.value)}><option value="all">All transactions</option><option value="income">Income only</option><option value="expense">Expenses only</option></select><button type="button" className={styles.primary} onClick={() => { setForm(blankForm()); setEditingId(null); setShowForm(true); }}><Plus size={17}/> Add transaction</button></div></section>
     {showForm ? <AddTransactionForm form={form} setForm={setForm} customCategories={(customCategories[form.type] || []).map((row) => row.name)} onAddCustomCategory={addCustomCategory} onRemoveCustomCategory={removeCustomCategory} onSubmit={submit} mode={editingId ? "edit" : "create"} saving={saving} onClose={() => { setShowForm(false); setEditingId(null); setForm(blankForm()); }}/> : null}
     {selectedTransaction ? <aside className={`${styles.detail} ${styles.transactionDetail}`} role="dialog" aria-label="Transaction details"><button type="button" className={styles.detailClose} onClick={() => setSelectedTransaction(null)} aria-label="Close transaction details"><X size={17}/></button><small>{selectedTransaction.type.toUpperCase()}</small><h3>{selectedTransaction.category}</h3>{selectedTransaction.sourceType === "fee_payment" ? <div className={styles.detailStudent}><strong>{selectedTransaction.studentName || "Student name unavailable"}</strong><span><ReceiptIndianRupee size={13}/>{selectedTransaction.receiptNumber || "Fee receipt"}</span></div> : <p>{selectedTransaction.description || "No description"}</p>}<strong>{money(selectedTransaction.amount)}</strong>{String(selectedTransaction.sourceType || "manual") === "manual" && !selectedTransaction.sourceId ? <><button type="button" className={styles.editButton} onClick={beginEdit}><Pencil size={15}/>Edit record</button><label>Delete reason <span>(optional)</span><textarea maxLength="300" value={deletionReason} onChange={(event) => setDeletionReason(event.target.value)} placeholder="Example: Duplicate entry"/></label><button type="button" className={styles.reverseButton} disabled={deleting} onClick={deleteSelected}><Trash2 size={15}/>{deleting ? "Deleting…" : "Delete record"}</button><p className={styles.auditHint}>Delete karne par totals update honge, lekin audit history safe rahegi.</p></> : <p className={styles.linkedHint}>Ye fee payment se linked income hai. Isko Payment History se update ya reverse karein.</p>}</aside> : null}

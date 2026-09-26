@@ -515,6 +515,65 @@
   border-radius: 0 4px 4px 0;
 }
 
+@media (max-width: 768px) {
+  .root:global(.sidebar) {
+    width: min(304px, 88vw);
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .brand {
+    min-height: 78px;
+    padding: 10px 12px;
+    gap: 9px;
+  }
+
+  .brandLogoFrame {
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
+  }
+
+  .brandCopy h2 { font-size: 17px; }
+  .brandCopy p { margin-top: 4px; font-size: 11px; }
+  .closeButton { width: 34px; height: 34px; flex-basis: 34px; }
+
+  .root .closeButton {
+    color: #b80008 !important;
+    background: #ffe4e7 !important;
+    border: 1px solid #ef9ba1 !important;
+    box-shadow: 0 3px 10px rgba(207, 0, 6, .12);
+  }
+
+  .root .closeButton:hover,
+  .root .closeButton:focus-visible {
+    color: #fff !important;
+    background: #cf0006 !important;
+    border-color: #cf0006 !important;
+    outline: 3px solid rgba(207, 0, 6, .14);
+  }
+
+  .body {
+    padding: 10px 11px 7px;
+    overflow: hidden;
+  }
+
+  .workspaceButton {
+    min-height: 58px;
+    padding: 7px 9px;
+  }
+
+  .workspaceLogo {
+    width: 39px;
+    height: 39px;
+    flex-basis: 39px;
+  }
+
+  .root .nav {
+    margin-top: 9px;
+  }
+}
+
 .root .nestedLink.activeLink > svg {
   color: var(--sidebar-red);
 }
@@ -655,18 +714,18 @@
     width: min(304px, 88vw);
     padding: 0;
     background: #fffdfc;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .brand {
-    min-height: 96px;
-    padding: 13px 15px;
+    min-height: 78px;
+    padding: 10px 12px;
   }
 
   .brandLogoFrame {
-    width: 64px;
-    height: 64px;
-    flex-basis: 64px;
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
   }
 
   .body {
@@ -676,7 +735,7 @@
   .workspaceMenu,
   .quickCreateMenu {
     position: fixed;
-    top: 100px;
+    top: 82px;
     left: 14px;
     right: auto;
     width: min(276px, calc(88vw - 28px));

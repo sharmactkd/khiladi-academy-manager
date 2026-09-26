@@ -236,6 +236,18 @@
   border-radius: 13px;
   background: #fff;
   box-shadow: 0 5px 16px rgba(16, 33, 61, .035);
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.categoryGrid article:hover,
+.categoryGrid article:focus-visible {
+  transform: translateY(-2px);
+  border-color: #f09da1;
+  outline: none;
+  box-shadow: 0 12px 26px rgba(16, 33, 61, .1);
+}
+.categoryGrid article:active {
+  transform: translateY(0);
 }
 .categoryIcon {
   display: grid;
@@ -258,6 +270,75 @@
 .categoryProgress em { display: block; height: 100%; border-radius: inherit; background: #e50914; }
 .categoryPercent { justify-self: end; color: #718096; font-size: 10px; font-weight: 750; }
 .categoryEmpty { padding: 25px; border: 1px dashed #d7e0ea; border-radius: 11px; text-align: center; color: #718096; font-size: 12px; }
+.categoryModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(12, 25, 46, .58);
+  backdrop-filter: blur(3px);
+}
+.categoryModal {
+  width: min(960px, 100%);
+  max-height: min(760px, calc(100dvh - 48px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid #dce4ed;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 26px 70px rgba(7, 20, 40, .28);
+}
+.categoryModalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 19px 21px;
+  border-bottom: 1px solid #e4eaf1;
+}
+.categoryModalHeader small { color: #cf0006; font-size: 10px; font-weight: 900; letter-spacing: .1em; }
+.categoryModalHeader h2 { margin: 4px 0; color: #10213d; font-size: 21px; }
+.categoryModalHeader p { margin: 0; color: #718096; font-size: 12px; }
+.categoryModalHeader button {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  color: #52637a;
+  background: #f4f7fa;
+  cursor: pointer;
+}
+.categoryModalBody { min-height: 0; overflow: auto; }
+.categoryModalBody .tableWrap { max-height: none; border: 0; border-radius: 0; }
+.categoryModalFooter {
+  min-height: 57px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 20px;
+  border-top: 1px solid #e4eaf1;
+  color: #718096;
+  font-size: 11px;
+}
+.categoryModalFooter button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid #d4dfeb;
+  border-radius: 8px;
+  color: #40536d;
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+.categoryModalFooter button:disabled { opacity: .5; cursor: not-allowed; }
+.categoryModalFooter strong { color: #10213d; }
 .income {
   color: #12804b;
 }
@@ -722,6 +803,57 @@
     width: auto;
   }
 }
+
+@media (max-width: 768px) {
+  .hero {
+    position: relative;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 17px;
+    border-radius: 14px;
+  }
+
+  .heroIcon {
+    width: 43px;
+    height: 43px;
+    flex: 0 0 43px;
+    border-radius: 12px;
+  }
+
+  .hero > div {
+    min-width: 0;
+    padding-right: 32px;
+  }
+
+  .hero h1 {
+    margin: 3px 0;
+    font-size: clamp(21px, 5vw, 25px);
+  }
+
+  .hero p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .refresh {
+    position: absolute;
+    top: 15px;
+    right: 14px;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero { padding: 14px; }
+  .heroIcon { width: 40px; height: 40px; flex-basis: 40px; }
+  .hero small { font-size: 9px; letter-spacing: .11em; }
+  .hero p { max-width: 28ch; }
+}
 @media (max-width: 900px) {
   .categoryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .categoryHeader { align-items: flex-start; flex-wrap: wrap; }
@@ -733,4 +865,9 @@
   .categorySummary { grid-template-columns: auto 1fr; }
   .categorySummary > i { display: none; }
   .periodPicker { padding-inline: 12px; }
+  .categoryModalBackdrop { align-items: end; padding: 0; }
+  .categoryModal { width: 100%; max-height: 88dvh; border-radius: 18px 18px 0 0; }
+  .categoryModalHeader { padding: 16px; }
+  .categoryModalHeader h2 { font-size: 18px; }
+  .categoryModalFooter { align-items: flex-start; flex-direction: column; padding: 10px 16px; }
 }
