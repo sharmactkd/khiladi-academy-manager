@@ -36,6 +36,17 @@ const categoryTotalsForPeriod = async (academy, date) => {
   ]);
 };
 
+const availableExpensePeriods = async (academy) => {
+  const now = new Date();
+  const currentMonthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return ExpenseTransaction.aggregate([
+  { $match: { academy: new mongoose.Types.ObjectId(String(academy)), reversedAt: null, date: { $lt: currentMonthEnd } } },
+  { $group: { _id: { year: { $year: "$date" }, month: { $month: "$date" } }, transactions: { $sum: 1 } } },
+  { $sort: { "_id.year": 1, "_id.month": 1 } },
+  { $project: { _id: 0, year: "$_id.year", month: "$_id.month", transactions: 1 } },
+  ]);
+};
+
 const attachFeePaymentDetails = async (academy, transactions) => {
   const feePaymentIds = transactions
     .filter((row) => row.sourceType === "fee_payment" && row.sourceId)
@@ -58,15 +69,16 @@ export const listExpenses = asyncHandler(async (req, res) => {
   const { page, limit } = parseExpensePagination(req.query);
   const filter = buildExpenseListFilter(req.academyId, req.query);
   const periodDate = filter.date;
-  const [rawTransactions, total, summary, categoryBreakdown] = await Promise.all([
+  const [rawTransactions, total, summary, categoryBreakdown, availablePeriods] = await Promise.all([
     ExpenseTransaction.find(filter).sort({ date: -1, createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate("branch", "branchName").lean(),
     ExpenseTransaction.countDocuments(filter),
     summaryForPeriod(req.academyId, periodDate),
     categoryTotalsForPeriod(req.academyId, periodDate),
+    availableExpensePeriods(req.academyId),
   ]);
   const transactions = await attachFeePaymentDetails(req.academyId, rawTransactions);
   const pages = Math.max(1, Math.ceil(total / limit));
-  return successResponse(res, "Expense transactions fetched successfully", { transactions, summary, categoryBreakdown, balance: summary.income - summary.expense, pagination: { page, limit, total, pages, hasNextPage: page < pages } });
+  return successResponse(res, "Expense transactions fetched successfully", { transactions, summary, categoryBreakdown, availablePeriods, balance: summary.income - summary.expense, pagination: { page, limit, total, pages, hasNextPage: page < pages } });
 });
 
 export const createExpense = asyncHandler(async (req, res) => {

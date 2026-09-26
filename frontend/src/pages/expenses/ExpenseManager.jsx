@@ -11,7 +11,7 @@ import "./ExpenseManagerPremium.css";
 const PAGE_SIZE = 25;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const today = new Date();
-const emptyData = { transactions: [], summary: { income: 0, expense: 0, incomeTransactions: 0, expenseTransactions: 0 }, categoryBreakdown: [], balance: 0, pagination: { page: 1, limit: PAGE_SIZE, total: 0, pages: 1, hasNextPage: false } };
+const emptyData = { transactions: [], summary: { income: 0, expense: 0, incomeTransactions: 0, expenseTransactions: 0 }, categoryBreakdown: [], availablePeriods: [], balance: 0, pagination: { page: 1, limit: PAGE_SIZE, total: 0, pages: 1, hasNextPage: false } };
 const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 const errorMessage = (error, fallback) => error.response?.data?.message || fallback;
 const blankForm = () => ({ type: "expense", category: "", customCategory: "", amount: "", date: localDateKey(), account: "cash", description: "", branch: null });
@@ -162,10 +162,28 @@ export default function ExpenseManager() {
   const expenseTransactions = useMemo(() => transactions.filter((row) => row.type === "expense"), [transactions]);
   const pagination = data.pagination || emptyData.pagination;
   const categoryBreakdown = data.categoryBreakdown || [];
+  const availablePeriods = data.availablePeriods || [];
+  const availableYears = useMemo(() => [...new Set(availablePeriods.map((item) => Number(item.year)))].sort((a, b) => a - b), [availablePeriods]);
+  const enabledMonthNumbers = useMemo(() => new Set(availablePeriods.filter((item) => Number(item.year) === selectedYear).map((item) => Number(item.month))), [availablePeriods, selectedYear]);
   const highestCategoryAmount = Math.max(...categoryBreakdown.map((row) => Number(row.amount || 0)), 1);
   const periodLabel = `${MONTHS[selectedMonth - 1]} ${selectedYear}`;
 
-  const moveYear = (amount) => setSelectedYear((value) => value + amount);
+  const selectedYearIndex = availableYears.indexOf(selectedYear);
+  const canMoveToPreviousYear = selectedYearIndex > 0;
+  const canMoveToNextYear = selectedYearIndex >= 0 && selectedYearIndex < availableYears.length - 1;
+  useEffect(() => {
+    if (!availablePeriods.length || enabledMonthNumbers.has(selectedMonth)) return;
+    const latestAvailable = availablePeriods[availablePeriods.length - 1];
+    setSelectedYear(Number(latestAvailable.year));
+    setSelectedMonth(Number(latestAvailable.month));
+  }, [availablePeriods, enabledMonthNumbers, selectedMonth]);
+  const moveYear = (amount) => {
+    const nextYear = availableYears[selectedYearIndex + amount];
+    if (!nextYear) return;
+    const monthsInYear = availablePeriods.filter((item) => Number(item.year) === nextYear).map((item) => Number(item.month));
+    setSelectedYear(nextYear);
+    setSelectedMonth(amount < 0 ? Math.max(...monthsInYear) : Math.min(...monthsInYear));
+  };
   const openReceipt = (row) => {
     if (row.sourceType === "fee_payment" && (row.paymentId || row.sourceId)) navigate(`/fees/receipt/${row.paymentId || row.sourceId}`);
   };
@@ -176,7 +194,7 @@ export default function ExpenseManager() {
 
   return <main className={`${styles.page} expense-manager-premium`}>
     <header className={styles.hero}><span className={styles.heroIcon}><WalletCards size={25}/></span><div><small>ACADEMY OPERATIONS</small><h1>Expense Manager</h1><p>Academy income, daily expenses and cash flow in one secure workspace.</p></div><button type="button" className={styles.refresh} onClick={() => load(1, filter, false)} title="Refresh"><RefreshCw size={17}/></button></header>
-    <section className={styles.periodPicker}><header><div><small>REPORTING PERIOD</small><h2>{periodLabel}</h2></div><div className={styles.yearPicker}><button type="button" onClick={() => moveYear(-1)} aria-label="Previous year"><ChevronLeft size={16}/></button><strong>{selectedYear}</strong><button type="button" onClick={() => moveYear(1)} aria-label="Next year"><ChevronRight size={16}/></button></div></header><div className={styles.monthTabs}>{MONTHS.map((month, index) => <button type="button" key={month} className={selectedMonth === index + 1 ? styles.activeMonth : ""} onClick={() => setSelectedMonth(index + 1)}>{month}</button>)}</div></section>
+    <section className={styles.periodPicker}><header><div><small>REPORTING PERIOD</small><h2>{periodLabel}</h2></div><div className={styles.yearPicker}><button type="button" disabled={!canMoveToPreviousYear} onClick={() => moveYear(-1)} aria-label="Previous available year"><ChevronLeft size={16}/></button><strong>{selectedYear}</strong><button type="button" disabled={!canMoveToNextYear} onClick={() => moveYear(1)} aria-label="Next available year"><ChevronRight size={16}/></button></div></header><div className={styles.monthTabs}>{MONTHS.map((month, index) => { const monthNumber = index + 1; const enabled = enabledMonthNumbers.has(monthNumber); return <button type="button" key={month} disabled={!enabled} className={selectedMonth === monthNumber ? styles.activeMonth : ""} onClick={() => enabled && setSelectedMonth(monthNumber)}>{month}{enabled ? <i/> : null}</button>; })}</div></section>
     <section className={styles.metrics}><article><small>Total Income</small><strong className={styles.income}>{money(data.summary?.income)}</strong><span>{periodLabel} · {data.summary?.incomeTransactions || 0} transactions</span></article><article><small>Total Expenses</small><strong className={styles.expense}>{money(data.summary?.expense)}</strong><span>{periodLabel} · {data.summary?.expenseTransactions || 0} transactions</span></article><article><small>Net Balance</small><strong>{money(data.balance)}</strong><span>Selected month income minus expenses</span></article></section>
     <section className={styles.categorySection}><header><span><Layers3 size={19}/></span><div><small>EXPENSE BREAKDOWN</small><h2>Category-wise spending</h2><p>{periodLabel} mein har category ka total kharcha.</p></div></header>{categoryBreakdown.length ? <div className={styles.categoryGrid}>{categoryBreakdown.map((row) => <article key={row.category}><div><strong>{row.category || "Uncategorised"}</strong><span>{row.transactions} transaction{row.transactions === 1 ? "" : "s"}</span></div><b>{money(row.amount)}</b><i><em style={{ width: `${Math.max((Number(row.amount || 0) / highestCategoryAmount) * 100, 3)}%` }}/></i></article>)}</div> : <div className={styles.categoryEmpty}>Is month mein expense transaction nahi hai.</div>}</section>
     <section className={styles.toolbar}><div><h2>Transaction ledger</h2><p>Manual records can be corrected or safely deleted without losing the audit trail.</p></div><div className={styles.toolbarActions}><select value={filter} onChange={(event) => changeFilter(event.target.value)}><option value="all">All transactions</option><option value="income">Income only</option><option value="expense">Expenses only</option></select><button type="button" className={styles.primary} onClick={() => { setForm(blankForm()); setEditingId(null); setShowForm(true); }}><Plus size={17}/> Add transaction</button></div></section>
