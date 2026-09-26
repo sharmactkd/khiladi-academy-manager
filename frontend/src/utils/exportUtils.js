@@ -1,7 +1,4 @@
-import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { formatMoney } from "./currency.js";
 import { printDomElement } from "./securePrint.js";
 
@@ -53,12 +50,13 @@ export const normalizeReportRows = (rows = [], columns = []) => {
   });
 };
 
-export const exportReportToExcel = ({
+export const exportReportToExcel = async ({
   rows = [],
   columns = [],
   fileName = "report",
   sheetName = "Report",
 }) => {
+  const XLSX = await import("xlsx");
   const normalizedRows = normalizeReportRows(rows, columns);
 
   const worksheet = XLSX.utils.json_to_sheet(normalizedRows);
@@ -78,7 +76,7 @@ export const exportReportToExcel = ({
   saveAs(blob, `${safeFileName(fileName)}.xlsx`);
 };
 
-export const exportReportToPdf = ({
+export const exportReportToPdf = async ({
   rows = [],
   columns = [],
   fileName = "report",
@@ -89,6 +87,10 @@ export const exportReportToPdf = ({
   fontSize = 8,
   cellPadding = 4,
 }) => {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ]);
   const doc = new jsPDF({
     orientation: "landscape",
     unit: "pt",
@@ -176,7 +178,7 @@ export const exportToExcel = ({
   fileName = "report",
   sheetName = "Sheet1",
 }) => {
-  exportReportToExcel({
+  return exportReportToExcel({
     rows: data,
     columns: [],
     fileName,
@@ -215,7 +217,7 @@ export const exportToPdf = ({
     return row;
   });
 
-  exportReportToPdf({
+  return exportReportToPdf({
     rows: normalizedRows,
     columns: normalizedColumns,
     fileName,

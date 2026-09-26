@@ -1993,3 +1993,11 @@
     display: none !important;
   }
 }
+/* Let Chromium skip painting off-screen attendance rows on smaller devices.
+   The table structure and complete dataset remain available for search/export. */
+@media (max-width: 900px) {
+  .monthly-register-table tbody tr {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 48px;
+  }
+}

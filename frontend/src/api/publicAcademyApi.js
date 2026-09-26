@@ -1,7 +1,12 @@
 import api from "./api.js";
+import { cachedPublicGet } from "./publicApi.js";
 export const publicAcademyApi = {
-  list: (params) => api.get("/public/academies", { params }),
-  get: (slug) => api.get(`/public/academies/${encodeURIComponent(slug)}`),
+  list: (params) => cachedPublicGet("/public/academies", params, 120_000),
+  get: (slug) =>
+    cachedPublicGet(`/public/academies/${encodeURIComponent(slug)}`, {}, 300_000),
+  prefetch: (slug) =>
+    cachedPublicGet(`/public/academies/${encodeURIComponent(slug)}`, {}, 300_000)
+      .catch(() => null),
   enquire: (slug, payload) => api.post(`/public/academies/${encodeURIComponent(slug)}/enquiries`, payload),
   mine: () => api.get("/academy/public-profile"),
   save: (payload) => api.patch("/academy/public-profile", payload),

@@ -23,6 +23,12 @@ import { formatAttendanceDate } from "../../utils/attendanceDate.js";
 import "./Attendance.css";
 
 const now = new Date();
+const LAST_ATTENDANCE_BATCH_KEY = "khiladi:attendance:last-batch";
+
+const getRememberedAttendanceBatch = () => {
+  if (typeof window === "undefined") return "";
+  return window.sessionStorage.getItem(LAST_ATTENDANCE_BATCH_KEY) || "";
+};
 
 const numberFromSearch = (value, fallback, minimum, maximum) => {
   const parsed = Number(value);
@@ -143,7 +149,9 @@ const Attendance = () => {
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [batches, setBatches] = useState([]);
-  const [batch, setBatch] = useState(searchParams.get("batch") || "");
+  const [batch, setBatch] = useState(
+    searchParams.get("batch") || getRememberedAttendanceBatch()
+  );
   const [month, setMonth] = useState(() =>
     numberFromSearch(searchParams.get("month"), now.getMonth() + 1, 1, 12)
   );
@@ -254,7 +262,13 @@ const Attendance = () => {
       setBatches(activeBatches);
 
       if (activeBatches.length) {
-        setBatch((prev) => prev || activeBatches[0]._id);
+        setBatch((previous) =>
+          activeBatches.some((item) => String(item._id) === String(previous))
+            ? previous
+            : activeBatches[0]._id
+        );
+      } else {
+        setBatch("");
       }
     } catch (error) {
       if (error?.response?.status === 401) {
@@ -309,6 +323,9 @@ const Attendance = () => {
         }, { signal: controller.signal });
 
         const data = normalizeResponseData(response);
+        if (import.meta.env.DEV && data.performance) {
+          console.info("Attendance register performance", data.performance);
+        }
         registerCacheRef.current.set(cacheKey, { data, savedAt: Date.now() });
         applyLoadedData(data);
       } catch (error) {
@@ -641,6 +658,14 @@ const Attendance = () => {
   useEffect(() => {
     loadBatches();
   }, [loadBatches]);
+
+  useEffect(() => {
+    if (batch) {
+      window.sessionStorage.setItem(LAST_ATTENDANCE_BATCH_KEY, String(batch));
+    } else {
+      window.sessionStorage.removeItem(LAST_ATTENDANCE_BATCH_KEY);
+    }
+  }, [batch]);
 
   useEffect(() => {
     let mounted = true;

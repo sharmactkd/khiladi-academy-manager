@@ -39,6 +39,7 @@ const processQueue = (error, token = null) => {
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },

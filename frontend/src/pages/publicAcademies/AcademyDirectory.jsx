@@ -1,30 +1,41 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Building2, CalendarDays, Dumbbell, Globe2, MapPin, Search, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
 import { Link } from "react-router-dom";
-import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import publicAcademyApi from "../../api/publicAcademyApi.js";
 import directoryHero from "../../assets/public-academy-directory-hero.webp";
 import PublicShell from "./PublicShell.jsx";
 import Seo from "../../components/seo/Seo.jsx";
 
+const INDIA_STATES = [
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam",
+  "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir",
+  "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh",
+  "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha",
+  "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
+  "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+];
+
 export default function AcademyDirectory() {
+  const initialRequestRef = useRef(true);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ search: "", country: "India", state: "", city: "", martialArt: "", trialAvailable: false });
 
   useEffect(() => {
+    const delay = initialRequestRef.current ? 0 : 250;
+    initialRequestRef.current = false;
     const id = setTimeout(async () => {
       setLoading(true); setError("");
       try { const response = await publicAcademyApi.list({ ...filters, trialAvailable: filters.trialAvailable || undefined }); setItems(response.data?.data?.items || []); }
       catch (requestError) { setError(requestError.response?.data?.message || "Academies could not be loaded"); }
       finally { setLoading(false); }
-    }, 250);
+    }, delay);
     return () => clearTimeout(id);
   }, [filters]);
 
   const change = (event) => setFilters((current) => ({ ...current, [event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value }));
-  const changeLocation = (field, value) => setFilters((current) => ({ ...current, [field]: value }));
 
   const structuredData = useMemo(() => {
     const origin = String(import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
@@ -64,12 +75,16 @@ export default function AcademyDirectory() {
         <div className="pa-directory-trust" aria-label="Directory benefits"><span><ShieldCheck size={21} /><strong>Verified Academies</strong></span><span><UsersRound size={21} /><strong>Active Batches</strong></span><span><CalendarDays size={21} /><strong>Trial Classes</strong></span></div>
         <div className="pa-directory-hero__actions"><a className="pa-directory-primary" href="#academy-directory-results">Explore Academies <ArrowRight size={18} /></a><Link className="pa-directory-secondary" to="/register">List your academy <ArrowRight size={16} /></Link></div>
       </div>
-      <div className="pa-directory-hero__media" aria-hidden="true"><img src={directoryHero} alt="" /></div>
+      <div className="pa-directory-hero__media" aria-hidden="true"><img src={directoryHero} alt="" width="1600" height="534" decoding="async" fetchPriority="high" /></div>
     </header>
     <main className="pa-wrap pa-directory" id="academy-directory-results">
       <section className="pa-filters pa-directory-filters" aria-label="Academy filters">
         <label className="pa-directory-search"><Search size={18} /><input name="search" value={filters.search} onChange={change} placeholder="Search academy or martial art" aria-label="Search academy or martial art" /></label>
-        <div className="pa-directory-location"><PhoneLocationFields showPhone={false} showLocation country={filters.country} state={filters.state} city={filters.city} cityLabel="City" onChange={changeLocation} /></div>
+        <div className="pa-directory-location">
+          <label><span>Country</span><select className="pa-input" name="country" value={filters.country} onChange={change}><option value="India">India</option></select></label>
+          <label><span>State</span><select className="pa-input" name="state" value={filters.state} onChange={change}><option value="">All states</option>{INDIA_STATES.map((state) => <option value={state} key={state}>{state}</option>)}</select></label>
+          <label><span>City</span><input className="pa-input" name="city" value={filters.city} onChange={change} placeholder="e.g. Agra" autoComplete="address-level2" /></label>
+        </div>
         <label><span>Sport / Martial art</span><input className="pa-input" name="martialArt" value={filters.martialArt} onChange={change} placeholder="e.g. Taekwondo" /></label>
         <label className="pa-trial-filter"><input type="checkbox" name="trialAvailable" checked={filters.trialAvailable} onChange={change} /><Sparkles size={17} /><span>Trial available</span></label>
       </section>
@@ -78,7 +93,11 @@ export default function AcademyDirectory() {
       {error && <div className="pa-error">{error}</div>}
       {loading ? <div className="pa-state">Loading academies…</div> : items.length ? <div className="pa-directory-list">{items.map((academy) => {
         const academyLocation = [academy.location?.city, academy.location?.state, academy.location?.country].filter(Boolean).join(", ") || "Location not published";
-        return <Link className="pa-academy-card" to={`/academies/${academy.slug}`} key={academy.slug}>
+        const prefetchProfile = () => {
+          import("./PublicAcademyDetails.jsx");
+          publicAcademyApi.prefetch(academy.slug);
+        };
+        return <Link className="pa-academy-card" to={`/academies/${academy.slug}`} key={academy.slug} onMouseEnter={prefetchProfile} onFocus={prefetchProfile} onTouchStart={prefetchProfile}>
           <span className="pa-academy-card__visual" style={academy.coverImage ? { backgroundImage: `linear-gradient(135deg, rgba(185,0,7,.82), rgba(20,32,56,.58)), url(${academy.coverImage})` } : undefined}>
             <span className="pa-academy-card__logo">{academy.logo ? <img src={academy.logo} alt={`${academy.academyName} logo`} loading="lazy" decoding="async" /> : <Building2 size={34} />}</span>
             {academy.trialAvailable && <strong><Sparkles size={14} />Trial Available</strong>}

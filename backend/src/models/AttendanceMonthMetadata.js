@@ -24,5 +24,12 @@ attendanceMonthMetadataSchema.index(
   { unique: true }
 );
 attendanceMonthMetadataSchema.index({ academy: 1, student: 1, year: 1, month: 1 });
+attendanceMonthMetadataSchema.index({
+  academy: 1,
+  batch: 1,
+  year: -1,
+  month: -1,
+  updatedAt: -1,
+});
 
 export default mongoose.model("AttendanceMonthMetadata", attendanceMonthMetadataSchema);
