@@ -13,6 +13,7 @@ import {
   PublicBranchProfile,
 } from "./PublicReadOnlyProfiles.jsx";
 import "./PublicProfileVisibility.css";
+import Seo from "../../components/seo/Seo.jsx";
 
 export default function PublicAcademyDetails() {
   const { slug } = useParams();
@@ -25,7 +26,6 @@ export default function PublicAcademyDetails() {
     publicAcademyApi.get(slug).then((response) => {
       const item = response.data?.data?.profile;
       setProfile(item);
-      document.title = `${item?.academyName || "Academy"} | KHILADI`;
     }).catch((requestError) => setError(requestError.response?.data?.message || "Academy not found"));
   }, [slug]);
 
@@ -33,6 +33,64 @@ export default function PublicAcademyDetails() {
   const branchBatches = useMemo(() => selectedBranch ? (profile?.batches || []).filter((batch) => batch.branchId === selectedBranch.id) : [], [profile, selectedBranch]);
   const selectedBatch = useMemo(() => branchBatches.find((batch) => batch.id === searchParams.get("batch")) || null, [branchBatches, searchParams]);
   const batchesVisible = searchParams.get("view") === "batches";
+
+  const seo = useMemo(() => {
+    if (!profile) return null;
+    const origin = String(import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
+    const location = [profile.location?.city, profile.location?.state, profile.location?.country].filter(Boolean).join(", ");
+    const sports = (profile.martialArts || []).slice(0, 5).join(", ");
+    const title = `${profile.academyName}${profile.location?.city ? ` in ${profile.location.city}` : ""} | Martial Arts Academy`;
+    const description = String(
+      profile.tagline ||
+      `Explore ${profile.academyName}${location ? ` in ${location}` : ""}. View ${sports || "martial arts"} training, branches, batches, facilities and trial class availability.`
+    ).slice(0, 160);
+    const url = `${origin}/academies/${encodeURIComponent(profile.slug)}`;
+    const socialLinks = Object.values(profile.socialLinks || {}).filter((value) => /^https:\/\//i.test(String(value || "")));
+    const address = profile.location && Object.values(profile.location).some(Boolean) ? {
+      "@type": "PostalAddress",
+      streetAddress: profile.location.address || undefined,
+      addressLocality: profile.location.city || undefined,
+      addressRegion: profile.location.state || undefined,
+      addressCountry: profile.location.country || "India",
+    } : undefined;
+    const business = {
+      "@context": "https://schema.org",
+      "@type": ["LocalBusiness", "SportsActivityLocation"],
+      "@id": `${url}#academy`,
+      name: profile.academyName,
+      description,
+      url,
+      image: profile.coverImage || profile.logo || undefined,
+      logo: profile.logo || undefined,
+      foundingDate: profile.since ? String(profile.since) : undefined,
+      address,
+      telephone: profile.contact?.phone ? `${profile.contact.countryCode || ""}${profile.contact.phone}` : undefined,
+      email: profile.contact?.email || undefined,
+      sameAs: socialLinks.length ? socialLinks : undefined,
+      knowsAbout: profile.martialArts?.length ? profile.martialArts : undefined,
+      amenityFeature: (profile.facilities || []).map((name) => ({ "@type": "LocationFeatureSpecification", name, value: true })),
+      department: (profile.branches || []).map((branch) => ({
+        "@type": "SportsActivityLocation",
+        name: `${profile.academyName} - ${branch.name}`,
+        address: branch.location && Object.values(branch.location).some(Boolean) ? {
+          "@type": "PostalAddress",
+          streetAddress: branch.location.address || undefined,
+          addressLocality: branch.location.city || undefined,
+          addressRegion: branch.location.state || undefined,
+          addressCountry: branch.location.country || profile.location?.country || "India",
+        } : undefined,
+      })),
+    };
+    const breadcrumb = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Academy Directory", item: `${origin}/academies` },
+        { "@type": "ListItem", position: 2, name: profile.academyName, item: url },
+      ],
+    };
+    return { title, description, url, business, breadcrumb };
+  }, [profile]);
 
   useEffect(() => {
     if (!enquiryMode) return undefined;
@@ -50,10 +108,11 @@ export default function PublicAcademyDetails() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  if (error) return <PublicShell><div className="pa-state"><h1>{error}</h1></div></PublicShell>;
-  if (!profile) return <PublicShell><div className="pa-state">Loading academy…</div></PublicShell>;
+  if (error) return <PublicShell><Seo title="Academy Not Found | KHILADI" description="This academy profile is unavailable." path={`/academies/${slug}`} robots="noindex,follow" /><div className="pa-state"><h1>{error}</h1></div></PublicShell>;
+  if (!profile) return <PublicShell><Seo title="Loading Academy | KHILADI" description="Loading academy profile." path={`/academies/${slug}`} robots="noindex,follow" /><div className="pa-state">Loading academy…</div></PublicShell>;
 
   return <PublicShell>
+    <Seo title={seo.title} description={seo.description} path={`/academies/${profile.slug}`} image={profile.coverImage || profile.logo} type="business.business" structuredData={[seo.business, seo.breadcrumb]} />
     <main className="pa-wrap public-profile-parity">
       {!selectedBranch && <>
         <PublicAcademyOverview profile={profile} />

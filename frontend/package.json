@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:expenses && npm run test:import-matching && npm run test:attendance-export && node scripts/testAttendanceRowView.mjs && node scripts/testRemainingDaysDisplay.mjs && node scripts/testAttendanceDate.mjs",
+    "test": "npm run test:expenses && npm run test:import-matching && npm run test:attendance-export && node scripts/testAttendanceRowView.mjs && node scripts/testRemainingDaysDisplay.mjs && node scripts/testAttendanceDate.mjs && node scripts/testSeo.mjs",
     "dev": "vite",
     "build": "vite build",
     "verify:historical-workbook": "node --max-old-space-size=4096 scripts/verifyHistoricalWorkbook.mjs",

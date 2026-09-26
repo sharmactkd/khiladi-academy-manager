@@ -139,6 +139,7 @@ export const unpublishMyPublicProfile = asyncHandler(async (req, res) => {
 });
 
 export const listPublicAcademies = asyncHandler(async (req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=120, s-maxage=600, stale-while-revalidate=3600");
   const page = Math.max(1, Number(req.query.page) || 1); const limit = Math.min(24, Math.max(1, Number(req.query.limit) || 12)); const filter = { status: "published" };
   const exactLocation = (value) => new RegExp(`^${clean(value, 80).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
   const academyLocationFilter = { isActive: true };
@@ -162,7 +163,22 @@ export const listPublicAcademies = asyncHandler(async (req, res) => {
 });
 
 export const getPublicAcademy = asyncHandler(async (req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=120, s-maxage=900, stale-while-revalidate=86400");
   const profile = await PublicAcademyProfile.findOne({ slug: req.params.slug, status: "published" }).select("+academy"); if (!profile) return errorResponse(res, "Academy not found", 404);
   const publicProfile = await buildPublicProfile(profile); if (!publicProfile) return errorResponse(res, "Academy not found", 404);
   return successResponse(res, "Academy details loaded", { profile: publicProfile });
+});
+
+export const getPublicAcademySeoIndex = asyncHandler(async (_req, res) => {
+  const items = await PublicAcademyProfile.find({ status: "published" })
+    .select("slug updatedAt")
+    .populate("academy", "isActive")
+    .sort({ updatedAt: -1 })
+    .lean();
+  res.setHeader("Cache-Control", "public, max-age=300, s-maxage=1800, stale-while-revalidate=86400");
+  return successResponse(res, "Published academy SEO index loaded", {
+    items: items
+      .filter((item) => item.academy?.isActive)
+      .map((item) => ({ slug: item.slug, updatedAt: item.updatedAt })),
+  });
 });

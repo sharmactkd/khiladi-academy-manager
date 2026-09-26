@@ -132,7 +132,7 @@ const billingRoles = [
 const RoleLandingRedirect = () => {
   const { isAuthenticated, loading, user } = useAuth();
   if (loading) return null;
-  return <Navigate to={isAuthenticated ? getRoleLandingPath(user?.role) : "/login"} replace />;
+  return <Navigate to={isAuthenticated ? getRoleLandingPath(user?.role) : "/academies"} replace />;
 };
 
 const RouteLoadingFallback = () => (

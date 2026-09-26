@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Building2, CalendarDays, Dumbbell, Globe2, MapPin, Search, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import PhoneLocationFields from "../../components/common/PhoneLocationFields.jsx";
 import publicAcademyApi from "../../api/publicAcademyApi.js";
 import directoryHero from "../../assets/public-academy-directory-hero.webp";
 import PublicShell from "./PublicShell.jsx";
+import Seo from "../../components/seo/Seo.jsx";
 
 export default function AcademyDirectory() {
   const [items, setItems] = useState([]);
@@ -25,7 +26,39 @@ export default function AcademyDirectory() {
   const change = (event) => setFilters((current) => ({ ...current, [event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value }));
   const changeLocation = (field, value) => setFilters((current) => ({ ...current, [field]: value }));
 
+  const structuredData = useMemo(() => {
+    const origin = String(import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
+    return [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: "KHILADI Academy",
+        url: `${origin}/academies`,
+        description: "Discover martial arts academies, branches, coaches and training batches across India.",
+        inLanguage: "en-IN",
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "Martial arts academy directory",
+        numberOfItems: items.length,
+        itemListElement: items.slice(0, 24).map((academy, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: academy.academyName,
+          url: `${origin}/academies/${encodeURIComponent(academy.slug)}`,
+        })),
+      },
+    ];
+  }, [items]);
+
   return <PublicShell>
+    <Seo
+      title="Find Martial Arts & Taekwondo Academies Near You | KHILADI"
+      description="Discover martial arts and Taekwondo academies across India. Compare branches, coaches, training batches, facilities and available trial classes."
+      path="/academies"
+      structuredData={structuredData}
+    />
     <header className="pa-hero pa-directory-hero">
       <div className="pa-directory-hero__content"><div className="pa-eyebrow">Train better. Grow stronger.</div><h1>Find the right martial arts academy for you.</h1><p>Explore trusted academies, training programs, facilities and branches—all in one professional directory.</p>
         <div className="pa-directory-trust" aria-label="Directory benefits"><span><ShieldCheck size={21} /><strong>Verified Academies</strong></span><span><UsersRound size={21} /><strong>Active Batches</strong></span><span><CalendarDays size={21} /><strong>Trial Classes</strong></span></div>
@@ -47,7 +80,7 @@ export default function AcademyDirectory() {
         const academyLocation = [academy.location?.city, academy.location?.state, academy.location?.country].filter(Boolean).join(", ") || "Location not published";
         return <Link className="pa-academy-card" to={`/academies/${academy.slug}`} key={academy.slug}>
           <span className="pa-academy-card__visual" style={academy.coverImage ? { backgroundImage: `linear-gradient(135deg, rgba(185,0,7,.82), rgba(20,32,56,.58)), url(${academy.coverImage})` } : undefined}>
-            <span className="pa-academy-card__logo">{academy.logo ? <img src={academy.logo} alt="" /> : <Building2 size={34} />}</span>
+            <span className="pa-academy-card__logo">{academy.logo ? <img src={academy.logo} alt={`${academy.academyName} logo`} loading="lazy" decoding="async" /> : <Building2 size={34} />}</span>
             {academy.trialAvailable && <strong><Sparkles size={14} />Trial Available</strong>}
           </span>
           <span className="pa-academy-card__content">
