@@ -5,7 +5,7 @@ cd "D:\Website\Khiladi Project\khiladi-academy-manager"
 Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
 
 Expand-Archive `
-  -Path "$env:USERPROFILE\Downloads\khiladi-expense-timeline-valid-periods-v46.zip" `
+  -Path "$env:USERPROFILE\Downloads\khiladi-expense-income-detail-ui-v47.zip" `
   -DestinationPath (Get-Location).Path `
   -Force
 
@@ -32,7 +32,7 @@ git diff --check
 git diff --stat
 
 git add -A
-git commit -m "Match expense timeline with available transaction periods"
+git commit -m "Improve linked fee income row and detail UI"
 git push origin main
 
 git status
@@ -66,3 +66,5 @@ USAGE
 25. Linked fee-income rows display the student's name and receipt number. Double-click a linked row to open its fee receipt.
 26. Expense month navigation now matches Attendance: active red month, bordered month grid, availability dot and muted disabled periods.
 27. Years before the first transaction, missing months and future periods cannot be selected; year arrows move only between years containing expense data.
+28. Linked fee-income rows use a normal pointer cursor while retaining double-click receipt navigation.
+29. The transaction detail card shows the linked student's name and receipt number instead of the generic fee-payment description.
