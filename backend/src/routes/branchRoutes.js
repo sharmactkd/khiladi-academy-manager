@@ -18,7 +18,6 @@ import {
   requireResolvedAcademy,
 } from "../middlewares/academyAccessMiddleware.js";
 import validateRequest from "../middlewares/validateRequest.js";
-import { requireFeature } from "../middlewares/featureMiddleware.js";
 
 import {
   branchIdValidator,
@@ -33,7 +32,6 @@ router.use(protect);
 router.use(allowAcademyManagement);
 router.use(resolveUserAcademy);
 router.use(requireResolvedAcademy);
-router.use(requireFeature("multiBranch"));
 
 router
   .route("/")

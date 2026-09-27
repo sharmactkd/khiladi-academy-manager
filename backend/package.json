@@ -4,7 +4,7 @@
   "description": "KHILADI Academy Manager backend",
   "main": "server.js",
   "scripts": {
-    "test": "npm run test:security && npm run test:expenses && node --test tests/feeMembershipLifecycle.test.js tests/membershipMonthlyDue.test.js tests/membershipDate.test.js tests/monthlyAttendanceIdentity.test.js",
+    "test": "npm run test:security && npm run test:expenses && node --test tests/feeMembershipLifecycle.test.js tests/membershipMonthlyDue.test.js tests/membershipDate.test.js tests/monthlyAttendanceIdentity.test.js tests/normalizeStringList.test.js tests/branchEntitlement.test.js tests/membershipControlSafety.test.js tests/importSessionSafety.test.js",
     "start": "node server.js",
     "dev": "nodemon server.js",
     "security:migrate-sensitive-data": "node scripts/migrateSensitiveStudentData.js",
@@ -14,6 +14,7 @@
     "test:cloudinary": "node scripts/testCloudinaryConnection.js",
     "performance:indexes": "node scripts/createPerformanceIndexes.js",
     "membership:migrate-next-due": "node scripts/migrateMembershipNextDueDate.js",
+    "academy:repair-martial-arts": "node scripts/repairAcademyMartialArts.js",
     "security:verify-audit": "node scripts/verifyAuditIntegrity.js",
     "security:verify-production": "node scripts/verifyProductionReadiness.js",
     "security:verify-headers": "node scripts/verifySecurityHeaders.js",

@@ -19,8 +19,8 @@ const student = (overrides = {}) => ({
 
 {
   const result = suggest(item(), [student(), student({ _id: "sibling", name: "Kashvi Goel" })], batch);
-  assert.equal(result.value, "student-1");
-  assert.match(result.reason, /shared phone safely resolved/i);
+  assert.equal(result.value, "");
+  assert.match(result.reason, /shared by multiple students/i);
 }
 
 {

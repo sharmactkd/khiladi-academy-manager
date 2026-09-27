@@ -221,6 +221,10 @@ export const applyMembershipAdjustment = async ({
   const reason = clean(payload.reason);
   const note = clean(payload.note);
 
+  if (type !== "set_note" && !reason) {
+    throw createError("Reason is required for membership changes");
+  }
+
   const membership = await getOrCreateMembership({ academyId, studentId });
   if (payload.expectedVersion !== undefined && Number(payload.expectedVersion) !== membership.__v) {
     throw createError("Membership was updated elsewhere. Refresh and try again.", 409);
@@ -327,24 +331,18 @@ export const applyMembershipAdjustment = async ({
       break;
     }
     case "set_fee_status": {
-      const allowed = ["paid", "due", "partial", "waived", "complimentary"];
+      // Paid/partial/due are ledger outcomes. Manual membership controls may
+      // only create explicit, audited exceptions.
+      const allowed = ["waived", "complimentary"];
       const feeStatus = clean(payload.feeStatus).toLowerCase();
-      if (!allowed.includes(feeStatus)) throw createError("Fee status is invalid");
+      if (!allowed.includes(feeStatus)) throw createError("Paid, partial and due status must come from fee transactions");
       const wasFeeRequired = membership.feeRequired !== false;
       membership.feeStatus = feeStatus;
       membership.feeStatusCleared = false;
       membership.feeRequired = !["waived", "complimentary"].includes(feeStatus);
       if (feeStatus === "complimentary") membership.status = "complimentary";
       else if (membership.status === "complimentary") membership.status = "active";
-      if (feeStatus === "paid") {
-        membership.unpaidMonths = 0;
-        membership.unpaidDays = 0;
-        const accrual = calculateMembershipAccrualState(membership);
-        membership.nextDueDate = moveDueDateToNextCycle(
-          accrual.nextDueDate || membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate,
-        );
-        membership.effectiveDueDate = membership.nextDueDate;
-      } else if (!wasFeeRequired && membership.feeRequired) {
+      if (!wasFeeRequired && membership.feeRequired) {
         membership.nextDueDate = moveDueDateToNextCycle(
           membership.nextDueDate || membership.effectiveDueDate || membership.originalDueDate,
         );
@@ -353,10 +351,8 @@ export const applyMembershipAdjustment = async ({
       break;
     }
     case "clear_fee_status":
-      membership.unpaidMonths = 0;
-      membership.unpaidDays = 0;
-      membership.feeStatus = "paid";
-      membership.feeRequired = false;
+      // Legacy/API compatibility: clear only the manually displayed label.
+      // Never erase arrears or silently turn off the fee requirement.
       membership.feeStatusCleared = true;
       break;
     case "set_note":

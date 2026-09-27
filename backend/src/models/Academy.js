@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { normalizeStringList } from "../utils/normalizeStringList.js";
 
 const academySettingsSchema = new mongoose.Schema(
   {
@@ -262,23 +263,8 @@ const academySchema = new mongoose.Schema(
 academySchema.index({ academyName: "text" });
 academySchema.index({ city: 1, state: 1 });
 
-const normalizeStringArray = (value) => {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item || "").trim()).filter(Boolean);
-  }
-
-  if (typeof value === "string") {
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  return [];
-};
-
 academySchema.pre("validate", function () {
-  this.martialArts = normalizeStringArray(this.martialArts);
+  this.martialArts = normalizeStringList(this.martialArts, { maxItems: 30, maxLength: 60 });
 
   const sourcePhones = Array.isArray(this.phoneNumbers)
     ? this.phoneNumbers.slice(0, 4)

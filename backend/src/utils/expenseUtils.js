@@ -22,6 +22,7 @@ export const parseExpensePagination = (query = {}) => {
 export const buildExpenseListFilter = (academy, query = {}) => {
   const filter = { academy, reversedAt: null };
   if (["income", "expense"].includes(query.type)) filter.type = query.type;
+  if (query.category) filter.category = cleanCategoryName(query.category);
   if (query.from || query.to) {
     filter.date = {};
     if (query.from) filter.date.$gte = new Date(`${query.from}T00:00:00.000Z`);

@@ -3,6 +3,7 @@ import AuditLog from "../models/AuditLog.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import { uploadedFileReference } from "../services/mediaStorageService.js";
+import { normalizeStringList } from "../utils/normalizeStringList.js";
 
 const SAFE_ACADEMY_UPDATE_FIELDS = [
   "ownerName",
@@ -39,23 +40,6 @@ const parseJsonIfNeeded = (value, fallback) => {
   } catch {
     return value;
   }
-};
-
-const normalizeStringArray = (value) => {
-  const parsed = parseJsonIfNeeded(value, value);
-
-  if (Array.isArray(parsed)) {
-    return parsed.map((item) => String(item || "").trim()).filter(Boolean);
-  }
-
-  if (typeof parsed === "string") {
-    return parsed
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  return [];
 };
 
 const normalizeAffiliations = (value) => {
@@ -119,7 +103,7 @@ const normalizeAcademyPayload = (body = {}) => {
   });
 
   if (Object.prototype.hasOwnProperty.call(body, "martialArts")) {
-    payload.martialArts = normalizeStringArray(body.martialArts);
+    payload.martialArts = normalizeStringList(body.martialArts, { maxItems: 30, maxLength: 60 });
   }
 
   if (Object.prototype.hasOwnProperty.call(body, "affiliations")) {

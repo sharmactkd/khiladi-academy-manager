@@ -5,22 +5,11 @@ import Branch from "../models/Branch.js";
 import PublicAcademyProfile from "../models/PublicAcademyProfile.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { errorResponse, successResponse } from "../utils/apiResponse.js";
+import { normalizeStringList } from "../utils/normalizeStringList.js";
 
 const clean = (value, max = 180) => String(value ?? "").trim().slice(0, max);
 const list = (value, max = 20) => (Array.isArray(value) ? value : String(value ?? "").split(",")).map((item) => clean(item, 80)).filter(Boolean).slice(0, max);
-const publicList = (value, max = 30) => {
-  const source = Array.isArray(value) ? value : [value];
-  const flattened = source.flatMap((item) => {
-    if (typeof item !== "string") return item == null ? [] : [item];
-    const text = item.trim();
-    if (!text) return [];
-    if (text.startsWith("[") && text.endsWith("]")) {
-      try { const parsed = JSON.parse(text); return Array.isArray(parsed) ? parsed : [text]; } catch { return text.split(","); }
-    }
-    return text.split(",");
-  });
-  return [...new Set(flattened.map((item) => clean(String(item).replace(/^['"]|['"]$/g, ""), 80)).filter(Boolean))].slice(0, max);
-};
+const publicList = (value, max = 30) => normalizeStringList(value, { maxItems: max, maxLength: 80 });
 const slugify = (value) => clean(value, 140).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "academy";
 const visibilityKeys = ["academyOverview", "academyContact", "socialLinks", "affiliations", "branches", "branchContact", "branchFacilities", "branchCoaches", "batches", "batchCoaches", "batchSchedule"];
 const ownerAcademy = (req) => Academy.findOne(req.user.role === "super_admin" && req.query.academyId ? { _id: req.query.academyId } : { owner: req.user._id });

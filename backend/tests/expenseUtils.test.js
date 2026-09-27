@@ -4,6 +4,7 @@ import { buildExpenseListFilter, buildExpenseMutationPayload, isDefaultCategory,
 test("category normalization blocks default duplicates", () => { assert.equal(normalizeCategoryName("  RENT  "), "rent"); assert.equal(isDefaultCategory("expense", " rent "), true); });
 test("pagination is bounded", () => { assert.deepEqual(parseExpensePagination({}), { page: 1, limit: 25 }); assert.deepEqual(parseExpensePagination({ page: "3", limit: "500" }), { page: 3, limit: 100 }); });
 test("list filters exclude reversals", () => { const filter = buildExpenseListFilter("academy", { type: "expense" }); assert.equal(filter.reversedAt, null); assert.equal(filter.type, "expense"); });
+test("list filters one exact normalized category", () => { const filter = buildExpenseListFilter("academy", { type: "expense", category: "  Student   Travel " }); assert.equal(filter.category, "Student Travel"); });
 test("expense edits use an explicit normalized payload", () => {
   const payload = buildExpenseMutationPayload({ type: "expense", category: "  Travel   Cost ", amount: "1250", account: "upi", date: "2026-09-17", description: "  Tournament cab  ", forbidden: "ignored" });
   assert.deepEqual(payload, { type: "expense", category: "Travel Cost", amount: 1250, account: "upi", date: "2026-09-17", branch: null, description: "Tournament cab" });

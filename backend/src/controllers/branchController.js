@@ -11,10 +11,17 @@ import FeePayment from "../models/FeePayment.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import { getCurrencySymbol } from "../utils/currency.js";
+import { getPlanLimit, isLimitUnlimited } from "../services/planService.js";
 
 const OWNER_ROLES = ["academy_owner", "super_admin"];
 
 const isOwnerRole = (user) => OWNER_ROLES.includes(user?.role);
+
+const planAllowsAdditionalBranches = async (academyId) => {
+  const value = await getPlanLimit({ academyId, resourceName: "multiBranch" });
+  return value === true || value === "true" || value === "enabled" || value === "yes" ||
+    value === 1 || value === "1" || isLimitUnlimited(value) || Number(value || 0) > 0;
+};
 
 const normalizeBranchCode = (value) => String(value || "").trim().toUpperCase();
 
@@ -312,6 +319,14 @@ export const createBranch = asyncHandler(async (req, res) => {
   }
 
   const academyId = req.academyId;
+  const activeBranchCount = await Branch.countDocuments({ academy: academyId, isActive: true });
+  if (activeBranchCount > 0 && req.user.role !== "super_admin" && !(await planAllowsAdditionalBranches(academyId))) {
+    return errorResponse(
+      res,
+      "Your current plan includes one branch. Upgrade to create additional branches.",
+      403,
+    );
+  }
   const cleanBranchCode = normalizeBranchCode(req.body.branchCode);
 
   const existing = await Branch.findOne({
@@ -330,6 +345,10 @@ export const createBranch = asyncHandler(async (req, res) => {
   });
 
   const payload = normalizeBranchPayload(req.body);
+
+  // Every academy needs one usable location. The first active branch is
+  // always its main branch; multiBranch entitlement applies only after it.
+  if (activeBranchCount === 0) payload.isMainBranch = true;
 
   if (payload.isMainBranch) {
     await unsetOtherMainBranches({ academyId });

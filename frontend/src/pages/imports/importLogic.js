@@ -58,7 +58,7 @@ export function prepareImportChoices(items, students, batch, previous = {}) {
     if (!students.length) { next[item.key] = "__new__"; continue; }
     const value = suggest(item, students, batch)?.value;
     if (value && !used.has(value)) { next[item.key] = value; used.add(value); }
-    else if (!value && !students.some(s => norm(studentName(s)) === norm(item.name) || (item.row.admissionNumber && norm(s.admissionNumber) === norm(item.row.admissionNumber))) && !nameVariantCandidates(item, students, batch, 0.72).length) {
+    else if (!value && !students.some(s => norm(studentName(s)) === norm(item.name) || (item.row.admissionNumber && norm(s.admissionNumber) === norm(item.row.admissionNumber))) && !nameVariantCandidates(item, students, batch, 0.72).some(({ score }) => score >= 0.72)) {
       // A different name sharing a parent's phone is a new identity, not a match.
       next[item.key] = "__new__";
     }
@@ -107,9 +107,10 @@ export function suggest(item, students, batchId) {
   }
   const samePhone = eligible.filter(s => itemPhone && phone(s.phone) === itemPhone);
   const exact = samePhone.filter(s => norm(studentName(s)) === itemName);
+  if (samePhone.length > 1) return { value: "", reason: "This phone is shared by multiple students (possibly a family number) — verify the student explicitly" };
   if (exact.length === 1) {
     if (itemDob && date(exact[0].dateOfBirth) && itemDob !== date(exact[0].dateOfBirth)) return { value: "", reason: "Exact name and phone match, but DOB differs — choose explicitly" };
-    return { value: id(exact[0]), reason: samePhone.length > 1 ? "Exact name and phone agree (shared phone safely resolved by name)" : "Exact name and phone agree" };
+    return { value: id(exact[0]), reason: "Exact name and phone agree" };
   }
   if (exact.length > 1) return { value: "", reason: "Multiple app students have this exact name and phone — choose explicitly" };
   const names = eligible.filter(s => norm(studentName(s)) === itemName);

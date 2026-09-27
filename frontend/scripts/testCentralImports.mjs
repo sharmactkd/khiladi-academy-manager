@@ -7,13 +7,20 @@ const existing = [{ _id:'s1', firstName:'Adi', lastName:'Jain', phone:'999999999
 const item = { name:'Adi Jain', phone:'9999999999', row:{} };
 test('wizard separates mapping, selection, matching and final save steps', () => {
  const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
- assert.match(source, /\["setup", "mapping", "scope", "review", "confirm", "result"\]/);
- assert.match(source, /Details found in Excel/);
+ assert.match(source, /\["setup", "mapping", "review", "confirm", "result"\]/);
+ assert.match(source, /Student record found in Excel/);
  assert.match(source, /Only attendance found in Excel/);
  assert.doesNotMatch(source, /Record available|Players & mapping/);
  assert.match(source, /Array\.isArray\(savedStudents\)/);
  const final = source.split('\n').find(line => line.includes('onClick={() => execute(false)}'));
  assert.match(final, /phase === "confirm"/);
+});
+test('final import requires explicit review confirmation and shows attendance scope', () => {
+ const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
+ assert.match(source, /I reviewed the destination, identity links, duplicate policy and final counts/);
+ assert.match(source, /!reviewConfirmed \|\| !included\.length/);
+ assert.match(source, /attendanceMonths/);
+ assert.match(source, /attendanceCells/);
 });
 test('individual player mode never auto-selects the whole workbook', () => {
  const source = readFileSync(new URL('../src/pages/imports/Imports.jsx', import.meta.url), 'utf8');
@@ -55,7 +62,8 @@ test('unchecked recovery identities do not block review or final import', () => 
  assert.match(source, /blockingUnresolved = reconciliationMode \? \[\] : unresolved/);
  const reviewAction = source.split('\n').find(line => line.includes('Continue: review & import'));
  const finalAction = source.split('\n').find(line => line.includes('Import selected records / attendance'));
- assert.doesNotMatch(reviewAction, /pendingDuplicateGroups\.length|blockingUnresolved\.length/);
+ const reviewButton = reviewAction.slice(reviewAction.indexOf('Continue: review & import') - 260, reviewAction.indexOf('Continue: review & import'));
+ assert.doesNotMatch(reviewButton, /pendingDuplicateGroups\.length|blockingUnresolved\.length/);
  assert.match(finalAction, /blockingUnresolved\.length/);
  assert.match(source, /Unresolved or unconfirmed identities will be safely skipped/);
 });

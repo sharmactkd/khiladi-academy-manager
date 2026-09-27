@@ -15,7 +15,6 @@ import {
   SlidersHorizontal,
   StickyNote,
   TimerReset,
-  Trash2,
   X,
 } from "lucide-react";
 
@@ -25,25 +24,23 @@ import { formatRemainingTrainingTime } from "./remainingDaysDisplay.js";
 import "../../pages/attendance/Attendance.css";
 
 const ACTIONS = [
-  { value: "extend_days", label: "Add training days", help: "Move the effective due date forward." },
-  { value: "reduce_days", label: "Remove training days", help: "Reduce protected or remaining training time." },
-  { value: "set_due_date", label: "Set custom due date", help: "Replace the current effective due date." },
-  { value: "clear_due_date", label: "Clear due date", help: "Remove the due date without changing fee history." },
-  { value: "set_remaining_days", label: "Set remaining days", help: "Set the exact training-day balance." },
-  { value: "change_unpaid_months", label: "Set unpaid months & days", help: "Set the exact outstanding fee duration." },
+  { value: "set_due_date", label: "Correct next due date", help: "Replace the next membership due date with an audited correction." },
+  { value: "extend_days", label: "Add membership days", help: "Credit calendar days and move the due date forward." },
+  { value: "reduce_days", label: "Remove membership days", help: "Debit calendar days and move the due date backward." },
+  { value: "set_remaining_days", label: "Set exact day credit", help: "Correct the protected membership-day balance." },
+  { value: "change_unpaid_months", label: "Correct opening outstanding", help: "Legacy/import correction for outstanding months and days." },
   { value: "pause", label: "Pause membership", help: "Temporarily stop membership progression." },
   { value: "resume", label: "Resume membership", help: "Restart membership from a chosen date." },
-  { value: "set_fee_status", label: "Set fee status", help: "Manually assign the current fee state." },
-  { value: "clear_fee_status", label: "Clear fee status", help: "Remove Due, Paid or other fee state." },
+  { value: "set_fee_status", label: "Apply fee exception", help: "Grant a waiver or complimentary membership; payments stay ledger-driven." },
   { value: "set_note", label: "Update internal note", help: "Save an operational note without changing balance." },
 ];
 
 const ACTION_GROUPS = [
-  { key: "due", label: "Due Date", help: "Set or clear membership due date.", icon: CalendarDays, actions: ["set_due_date", "clear_due_date"] },
-  { key: "fee", label: "Fee Status", help: "Set or clear the current fee state.", icon: ReceiptIndianRupee, actions: ["set_fee_status", "clear_fee_status"] },
-  { key: "days", label: "Training Days", help: "Add, remove or set days precisely.", icon: TimerReset, actions: ["extend_days", "reduce_days", "set_remaining_days"] },
-  { key: "balance", label: "Unpaid Balance", help: "Adjust pending months and days.", icon: CircleDollarSign, actions: ["change_unpaid_months"] },
+  { key: "due", label: "Due Date", help: "Correct the next due date.", icon: CalendarDays, actions: ["set_due_date"] },
+  { key: "days", label: "Membership Days", help: "Credit, debit or correct day balance.", icon: TimerReset, actions: ["extend_days", "reduce_days", "set_remaining_days"] },
+  { key: "balance", label: "Opening Balance", help: "Correct legacy outstanding duration.", icon: CircleDollarSign, actions: ["change_unpaid_months"] },
   { key: "access", label: "Pause / Resume", help: "Temporarily pause or restart access.", icon: PauseCircle, actions: ["pause", "resume"] },
+  { key: "fee", label: "Fee Exception", help: "Waiver or complimentary access only.", icon: ReceiptIndianRupee, actions: ["set_fee_status"] },
   { key: "note", label: "Internal Note", help: "Update an operational note only.", icon: StickyNote, actions: ["set_note"] },
 ];
 
@@ -56,7 +53,7 @@ const initialForm = {
   months: 0,
   unpaidDays: 0,
   resumeDate: new Date().toISOString().slice(0, 10),
-  feeStatus: "due",
+  feeStatus: "waived",
   reason: "",
   note: "",
   internalNote: "",
@@ -118,7 +115,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
         setForm({
           ...initialForm,
           internalNote: data.membership?.internalNote || "",
-          feeStatus: data.membership?.feeStatus || "due",
+          feeStatus: ["waived", "complimentary"].includes(data.membership?.feeStatus) ? data.membership.feeStatus : "waived",
           remainingMonths: Math.floor(Number(data.membership?.remainingTrainingDays || 0) / 30),
           remainingDays: Number(data.membership?.remainingTrainingDays || 0) % 30,
         });
@@ -186,26 +183,6 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
     }
   };
 
-  const quickClear = async (type) => {
-    try {
-      setSaving(true);
-      const response = await membershipApi.createAdjustment(student.studentId, {
-        type,
-        reason: type === "clear_due_date" ? "Quick clear due date" : "Quick clear fee status",
-        expectedVersion: membership?.version,
-      });
-      const data = unwrap(response);
-      setMembership(data.membership);
-      setAdjustments((current) => [data.adjustment, ...current]);
-      onUpdated?.(student.studentId, data.membership, type);
-      toast.success(type === "clear_due_date" ? "Due date cleared" : "Fee status cleared");
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Quick action complete nahi hua");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const reverse = async (adjustmentId) => {
     const reason = window.prompt("Reversal reason likhein");
     if (!reason?.trim()) return;
@@ -242,12 +219,6 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
               <div><span><CalendarClock /></span><div><small>Time Remaining</small><strong>{formatRemainingTrainingTime(membership?.remainingTrainingDays || 0)}<em> left</em></strong></div></div>
               <div><span><CircleDollarSign /></span><div><small>Unpaid Balance</small><strong>{[Number(membership?.unpaidMonths || 0) > 0 ? `${membership.unpaidMonths}M` : "", Number(membership?.unpaidDays || 0) > 0 ? `${membership.unpaidDays}D` : ""].filter(Boolean).join(" ") || "Clear"}</strong></div></div>
             </section>
-            <section className="membership-quick-actions" aria-label="Quick membership actions">
-              <div><strong>Quick actions</strong><small>Clear a value immediately with one click.</small></div>
-              <button type="button" onClick={() => quickClear("clear_fee_status")} disabled={saving || membership?.feeStatusCleared}><Trash2 />Clear Fee Status</button>
-              <button type="button" onClick={() => quickClear("clear_due_date")} disabled={saving || membership?.dueDateCleared}><Trash2 />Clear Due Date</button>
-            </section>
-
             <form className="membership-form" onSubmit={submit}>
               <div className="membership-form__heading"><span><SlidersHorizontal /></span><div><h3>What would you like to update?</h3><p>Choose a category, then select the exact adjustment.</p></div><b>{selectedAction.label}</b></div>
               <div className="membership-action-grid" role="tablist" aria-label="Membership adjustment categories">
@@ -270,9 +241,9 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
               {form.type === "set_remaining_days" && <><label className="membership-field"><span>Remaining Months</span><input type="number" min="0" max="120" value={form.remainingMonths} onChange={(event) => updateForm("remainingMonths", event.target.value)} required /><small>1 month is treated as 30 training days.</small></label><label className="membership-field"><span>Remaining Days</span><input type="number" min="0" max="29" value={form.remainingDays} onChange={(event) => updateForm("remainingDays", event.target.value)} required /><small>Total: {formatRemainingTrainingTime((Number(form.remainingMonths) * 30) + Number(form.remainingDays))}</small></label></>}
               {form.type === "change_unpaid_months" && <><label className="membership-field"><span>Unpaid Months</span><input type="number" min="0" max="120" value={form.months} onChange={(event) => updateForm("months", event.target.value)} required /><small>Exact unpaid month balance.</small></label><label className="membership-field"><span>Unpaid Days</span><input type="number" min="0" max="29" value={form.unpaidDays} onChange={(event) => updateForm("unpaidDays", event.target.value)} required /><small>For 10 days due, enter 0 months and 10 days.</small></label></>}
               {form.type === "resume" && <label className="membership-field"><span>Resume Date</span><DateInput value={form.resumeDate} onChange={(event) => updateForm("resumeDate", event.target.value)} /></label>}
-              {form.type === "set_fee_status" && <label className="membership-field"><span>Fee Status</span><select value={form.feeStatus === "overdue" ? "due" : form.feeStatus} onChange={(event) => updateForm("feeStatus", event.target.value)}><option value="paid">Paid</option><option value="due">Due</option><option value="partial">Partial</option><option value="waived">Waived</option><option value="complimentary">Complimentary</option></select></label>}
+              {form.type === "set_fee_status" && <label className="membership-field"><span>Fee Exception</span><select value={form.feeStatus} onChange={(event) => updateForm("feeStatus", event.target.value)}><option value="waived">Waive outstanding fee</option><option value="complimentary">Complimentary membership</option></select><small>Paid, partial and due states are calculated from fee transactions—not set manually.</small></label>}
 
-              <label className="membership-field membership-field--wide"><span>Reason (optional)</span><input value={form.reason} onChange={(event) => updateForm("reason", event.target.value)} maxLength="300" placeholder="Example: Approved holiday adjustment" /></label>
+              {form.type !== "set_note" && <label className="membership-field membership-field--wide"><span>Reason <b>*</b></span><input value={form.reason} onChange={(event) => updateForm("reason", event.target.value)} maxLength="300" placeholder="Example: Approved holiday adjustment" required /></label>}
               <label className="membership-field membership-field--wide"><span>Internal Note</span><textarea value={form.internalNote} onChange={(event) => updateForm("internalNote", event.target.value)} maxLength="1000" placeholder="Example: 15 days protected; apply when training resumes" /></label>
               <label className="membership-field membership-field--wide"><span>Additional Audit Note</span><input value={form.note} onChange={(event) => updateForm("note", event.target.value)} maxLength="1000" placeholder="Optional details for this adjustment" /></label>
               <button type="submit" className="membership-save" disabled={saving}><Save />{saving ? "Saving…" : "Apply Adjustment"}</button>
