@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import ReactCountryFlag from "react-country-flag";
 import { Check, ChevronDown, Search, WalletCards } from "lucide-react";
 import { currencyMeta, currencyOptions } from "../../utils/currency.js";
+import { countryFlagEmoji } from "../../utils/countryFlag.js";
 import styles from "./CurrencySelector.module.css";
 
-const Flag = ({ countryCode, flag }) => countryCode === "EU" ? <span className={styles.emoji}>{flag || "🇪🇺"}</span> : <ReactCountryFlag countryCode={countryCode} svg className={styles.flag} />;
+const Flag = ({ countryCode, flag }) => (
+  <span className={styles.flag} aria-hidden="true">
+    {countryCode === "EU" ? flag || "🇪🇺" : countryFlagEmoji(countryCode)}
+  </span>
+);
 
 const CurrencySelector = ({ value = "INR", onChange, disabled = false, label = "Currency", required = false }) => {
   const [open, setOpen] = useState(false); const [search, setSearch] = useState(""); const root = useRef(null);

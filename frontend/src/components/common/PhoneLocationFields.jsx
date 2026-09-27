@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Country from "country-state-city/lib/country.js";
 import State from "country-state-city/lib/state.js";
-import ReactCountryFlag from "react-country-flag";
 import { Plus, Trash2 } from "lucide-react";
 import {
   formatStudentPhone,
   getPhoneDigits,
 } from "../../utils/studentPhone.js";
+import { countryFlagEmoji } from "../../utils/countryFlag.js";
 import "./PhoneLocationFields.css";
 
 const DEFAULT_COUNTRY_ISO = "IN";
@@ -405,11 +405,7 @@ const PhoneLocationFields = ({
             >
               <span>
                 {selectedDialCountry?.isoCode && (
-                  <ReactCountryFlag
-                    countryCode={selectedDialCountry.isoCode}
-                    svg
-                    className="phone-location-country-flag"
-                  />
+                  <span className="phone-location-country-flag" aria-hidden="true">{countryFlagEmoji(selectedDialCountry.isoCode)}</span>
                 )}
                 <span>{countryCode || DEFAULT_DIAL_CODE}</span>
               </span>
@@ -442,11 +438,7 @@ const PhoneLocationFields = ({
                       }
                       onClick={() => handleCountryCodeSelect(item)}
                     >
-                      <ReactCountryFlag
-                        countryCode={item.isoCode}
-                        svg
-                        className="phone-location-country-flag"
-                      />
+                      <span className="phone-location-country-flag" aria-hidden="true">{countryFlagEmoji(item.isoCode)}</span>
                       <span>{item.name}</span>
                       <strong>{item.dialCode}</strong>
                     </button>
@@ -514,11 +506,7 @@ const PhoneLocationFields = ({
                 >
                   <span>
                     {selectedAdditionalCountry?.isoCode ? (
-                      <ReactCountryFlag
-                        countryCode={selectedAdditionalCountry.isoCode}
-                        svg
-                        className="phone-location-country-flag"
-                      />
+                      <span className="phone-location-country-flag" aria-hidden="true">{countryFlagEmoji(selectedAdditionalCountry.isoCode)}</span>
                     ) : null}
                     <span>{number.countryCode || DEFAULT_DIAL_CODE}</span>
                   </span>
@@ -563,11 +551,7 @@ const PhoneLocationFields = ({
                             setAdditionalCodeSearch("");
                           }}
                         >
-                          <ReactCountryFlag
-                            countryCode={item.isoCode}
-                            svg
-                            className="phone-location-country-flag"
-                          />
+                          <span className="phone-location-country-flag" aria-hidden="true">{countryFlagEmoji(item.isoCode)}</span>
                           <span>{item.name}</span>
                           <strong>{item.dialCode}</strong>
                         </button>
@@ -622,11 +606,7 @@ const PhoneLocationFields = ({
               }}
             >
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <ReactCountryFlag
-                  countryCode={selectedCountryIso}
-                  svg
-                  style={{ width: 22, height: 22, borderRadius: "50%" }}
-                />
+                <span className="phone-location-country-flag" aria-hidden="true">{countryFlagEmoji(selectedCountryIso)}</span>
                 {country || "India"}
               </span>
               <span>▾</span>
@@ -659,11 +639,7 @@ const PhoneLocationFields = ({
                       onClick={() => handleCountrySelect(item)}
                       className={item.isoCode === selectedCountryIso ? "is-selected" : ""}
                     >
-                      <ReactCountryFlag
-                        countryCode={item.isoCode}
-                        svg
-                        style={{ width: 22, height: 22, borderRadius: "50%" }}
-                      />
+                      <span className="phone-location-country-flag" aria-hidden="true">{countryFlagEmoji(item.isoCode)}</span>
                       <span>{item.name}</span>
                     </button>
                   ))}

@@ -136,6 +136,34 @@
 .add-branch-switch strong { font-size: 12px; }
 .add-branch-switch small { color: var(--ab-muted); font-size: 11px; line-height: 1.35; }
 .add-branch-location-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; padding: 15px 16px; }
+.add-branch-location-card .academy-profile-location-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 15px 16px 16px;
+}
+.add-branch-location-card .academy-profile-location-fields > .form-group,
+.add-branch-location-card .academy-profile-contact-email,
+.add-branch-location-card .academy-profile-contact-address {
+  min-width: 0;
+  margin: 0;
+}
+.add-branch-location-card .academy-profile-location-fields > .form-group-full,
+.add-branch-location-card .academy-profile-contact-email,
+.add-branch-location-card .academy-profile-contact-address {
+  grid-column: 1 / -1;
+}
+.add-branch-whatsapp-field {
+  display: grid;
+  gap: 6px;
+  margin: 14px 16px 4px;
+}
+.add-branch-whatsapp-field > span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+.add-branch-whatsapp-field small { color: var(--ab-muted); font-weight: 600; }
 .add-branch-location-grid > .form-group { min-width: 0; margin: 0; }
 .add-branch-address { grid-column: 1 / -1; order: 2; }
 .add-branch-coach-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; padding: 15px 16px; }
@@ -183,6 +211,10 @@
 .add-branch-coach-grid { grid-template-columns:1fr; } }
 @media (max-width:760px) {
   .add-branch-location-grid { grid-template-columns:1fr; } }
+@media (max-width:760px) {
+  .add-branch-location-card .academy-profile-location-fields { grid-template-columns:1fr; }
+  .add-branch-location-card .academy-profile-location-fields > * { grid-column:1; }
+}
 @media (max-width:760px) {
   .add-branch-additional-list>article { grid-template-columns:32px minmax(0,1fr) 38px; } }
 @media (max-width:760px) {
