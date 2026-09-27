@@ -9,8 +9,8 @@
     "build": "vite build",
     "verify:historical-workbook": "node --max-old-space-size=4096 scripts/verifyHistoricalWorkbook.mjs",
     "preview": "vite preview",
-    "test:expenses": "node scripts/testExpenseManager.mjs"
-    ,"test:import-matching": "node scripts/testImportMatching.mjs",
+    "test:expenses": "node scripts/testExpenseManager.mjs",
+    "test:import-matching": "node scripts/testImportMatching.mjs",
     "test:central-imports": "node --test scripts/testCentralImports.mjs",
     "test:membership-control": "node --test scripts/testMembershipControl.mjs",
     "test:attendance-export": "node --test scripts/testAttendanceHistoryExport.mjs"
@@ -27,6 +27,7 @@
     "date-fns": "^4.2.1",
     "dayjs": "^1.11.20",
     "file-saver": "^2.0.5",
+    "flag-icons": "^7.5.0",
     "framer-motion": "^12.40.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
