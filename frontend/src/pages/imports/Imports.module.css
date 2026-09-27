@@ -211,3 +211,95 @@
 @media(max-width:1050px) { .sheetGroups,.mappingGroups { grid-template-columns:1fr; }.ignoredSheetCard { grid-column:auto; }.monthTiles,.scopePlayerGrid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:800px) { .mapping,.sheetGrid { grid-template-columns:1fr; }.stats { grid-template-columns:repeat(2,1fr); }.heading,.classificationHeader,.mappingHeader,.monthsHeader,.studentScopeHeader,.decisionHeader { align-items:flex-start; flex-direction:column; }.card { padding:14px; }.page .headerRowControl { width:100%; flex-basis:auto; }.sheetRoleRow { grid-template-columns:minmax(110px,1fr) minmax(130px,170px); }.sheetRoleRow>span:last-child { display:none; }.monthsHeaderActions { width:100%; justify-content:flex-start; }.page .monthSearch { flex:1 1 240px; width:auto; }.monthTiles { grid-template-columns:repeat(2,minmax(0,1fr)); }.decisionHeader .stageButton { margin-left:0; } }
 @media(max-width:560px) { .classificationStats { display:grid; grid-template-columns:1fr; }.classificationActions,.mappingFooter { align-items:stretch; flex-direction:column; }.mappingColumnHead { display:none; }.mappingRow { grid-template-columns:1fr 78px; gap:7px; }.mappingRow select { grid-column:1/-1; grid-row:2; }.mappingRow>span:last-child { grid-column:2; grid-row:1; justify-self:end; }.sheetRoleRow { grid-template-columns:1fr; padding:10px 0; }.page .sheetRoleRow select { width:100%; }.page .mappingSearch { max-width:none; }.monthsHeaderActions { display:grid; grid-template-columns:1fr 1fr; }.page .monthSearch { grid-column:1/-1; width:100%; }.monthsSummary>span { border:0; padding:5px 8px; }.monthsSummary .monthsSelected { margin:0; }.monthYearHeader { flex-wrap:wrap; padding:7px 9px; }.page .monthYearCheck { min-width:0; flex:1; }.monthYearHeader>span { width:100%; padding-left:32px; }.monthTiles,.scopePlayerGrid { grid-template-columns:1fr; }.page .monthTile { min-height:45px; }.scopeChoiceRow>button,.scopePickerToolbar>button { width:100%; }.scopePickerToolbar .matchSearch { max-width:none; flex-basis:100%; } }
+
+/* Premium import workspace */
+.page { --import-red:#d00009; --import-navy:#0b1f3a; --import-muted:#6b7c91; }
+.heading { margin-bottom:18px; padding:22px 24px; border:1px solid #dce5ee; border-radius:18px; background:linear-gradient(135deg,#fff 0%,#f9fbfe 72%,#fff1f2 100%); box-shadow:0 12px 35px rgba(8,22,47,.06); }
+.heading h1 { margin:5px 0; color:var(--import-navy); font-size:29px; letter-spacing:-.035em; }
+.steps { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; padding:7px; border:1px solid #dce5ee; border-radius:13px; background:#fff; box-shadow:0 5px 20px rgba(24,47,75,.035); }
+.steps span { min-width:0; padding:11px 13px; overflow:hidden; color:#607287; background:#f2f5f8; font-size:11px; font-weight:650; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
+.steps [aria-current] { color:#fff; background:linear-gradient(135deg,#d00009,#a90007); font-weight:800; box-shadow:0 7px 17px rgba(208,0,9,.18); }
+.card { border-radius:16px; box-shadow:0 8px 26px rgba(24,47,75,.045); }
+.setupGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:16px; }
+.setupGrid .card { margin:0; }
+.setupPanel { min-width:0; display:flex; flex-direction:column; padding:0; overflow:hidden; }
+.setupPanelHeader,.workbookHeader>div { display:flex; align-items:flex-start; gap:11px; }
+.setupPanelHeader { padding:17px 18px 14px; border-bottom:1px solid #e9eef4; background:linear-gradient(180deg,#fff,#fbfcfe); }
+.setupPanelHeader>span,.workbookHeader>div>span { width:38px; height:38px; display:grid; place-items:center; flex:0 0 38px; border-radius:11px; color:var(--import-red); background:#fff0f1; }
+.setupPanelHeader>div,.workbookHeader>div>div { min-width:0; }
+.setupPanelHeader small,.workbookHeader small { display:block; margin-bottom:2px; color:var(--import-red); font-size:9px; font-weight:900; letter-spacing:.14em; }
+.setupPanelHeader h2,.workbookHeader h2 { margin:0 0 3px; color:var(--import-navy); font-size:15px; }
+.setupPanelHeader p,.workbookHeader p { margin:0; font-size:10px; }
+.importModeGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; padding:16px 18px 10px; }
+.page .importModeOption { position:relative; min-width:0; min-height:105px; display:flex; align-items:flex-start; flex-direction:column; gap:5px; padding:12px; border-color:#dce5ee; color:var(--import-navy); background:#fbfcfe; text-align:left; transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background .16s ease; }
+.page .importModeOption:hover { transform:translateY(-2px); border-color:#e7a3a8; box-shadow:0 8px 18px rgba(24,47,75,.07); }
+.page .importModeOption[aria-pressed="true"] { border-color:var(--import-red); color:var(--import-navy); background:#fff4f5; box-shadow:0 0 0 2px rgba(208,0,9,.07); }
+.importModeOption>span { width:30px; height:30px; display:grid; place-items:center; border-radius:8px; color:#65788e; background:#edf2f7; }
+.importModeOption[aria-pressed="true"]>span { color:#fff; background:var(--import-red); }
+.importModeOption>strong { max-width:100%; color:var(--import-navy); font-size:11px; line-height:1.3; }
+.importModeOption>small { color:#718198; font-size:9px; line-height:1.35; }
+.importModeOption>svg { position:absolute; top:11px; right:11px; color:var(--import-red); }
+.setupFootnote { display:flex; align-items:flex-start; gap:7px; padding:0 18px 16px; margin:auto 0 0; }
+.setupFootnote svg { flex:0 0 14px; margin-top:2px; color:#197149; }
+.destinationGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:16px 18px 12px; }
+.destinationGrid label { min-width:0; }
+.destinationGrid label>span { color:#334155; font-weight:800; }
+.destinationGrid a { align-self:flex-start; font-size:10px; font-weight:700; }
+.destinationFooter { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 18px 15px; margin-top:auto; border-top:1px solid #edf1f5; }
+.destinationFooter>span { display:inline-flex; align-items:center; gap:6px; color:#65758a; font-size:10px; font-weight:750; }
+.destinationFooter>span svg { color:#197149; }
+.page .destinationFooter button { min-height:34px; padding:7px 10px; }
+.workbookCard { padding:0; overflow:hidden; }
+.workbookHeader { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; border-bottom:1px solid #e8edf3; background:linear-gradient(180deg,#fff,#fafcfe); }
+.fileReady { display:inline-flex; align-items:center; gap:5px; padding:7px 10px; border-radius:999px; color:#176e49; background:#eaf8f0; font-size:10px; font-weight:800; }
+.page .workbookCard .drop { width:calc(100% - 36px); min-height:170px; margin:18px; border:1.5px dashed #aebdcd; border-radius:14px; background:radial-gradient(circle at top,#fff 0,#f8fbfe 72%); }
+.page .workbookCard .drop:hover { border-color:#d75d65; background:#fff8f8; }
+.page .workbookCard .dropReady { border-color:#7bbd9b; background:#f5fbf7; }
+.dropIcon { width:52px; height:52px; display:grid; place-items:center; border-radius:15px; color:var(--import-red); background:#fff0f1; box-shadow:0 8px 20px rgba(208,0,9,.08); }
+.dropIcon svg { width:27px; height:27px; }
+.dropReady .dropIcon { color:#16744a; background:#e5f7ed; }
+.workbookActions { display:flex; flex-wrap:wrap; gap:9px; padding:0 18px 16px; }
+.recoveryCard { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:15px; padding:17px 18px; overflow:hidden; background:linear-gradient(135deg,#fff 0%,#fbfcfe 65%,#f3f7fb 100%); }
+.recoveryCard>div { display:flex; align-items:flex-start; gap:10px; min-width:0; }
+.recoveryCard>div>span { width:34px; height:34px; display:grid; place-items:center; flex:0 0 34px; border-radius:9px; color:#285172; background:#edf4fa; }
+.recoveryCard h2 { margin:0 0 3px; font-size:14px; }
+.recoveryCard p { margin:0; font-size:10px; }
+.recoveryCard>small { grid-column:1/-1; padding-top:10px; border-top:1px solid #e8edf3; }
+.page .recoveryToggle { position:relative; display:grid; grid-template-columns:36px auto; align-items:center; column-gap:8px; cursor:pointer; }
+.recoveryToggle input { position:absolute; opacity:0; pointer-events:none; }
+.recoveryToggle>span { position:relative; width:36px; height:20px; grid-row:1; border-radius:999px; background:#cbd5e1; transition:background .16s ease; }
+.recoveryToggle>span::after { content:""; position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 4px rgba(15,23,42,.3); transition:transform .16s ease; }
+.recoveryToggle input:checked+span { background:var(--import-red); }
+.recoveryToggle input:checked+span::after { transform:translateX(16px); }
+.recoveryToggle strong { grid-column:2; grid-row:1; color:#334155; font-size:10px; white-space:nowrap; }
+.setupActionBar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 16px; margin:16px 0; border:1px solid #dce5ee; border-radius:14px; background:#fff; box-shadow:0 8px 25px rgba(24,47,75,.05); }
+.setupActionBar>div { display:flex; align-items:center; gap:9px; color:#197149; }
+.setupActionBar>div span { display:grid; gap:2px; }
+.setupActionBar>div strong { color:var(--import-navy); font-size:11px; }
+.setupActionBar>div small { font-size:9px; }
+.page .setupActionBar>button { min-width:205px; min-height:44px; box-shadow:0 8px 18px rgba(208,0,9,.18); }
+
+@media(max-width:1050px) {
+  .setupGrid { grid-template-columns:1fr; }
+}
+@media(max-width:720px) {
+  .heading { padding:18px; }
+  .steps { grid-template-columns:1fr; }
+  .steps span { text-align:left; }
+  .importModeGrid { grid-template-columns:1fr; }
+  .page .importModeOption { min-height:82px; }
+  .destinationGrid { grid-template-columns:1fr; }
+  .recoveryCard { grid-template-columns:1fr; }
+  .recoveryCard>small { grid-column:1; }
+  .setupActionBar { align-items:flex-start; flex-direction:column; }
+  .page .setupActionBar>button { width:100%; }
+}
+@media(max-width:520px) {
+  .heading { align-items:flex-start; flex-direction:column; }
+  .heading .actions { width:100%; }
+  .heading .actions>* { flex:1; }
+  .setupPanelHeader,.workbookHeader { padding:14px; }
+  .importModeGrid,.destinationGrid { padding:14px; }
+  .page .workbookCard .drop { width:calc(100% - 28px); margin:14px; }
+  .workbookHeader { align-items:flex-start; }
+}
