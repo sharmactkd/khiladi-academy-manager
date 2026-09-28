@@ -18,4 +18,5 @@ export const updatePlanValidator = [
   body("isActive").optional().isBoolean(),
   body("isPopular").optional().isBoolean(),
   body("sortOrder").optional().isInt({ min: 0 }),
+  body("reason").optional().trim().isLength({ min: 8, max: 500 }),
 ];

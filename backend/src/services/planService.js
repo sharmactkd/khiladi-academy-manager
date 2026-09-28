@@ -11,10 +11,12 @@ export const DEFAULT_PLANS = [
     billingCycle: "monthly",
     features: ["Basic academy management", "Students", "Batches"],
     limits: {
-      students: 50,
-      batches: 2,
-      certificates: 0,
-      idCards: 10,
+      students: 100,
+      branches: 1,
+      staffUsers: 2,
+      batches: 3,
+      certificates: 5,
+      idCards: 5,
       announcements: 5,
       parentPortal: false,
       whatsapp: false,
@@ -26,18 +28,20 @@ export const DEFAULT_PLANS = [
     sortOrder: 1,
   },
   {
-    name: "Basic",
+    name: "Academy Base",
     code: "basic",
     description: "Good for growing academies.",
-    price: 499,
+    price: 299,
     currency: "INR",
     billingCycle: "monthly",
-    features: ["Students", "Batches", "Fees", "Attendance"],
+    features: ["Up to 500 students", "Advanced reports", "Full imports", "Priority support"],
     limits: {
-      students: 200,
-      batches: 10,
-      certificates: 100,
-      idCards: 200,
+      students: 500,
+      branches: 1,
+      staffUsers: 4,
+      batches: "unlimited",
+      certificates: 5,
+      idCards: 5,
       announcements: 50,
       parentPortal: false,
       whatsapp: false,
@@ -220,5 +224,20 @@ export const getPlanLimit = async ({ academyId, resourceName } = {}) => {
   }
 
   const plan = await getEffectivePlan({ academyId });
-  return plan?.limits?.[resourceName] ?? 0;
+  const baseLimit = plan?.limits?.[resourceName] ?? 0;
+  if (!["students", "branches", "multiBranch", "idCards", "certificates"].includes(resourceName)) {
+    return baseLimit;
+  }
+
+  const Academy = (await import("../models/Academy.js")).default;
+  const academy = await Academy.findById(academyId).select("owner").lean();
+  if (!academy?.owner) return baseLimit;
+  const { getAcademyEntitlementSnapshot } = await import("./entitlementService.js");
+  const snapshot = await getAcademyEntitlementSnapshot({ ownerId: academy.owner, academyId });
+  if (resourceName === "students") return snapshot.limits.students;
+  if (resourceName === "branches") return snapshot.limits.branches;
+  if (resourceName === "multiBranch") return snapshot.limits.branches === "unlimited" || Number(snapshot.limits.branches) > 1;
+  if (resourceName === "idCards") return snapshot.limits.idCardStudio ? 5000 : baseLimit;
+  if (resourceName === "certificates") return snapshot.limits.certificateStudio ? 5000 : baseLimit;
+  return baseLimit;
 };

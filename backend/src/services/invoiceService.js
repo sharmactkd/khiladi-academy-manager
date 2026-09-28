@@ -28,6 +28,7 @@ export const createInvoiceForPayment = async ({
   plan,
   billingUser,
   createdBy,
+  lineItems = null,
   session = null,
 }) => {
   const gstPercentage = Number(env.GST_PERCENTAGE || 0);
@@ -53,7 +54,7 @@ export const createInvoiceForPayment = async ({
     billingEmail: academy.email || billingUser?.email || "",
     billingPhone: academy.phone || billingUser?.phone || "",
     billingAddress: academy.address || "",
-    lineItems: [
+    lineItems: lineItems || [
       {
         name: `${plan.name} Plan`,
         description: `${plan.name} subscription (${plan.billingCycle})`,

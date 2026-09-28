@@ -9,7 +9,11 @@ import { verifyTurnstile } from "../services/turnstileService.js";
 
 const clean = (value, max) => String(value ?? "").replace(/[<>]/g, "").trim().slice(0, max);
 const phoneDigits = (value) => String(value ?? "").replace(/\D/g, "");
-const ownerAcademy = (req) => Academy.findOne(req.user.role === "super_admin" && req.query.academyId ? { _id: req.query.academyId } : { owner: req.user._id });
+const ownerAcademy = (req) => {
+  const academyId = req.headers?.["x-academy-id"] || req.query.academyId;
+  if (academyId) return Academy.findOne(req.user.role === "super_admin" ? { _id: academyId } : { _id: academyId, owner: req.user._id });
+  return Academy.findOne({ owner: req.user._id }).sort({ createdAt: 1 });
+};
 
 export const createPublicEnquiry = asyncHandler(async (req, res) => {
   if (req.body?.website) return successResponse(res, "Enquiry received", null, 201);

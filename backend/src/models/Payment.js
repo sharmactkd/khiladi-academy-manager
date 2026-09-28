@@ -17,7 +17,19 @@ const paymentSchema = new mongoose.Schema(
     plan: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Plan",
-      required: [true, "Plan is required"],
+      default: null,
+      index: true,
+    },
+    addOn: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AddOnDefinition",
+      default: null,
+      index: true,
+    },
+    purchaseType: {
+      type: String,
+      enum: ["plan", "add_on"],
+      default: "plan",
       index: true,
     },
     amount: {

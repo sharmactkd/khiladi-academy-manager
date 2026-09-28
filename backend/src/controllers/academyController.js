@@ -4,6 +4,16 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import { uploadedFileReference } from "../services/mediaStorageService.js";
 import { normalizeStringList } from "../utils/normalizeStringList.js";
+import { getAccountAcademyLimit } from "../services/entitlementService.js";
+
+const requestedAcademyId = (req) => req.headers?.["x-academy-id"] || req.query?.academyId || null;
+
+const findOwnedAcademy = async (req) => {
+  const requested = requestedAcademyId(req);
+  if (req.user.role === "super_admin" && requested) return Academy.findById(requested);
+  if (requested) return Academy.findOne({ _id: requested, owner: req.user._id });
+  return Academy.findOne({ owner: req.user._id }).sort({ createdAt: 1 });
+};
 
 const SAFE_ACADEMY_UPDATE_FIELDS = [
   "ownerName",
@@ -166,10 +176,12 @@ export const createAcademy = asyncHandler(async (req, res) => {
       ? req.body.owner
       : req.user._id;
 
-  const existingAcademy = await Academy.findOne({ owner: ownerId });
-
-  if (existingAcademy) {
-    return errorResponse(res, "This owner already has an academy", 409);
+  const ownedAcademies = await Academy.countDocuments({ owner: ownerId, isActive: { $ne: false } });
+  if (req.user.role !== "super_admin") {
+    const academyLimit = await getAccountAcademyLimit({ ownerId });
+    if (ownedAcademies >= academyLimit) {
+      return errorResponse(res, `Academy limit reached (${academyLimit}). Add an Additional Academy subscription to continue.`, 403);
+    }
   }
 
   const logo = getUploadedFilePath(req.file) || req.body.logo || "";
@@ -200,7 +212,7 @@ export const createAcademy = asyncHandler(async (req, res) => {
 });
 
 export const getMyAcademy = asyncHandler(async (req, res) => {
-  const academy = await Academy.findOne({ owner: req.user._id });
+  const academy = await findOwnedAcademy(req);
 
   if (!academy) {
     return errorResponse(res, "Academy not found", 404);
@@ -209,12 +221,18 @@ export const getMyAcademy = asyncHandler(async (req, res) => {
   return successResponse(res, "Academy fetched successfully", { academy });
 });
 
+export const getMyAcademies = asyncHandler(async (req, res) => {
+  const filter = req.user.role === "super_admin" ? {} : { owner: req.user._id };
+  const academies = await Academy.find(filter).sort({ createdAt: 1 });
+  return successResponse(res, "Academies fetched successfully", { academies });
+});
+
 export const updateMyAcademy = asyncHandler(async (req, res) => {
   if (!["academy_owner", "super_admin"].includes(req.user.role)) {
     return errorResponse(res, "Only academy owner can update academy", 403);
   }
 
-  const academy = await Academy.findOne({ owner: req.user._id });
+  const academy = await findOwnedAcademy(req);
 
   if (!academy) {
     return errorResponse(res, "Academy not found", 404);

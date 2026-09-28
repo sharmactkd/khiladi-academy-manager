@@ -7,11 +7,11 @@ const routes = fs.readFileSync(new URL("../src/routes/branchRoutes.js", import.m
 
 test("first branch is not blocked by the multiBranch route feature", () => {
   assert.doesNotMatch(routes, /requireFeature\("multiBranch"\)/);
-  assert.match(controller, /activeBranchCount > 0/);
+  assert.match(controller, /activeBranchCount >= Number\(branchLimit \|\| 1\)/);
   assert.match(controller, /activeBranchCount === 0\) payload\.isMainBranch = true/);
 });
 
 test("additional branches retain an explicit plan check", () => {
-  assert.match(controller, /getPlanLimit\(\{ academyId, resourceName: "multiBranch" \}\)/);
-  assert.match(controller, /Upgrade to create additional branches/);
+  assert.match(controller, /getPlanLimit\(\{ academyId, resourceName: "branches" \}\)/);
+  assert.match(controller, /Add an Additional Branch subscription/);
 });

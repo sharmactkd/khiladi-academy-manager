@@ -245,6 +245,20 @@ const Sidebar = ({ isOpen = false, onClose }) => {
 
             {workspaceOpen ? (
               <div className={styles.workspaceMenu}>
+                {workspace.academies.length > 1 ? <>
+                  <div className={styles.workspaceMenuTitle}>Academies</div>
+                  {workspace.academies.map((academy) => (
+                    <button
+                      key={academy._id}
+                      type="button"
+                      className={String(academy._id) === String(workspace.academy?._id) ? styles.selectedAcademy : ""}
+                      onClick={() => workspace.selectAcademy(academy._id)}
+                    >
+                      <span className={styles.workspaceMenuIcon}><Building2 size={16}/></span>
+                      <span><strong>{academy.academyName}</strong><small>{String(academy._id) === String(workspace.academy?._id) ? "Currently selected" : "Switch academy"}</small></span>
+                    </button>
+                  ))}
+                </> : null}
                 <NavLink to="/academy/profile" onClick={handleNavigate}>
                   <span className={styles.workspaceMenuIcon}><Building2 size={16} /></span>
                   <span><strong>Academy profile</strong><small>Identity and configuration</small></span>

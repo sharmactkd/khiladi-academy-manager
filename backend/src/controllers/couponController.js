@@ -1,15 +1,23 @@
 import Coupon from "../models/Coupon.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
-import { getPlanByCodeOrThrow, validateCouponForPlan } from "../services/billingService.js";
+import AddOnDefinition from "../models/AddOnDefinition.js";
+import { calculateCouponDiscount, getPlanByCodeOrThrow, validateCouponForPurchase } from "../services/billingService.js";
 
 export const validateCoupon = asyncHandler(async (req, res) => {
-  const plan = await getPlanByCodeOrThrow(req.body.planCode);
-
-  const validation = await validateCouponForPlan({
+  const purchaseType = req.body.addOnCode ? "add_on" : "plan";
+  const product = purchaseType === "plan"
+    ? await getPlanByCodeOrThrow(req.body.planCode)
+    : await AddOnDefinition.findOne({ code: req.body.addOnCode, isActive: true });
+  if (!product) return errorResponse(res, "Billing product not found", 404);
+  const quantity = purchaseType === "add_on" && product.stackable ? Math.max(1, Math.min(100, Number(req.body.quantity || 1))) : 1;
+  const baseAmount = Number(product.price || 0) * quantity;
+  const validation = await validateCouponForPurchase({
     couponCode: req.body.couponCode,
-    planCode: plan.code,
+    purchaseType,
+    productCode: product.code,
     academyId: req.academyId,
+    amount: baseAmount,
   });
 
   if (!validation.valid) {
@@ -18,6 +26,7 @@ export const validateCoupon = asyncHandler(async (req, res) => {
 
   return successResponse(res, "Coupon validated successfully", {
     coupon: validation.coupon,
+    amountBreakup: { baseAmount, discount: calculateCouponDiscount({ coupon: validation.coupon, amount: baseAmount }), finalAmount: baseAmount - calculateCouponDiscount({ coupon: validation.coupon, amount: baseAmount }) },
   });
 });
 
@@ -46,11 +55,16 @@ export const updateCoupon = asyncHandler(async (req, res) => {
   }
 
   const allowedFields = [
+    "code",
     "description",
     "discountType",
     "discountValue",
     "freeMonths",
     "applicablePlanCodes",
+    "applicableAddOnCodes",
+    "appliesTo",
+    "minimumAmount",
+    "maximumDiscount",
     "maxRedemptions",
     "perAcademyLimit",
     "startsAt",
@@ -60,7 +74,7 @@ export const updateCoupon = asyncHandler(async (req, res) => {
 
   allowedFields.forEach((field) => {
     if (Object.prototype.hasOwnProperty.call(req.body, field)) {
-      coupon[field] = req.body[field];
+      coupon[field] = field === "code" ? String(req.body[field]).trim().toUpperCase() : req.body[field];
     }
   });
 

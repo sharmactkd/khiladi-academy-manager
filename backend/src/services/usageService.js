@@ -38,7 +38,13 @@ export const getAcademyUsage = async ({ academyId }) => {
   };
 };
 
-export const getResourceUsage = async ({ academyId, resourceName }) => {
+export const getResourceUsage = async ({ academyId, resourceName, since = null }) => {
+  if (since && resourceName === "certificates") {
+    return GeneratedCertificate.countDocuments({ academy: academyId, status: { $ne: "cancelled" }, createdAt: { $gte: since } });
+  }
+  if (since && resourceName === "idCards") {
+    return GeneratedIdCard.countDocuments({ academy: academyId, status: { $ne: "cancelled" }, createdAt: { $gte: since } });
+  }
   const usage = await getAcademyUsage({ academyId });
   return usage[resourceName] || 0;
 };

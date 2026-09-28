@@ -17,6 +17,14 @@ export const academyApi = {
   },
 
   getMyAcademy: () => cachedRequest("workspace:academy", () => api.get("/academy/my")),
+  getMyAcademies: () => api.get("/academy/mine"),
+
+  selectAcademy: (academyId) => {
+    if (academyId) localStorage.setItem("khiladi_active_academy_id", academyId);
+    else localStorage.removeItem("khiladi_active_academy_id");
+    invalidateRequestCache("workspace:");
+    window.dispatchEvent(new CustomEvent("khiladi:academy-changed", { detail: { academyId } }));
+  },
 
   updateMyAcademy: async (payload) => {
     const response = payload instanceof FormData

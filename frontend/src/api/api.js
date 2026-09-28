@@ -65,6 +65,13 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
 
+  try {
+    const activeAcademyId = localStorage.getItem("khiladi_active_academy_id");
+    if (activeAcademyId) config.headers["X-Academy-Id"] = activeAcademyId;
+  } catch {
+    // Requests remain usable when browser storage is unavailable.
+  }
+
   return config;
 });
 

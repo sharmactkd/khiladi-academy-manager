@@ -8,4 +8,8 @@ export const billingApi = {
   getInvoices: () => api.get("/billing/invoices"),
   getInvoiceById: (id) => api.get(`/billing/invoices/${id}`),
   cancelSubscription: () => api.post("/billing/cancel-subscription"),
+  getAddOns: () => api.get("/billing/add-ons"),
+  createAddOnOrder: (payload) => api.post("/billing/add-ons/create-order", payload),
+  verifyAddOnPayment: (payload) => api.post("/billing/add-ons/verify-payment", payload),
+  cancelEntitlement: (id, reason = "") => api.post(`/billing/add-ons/${id}/cancel`, { reason }),
 };

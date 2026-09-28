@@ -40,3 +40,17 @@ export const verifyPaymentValidator = [
 export const invoiceIdValidator = [
   param("id").isMongoId().withMessage("Invalid invoice ID"),
 ];
+
+export const createAddOnOrderValidator = [
+  body("addOnCode")
+    .trim()
+    .isIn(["student_capacity_500", "additional_academy", "additional_branch", "id_card_studio", "certificate_studio", "document_studio_bundle"])
+    .withMessage("Invalid add-on code"),
+  body("quantity").optional().isInt({ min: 1, max: 100 }).withMessage("Quantity must be between 1 and 100"),
+  body("couponCode").optional({ checkFalsy: true }).trim().isLength({ min: 2, max: 50 }).withMessage("Invalid coupon code"),
+];
+
+export const entitlementIdValidator = [
+  param("id").isMongoId().withMessage("Invalid entitlement ID"),
+  body("reason").optional().trim().isLength({ max: 500 }).withMessage("Reason cannot exceed 500 characters"),
+];

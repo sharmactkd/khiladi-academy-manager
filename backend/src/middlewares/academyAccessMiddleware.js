@@ -67,7 +67,10 @@ export const resolveUserAcademy = asyncHandler(async (req, res, next) => {
     academy = await Academy.findOne({ _id: academyIds[0], isActive: true });
     req.user.$locals.authorizedBranchIds = assignedBranches.map((item) => item._id);
   } else {
-    academy = await Academy.findOne({ owner: req.user._id });
+    const requestedAcademyId = getRequestedAcademyId(req);
+    academy = requestedAcademyId
+      ? await Academy.findOne({ _id: requestedAcademyId, owner: req.user._id, isActive: true })
+      : await Academy.findOne({ owner: req.user._id, isActive: true }).sort({ createdAt: 1 });
   }
 
   if (!academy) {

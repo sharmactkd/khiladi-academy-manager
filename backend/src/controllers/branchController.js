@@ -17,11 +17,8 @@ const OWNER_ROLES = ["academy_owner", "super_admin"];
 
 const isOwnerRole = (user) => OWNER_ROLES.includes(user?.role);
 
-const planAllowsAdditionalBranches = async (academyId) => {
-  const value = await getPlanLimit({ academyId, resourceName: "multiBranch" });
-  return value === true || value === "true" || value === "enabled" || value === "yes" ||
-    value === 1 || value === "1" || isLimitUnlimited(value) || Number(value || 0) > 0;
-};
+const getBranchLimit = async (academyId) =>
+  getPlanLimit({ academyId, resourceName: "branches" });
 
 const normalizeBranchCode = (value) => String(value || "").trim().toUpperCase();
 
@@ -320,12 +317,15 @@ export const createBranch = asyncHandler(async (req, res) => {
 
   const academyId = req.academyId;
   const activeBranchCount = await Branch.countDocuments({ academy: academyId, isActive: true });
-  if (activeBranchCount > 0 && req.user.role !== "super_admin" && !(await planAllowsAdditionalBranches(academyId))) {
-    return errorResponse(
-      res,
-      "Your current plan includes one branch. Upgrade to create additional branches.",
-      403,
-    );
+  if (req.user.role !== "super_admin") {
+    const branchLimit = await getBranchLimit(academyId);
+    if (!isLimitUnlimited(branchLimit) && activeBranchCount >= Number(branchLimit || 1)) {
+      return errorResponse(
+        res,
+        `Branch limit reached (${Number(branchLimit || 1)}). Add an Additional Branch subscription to continue.`,
+        403,
+      );
+    }
   }
   const cleanBranchCode = normalizeBranchCode(req.body.branchCode);
 

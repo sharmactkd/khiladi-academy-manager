@@ -107,7 +107,6 @@ const academySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: [true, "Academy owner is required"],
-      unique: true,
       index: true,
     },
 

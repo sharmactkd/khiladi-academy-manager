@@ -76,6 +76,7 @@ const Notifications = lazy(() => import("../pages/notifications/Notifications.js
 const CommunicationHub = lazy(() => import("../pages/communication/CommunicationHub.jsx"));
 const SubscriptionBillingHub = lazy(() => import("../pages/billing/SubscriptionBillingHub.jsx"));
 const Checkout = lazy(() => import("../pages/billing/Checkout.jsx"));
+const AddOnCheckout = lazy(() => import("../pages/billing/AddOnCheckout.jsx"));
 const PaymentSuccess = lazy(() => import("../pages/billing/PaymentSuccess.jsx"));
 const PaymentFailed = lazy(() => import("../pages/billing/PaymentFailed.jsx"));
 const InvoiceDetail = lazy(() => import("../pages/billing/InvoiceDetail.jsx"));
@@ -200,6 +201,10 @@ const AppRoutes = () => {
             <Route
               path="/billing/checkout/:planCode"
               element={<Checkout />}
+            />
+            <Route
+              path="/billing/add-ons/:addOnCode"
+              element={<AddOnCheckout />}
             />
 
             <Route

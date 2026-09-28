@@ -12,7 +12,11 @@ const list = (value, max = 20) => (Array.isArray(value) ? value : String(value ?
 const publicList = (value, max = 30) => normalizeStringList(value, { maxItems: max, maxLength: 80 });
 const slugify = (value) => clean(value, 140).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "academy";
 const visibilityKeys = ["academyOverview", "academyContact", "socialLinks", "affiliations", "branches", "branchContact", "branchFacilities", "branchCoaches", "batches", "batchCoaches", "batchSchedule"];
-const ownerAcademy = (req) => Academy.findOne(req.user.role === "super_admin" && req.query.academyId ? { _id: req.query.academyId } : { owner: req.user._id });
+const ownerAcademy = (req) => {
+  const academyId = req.headers?.["x-academy-id"] || req.query.academyId;
+  if (academyId) return Academy.findOne(req.user.role === "super_admin" ? { _id: academyId } : { _id: academyId, owner: req.user._id });
+  return Academy.findOne({ owner: req.user._id }).sort({ createdAt: 1 });
+};
 
 const uniqueSlug = async (name, academyId) => {
   const base = slugify(name); let slug = base; let suffix = 1;

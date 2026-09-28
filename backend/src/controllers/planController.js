@@ -18,6 +18,10 @@ export const getPlanByCode = asyncHandler(async (req, res) => {
   if (!plan) {
     return errorResponse(res, "Plan not found", 404);
   }
+  const reason = String(req.body.reason || "").trim();
+  if ((req.body.price !== undefined || req.body.isActive !== undefined) && reason.length < 8) {
+    return errorResponse(res, "A pricing change reason of at least 8 characters is required", 400);
+  }
 
   return successResponse(res, "Plan fetched successfully", { plan });
 });
@@ -59,5 +63,5 @@ export const updatePlan = asyncHandler(async (req, res) => {
 
   await plan.save();
 
-  return successResponse(res, "Plan updated successfully", { plan });
+  return successResponse(res, "Plan updated successfully", { plan, reason });
 });

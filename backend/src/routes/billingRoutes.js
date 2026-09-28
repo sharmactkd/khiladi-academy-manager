@@ -8,6 +8,11 @@ import {
   getBillingInvoiceById,
   cancelSubscription,
   razorpayBillingWebhook,
+  getBillingAddOns,
+  seedBillingAddOns,
+  createAddOnOrder,
+  verifyAddOnPayment,
+  cancelEntitlement,
 } from "../controllers/billingController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { allowRoles } from "../middlewares/roleMiddleware.js";
@@ -21,6 +26,8 @@ import {
   verifyPaymentValidator,
   invoiceIdValidator,
   billingIdempotencyValidator,
+  createAddOnOrderValidator,
+  entitlementIdValidator,
 } from "../validators/billingValidator.js";
 import { tournamentWebhookRateLimiter } from "../middlewares/rateLimiter.js";
 
@@ -49,6 +56,27 @@ router.post(
 );
 
 router.get("/my-subscription", getMySubscription);
+router.get("/add-ons", getBillingAddOns);
+router.post(
+  "/add-ons/create-order",
+  billingIdempotencyValidator,
+  createAddOnOrderValidator,
+  validateRequest,
+  createAddOnOrder
+);
+router.post(
+  "/add-ons/verify-payment",
+  verifyPaymentValidator,
+  validateRequest,
+  verifyAddOnPayment
+);
+router.post(
+  "/add-ons/:id/cancel",
+  entitlementIdValidator,
+  validateRequest,
+  cancelEntitlement
+);
+router.post("/add-ons/seed-defaults", allowRoles("super_admin"), seedBillingAddOns);
 router.get("/payments", getBillingPayments);
 router.get("/invoices", getBillingInvoices);
 

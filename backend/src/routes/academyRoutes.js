@@ -3,6 +3,7 @@ import express from "express";
 import {
   createAcademy,
   getMyAcademy,
+  getMyAcademies,
   updateMyAcademy,
 } from "../controllers/academyController.js";
 
@@ -43,6 +44,7 @@ router.post(
 );
 
 router.get("/my", getMyAcademy);
+router.get("/mine", allowRoles("academy_owner", "super_admin"), getMyAcademies);
 router.get("/public-profile", allowRoles("academy_owner", "super_admin"), getMyPublicProfile);
 router.patch("/public-profile", allowRoles("academy_owner", "super_admin"), updateMyPublicProfile);
 router.post("/public-profile/publish", allowRoles("academy_owner", "super_admin"), publishMyPublicProfile);

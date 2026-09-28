@@ -4,6 +4,8 @@ import Coupon from "../models/Coupon.js";
 import Payment from "../models/Payment.js";
 import Subscription from "../models/Subscription.js";
 import { createInvoiceForPayment } from "./invoiceService.js";
+import { calculateCouponDiscount } from "../utils/couponPricing.js";
+export { calculateCouponDiscount } from "../utils/couponPricing.js";
 
 const addMonths = (date, months) => {
   const result = new Date(date);
@@ -84,6 +86,10 @@ export const validateCouponForPlan = async ({
     };
   }
 
+  if (!["plans", "both"].includes(coupon.appliesTo || "plans")) {
+    return { valid: false, coupon, message: "Coupon is not applicable on plans" };
+  }
+
   const previousUsage = await Payment.countDocuments({
     academy: academyId,
     status: "paid",
@@ -103,6 +109,27 @@ export const validateCouponForPlan = async ({
     coupon,
     message: "Coupon is valid",
   };
+};
+
+export const validateCouponForPurchase = async ({ couponCode, purchaseType, productCode, academyId, amount }) => {
+  if (purchaseType === "plan") {
+    const validation = await validateCouponForPlan({ couponCode, planCode: productCode, academyId });
+    if (validation.valid && Number(amount) < Number(validation.coupon.minimumAmount || 0)) return { valid: false, coupon: validation.coupon, message: `Minimum order amount is ${validation.coupon.minimumAmount}` };
+    return validation;
+  }
+  const coupon = await Coupon.findOne({ code: String(couponCode || "").trim().toUpperCase() });
+  if (!coupon) return { valid: false, coupon: null, message: "Invalid coupon code" };
+  const now = new Date();
+  if (!coupon.isActive) return { valid: false, coupon, message: "Coupon is inactive" };
+  if (coupon.startsAt && coupon.startsAt > now) return { valid: false, coupon, message: "Coupon is not active yet" };
+  if (coupon.expiresAt && coupon.expiresAt < now) return { valid: false, coupon, message: "Coupon has expired" };
+  if (coupon.maxRedemptions > 0 && coupon.usedCount >= coupon.maxRedemptions) return { valid: false, coupon, message: "Coupon redemption limit reached" };
+  if (!["add_ons", "both"].includes(coupon.appliesTo)) return { valid: false, coupon, message: "Coupon is not applicable on add-ons" };
+  if (coupon.applicableAddOnCodes?.length && !coupon.applicableAddOnCodes.includes(productCode)) return { valid: false, coupon, message: "Coupon is not applicable on this add-on" };
+  if (Number(amount) < Number(coupon.minimumAmount || 0)) return { valid: false, coupon, message: `Minimum order amount is ${coupon.minimumAmount}` };
+  const previousUsage = await Payment.countDocuments({ academy: academyId, status: "paid", "metadata.couponCode": coupon.code });
+  if (previousUsage >= coupon.perAcademyLimit) return { valid: false, coupon, message: "Coupon already used for this academy" };
+  return { valid: true, coupon, message: "Coupon is valid" };
 };
 
 export const calculateBillingAmount = async ({
@@ -127,18 +154,14 @@ export const calculateBillingAmount = async ({
 
     coupon = validation.coupon;
 
-    if (coupon.discountType === "percentage") {
-      discount = Math.round((plan.price * coupon.discountValue) / 100);
-    }
-
-    if (coupon.discountType === "fixed") {
-      discount = coupon.discountValue;
+    if (Number(plan.price || 0) < Number(coupon.minimumAmount || 0)) {
+      throw new Error(`Minimum order amount is ${coupon.minimumAmount}`);
     }
 
     if (coupon.discountType === "free_months") {
       freeMonths = coupon.freeMonths || 1;
-      discount = plan.price;
     }
+    discount = calculateCouponDiscount({ coupon, amount: plan.price });
   }
 
   const finalAmount = Math.max(Number(plan.price || 0) - Number(discount || 0), 0);
@@ -227,7 +250,7 @@ export const activateSubscription = async ({
       status === "admin_granted" ? "active" : status;
     academyDoc.subscriptionPlan = plan.code;
     academyDoc.maxStudentsAllowed =
-      plan.limits?.students === "unlimited" ? 999999 : Number(plan.limits?.students || 50);
+      plan.limits?.students === "unlimited" ? 999999 : Number(plan.limits?.students || 100);
     academyDoc.settings = {
       ...(academyDoc.settings || {}),
       allowParentPortal: Boolean(plan.limits?.parentPortal),

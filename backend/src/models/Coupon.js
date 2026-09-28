@@ -34,6 +34,17 @@ const couponSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    applicableAddOnCodes: {
+      type: [String],
+      default: [],
+    },
+    appliesTo: {
+      type: String,
+      enum: ["plans", "add_ons", "both"],
+      default: "plans",
+    },
+    minimumAmount: { type: Number, default: 0, min: 0 },
+    maximumDiscount: { type: Number, default: 0, min: 0 },
     maxRedemptions: {
       type: Number,
       default: 0,
@@ -77,6 +88,12 @@ const couponSchema = new mongoose.Schema(
 );
 
 couponSchema.index({ isActive: 1, expiresAt: 1 });
+couponSchema.pre("validate", function validateCouponRules(next) {
+  if (this.discountType === "percentage" && Number(this.discountValue) > 100) return next(new Error("Percentage discount cannot exceed 100"));
+  if (this.discountType === "free_months" && Number(this.freeMonths) < 1) return next(new Error("Free-month coupon requires at least one month"));
+  if (this.startsAt && this.expiresAt && this.expiresAt <= this.startsAt) return next(new Error("Coupon expiry must be after its start date"));
+  next();
+});
 
 const Coupon = mongoose.model("Coupon", couponSchema);
 
