@@ -196,6 +196,7 @@ const feePaymentSchema = new mongoose.Schema(
 );
 
 feePaymentSchema.index({ academy: 1, student: 1 });
+feePaymentSchema.index({ academy: 1, student: 1, paymentDate: -1, createdAt: -1 });
 feePaymentSchema.index({ academy: 1, batch: 1 });
 feePaymentSchema.index({ academy: 1, feeYear: 1, feeMonth: 1 });
 feePaymentSchema.index({ academy: 1, status: 1 });

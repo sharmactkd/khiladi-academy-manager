@@ -589,7 +589,8 @@ export const getMonthlyAttendanceRegister = async ({
         : { academy: academyObjectId, batch: batchObjectId, year: numericYear, month: numericMonth }
     ).sort(isCurrentRegister ? { updatedAt: -1 } : {}).lean(),
     isCurrentRegister
-      ? Attendance.find({
+      ? Attendance.aggregate([
+          { $match: {
           academy: academyObjectId,
           batch: batchObjectId,
           date: { $lt: end },
@@ -603,11 +604,28 @@ export const getMonthlyAttendanceRegister = async ({
               ],
             },
           },
-        })
-          .select("date records.student records.importedDueDate records.importedPaidDate records.importedFeePaid records.importedFeeStatus")
-          .sort({ date: -1, updatedAt: -1 })
-          .limit(40)
-          .lean()
+        } },
+          { $sort: { date: -1, updatedAt: -1 } },
+          { $limit: 40 },
+          { $unwind: "$records" },
+          { $match: {
+            $or: [
+              { "records.importedDueDate": { $exists: true, $nin: [null, ""] } },
+              { "records.importedPaidDate": { $exists: true, $nin: [null, ""] } },
+              { "records.importedFeePaid": { $exists: true, $nin: [null, ""] } },
+              { "records.importedFeeStatus": { $exists: true, $nin: [null, ""] } },
+            ],
+          } },
+          { $project: {
+            _id: 0,
+            date: 1,
+            student: "$records.student",
+            importedDueDate: "$records.importedDueDate",
+            importedPaidDate: "$records.importedPaidDate",
+            importedFeePaid: "$records.importedFeePaid",
+            importedFeeStatus: "$records.importedFeeStatus",
+          } },
+        ])
       : Promise.resolve([]),
   ]);
 
@@ -633,16 +651,14 @@ export const getMonthlyAttendanceRegister = async ({
   }, {});
 
   const effectiveMonthMetadataDocs = isCurrentRegister
-    ? [...historicalFeeContextDocs.reduce((map, doc) => {
-        (doc.records || []).forEach((record) => {
+      ? [...historicalFeeContextDocs.reduce((map, record) => {
           const studentId = String(record.student || "");
-          if (!studentId) return;
+          if (!studentId) return map;
           const latest = map.get(studentId) || { student: record.student };
           ["importedDueDate", "importedPaidDate", "importedFeePaid", "importedFeeStatus"].forEach((field) => {
             if (!clean(latest[field]) && clean(record[field])) latest[field] = record[field];
           });
           map.set(studentId, latest);
-        });
         return map;
       }, monthMetadataDocs.reduce((map, item) => {
         const studentId = String(item.student);

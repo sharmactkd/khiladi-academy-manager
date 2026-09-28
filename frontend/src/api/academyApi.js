@@ -17,7 +17,7 @@ export const academyApi = {
   },
 
   getMyAcademy: () => cachedRequest("workspace:academy", () => api.get("/academy/my")),
-  getMyAcademies: () => api.get("/academy/mine"),
+  getMyAcademies: () => cachedRequest("workspace:academies", () => api.get("/academy/mine"), 60_000),
 
   selectAcademy: (academyId) => {
     if (academyId) localStorage.setItem("khiladi_active_academy_id", academyId);

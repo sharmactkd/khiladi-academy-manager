@@ -8,8 +8,11 @@ import { clearRequestCache } from "../api/requestCache.js";
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => getStoredJson(USER_KEY));
-  const [loading, setLoading] = useState(true);
+  const [cachedUser] = useState(() => getStoredJson(USER_KEY));
+  const publicBootPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/academies", "/verify/"];
+  const isPublicBoot = typeof window !== "undefined" && publicBootPaths.some((path) => window.location.pathname === path || window.location.pathname.startsWith(`${path}/`) || (path.endsWith("/") && window.location.pathname.startsWith(path)));
+  const [user, setUser] = useState(() => cachedUser);
+  const [loading, setLoading] = useState(() => !isPublicBoot);
 
   const persistAuth = useCallback((userData, token) => {
     clearRequestCache();
@@ -46,12 +49,19 @@ export const AuthProvider = ({ children }) => {
     const boot = async () => {
       // Always validate/restore through the HttpOnly refresh cookie. Cached
       // user data is display-only and never treated as proof of authentication.
+      // Public/auth pages must render immediately. Only attempt a background
+      // restore there when this browser already knows about a prior session.
+      if (isPublicBoot) {
+        setLoading(false);
+        if (cachedUser) await refreshAuth();
+        return;
+      }
       await refreshAuth();
       setLoading(false);
     };
 
     boot();
-  }, [refreshAuth]);
+  }, [refreshAuth, isPublicBoot, cachedUser]);
 
   useEffect(() => {
     const handleAuthenticationExpired = () => {
@@ -85,6 +95,15 @@ export const AuthProvider = ({ children }) => {
     const response = await authApi.login(payload);
     const data = response.data?.data;
     persistAuth(data.user, data.accessToken);
+    const warmCommonRoutes = () => {
+      import("../pages/dashboard/OwnerDashboard.jsx");
+      import("../pages/attendance/Attendance.jsx");
+    };
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(warmCommonRoutes, { timeout: 2_000 });
+    } else {
+      window.setTimeout(warmCommonRoutes, 1_500);
+    }
     return data;
   };
 
