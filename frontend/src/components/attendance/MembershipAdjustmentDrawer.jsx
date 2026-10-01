@@ -165,18 +165,23 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
     return payload;
   };
 
-  const submit = async (event) => {
-    event.preventDefault();
+  const submit = async (event, clearType = null) => {
+    event?.preventDefault();
+    if (saving || loading) return;
+    const actionType = clearType || form.type;
     try {
       setSaving(true);
-      const response = await membershipApi.createAdjustment(student.studentId, buildPayload());
+      const payload = clearType
+        ? { type: clearType, reason: form.reason, expectedVersion: membership?.version }
+        : buildPayload();
+      const response = await membershipApi.createAdjustment(student.studentId, payload);
       const data = unwrap(response);
       const nextMembership = data.membership;
       setMembership(nextMembership);
       setAdjustments((current) => [data.adjustment, ...current]);
       setForm((current) => ({ ...current, reason: "", note: "", internalNote: nextMembership?.internalNote || "" }));
-      onUpdated?.(student.studentId, nextMembership, form.type);
-      toast.success("Membership adjustment saved");
+      onUpdated?.(student.studentId, nextMembership, actionType);
+      toast.success(actionType === "clear_due_date" ? "Due date cleared" : actionType === "clear_fee_status" ? "Fee status cleared" : "Membership adjustment saved");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Adjustment save nahi hua");
     } finally {
@@ -220,6 +225,10 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
               <div><span><CalendarClock /></span><div><small>Time Remaining</small><strong>{formatRemainingTrainingTime(membership?.remainingTrainingDays || 0)}<em> left</em></strong></div></div>
               <div><span><CircleDollarSign /></span><div><small>Unpaid Balance</small><strong>{[Number(membership?.unpaidMonths || 0) > 0 ? `${membership.unpaidMonths}M` : "", Number(membership?.unpaidDays || 0) > 0 ? `${membership.unpaidDays}D` : ""].filter(Boolean).join(" ") || "Clear"}</strong></div></div>
             </section>
+            <div className="membership-subactions" aria-label="Clear membership fields">
+              <button type="button" disabled={saving || loading} onClick={() => submit(null, "clear_due_date")}><CalendarDays /> Clear Due Date</button>
+              <button type="button" disabled={saving || loading} onClick={() => submit(null, "clear_fee_status")}><ReceiptIndianRupee /> Clear Fee Status</button>
+            </div>
             <form className="membership-form" onSubmit={submit}>
               <div className="membership-form__heading"><span><SlidersHorizontal /></span><div><h3>What would you like to update?</h3><p>Choose a category, then select the exact adjustment.</p></div><b>{selectedAction.label}</b></div>
               <div className="membership-action-grid" role="tablist" aria-label="Membership adjustment categories">
