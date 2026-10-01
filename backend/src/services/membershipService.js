@@ -221,10 +221,6 @@ export const applyMembershipAdjustment = async ({
   const reason = clean(payload.reason);
   const note = clean(payload.note);
 
-  if (!["set_note", "set_due_date"].includes(type) && !reason) {
-    throw createError("Reason is required for membership changes");
-  }
-
   const membership = await getOrCreateMembership({ academyId, studentId });
   if (payload.expectedVersion !== undefined && Number(payload.expectedVersion) !== membership.__v) {
     throw createError("Membership was updated elsewhere. Refresh and try again.", 409);
@@ -391,7 +387,6 @@ export const applyMembershipAdjustment = async ({
 
 export const reverseMembershipAdjustment = async ({ academyId, adjustmentId, userId, reason }) => {
   const reversalReason = clean(reason);
-  if (!reversalReason) throw createError("Reversal reason is required");
   const adjustment = await MembershipAdjustment.findOne({ _id: adjustmentId, academy: academyId });
   if (!adjustment) throw createError("Adjustment not found", 404);
   if (adjustment.reversedAt || adjustment.type === "reversal") throw createError("Adjustment is already reversed");

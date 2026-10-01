@@ -40,6 +40,9 @@ export const buildAttendanceRowView = (rows, query = "", sort = [], monthDate = 
       (phoneQuery && [row.contact, row.importedPhone].some((value) => text(value).replace(/\D/g, "").includes(digits)));
   });
   const sorts = (Array.isArray(sort) ? sort : [sort]).filter((item) => ["dueDate", "feeStatus"].includes(item.key));
+  // A persisted monthly register is already in its canonical serial order.
+  // Do not regroup it when a student's live profile status changes.
+  if (preserveManualOrder && !sorts.length) return view;
   const isActive = ({ row }) => text(row.status).toLowerCase() === "active" && row.rowType !== "raw-import";
   const activeRows = view.filter(isActive);
   const inactiveRows = view.filter(({ row }) => text(row.status).toLowerCase() === "inactive" && row.rowType !== "raw-import");
@@ -66,11 +69,6 @@ export const buildAttendanceRowView = (rows, query = "", sort = [], monthDate = 
     }
     return a.sourceIndex - b.sourceIndex;
   });
-  if (preserveManualOrder && !sorts.length) {
-    // Preserve the saved order inside each visible group, while keeping
-    // inactive students at the bottom of the register.
-    return [...activeRows, ...inactiveRows, ...otherRows];
-  }
   // Status groups take precedence over saved manual order and column sorting.
   // Keep sourceIndex unchanged so attendance edits still target the correct row.
   return [...activeRows, ...inactiveRows, ...otherRows];

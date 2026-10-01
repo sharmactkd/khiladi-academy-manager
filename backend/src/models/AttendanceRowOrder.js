@@ -7,6 +7,16 @@ const schema = new mongoose.Schema({
   month: { type: Number, required: true },
   year: { type: Number, required: true },
   keys: { type: [String], default: [] },
+  // Month-specific student state. Once a month becomes historical this keeps
+  // later profile status changes from rewriting the old register.
+  statuses: {
+    type: [{
+      _id: false,
+      key: { type: String, required: true },
+      status: { type: String, enum: ["active", "inactive", "imported"], required: true },
+    }],
+    default: [],
+  },
   revision: { type: Number, default: 0 },
 }, { timestamps: true });
 

@@ -76,14 +76,6 @@ const formatRows = (rows = []) =>
     contact: formatPhoneNumber(row.contact),
   }));
 
-const sortRegisterRows = (list = [], preserveOrder = false) => preserveOrder ? list : [...list].sort((a, b) => {
-  const rank = (row) => row.rowType === "raw-import" || row.status === "imported" ? 2 : row.status === "inactive" ? 1 : 0;
-  const difference = rank(a) - rank(b);
-  if (difference) return difference;
-  if (rank(a) === 1) return new Date(b.statusUpdatedAt || 0) - new Date(a.statusUpdatedAt || 0);
-  return Number(a.no || 0) - Number(b.no || 0);
-});
-
 const recalculateRow = (row, days) => {
   const values = days.map((day) => row.attendance?.[day.dateKey] || "");
   const presentCount = values.filter((v) => v === "P").length;
@@ -490,9 +482,8 @@ const Attendance = () => {
     const previous = rowsRef.current;
     setStatusUpdatingIds((ids) => [...ids, row.studentId]);
     registerCacheRef.current.delete(`${batch}:${year}:${month}`);
-    const optimisticRows = sortRegisterRows(
-      applyStudentStatusToAttendanceRows(previous, row.studentId, status, changedAt),
-      orderRevision > 0,
+    const optimisticRows = applyStudentStatusToAttendanceRows(
+      previous, row.studentId, status, changedAt
     );
     rowsRef.current = optimisticRows;
     setRows(optimisticRows);
@@ -500,14 +491,11 @@ const Attendance = () => {
       const response = await studentApi.updateStatus(row.studentId, status);
       const saved = normalizeResponseData(response);
       registerCacheRef.current.delete(`${batch}:${year}:${month}`);
-      const persistedRows = sortRegisterRows(
-        applyStudentStatusToAttendanceRows(
-          rowsRef.current,
-          row.studentId,
-          saved.status || status,
-          saved.statusUpdatedAt || changedAt,
-        ),
-        orderRevision > 0,
+      const persistedRows = applyStudentStatusToAttendanceRows(
+        rowsRef.current,
+        row.studentId,
+        saved.status || status,
+        saved.statusUpdatedAt || changedAt,
       );
       rowsRef.current = persistedRows;
       setRows(persistedRows);

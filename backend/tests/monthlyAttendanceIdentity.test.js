@@ -9,7 +9,7 @@ process.env.INTEGRATION_ENCRYPTION_KEY ||= "unit-test-integration-key-at-least-3
 process.env.AUDIT_LOG_SIGNING_KEY ||= "unit-test-audit-key-at-least-32-characters";
 process.env.PRIVATE_MEDIA_SIGNING_KEY ||= "unit-test-private-media-key-at-least-32-chars";
 
-const { applyCurrentMembershipFeeStatus, buildRowFromRecord, hasMarkedAttendanceCounts, mergeMonthlyRecordIdentity } = await import("../src/services/monthlyAttendanceService.js");
+const { applyCurrentMembershipFeeStatus, buildRowFromRecord, hasMarkedAttendanceCounts, mergeMonthlyRecordIdentity, resolveMonthlyStudentStatus } = await import("../src/services/monthlyAttendanceService.js");
 const { backfillImportedAttendanceMetadata, getImportedAttendancePeriod, isProtectedReconciliationPeriod } = await import("../src/controllers/attendanceController.js");
 
 test("student dates do not fabricate missing fee data", () => {
@@ -20,6 +20,23 @@ test("student dates do not fabricate missing fee data", () => {
   });
   assert.equal(row.feeDueDate, null);
   assert.equal(row.feeStatus, "");
+});
+
+test("historical attendance keeps its stored monthly student status", () => {
+  assert.equal(resolveMonthlyStudentStatus({
+    currentStatus: "inactive",
+    statusUpdatedAt: "2026-10-01T00:00:00.000Z",
+    monthEnd: "2026-10-01T00:00:00.000Z",
+    storedStatus: "active",
+  }), "active");
+});
+
+test("first historical snapshot infers the state before a later status change", () => {
+  assert.equal(resolveMonthlyStudentStatus({
+    currentStatus: "inactive",
+    statusUpdatedAt: "2026-10-01T00:00:00.000Z",
+    monthEnd: "2026-10-01T00:00:00.000Z",
+  }), "active");
 });
 
 test("real imported fee data remains visible", () => {

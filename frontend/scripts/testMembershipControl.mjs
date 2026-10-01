@@ -18,9 +18,10 @@ test("dangerous one-click clear controls are not exposed", () => {
   assert.doesNotMatch(source, /membership-quick-actions/);
 });
 
-test("custom due date reason is optional while other changes require it", () => {
-  assert.match(source, /form\.type === "set_due_date" \? <small>\(optional\)<\/small>/);
-  assert.match(source, /required=\{form\.type !== "set_due_date"\}/);
+test("reason is optional for every membership action and reversal", () => {
+  assert.match(source, /Reason <small>\(optional\)<\/small>/);
+  assert.doesNotMatch(source, /required=\{form\.type !== "set_due_date"\}/);
+  assert.match(source, /Reversal reason \(optional\)/);
 });
 
 test("due and remaining month/day adjustments are directly visible", () => {

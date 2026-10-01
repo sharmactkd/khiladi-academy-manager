@@ -130,6 +130,18 @@ test("attendance page keeps saved manual order while search is active", () => {
   assert.match(source, /preserveManualOrder=\{orderRevision > 0\}/);
   assert.doesNotMatch(source, /preserveManualOrder=\{orderRevision > 0 && !studentSearch\}/);
 });
+
+test("saved monthly order is not regrouped after student status changes", () => {
+  const rows = [
+    { studentId: "one", rowType: "student", status: "inactive", name: "One" },
+    { studentId: "two", rowType: "student", status: "active", name: "Two" },
+    { studentId: "three", rowType: "student", status: "inactive", name: "Three" },
+  ];
+  assert.deepEqual(
+    buildAttendanceRowView(rows, "", [], "", true).map(({ row }) => row.studentId),
+    ["one", "two", "three"],
+  );
+});
 test("active rows sort first; inactive follow, then unknown/raw-import rows", () => {
   const data = [
     { status: "active", feeDueDate: "2026-09-20", feeStatus: "Paid" },

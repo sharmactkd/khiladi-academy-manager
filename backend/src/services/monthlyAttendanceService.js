@@ -163,6 +163,46 @@ const normalizeShortStatus = (value) => {
 const toLongStatus = (shortStatus) => STATUS_MAP[shortStatus] || null;
 const toShortStatus = (longStatus) => STATUS_MAP[longStatus] || "";
 
+const normalizeStudentState = (value, fallback = "active") => {
+  const state = clean(value).toLowerCase();
+  return ["active", "inactive", "imported"].includes(state) ? state : fallback;
+};
+
+export const resolveMonthlyStudentStatus = ({
+  currentStatus,
+  statusUpdatedAt,
+  monthEnd,
+  storedStatus,
+  isCurrentRegister = false,
+}) => {
+  const current = normalizeStudentState(currentStatus);
+  if (isCurrentRegister) return current;
+  if (storedStatus) return normalizeStudentState(storedStatus, current);
+
+  const changedAt = new Date(statusUpdatedAt || 0);
+  const end = new Date(monthEnd || 0);
+  if (
+    ["active", "inactive"].includes(current) &&
+    Number.isFinite(changedAt.getTime()) &&
+    Number.isFinite(end.getTime()) &&
+    changedAt >= end
+  ) {
+    return current === "active" ? "inactive" : "active";
+  }
+  return current;
+};
+
+const asStatusObject = (value) => {
+  if (!value) return {};
+  if (Array.isArray(value)) {
+    return Object.fromEntries(
+      value.filter((item) => item?.key).map((item) => [String(item.key), item.status])
+    );
+  }
+  if (value instanceof Map) return Object.fromEntries(value);
+  return typeof value === "object" ? value : {};
+};
+
 const calculateCounts = (attendance = {}) => {
   const values = Object.values(attendance);
 
@@ -610,7 +650,7 @@ export const getMonthlyAttendanceRegister = async ({
     Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).select("batchName martialArt branch isActive").lean(),
     Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date records").lean(),
     AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date type title description color createdAt updatedAt").lean(),
-    AttendanceRowOrder.findById(orderId).select("keys revision").lean(),
+    AttendanceRowOrder.findById(orderId).select("keys statuses revision").lean(),
     metadataQuery,
     isCurrentRegister
       ? Attendance.aggregate([
@@ -723,9 +763,75 @@ export const getMonthlyAttendanceRegister = async ({
     latestFeeValues: isCurrentRegister,
   });
 
-  const orderedRows = applyRowOrder(rows.map((row) => ({ ...row, registerOrderKey: getAttendanceRegisterRowKey(row) })), order?.keys || []);
+  const storedStatuses = asStatusObject(order?.statuses);
+  const rowsWithMonthlyState = rows.map((row) => {
+    const registerOrderKey = getAttendanceRegisterRowKey(row);
+    return {
+      ...row,
+      registerOrderKey,
+      status: resolveMonthlyStudentStatus({
+        currentStatus: row.status,
+        statusUpdatedAt: row.statusUpdatedAt,
+        monthEnd: end,
+        storedStatus: storedStatuses[registerOrderKey],
+        isCurrentRegister,
+      }),
+    };
+  });
+
+  // Create a stable order the first time a month is opened. New students are
+  // appended by applyRowOrder; existing rows never jump because their live
+  // profile status changed later.
+  const initialKeys = rowsWithMonthlyState.map((row) => row.registerOrderKey);
+  const initialStatuses = rowsWithMonthlyState.map((row) => ({
+    key: row.registerOrderKey,
+    status: normalizeStudentState(row.status),
+  }));
+  let persistedOrder = order;
+  const hasRegisterData = isCurrentRegister || attendanceDocs.length > 0 || effectiveMonthMetadataDocs.length > 0;
+  if (!persistedOrder && hasRegisterData) {
+    try {
+      persistedOrder = await AttendanceRowOrder.findOneAndUpdate(
+        { _id: orderId },
+        {
+          $setOnInsert: {
+            academy: academyObjectId,
+            batch: batchObjectId,
+            month: numericMonth,
+            year: numericYear,
+            keys: initialKeys,
+            statuses: initialStatuses,
+            revision: 1,
+          },
+        },
+        { upsert: true, new: true, lean: true }
+      );
+    } catch (error) {
+      if (error?.code !== 11000) throw error;
+      persistedOrder = await AttendanceRowOrder.findById(orderId).lean();
+    }
+  } else if (isCurrentRegister) {
+    // Keep the open month snapshot current. Once the month closes, the branch
+    // above stops updating it and the historical state becomes immutable.
+    await AttendanceRowOrder.updateOne(
+      { _id: orderId },
+      { $set: { statuses: initialStatuses } }
+    );
+    persistedOrder = { ...persistedOrder, statuses: initialStatuses };
+  } else if (!Object.keys(storedStatuses).length) {
+    await AttendanceRowOrder.updateOne(
+      { _id: orderId },
+      { $set: { statuses: initialStatuses } }
+    );
+    persistedOrder = { ...persistedOrder, statuses: initialStatuses };
+  }
+
+  const orderedRows = applyRowOrder(
+    rowsWithMonthlyState,
+    persistedOrder?.keys?.length ? persistedOrder.keys : initialKeys
+  );
   return {
-    orderRevision: order?.revision || 0,
+    orderRevision: persistedOrder?.revision || 0,
     month: numericMonth,
     year: numericYear,
     batch,

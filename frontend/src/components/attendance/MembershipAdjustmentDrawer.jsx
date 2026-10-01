@@ -185,8 +185,8 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
   };
 
   const reverse = async (adjustmentId) => {
-    const reason = window.prompt("Reversal reason likhein");
-    if (!reason?.trim()) return;
+    const reason = window.prompt("Reversal reason (optional)", "");
+    if (reason === null) return;
     try {
       setSaving(true);
       const response = await membershipApi.reverseAdjustment(adjustmentId, reason);
@@ -244,7 +244,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
               {form.type === "resume" && <label className="membership-field"><span>Resume Date</span><DateInput value={form.resumeDate} onChange={(event) => updateForm("resumeDate", event.target.value)} /></label>}
               {form.type === "set_fee_status" && <label className="membership-field"><span>Fee Exception</span><select value={form.feeStatus} onChange={(event) => updateForm("feeStatus", event.target.value)}><option value="waived">Waive outstanding fee</option><option value="complimentary">Complimentary membership</option></select><small>Paid, partial and due states are calculated from fee transactions—not set manually.</small></label>}
 
-              {form.type !== "set_note" && <label className="membership-field membership-field--wide"><span>Reason {form.type === "set_due_date" ? <small>(optional)</small> : <b>*</b>}</span><input value={form.reason} onChange={(event) => updateForm("reason", event.target.value)} maxLength="300" placeholder={form.type === "set_due_date" ? "Optional reason for this due-date correction" : "Example: Approved holiday adjustment"} required={form.type !== "set_due_date"} /></label>}
+              {form.type !== "set_note" && <label className="membership-field membership-field--wide"><span>Reason <small>(optional)</small></span><input value={form.reason} onChange={(event) => updateForm("reason", event.target.value)} maxLength="300" placeholder="Optional reason for this adjustment" /></label>}
               <label className="membership-field membership-field--wide"><span>Internal Note</span><textarea value={form.internalNote} onChange={(event) => updateForm("internalNote", event.target.value)} maxLength="1000" placeholder="Example: 15 days protected; apply when training resumes" /></label>
               <label className="membership-field membership-field--wide"><span>Additional Audit Note</span><input value={form.note} onChange={(event) => updateForm("note", event.target.value)} maxLength="1000" placeholder="Optional details for this adjustment" /></label>
               <button type="submit" className="membership-save" disabled={saving}><Save />{saving ? "Saving…" : "Apply Adjustment"}</button>
@@ -255,7 +255,7 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
               {!adjustments.length ? <p className="membership-history__empty">No manual adjustment added yet.</p> : adjustments.map((item) => (
                 <article key={item._id} className={item.reversedAt ? "is-reversed" : ""}>
                   <span><RefreshCcw /></span>
-                  <div><strong>{formatAction(item)}</strong>{item.reversedAt ? <em>Reversed</em> : null}<p>{item.reason}</p>{item.note ? <small>{item.note}</small> : null}<time>{new Date(item.createdAt).toLocaleString("en-IN")} · {item.createdBy?.name || "Academy user"}</time></div>
+                  <div><strong>{formatAction(item)}</strong>{item.reversedAt ? <em>Reversed</em> : null}{item.reason ? <p>{item.reason}</p> : null}{item.note ? <small>{item.note}</small> : null}<time>{new Date(item.createdAt).toLocaleString("en-IN")} · {item.createdBy?.name || "Academy user"}</time></div>
                   {item._id === latestReversibleId && !item.reversedAt ? <button type="button" onClick={() => reverse(item._id)} disabled={saving}>Reverse</button> : null}
                 </article>
               ))}
