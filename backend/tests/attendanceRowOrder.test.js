@@ -5,6 +5,7 @@ import {
   moveRowKeys,
   previousMonthPeriod,
   selectMonthlyOrder,
+  studentIdsFromOrderKeys,
 } from "../src/utils/attendanceRowOrder.js";
 
 test("8 to 2 shifts intervening students without dropping anyone", () => {
@@ -58,7 +59,16 @@ test("October's own order wins without changing September", () => {
   const september = ["student:c", "student:a", "student:b"];
   const october = ["student:a", "student:b", "student:c"];
   const selected = selectMonthlyOrder({
-    currentOrder: { year: 2026, month: 10, keys: october, revision: 2, snapshotSource: "explicit-save", statuses: [] },
+    currentOrder: {
+      year: 2026,
+      month: 10,
+      keys: october,
+      revision: 2,
+      snapshotSource: "explicit-save",
+      baselineYear: 2026,
+      baselineMonth: 9,
+      statuses: [],
+    },
     previousOrder: { year: 2026, month: 9, keys: september, revision: 7, snapshotSource: "explicit-save", statuses: [] },
     isCurrentRegister: true,
   });
@@ -78,4 +88,90 @@ test("historical months never inherit a neighbouring month's order", () => {
   assert.equal(selected.inherited, false);
   assert.deepEqual(previousMonthPeriod(2026, 1), { year: 2025, month: 12 });
   assert.deepEqual(previousMonthPeriod(2026, 10), { year: 2026, month: 9 });
+});
+
+test("active-only October snapshot is repaired with missing September inactive rows", () => {
+  const selected = selectMonthlyOrder({
+    currentOrder: {
+      year: 2026,
+      month: 10,
+      keys: ["student:a", "student:c", "student:new"],
+      revision: 3,
+      snapshotSource: "explicit-save",
+      statuses: [],
+    },
+    previousOrder: {
+      year: 2026,
+      month: 9,
+      keys: ["student:c", "student:inactive", "student:a"],
+      revision: 8,
+      snapshotSource: "explicit-save",
+      statuses: [],
+    },
+    isCurrentRegister: true,
+  });
+  assert.deepEqual(selected.keys, ["student:c", "student:inactive", "student:a", "student:new"]);
+  assert.equal(selected.revision, 3);
+  assert.equal(selected.reconciledFromPrevious, true);
+});
+
+test("legacy October snapshot with all students but wrong order is repaired once", () => {
+  const previousOrder = {
+    year: 2026,
+    month: 9,
+    keys: ["student:c", "student:inactive", "student:a"],
+    snapshotSource: "explicit-save",
+  };
+  const repaired = selectMonthlyOrder({
+    currentOrder: {
+      year: 2026,
+      month: 10,
+      keys: ["student:a", "student:c", "student:inactive"],
+      revision: 4,
+      snapshotSource: "explicit-save",
+    },
+    previousOrder,
+    isCurrentRegister: true,
+  });
+  assert.deepEqual(repaired.keys, previousOrder.keys);
+  assert.equal(repaired.reconciledFromPrevious, true);
+
+  const afterOctoberEdit = selectMonthlyOrder({
+    currentOrder: {
+      year: 2026,
+      month: 10,
+      keys: ["student:inactive", "student:a", "student:c"],
+      revision: 5,
+      snapshotSource: "explicit-save",
+      baselineYear: 2026,
+      baselineMonth: 9,
+    },
+    previousOrder,
+    isCurrentRegister: true,
+  });
+  assert.deepEqual(afterOctoberEdit.keys, ["student:inactive", "student:a", "student:c"]);
+  assert.equal(afterOctoberEdit.reconciledFromPrevious, false);
+});
+
+test("legacy historical order keys remain usable while untrusted statuses are ignored", () => {
+  const selected = selectMonthlyOrder({
+    currentOrder: {
+      year: 2026,
+      month: 9,
+      keys: ["student:b", "student:a"],
+      statuses: [{ key: "student:a", status: "inactive" }],
+      revision: 1,
+    },
+    previousOrder: null,
+    isCurrentRegister: false,
+  });
+  assert.deepEqual(selected.keys, ["student:b", "student:a"]);
+  assert.deepEqual(selected.statuses, []);
+});
+
+test("student identities are extracted from saved order without import rows or duplicates", () => {
+  assert.deepEqual(
+    studentIdsFromOrderKeys(["student:a", "import:sheet:row:2", "student:b", "student:a"]),
+    ["a", "b"],
+  );
 });

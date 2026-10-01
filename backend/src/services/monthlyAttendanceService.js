@@ -8,7 +8,7 @@ import AttendanceDayNote from "../models/AttendanceDayNote.js";
 import AttendanceRowOrder from "../models/AttendanceRowOrder.js";
 import AttendanceMonthMetadata from "../models/AttendanceMonthMetadata.js";
 import MembershipAdjustment from "../models/MembershipAdjustment.js";
-import { applyRowOrder, moveRowKeys, previousMonthPeriod, selectMonthlyOrder } from "../utils/attendanceRowOrder.js";
+import { applyRowOrder, moveRowKeys, previousMonthPeriod, selectMonthlyOrder, studentIdsFromOrderKeys } from "../utils/attendanceRowOrder.js";
 import { getMembershipMap } from "./membershipService.js";
 import { resolveFeeStatus } from "../utils/feeStatus.js";
 import { todayDateKey } from "../utils/businessDate.js";
@@ -166,6 +166,7 @@ const toShortStatus = (longStatus) => STATUS_MAP[longStatus] || "";
 
 const normalizeStudentState = (value, fallback = "active") => {
   const state = clean(value).toLowerCase();
+  if (state === "left") return "inactive";
   return ["active", "inactive", "imported"].includes(state) ? state : fallback;
 };
 
@@ -477,6 +478,7 @@ const buildMonthlyRows = async ({
   latestFeeValues = false,
   isCurrentRegister = false,
   monthEnd,
+  orderedStudentIds = [],
 }) => {
   const markedStudentIds = [];
 
@@ -489,11 +491,15 @@ const buildMonthlyRows = async ({
   // Fetch the current roster and historical students through index-friendly
   // queries, then merge by ID. This avoids a broad $or scan on large academies.
   const metadataStudentIds = monthMetadataDocs.map((item) => item.student).filter(Boolean);
-  const historicalIdentityIds = [...new Set([...markedStudentIds, ...metadataStudentIds].map(String))];
+  const historicalIdentityIds = [...new Set([
+    ...markedStudentIds,
+    ...metadataStudentIds,
+    ...orderedStudentIds,
+  ].map(String))].filter((id) => mongoose.Types.ObjectId.isValid(id));
   const studentFields = "admissionNumber firstName lastName phone countryCode status statusUpdatedAt joiningDate createdAt updatedAt batch dob dateOfBirth fatherName schoolName address";
   const [rosterStudents, historicalStudents] = await Promise.all([
     isCurrentRegister
-      ? Student.find({ academy: academyObjectId, batch: batchObjectId, status: { $in: ["active", "inactive"] } }).select(studentFields).lean()
+      ? Student.find({ academy: academyObjectId, batch: batchObjectId }).select(studentFields).lean()
       : Promise.resolve([]),
     historicalIdentityIds.length
       ? Student.find({ academy: academyObjectId, _id: { $in: historicalIdentityIds } }).select(studentFields).lean()
@@ -704,9 +710,9 @@ export const getMonthlyAttendanceRegister = async ({
     Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).select("batchName martialArt branch isActive").lean(),
     Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date records").lean(),
     AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date type title description color createdAt updatedAt").lean(),
-    AttendanceRowOrder.findById(orderId).select("keys statuses snapshotSource revision").lean(),
+    AttendanceRowOrder.findById(orderId).select("keys statuses snapshotSource baselineYear baselineMonth revision year month").lean(),
     isCurrentRegister
-      ? AttendanceRowOrder.findById(previousOrderId).select("keys statuses snapshotSource revision year month").lean()
+      ? AttendanceRowOrder.findById(previousOrderId).select("keys statuses snapshotSource baselineYear baselineMonth revision year month").lean()
       : Promise.resolve(null),
     metadataQuery,
     isCurrentRegister
@@ -809,6 +815,7 @@ export const getMonthlyAttendanceRegister = async ({
       }, new Map())).values()]
     : monthMetadataDocs;
 
+  const selectedOrder = selectMonthlyOrder({ currentOrder: order, previousOrder, isCurrentRegister });
   const { rows, students } = await buildMonthlyRows({
     academyObjectId,
     batchObjectId,
@@ -820,11 +827,11 @@ export const getMonthlyAttendanceRegister = async ({
     latestFeeValues: isCurrentRegister,
     isCurrentRegister,
     monthEnd: end,
+    orderedStudentIds: studentIdsFromOrderKeys(selectedOrder.keys),
   });
 
   // Ignore status arrays created by the withdrawn read-time snapshot build.
   // Only an explicit attendance save is authoritative.
-  const selectedOrder = selectMonthlyOrder({ currentOrder: order, previousOrder, isCurrentRegister });
   const storedStatuses = asStatusObject(selectedOrder.statuses);
   const rowsWithMonthlyState = rows.map((row) => {
     const registerOrderKey = getAttendanceRegisterRowKey(row);
@@ -853,6 +860,7 @@ export const getMonthlyAttendanceRegister = async ({
     preserveManualOrder: selectedOrder.keys.length > 0,
     orderInherited: selectedOrder.inherited,
     orderInheritedFrom: selectedOrder.inheritedFrom,
+    orderReconciledFromPrevious: selectedOrder.reconciledFromPrevious,
     month: numericMonth,
     year: numericYear,
     batch,
@@ -900,6 +908,8 @@ export const moveMonthlyAttendanceRow = async ({ academyId, batchId, month, year
         keys,
         statuses,
         snapshotSource: "explicit-save",
+        baselineYear: previousMonthPeriod(Number(year), Number(month)).year,
+        baselineMonth: previousMonthPeriod(Number(year), Number(month)).month,
       },
       $inc: { revision: 1 },
     }, { upsert: revision === 0, new: true, runValidators: true });
@@ -1563,22 +1573,26 @@ export const saveMonthlyAttendanceRegister = async ({
           keys: submittedRows.map((item) => item.key),
           statuses: submittedRows,
           snapshotSource: "explicit-save",
+          baselineYear: previousMonthPeriod(numericYear, numericMonth).year,
+          baselineMonth: previousMonthPeriod(numericYear, numericMonth).month,
           revision: 1,
         }], { session });
       } else {
-        const submittedKeySet = new Set(submittedRows.map((item) => item.key));
-        const existingWasWithdrawnReadSnapshot = existingOrder.snapshotSource !== "explicit-save" &&
-          Array.isArray(existingOrder.statuses) && existingOrder.statuses.length > 0;
-        const baseKeys = existingWasWithdrawnReadSnapshot ? [] : existingOrder.keys || [];
-        const keys = [
-          ...baseKeys.filter((key) => submittedKeySet.has(key)),
-          ...submittedRows.map((item) => item.key).filter((key) => !baseKeys.includes(key)),
-        ];
+        // rows is the complete, canonical register (search only affects the
+        // rendered view). Persist its exact order so a repaired inherited order
+        // cannot be replaced again by a stale active-only legacy snapshot.
+        const keys = submittedRows.map((item) => item.key);
         const keysChanged = JSON.stringify(keys) !== JSON.stringify(existingOrder.keys || []);
         await AttendanceRowOrder.updateOne(
           { _id: orderId },
           {
-            $set: { keys, statuses: submittedRows, snapshotSource: "explicit-save" },
+            $set: {
+              keys,
+              statuses: submittedRows,
+              snapshotSource: "explicit-save",
+              baselineYear: previousMonthPeriod(numericYear, numericMonth).year,
+              baselineMonth: previousMonthPeriod(numericYear, numericMonth).month,
+            },
             ...(keysChanged ? { $inc: { revision: 1 } } : {}),
           },
           { session }

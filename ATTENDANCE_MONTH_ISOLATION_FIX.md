@@ -18,6 +18,13 @@ It never updates September's document:
 New students not present in September are appended without moving the inherited
 students. Removed students are ignored without corrupting the stored keys.
 
+Legacy October snapshots that were previously saved with active rows only, or
+without September-baseline provenance, are reconciled once from September.
+Students referenced by September's saved order are hydrated even when a legacy
+record has status `left` or is no longer returned by the current batch roster;
+`left` is displayed as inactive in attendance. After the repaired October order
+is saved, its baseline provenance prevents later October edits from being reset.
+
 ## Isolation guarantees
 
 - A historical GET is read-only.

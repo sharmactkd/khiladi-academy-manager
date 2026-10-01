@@ -60,6 +60,13 @@ test("attendance save never copies live fee display into imported history", () =
   assert.doesNotMatch(saveBlock, /row\.importedFeeStatus \|\| row\.feeStatus/);
 });
 
+test("attendance save persists the submitted canonical row order", () => {
+  const saveBlock = monthlyServiceSource.split("export const saveMonthlyAttendanceRegister")[1];
+  assert.match(saveBlock, /const keys = submittedRows\.map\(\(item\) => item\.key\)/);
+  assert.match(saveBlock, /baselineYear: previousMonthPeriod\(numericYear, numericMonth\)\.year/);
+  assert.doesNotMatch(saveBlock, /baseKeys\.filter/);
+});
+
 test("opening a monthly register does not create or update row snapshots", () => {
   const getBlock = monthlyServiceSource
     .split("export const getMonthlyAttendanceRegister")[1]
@@ -68,6 +75,13 @@ test("opening a monthly register does not create or update row snapshots", () =>
   assert.match(getBlock, /previousOrderId/);
   assert.match(getBlock, /selectMonthlyOrder/);
   assert.match(getBlock, /preserveManualOrder: selectedOrder\.keys\.length > 0/);
+  assert.match(getBlock, /orderedStudentIds: studentIdsFromOrderKeys\(selectedOrder\.keys\)/);
+});
+
+test("current attendance includes legacy left students as inactive roster rows", () => {
+  assert.match(monthlyServiceSource, /Student\.find\(\{ academy: academyObjectId, batch: batchObjectId \}\)/);
+  assert.match(monthlyServiceSource, /if \(state === "left"\) return "inactive"/);
+  assert.doesNotMatch(monthlyServiceSource, /batch: batchObjectId, status: \{ \$in: \["active", "inactive"\] \}/);
 });
 
 test("real imported fee data remains visible", () => {
