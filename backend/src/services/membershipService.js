@@ -103,6 +103,14 @@ const snapshot = (membership) =>
     return result;
   }, {});
 
+const comparableSnapshot = (value = {}) => JSON.stringify(
+  MEMBERSHIP_FIELDS.reduce((result, field) => {
+    const item = value?.[field];
+    result[field] = item instanceof Date ? item.toISOString() : item ?? null;
+    return result;
+  }, {})
+);
+
 export const serializeMembership = (membership) => {
   if (!membership) return null;
   const source = typeof membership.toObject === "function" ? membership.toObject() : membership;
@@ -141,29 +149,29 @@ export const serializeMembership = (membership) => {
   };
 };
 
-const findStudent = async ({ academyId, studentId }) => {
+const findStudent = async ({ academyId, studentId, session = null }) => {
   if (!mongoose.Types.ObjectId.isValid(String(studentId || ""))) {
     throw createError("Invalid student ID");
   }
-  const student = await Student.findOne({ _id: studentId, academy: academyId });
+  const student = await Student.findOne({ _id: studentId, academy: academyId }).session(session);
   if (!student) throw createError("Student not found", 404);
   return student;
 };
 
-export const getOrCreateMembership = async ({ academyId, studentId }) => {
-  const student = await findStudent({ academyId, studentId });
-  let membership = await StudentMembership.findOne({ academy: academyId, student: studentId });
+export const getOrCreateMembership = async ({ academyId, studentId, session = null }) => {
+  const student = await findStudent({ academyId, studentId, session });
+  let membership = await StudentMembership.findOne({ academy: academyId, student: studentId }).session(session);
   if (membership) return membership;
 
   const latestFee = await FeePayment.findOne({
     academy: academyId,
     student: studentId,
     status: { $ne: "cancelled" },
-  }).sort({ paymentDate: -1, createdAt: -1 });
+  }).sort({ paymentDate: -1, createdAt: -1 }).session(session);
 
   const initialDueDate = latestFee?.dueDate || student.joiningDate || student.createdAt || null;
   try {
-    membership = await StudentMembership.create({
+    const created = await StudentMembership.create([{
       academy: academyId,
       student: studentId,
       batch: student.batch || null,
@@ -174,10 +182,11 @@ export const getOrCreateMembership = async ({ academyId, studentId }) => {
       nextDueDate: initialDueDate,
       feeStatus: latestFee?.status || "due",
       feeRequired: true,
-    });
+    }], { session });
+    membership = created[0];
   } catch (error) {
     if (error?.code !== 11000) throw error;
-    membership = await StudentMembership.findOne({ academy: academyId, student: studentId });
+    membership = await StudentMembership.findOne({ academy: academyId, student: studentId }).session(session);
   }
   return membership;
 };
@@ -220,8 +229,10 @@ export const applyMembershipAdjustment = async ({
   const type = clean(payload.type).toLowerCase();
   const reason = clean(payload.reason);
   const note = clean(payload.note);
-
-  const membership = await getOrCreateMembership({ academyId, studentId });
+  const session = await mongoose.startSession();
+  try {
+    const result = await session.withTransaction(async () => {
+  const membership = await getOrCreateMembership({ academyId, studentId, session });
   if (payload.expectedVersion !== undefined && Number(payload.expectedVersion) !== membership.__v) {
     throw createError("Membership was updated elsewhere. Refresh and try again.", 409);
   }
@@ -364,9 +375,9 @@ export const applyMembershipAdjustment = async ({
   }
   membership.lastAdjustedAt = new Date();
   membership.lastAdjustedBy = userId;
-  await membership.save();
+  await membership.save({ session });
 
-  const adjustment = await MembershipAdjustment.create({
+  const [adjustment] = await MembershipAdjustment.create([{
     academy: academyId,
     student: studentId,
     membership: membership._id,
@@ -378,16 +389,23 @@ export const applyMembershipAdjustment = async ({
     previousState,
     nextState: snapshot(membership),
     createdBy: userId,
-  });
-
-  queueFeeIntegritySync(academyId);
+  }], { session });
 
   return { membership: serializeMembership(membership), adjustment };
+    });
+    queueFeeIntegritySync(academyId);
+    return result;
+  } finally {
+    await session.endSession();
+  }
 };
 
 export const reverseMembershipAdjustment = async ({ academyId, adjustmentId, userId, reason }) => {
   const reversalReason = clean(reason);
-  const adjustment = await MembershipAdjustment.findOne({ _id: adjustmentId, academy: academyId });
+  const session = await mongoose.startSession();
+  try {
+    const result = await session.withTransaction(async () => {
+  const adjustment = await MembershipAdjustment.findOne({ _id: adjustmentId, academy: academyId }).session(session);
   if (!adjustment) throw createError("Adjustment not found", 404);
   if (adjustment.reversedAt || adjustment.type === "reversal") throw createError("Adjustment is already reversed");
 
@@ -395,24 +413,27 @@ export const reverseMembershipAdjustment = async ({ academyId, adjustmentId, use
     membership: adjustment.membership,
     reversedAt: null,
     type: { $ne: "reversal" },
-  }).sort({ createdAt: -1 });
+  }).sort({ createdAt: -1 }).session(session);
   if (!latest || String(latest._id) !== String(adjustment._id)) {
     throw createError("Only the latest adjustment can be reversed", 409);
   }
 
-  const membership = await StudentMembership.findOne({ _id: adjustment.membership, academy: academyId });
+  const membership = await StudentMembership.findOne({ _id: adjustment.membership, academy: academyId }).session(session);
   if (!membership) throw createError("Membership not found", 404);
   const currentState = snapshot(membership);
+  if (comparableSnapshot(currentState) !== comparableSnapshot(adjustment.nextState || {})) {
+    throw createError("Membership changed after this adjustment and cannot be safely reversed", 409);
+  }
   MEMBERSHIP_FIELDS.forEach((field) => { membership[field] = adjustment.previousState?.[field] ?? null; });
   membership.lastAdjustedAt = new Date();
   membership.lastAdjustedBy = userId;
-  await membership.save();
+  await membership.save({ session });
 
   adjustment.reversedAt = new Date();
   adjustment.reversedBy = userId;
-  await adjustment.save();
+  await adjustment.save({ session });
 
-  await MembershipAdjustment.create({
+  await MembershipAdjustment.create([{
     academy: academyId,
     student: adjustment.student,
     membership: membership._id,
@@ -423,9 +444,13 @@ export const reverseMembershipAdjustment = async ({ academyId, adjustmentId, use
     nextState: snapshot(membership),
     createdBy: userId,
     reversalOf: adjustment._id,
-  });
-
-  queueFeeIntegritySync(academyId);
+  }], { session });
 
   return serializeMembership(membership);
+    });
+    queueFeeIntegritySync(academyId);
+    return result;
+  } finally {
+    await session.endSession();
+  }
 };

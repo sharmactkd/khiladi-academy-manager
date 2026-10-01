@@ -10,3 +10,9 @@ test("attendance overview reports active students instead of every loaded row", 
   assert.match(source, /<small>Active Students<\/small><strong>\{activeStudentCount\}<\/strong>/);
   assert.doesNotMatch(source, /<small>Total Students<\/small><strong>\{formattedRows\.length\}<\/strong>/);
 });
+
+test("historical attendance cannot open live membership controls", () => {
+  assert.match(source, /canManageMembership=\{selectedPeriodIsCurrent &&/);
+  assert.match(source, /Membership Control sirf current month me available hai/);
+  assert.match(source, /Historical month ka student status change nahi kiya ja sakta/);
+});

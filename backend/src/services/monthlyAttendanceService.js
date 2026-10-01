@@ -7,6 +7,7 @@ import FeePayment from "../models/FeePayment.js";
 import AttendanceDayNote from "../models/AttendanceDayNote.js";
 import AttendanceRowOrder from "../models/AttendanceRowOrder.js";
 import AttendanceMonthMetadata from "../models/AttendanceMonthMetadata.js";
+import MembershipAdjustment from "../models/MembershipAdjustment.js";
 import { applyRowOrder, moveRowKeys } from "../utils/attendanceRowOrder.js";
 import { getMembershipMap } from "./membershipService.js";
 import { resolveFeeStatus } from "../utils/feeStatus.js";
@@ -288,6 +289,44 @@ const getMonthlyFeeMap = async ({ academyId, studentIds, month, year, latest = f
   return map;
 };
 
+const serializeHistoricalMembership = (adjustment) => {
+  const state = adjustment?.nextState;
+  if (!state) return null;
+  const feeStatusSummary = state.feeStatusCleared === true ? null : resolveFeeStatus({
+    membership: state,
+    fallbackStatus: state.feeStatus || "due",
+  });
+  return {
+    status: state.status || "active",
+    effectiveDueDate: state.dueDateCleared === true ? null : state.effectiveDueDate || state.nextDueDate || null,
+    nextDueDate: state.dueDateCleared === true ? null : state.nextDueDate || state.effectiveDueDate || null,
+    dueDateCleared: state.dueDateCleared === true,
+    remainingTrainingDays: Number(state.remainingTrainingDays || 0),
+    unpaidMonths: Number(state.unpaidMonths || 0),
+    unpaidDays: Number(state.unpaidDays || 0),
+    feeRequired: state.feeRequired !== false,
+    feeStatus: state.feeStatusCleared === true ? "" : feeStatusSummary?.code || state.feeStatus || "",
+    feeStatusSummary,
+    feeStatusCleared: state.feeStatusCleared === true,
+    internalNote: state.internalNote || "",
+    lastAdjustedAt: adjustment.createdAt || null,
+    historicalSnapshot: true,
+  };
+};
+
+const getHistoricalMembershipMap = async ({ academyId, studentIds, monthEnd }) => {
+  if (!studentIds.length) return new Map();
+  const adjustments = await MembershipAdjustment.aggregate([
+    { $match: { academy: academyId, student: { $in: studentIds }, createdAt: { $lt: monthEnd } } },
+    { $sort: { student: 1, createdAt: -1 } },
+    { $group: { _id: "$student", adjustment: { $first: "$$ROOT" } } },
+  ]);
+  return new Map(adjustments.map((item) => [
+    String(item._id),
+    serializeHistoricalMembership(item.adjustment),
+  ]));
+};
+
 const getRecordDisplayIdentity = (record = {}, studentMap = new Map()) => {
   const student = record.student ? studentMap.get(String(record.student)) : null;
 
@@ -307,6 +346,7 @@ const getRecordDisplayIdentity = (record = {}, studentMap = new Map()) => {
     importedFeePaid: record.importedFeePaid || "",
     importedFeeStatus: record.importedFeeStatus || "",
     importedExtraNote: record.importedExtraNote || "",
+    studentStatus: record.studentStatus || "",
     source: record.source || "manual",
   };
 };
@@ -333,6 +373,7 @@ export const mergeMonthlyRecordIdentity = (existing = {}, incoming = {}) => {
   if (!merged.studentId && incoming.studentId) merged.studentId = incoming.studentId;
   if (incoming.rowType === "student") merged.rowType = "student";
   if (incoming.source === "excel-import") merged.source = "excel-import";
+  if (!merged.studentStatus && incoming.studentStatus) merged.studentStatus = incoming.studentStatus;
 
   if (
     incoming.importedRowNumber &&
@@ -351,7 +392,7 @@ export const mergeMonthlyRecordIdentity = (existing = {}, incoming = {}) => {
   return merged;
 };
 
-export const buildRowFromRecord = ({ identity, attendance, index, fee, membership }) => {
+export const buildRowFromRecord = ({ identity, attendance, index, fee, membership, historical = false }) => {
   const student = identity.student;
   const counts = calculateCounts(attendance);
 
@@ -383,7 +424,7 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
     importedAdmissionNumber: identity.importedAdmissionNumber,
     importedDueDate: normalizedDueDate,
     importedPaidDate: normalizedPaidDate,
-    importedFeePaid: "",
+    importedFeePaid: identity.importedFeePaid || "",
     importedFeeStatus: identity.importedFeeStatus,
     importedExtraNote: identity.importedExtraNote,
 
@@ -393,13 +434,15 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
     contact: importedPhone || student?.phone || "-",
     contactCountryCode: student?.countryCode || "",
     status:
-      student?.status || (identity.rowType === "raw-import" ? "imported" : "active"),
+      historical && identity.studentStatus
+        ? identity.studentStatus
+        : student?.status || (identity.rowType === "raw-import" ? "imported" : "active"),
     statusUpdatedAt:
       student?.statusUpdatedAt || student?.updatedAt || student?.createdAt || null,
     feeDueDate:
       normalizedDueDate ||
-      membership?.effectiveDueDate ||
       fee?.dueDate ||
+      membership?.effectiveDueDate ||
       null,
     feePaidDate: isLinkedStudent
       ? fee?.paidDate || fee?.paymentDate || formatDisplayDate(normalizedPaidDate) || null
@@ -432,6 +475,8 @@ const buildMonthlyRows = async ({
   attendanceDocs,
   monthMetadataDocs = [],
   latestFeeValues = false,
+  isCurrentRegister = false,
+  monthEnd,
 }) => {
   const markedStudentIds = [];
 
@@ -443,11 +488,15 @@ const buildMonthlyRows = async ({
 
   // Fetch the current roster and historical students through index-friendly
   // queries, then merge by ID. This avoids a broad $or scan on large academies.
+  const metadataStudentIds = monthMetadataDocs.map((item) => item.student).filter(Boolean);
+  const historicalIdentityIds = [...new Set([...markedStudentIds, ...metadataStudentIds].map(String))];
   const studentFields = "admissionNumber firstName lastName phone countryCode status statusUpdatedAt joiningDate createdAt updatedAt batch dob dateOfBirth fatherName schoolName address";
   const [rosterStudents, historicalStudents] = await Promise.all([
-    Student.find({ academy: academyObjectId, batch: batchObjectId, status: { $in: ["active", "inactive"] } }).select(studentFields).lean(),
-    markedStudentIds.length
-      ? Student.find({ academy: academyObjectId, _id: { $in: [...new Set(markedStudentIds.map(String))] }, status: { $in: ["active", "inactive"] } }).select(studentFields).lean()
+    isCurrentRegister
+      ? Student.find({ academy: academyObjectId, batch: batchObjectId, status: { $in: ["active", "inactive"] } }).select(studentFields).lean()
+      : Promise.resolve([]),
+    historicalIdentityIds.length
+      ? Student.find({ academy: academyObjectId, _id: { $in: historicalIdentityIds } }).select(studentFields).lean()
       : Promise.resolve([]),
   ]);
   const students = [...new Map([...rosterStudents, ...historicalStudents].map(student => [String(student._id), student])).values()];
@@ -457,7 +506,9 @@ const buildMonthlyRows = async ({
   const studentIds = students.map((student) => student._id);
   const [feeMap, membershipMap] = await Promise.all([
     getMonthlyFeeMap({ academyId: academyObjectId, studentIds, month, year, latest: latestFeeValues }),
-    getMembershipMap({ academyId: academyObjectId, studentIds }),
+    isCurrentRegister
+      ? getMembershipMap({ academyId: academyObjectId, studentIds })
+      : getHistoricalMembershipMap({ academyId: academyObjectId, studentIds, monthEnd }),
   ]);
 
   const rowIdentityMap = new Map();
@@ -560,6 +611,7 @@ const buildMonthlyRows = async ({
           index,
           fee,
           membership,
+          historical: !isCurrentRegister,
         });
       })
       .sort((a, b) => {
@@ -650,7 +702,7 @@ export const getMonthlyAttendanceRegister = async ({
     Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).select("batchName martialArt branch isActive").lean(),
     Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date records").lean(),
     AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date type title description color createdAt updatedAt").lean(),
-    AttendanceRowOrder.findById(orderId).select("keys statuses revision").lean(),
+    AttendanceRowOrder.findById(orderId).select("keys statuses snapshotSource revision").lean(),
     metadataQuery,
     isCurrentRegister
       ? Attendance.aggregate([
@@ -761,9 +813,17 @@ export const getMonthlyAttendanceRegister = async ({
     attendanceDocs,
     monthMetadataDocs: effectiveMonthMetadataDocs,
     latestFeeValues: isCurrentRegister,
+    isCurrentRegister,
+    monthEnd: end,
   });
 
-  const storedStatuses = asStatusObject(order?.statuses);
+  // Ignore status arrays created by the withdrawn read-time snapshot build.
+  // Only an explicit attendance save is authoritative.
+  const storedStatuses = order?.snapshotSource === "explicit-save"
+    ? asStatusObject(order?.statuses)
+    : {};
+  const withdrawnReadSnapshot = order?.snapshotSource !== "explicit-save" &&
+    Array.isArray(order?.statuses) && order.statuses.length > 0;
   const rowsWithMonthlyState = rows.map((row) => {
     const registerOrderKey = getAttendanceRegisterRowKey(row);
     return {
@@ -779,59 +839,15 @@ export const getMonthlyAttendanceRegister = async ({
     };
   });
 
-  // Create a stable order the first time a month is opened. New students are
-  // appended by applyRowOrder; existing rows never jump because their live
-  // profile status changed later.
+  // GET is strictly read-only. Month order/status snapshots are persisted only
+  // by an explicit attendance save or row move.
   const initialKeys = rowsWithMonthlyState.map((row) => row.registerOrderKey);
-  const initialStatuses = rowsWithMonthlyState.map((row) => ({
-    key: row.registerOrderKey,
-    status: normalizeStudentState(row.status),
-  }));
-  let persistedOrder = order;
-  const hasRegisterData = isCurrentRegister || attendanceDocs.length > 0 || effectiveMonthMetadataDocs.length > 0;
-  if (!persistedOrder && hasRegisterData) {
-    try {
-      persistedOrder = await AttendanceRowOrder.findOneAndUpdate(
-        { _id: orderId },
-        {
-          $setOnInsert: {
-            academy: academyObjectId,
-            batch: batchObjectId,
-            month: numericMonth,
-            year: numericYear,
-            keys: initialKeys,
-            statuses: initialStatuses,
-            revision: 1,
-          },
-        },
-        { upsert: true, new: true, lean: true }
-      );
-    } catch (error) {
-      if (error?.code !== 11000) throw error;
-      persistedOrder = await AttendanceRowOrder.findById(orderId).lean();
-    }
-  } else if (isCurrentRegister) {
-    // Keep the open month snapshot current. Once the month closes, the branch
-    // above stops updating it and the historical state becomes immutable.
-    await AttendanceRowOrder.updateOne(
-      { _id: orderId },
-      { $set: { statuses: initialStatuses } }
-    );
-    persistedOrder = { ...persistedOrder, statuses: initialStatuses };
-  } else if (!Object.keys(storedStatuses).length) {
-    await AttendanceRowOrder.updateOne(
-      { _id: orderId },
-      { $set: { statuses: initialStatuses } }
-    );
-    persistedOrder = { ...persistedOrder, statuses: initialStatuses };
-  }
-
   const orderedRows = applyRowOrder(
     rowsWithMonthlyState,
-    persistedOrder?.keys?.length ? persistedOrder.keys : initialKeys
+    !withdrawnReadSnapshot && order?.keys?.length ? order.keys : initialKeys
   );
   return {
-    orderRevision: persistedOrder?.revision || 0,
+    orderRevision: withdrawnReadSnapshot ? 0 : order?.revision || 0,
     month: numericMonth,
     year: numericYear,
     batch,
@@ -1367,15 +1383,45 @@ export const saveMonthlyAttendanceRegister = async ({
     .map((row) => row.studentId)
     .filter((id) => mongoose.Types.ObjectId.isValid(String(id)));
 
-  const validStudents = await Student.find({
-    _id: { $in: studentIds },
-    academy: academyObjectId,
-  }).select("_id");
+  const { start: saveMonthStart, end: saveMonthEnd } = getMonthRange({ year: numericYear, month: numericMonth });
+  const [validStudents, exactMetadataDocs, existingAttendanceDocs] = await Promise.all([
+    Student.find({
+      _id: { $in: studentIds },
+      academy: academyObjectId,
+    }).select("_id"),
+    AttendanceMonthMetadata.find({
+      academy: academyObjectId,
+      batch: batchObjectId,
+      year: numericYear,
+      month: numericMonth,
+      student: { $in: studentIds },
+    }).lean(),
+    Attendance.find({
+      academy: academyObjectId,
+      batch: batchObjectId,
+      date: { $gte: saveMonthStart, $lt: saveMonthEnd },
+    }).select("records").lean(),
+  ]);
 
   const validStudentIds = new Set(validStudents.map((item) => String(item._id)));
+  const financialFields = ["importedDueDate", "importedPaidDate", "importedFeePaid", "importedFeeStatus"];
+  const authoritativeMetadata = new Map(exactMetadataDocs.map((item) => [String(item.student), item]));
+  existingAttendanceDocs.forEach((document) => {
+    (document.records || []).forEach((record) => {
+      if (!record.student) return;
+      const key = String(record.student);
+      const existing = authoritativeMetadata.get(key) || {};
+      const merged = { ...existing };
+      financialFields.forEach((field) => {
+        if (!clean(merged[field]) && clean(record[field])) merged[field] = record[field];
+      });
+      authoritativeMetadata.set(key, merged);
+    });
+  });
 
   const recordsByDate = new Map();
   const expectedCells = new Map();
+  const expectedMetadata = new Map();
 
   days.forEach((day) => {
     recordsByDate.set(day.dateKey, new Map());
@@ -1390,6 +1436,7 @@ export const saveMonthlyAttendanceRegister = async ({
       ...row,
       student: isRawImport ? null : studentId,
     });
+    const financialMetadata = isRawImport ? row : authoritativeMetadata.get(studentId) || {};
 
     days.forEach((day) => {
       const shortStatus = normalizeShortStatus(row.attendance?.[day.dateKey]);
@@ -1405,11 +1452,14 @@ export const saveMonthlyAttendanceRegister = async ({
         importedName: clean(row.importedName || row.name),
         importedPhone: normalizePhone(row.importedPhone || row.contact),
         importedAdmissionNumber: clean(row.importedAdmissionNumber),
-        importedDueDate: clean(row.importedDueDate || row.feeDueDate),
-        importedPaidDate: clean(row.importedPaidDate || row.feePaidDate),
-        importedFeePaid: clean(row.importedFeePaid || row.feePaid),
-        importedFeeStatus: clean(row.importedFeeStatus || row.feeStatus),
+        // Attendance saves must never convert live fee/membership display
+        // values into historical imported metadata.
+        importedDueDate: clean(financialMetadata.importedDueDate),
+        importedPaidDate: clean(financialMetadata.importedPaidDate),
+        importedFeePaid: clean(financialMetadata.importedFeePaid),
+        importedFeeStatus: clean(financialMetadata.importedFeeStatus),
         importedExtraNote: clean(row.importedExtraNote),
+        studentStatus: isRawImport ? "" : normalizeStudentState(row.status),
         status: longStatus,
         source: row.source === "excel-import" ? "excel-import" : "manual",
         note:
@@ -1423,6 +1473,14 @@ export const saveMonthlyAttendanceRegister = async ({
       // records from being reconstructed as missing/merged attendance later.
       recordsByDate.get(day.dateKey).set(rowKey, record);
       expectedCells.set(`${day.dateKey}::${rowKey}`, shortStatus);
+      if (!expectedMetadata.has(rowKey)) {
+        expectedMetadata.set(rowKey, {
+          importedDueDate: record.importedDueDate,
+          importedPaidDate: record.importedPaidDate,
+          importedFeePaid: record.importedFeePaid,
+          importedFeeStatus: record.importedFeeStatus,
+        });
+      }
     });
   });
 
@@ -1432,14 +1490,14 @@ export const saveMonthlyAttendanceRegister = async ({
     const date = new Date(`${dateKey}T00:00:00.000Z`);
     const records = Array.from(recordsMap.values());
 
-    operations.push(
-      Attendance.findOneAndUpdate(
-        {
+    operations.push({
+      updateOne: {
+        filter: {
           academy: academyObjectId,
           batch: batchObjectId,
           date,
         },
-        {
+        update: {
           $set: {
             records,
             updatedBy: userId,
@@ -1451,16 +1509,61 @@ export const saveMonthlyAttendanceRegister = async ({
             markedBy: userId,
           },
         },
-        {
-          new: true,
-          upsert: true,
-          runValidators: true,
-        }
-      )
-    );
+        upsert: true,
+      },
+    });
   }
 
-  await Promise.all(operations);
+  const orderId = `${academyObjectId}:${batchObjectId}:${numericYear}:${numericMonth}`;
+  const submittedRows = rows.map((row) => ({
+    key: getAttendanceRegisterRowKey({
+      ...row,
+      student: row.rowType === "raw-import" ? null : row.studentId,
+    }),
+    status: normalizeStudentState(row.status, row.rowType === "raw-import" ? "imported" : "active"),
+  })).filter((item) => item.key);
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      if (operations.length) {
+        await Attendance.bulkWrite(operations, { session, ordered: true });
+      }
+      const existingOrder = await AttendanceRowOrder.findById(orderId).session(session).lean();
+      if (!existingOrder) {
+        await AttendanceRowOrder.create([{
+          _id: orderId,
+          academy: academyObjectId,
+          batch: batchObjectId,
+          month: numericMonth,
+          year: numericYear,
+          keys: submittedRows.map((item) => item.key),
+          statuses: submittedRows,
+          snapshotSource: "explicit-save",
+          revision: 1,
+        }], { session });
+      } else {
+        const submittedKeySet = new Set(submittedRows.map((item) => item.key));
+        const existingWasWithdrawnReadSnapshot = existingOrder.snapshotSource !== "explicit-save" &&
+          Array.isArray(existingOrder.statuses) && existingOrder.statuses.length > 0;
+        const baseKeys = existingWasWithdrawnReadSnapshot ? [] : existingOrder.keys || [];
+        const keys = [
+          ...baseKeys.filter((key) => submittedKeySet.has(key)),
+          ...submittedRows.map((item) => item.key).filter((key) => !baseKeys.includes(key)),
+        ];
+        const keysChanged = JSON.stringify(keys) !== JSON.stringify(existingOrder.keys || []);
+        await AttendanceRowOrder.updateOne(
+          { _id: orderId },
+          {
+            $set: { keys, statuses: submittedRows, snapshotSource: "explicit-save" },
+            ...(keysChanged ? { $inc: { revision: 1 } } : {}),
+          },
+          { session }
+        );
+      }
+    });
+  } finally {
+    await session.endSession();
+  }
 
   const savedRegister = await getMonthlyAttendanceRegister({
     academyId: academyObjectId,
@@ -1470,8 +1573,15 @@ export const saveMonthlyAttendanceRegister = async ({
   });
 
   const persistedCells = new Map();
+  const persistedMetadata = new Map();
   savedRegister.rows.forEach((row) => {
     const rowKey = getAttendanceRegisterRowKey(row);
+    persistedMetadata.set(rowKey, {
+      importedDueDate: clean(row.importedDueDate),
+      importedPaidDate: clean(row.importedPaidDate),
+      importedFeePaid: clean(row.importedFeePaid),
+      importedFeeStatus: clean(row.importedFeeStatus),
+    });
     days.forEach((day) => {
       const status = normalizeShortStatus(row.attendance?.[day.dateKey]);
       if (status) persistedCells.set(`${day.dateKey}::${rowKey}`, status);
@@ -1484,10 +1594,14 @@ export const saveMonthlyAttendanceRegister = async ({
   const unexpectedCells = Array.from(persistedCells.keys()).filter(
     (cellKey) => !expectedCells.has(cellKey)
   );
+  const failedMetadata = Array.from(expectedMetadata.entries()).filter(([rowKey, expected]) => {
+    const actual = persistedMetadata.get(rowKey);
+    return !actual || Object.keys(expected).some((field) => clean(actual[field]) !== clean(expected[field]));
+  });
 
-  if (failedCells.length || unexpectedCells.length) {
+  if (failedCells.length || unexpectedCells.length || failedMetadata.length) {
     const error = new Error(
-      `Attendance save verification failed (${expectedCells.size - failedCells.length}/${expectedCells.size} marks persisted)`
+      `Attendance save verification failed (${expectedCells.size - failedCells.length}/${expectedCells.size} marks, ${expectedMetadata.size - failedMetadata.length}/${expectedMetadata.size} metadata rows persisted)`
     );
     error.statusCode = 500;
     throw error;

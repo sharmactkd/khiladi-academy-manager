@@ -96,6 +96,12 @@ const attendanceRecordSchema = new mongoose.Schema(
       default: "manual",
     },
 
+    studentStatus: {
+      type: String,
+      enum: ["active", "inactive", ""],
+      default: "",
+    },
+
     note: {
       type: String,
       trim: true,

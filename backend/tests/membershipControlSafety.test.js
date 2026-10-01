@@ -20,3 +20,13 @@ test("legacy clear fee action does not erase outstanding balance", () => {
   assert.doesNotMatch(clearBlock, /feeRequired\s*=/);
   assert.match(clearBlock, /feeStatusCleared = true/);
 });
+
+test("membership changes and audit history are committed atomically", () => {
+  assert.match(service, /session\.withTransaction/);
+  assert.match(service, /membership\.save\(\{ session \}\)/);
+  assert.match(service, /MembershipAdjustment\.create\(\[/);
+});
+
+test("reversal refuses to overwrite membership changed after the adjustment", () => {
+  assert.match(service, /Membership changed after this adjustment and cannot be safely reversed/);
+});

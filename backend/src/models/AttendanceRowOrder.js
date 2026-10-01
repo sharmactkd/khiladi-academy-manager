@@ -17,6 +17,7 @@ const schema = new mongoose.Schema({
     }],
     default: [],
   },
+  snapshotSource: { type: String, enum: ["explicit-save"], default: undefined },
   revision: { type: Number, default: 0 },
 }, { timestamps: true });
 

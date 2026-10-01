@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 process.env.MONGO_URI ||= "mongodb://127.0.0.1:27017/khiladi_unit_test";
 process.env.JWT_ACCESS_SECRET ||= "unit-test-access-secret-at-least-32-characters";
@@ -11,6 +12,7 @@ process.env.PRIVATE_MEDIA_SIGNING_KEY ||= "unit-test-private-media-key-at-least-
 
 const { applyCurrentMembershipFeeStatus, buildRowFromRecord, hasMarkedAttendanceCounts, mergeMonthlyRecordIdentity, resolveMonthlyStudentStatus } = await import("../src/services/monthlyAttendanceService.js");
 const { backfillImportedAttendanceMetadata, getImportedAttendancePeriod, isProtectedReconciliationPeriod } = await import("../src/controllers/attendanceController.js");
+const monthlyServiceSource = fs.readFileSync(new URL("../src/services/monthlyAttendanceService.js", import.meta.url), "utf8");
 
 test("student dates do not fabricate missing fee data", () => {
   const row = buildRowFromRecord({
@@ -37,6 +39,32 @@ test("first historical snapshot infers the state before a later status change", 
     statusUpdatedAt: "2026-10-01T00:00:00.000Z",
     monthEnd: "2026-10-01T00:00:00.000Z",
   }), "active");
+});
+
+test("historical fee due date prefers its monthly fee ledger over live membership", () => {
+  const row = buildRowFromRecord({
+    identity: { rowType: "student", studentId: "student-1" },
+    attendance: {},
+    index: 0,
+    fee: { dueDate: "2026-09-20", status: "due" },
+    membership: { effectiveDueDate: "2026-10-25", feeStatus: "paid" },
+  });
+  assert.equal(row.feeDueDate, "2026-09-20");
+});
+
+test("attendance save never copies live fee display into imported history", () => {
+  const saveBlock = monthlyServiceSource.split("export const saveMonthlyAttendanceRegister")[1];
+  assert.match(saveBlock, /importedDueDate: clean\(row\.importedDueDate\)/);
+  assert.match(saveBlock, /importedFeeStatus: clean\(row\.importedFeeStatus\)/);
+  assert.doesNotMatch(saveBlock, /row\.importedDueDate \|\| row\.feeDueDate/);
+  assert.doesNotMatch(saveBlock, /row\.importedFeeStatus \|\| row\.feeStatus/);
+});
+
+test("opening a monthly register does not create or update row snapshots", () => {
+  const getBlock = monthlyServiceSource
+    .split("export const getMonthlyAttendanceRegister")[1]
+    .split("export const moveMonthlyAttendanceRow")[0];
+  assert.doesNotMatch(getBlock, /AttendanceRowOrder\.(findOneAndUpdate|updateOne|create)/);
 });
 
 test("real imported fee data remains visible", () => {

@@ -197,6 +197,7 @@ const Attendance = () => {
   }, [year, allowedLimit]);
 
   const formattedRows = useMemo(() => formatRows(rows), [rows]);
+  const selectedPeriodIsCurrent = Number(year) === now.getFullYear() && Number(month) === now.getMonth() + 1;
   const activeStudentCount = useMemo(
     () => formattedRows.filter((row) =>
       String(row.status || "").toLowerCase() === "active" && row.rowType !== "raw-import"
@@ -477,6 +478,10 @@ const Attendance = () => {
   };
 
   const toggleStudentStatus = async (row, status) => {
+    if (!selectedPeriodIsCurrent) {
+      toast.error("Historical month ka student status change nahi kiya ja sakta");
+      return;
+    }
     if (!row.studentId || statusUpdatingIds.includes(row.studentId)) return;
     const changedAt = new Date().toISOString();
     const previous = rowsRef.current;
@@ -807,9 +812,15 @@ const Attendance = () => {
             onSaveDayNote={saveDayNote}
             onRemoveDayNote={removeDayNote}
             onToggleStudentStatus={toggleStudentStatus}
-            onOpenMembership={setMembershipStudent}
+            onOpenMembership={(row) => {
+              if (!selectedPeriodIsCurrent) {
+                toast.error("Membership Control sirf current month me available hai");
+                return;
+              }
+              setMembershipStudent(row);
+            }}
             onOpenFeeCollection={openFeeCollection}
-            canManageMembership={["academy_owner", "super_admin"].includes(user?.role)}
+            canManageMembership={selectedPeriodIsCurrent && ["academy_owner", "super_admin"].includes(user?.role)}
             statusUpdatingIds={statusUpdatingIds}
             loading={loading}
           />
