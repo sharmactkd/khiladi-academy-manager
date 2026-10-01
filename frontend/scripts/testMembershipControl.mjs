@@ -4,18 +4,18 @@ import fs from "node:fs";
 
 const source = fs.readFileSync(new URL("../src/components/attendance/MembershipAdjustmentDrawer.jsx", import.meta.url), "utf8");
 
-test("membership controller keeps payment status ledger-driven", () => {
-  assert.doesNotMatch(source, /<option value="paid">/);
-  assert.doesNotMatch(source, /<option value="due">/);
+test("membership controller exposes audited paid and due overrides", () => {
+  assert.match(source, /<option value="paid">Paid<\/option>/);
+  assert.match(source, /<option value="due">Due<\/option>/);
   assert.doesNotMatch(source, /<option value="partial">/);
   assert.match(source, /Waive outstanding fee/);
   assert.match(source, /Complimentary membership/);
 });
 
-test("dangerous one-click clear controls are not exposed", () => {
-  assert.doesNotMatch(source, /Clear Fee Status/);
-  assert.doesNotMatch(source, /Clear Due Date/);
-  assert.doesNotMatch(source, /membership-quick-actions/);
+test("independent one-click clear controls call their own action and block during saves", () => {
+  assert.match(source, /disabled=\{saving \|\| loading\} onClick=\{\(\) => submit\(null, "clear_fee_status"\)\}/);
+  assert.match(source, /disabled=\{saving \|\| loading\} onClick=\{\(\) => submit\(null, "clear_due_date"\)\}/);
+  assert.match(source, /expectedVersion: membership\?\.version/);
 });
 
 test("reason is optional for every membership action and reversal", () => {

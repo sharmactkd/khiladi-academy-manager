@@ -27,6 +27,9 @@ export const resolveFeeStatus = ({
 
   let code;
   let source;
+  if (["paid", "due"].includes(membership?.manualFeeStatus)) {
+    return { code: membership.manualFeeStatus, label: membership.manualFeeStatus.toUpperCase(), source: "manual-adjustment" };
+  }
   if (["waived", "complimentary"].includes(membershipStatus)) {
     code = membershipStatus;
     source = "membership";

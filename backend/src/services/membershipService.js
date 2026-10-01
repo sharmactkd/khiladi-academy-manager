@@ -23,6 +23,7 @@ const MEMBERSHIP_FIELDS = [
   "feeRequired",
   "feeStatus",
   "feeStatusCleared",
+  "manualFeeStatus",
   "internalNote",
 ];
 
@@ -141,6 +142,7 @@ export const serializeMembership = (membership) => {
     feeStatus: feeStatusSummary?.code || "",
     feeStatusSummary,
     feeStatusCleared: source.feeStatusCleared === true,
+    manualFeeStatus: source.manualFeeStatus || "",
     autoMonthlyDue: source.autoMonthlyDue === true,
     internalNote: source.internalNote || "",
     lastAdjustedAt: source.lastAdjustedAt,
@@ -341,9 +343,10 @@ export const applyMembershipAdjustment = async ({
     case "set_fee_status": {
       // Paid/partial/due are ledger outcomes. Manual membership controls may
       // only create explicit, audited exceptions.
-      const allowed = ["waived", "complimentary"];
+      const allowed = ["paid", "due", "waived", "complimentary"];
       const feeStatus = clean(payload.feeStatus).toLowerCase();
-      if (!allowed.includes(feeStatus)) throw createError("Paid, partial and due status must come from fee transactions");
+      if (!allowed.includes(feeStatus)) throw createError("Invalid fee status");
+      membership.manualFeeStatus = ["paid", "due"].includes(feeStatus) ? feeStatus : "";
       const wasFeeRequired = membership.feeRequired !== false;
       membership.feeStatus = feeStatus;
       membership.feeStatusCleared = false;
@@ -359,6 +362,7 @@ export const applyMembershipAdjustment = async ({
       break;
     }
     case "clear_fee_status":
+      membership.manualFeeStatus = "";
       // Legacy/API compatibility: clear only the manually displayed label.
       // Never erase arrears or silently turn off the fee requirement.
       membership.feeStatusCleared = true;

@@ -72,9 +72,10 @@ test("student status update replaces the cached attendance row without changing 
     { studentId: "two", status: "active", name: "Two" },
   ];
   const updated = applyStudentStatusToAttendanceRows(current, "one", "inactive", "2026-09-21T10:00:00.000Z");
-  assert.equal(updated[0].status, "inactive");
-  assert.equal(updated[0].statusUpdatedAt, "2026-09-21T10:00:00.000Z");
-  assert.equal(updated[1], current[1]);
+  assert.equal(updated[1].status, "inactive");
+  assert.equal(updated[1].statusUpdatedAt, "2026-09-21T10:00:00.000Z");
+  assert.equal(updated[0], current[1]);
+  assert.equal(current[0].status, "active");
 });
 
 const rows = [

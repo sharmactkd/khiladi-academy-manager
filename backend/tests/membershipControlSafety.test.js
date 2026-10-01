@@ -4,9 +4,11 @@ import fs from "node:fs";
 
 const service = fs.readFileSync(new URL("../src/services/membershipService.js", import.meta.url), "utf8");
 
-test("manual fee control cannot mark a membership paid, due or partial", () => {
-  assert.match(service, /const allowed = \["waived", "complimentary"\]/);
-  assert.match(service, /must come from fee transactions/);
+test("manual paid/due status is an audited override without deleting outstanding balance", () => {
+  assert.match(service, /const allowed = \["paid", "due", "waived", "complimentary"\]/);
+  const block = service.split('case "set_fee_status":')[1].split('case "clear_fee_status":')[0];
+  assert.match(block, /membership.manualFeeStatus =/);
+  assert.doesNotMatch(block, /unpaidMonths\s*=|unpaidDays\s*=/);
 });
 
 test("membership reasons are optional for every adjustment and reversal", () => {

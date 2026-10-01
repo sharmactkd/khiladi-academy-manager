@@ -46,6 +46,7 @@ const studentMembershipSchema = new mongoose.Schema(
       index: true,
     },
     feeStatusCleared: { type: Boolean, default: false },
+    manualFeeStatus: { type: String, enum: ["", "paid", "due"], default: "" },
     internalNote: { type: String, trim: true, maxlength: 1000, default: "" },
     lastAdjustedAt: { type: Date, default: null },
     lastAdjustedBy: {

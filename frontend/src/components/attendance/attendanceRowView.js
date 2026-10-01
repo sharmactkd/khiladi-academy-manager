@@ -86,9 +86,16 @@ export const applyMembershipToAttendanceRow = (row, membership) => ({
   feeStatusSummary: membership?.feeStatusSummary || null,
 });
 
-export const applyStudentStatusToAttendanceRows = (rows, studentId, status, statusUpdatedAt) =>
-  rows.map((row) =>
+export const applyStudentStatusToAttendanceRows = (rows, studentId, status, statusUpdatedAt) => {
+  const updated = rows.map((row) =>
     String(row.studentId) === String(studentId)
       ? { ...row, status, statusUpdatedAt: statusUpdatedAt || row.statusUpdatedAt }
       : row
   );
+  const index = updated.findIndex(row => String(row.studentId) === String(studentId));
+  if (status !== "inactive" || index < 0 || rows[index].status === "inactive") return updated;
+  const [changed] = updated.splice(index, 1);
+  const lastActive = updated.reduce((last, row, i) => row.status === "active" && row.rowType !== "raw-import" ? i : last, -1);
+  updated.splice(lastActive + 1, 0, changed);
+  return updated;
+};

@@ -306,6 +306,7 @@ const serializeHistoricalMembership = (adjustment) => {
     unpaidMonths: Number(state.unpaidMonths || 0),
     unpaidDays: Number(state.unpaidDays || 0),
     feeRequired: state.feeRequired !== false,
+    manualFeeStatus: state.manualFeeStatus || "",
     feeStatus: state.feeStatusCleared === true ? "" : feeStatusSummary?.code || state.feeStatus || "",
     feeStatusSummary,
     feeStatusCleared: state.feeStatusCleared === true,
