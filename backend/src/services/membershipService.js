@@ -221,7 +221,7 @@ export const applyMembershipAdjustment = async ({
   const reason = clean(payload.reason);
   const note = clean(payload.note);
 
-  if (type !== "set_note" && !reason) {
+  if (!["set_note", "set_due_date"].includes(type) && !reason) {
     throw createError("Reason is required for membership changes");
   }
 

@@ -17,6 +17,8 @@ assert.match(academyApi, /cachedRequest\("workspace:academies"/, "academy list r
 assert.match(batchApi, /cachedRequest\(`workspace:batches:/, "batch requests must be deduplicated");
 assert.match(attendanceService, /Attendance\.aggregate\(\[/, "historical fee context must project matching attendance rows only");
 assert.match(attendanceService, /\{ \$unwind: "\$records" \}/, "historical attendance arrays must be reduced in MongoDB");
+assert.match(attendanceService, /AttendanceMonthMetadata\.aggregate\(\[/, "current register must not transfer every historical metadata document");
+assert.match(attendanceService, /FeePayment\.aggregate\(\[/, "current register must fetch only the latest fee row per student");
 assert.match(feePayment, /student: 1, paymentDate: -1, createdAt: -1/, "latest student fee lookup must have a compound index");
 
 console.log("Performance optimization checks passed");

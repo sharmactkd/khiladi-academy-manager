@@ -24,6 +24,10 @@ import "./Attendance.css";
 
 const now = new Date();
 const LAST_ATTENDANCE_BATCH_KEY = "khiladi:attendance:last-batch";
+// Survives route unmount/remount in the same browser tab. Returning to
+// Attendance shows the last verified register instantly instead of rebuilding
+// it from scratch while the server is waking up.
+const attendanceRegisterCache = new Map();
 
 const getRememberedAttendanceBatch = () => {
   if (typeof window === "undefined") return "";
@@ -141,7 +145,7 @@ const Attendance = () => {
   const saveRegisterRef = useRef(null);
   const registerContextRef = useRef("");
   const loadRequestRef = useRef({ id: 0, controller: null });
-  const registerCacheRef = useRef(new Map());
+  const registerCacheRef = useRef(attendanceRegisterCache);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -311,7 +315,7 @@ const Attendance = () => {
         setLoading(true);
 
         const cached = registerCacheRef.current.get(cacheKey);
-        if (cached && Date.now() - cached.savedAt < 30000) {
+        if (cached && Date.now() - cached.savedAt < 120000) {
           applyLoadedData(cached.data);
           return;
         }

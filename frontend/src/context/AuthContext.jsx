@@ -39,11 +39,17 @@ export const AuthProvider = ({ children }) => {
 
       persistAuth(null, null);
       return null;
-    } catch {
-      persistAuth(null, null);
-      return null;
+    } catch (error) {
+      if ([401, 403].includes(error?.response?.status)) {
+        persistAuth(null, null);
+        return null;
+      }
+      // Keep the display session during offline periods and free-host cold
+      // starts. Protected API calls will retry refresh when connectivity is
+      // available again.
+      return cachedUser || null;
     }
-  }, [persistAuth]);
+  }, [cachedUser, persistAuth]);
 
   useEffect(() => {
     const boot = async () => {
@@ -62,6 +68,23 @@ export const AuthProvider = ({ children }) => {
 
     boot();
   }, [refreshAuth, isPublicBoot, cachedUser]);
+
+  useEffect(() => {
+    if (!user) return undefined;
+    const refreshWhenActive = () => {
+      if (navigator.onLine && document.visibilityState === "visible") {
+        refreshAuth();
+      }
+    };
+    const interval = window.setInterval(refreshWhenActive, 10 * 60 * 1000);
+    window.addEventListener("online", refreshWhenActive);
+    document.addEventListener("visibilitychange", refreshWhenActive);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("online", refreshWhenActive);
+      document.removeEventListener("visibilitychange", refreshWhenActive);
+    };
+  }, [refreshAuth, user]);
 
   useEffect(() => {
     const handleAuthenticationExpired = () => {

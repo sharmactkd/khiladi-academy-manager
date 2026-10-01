@@ -227,9 +227,16 @@ const getMonthlyFeeMap = async ({ academyId, studentIds, month, year, latest = f
     query.feeYear = Number(year);
   }
 
-  const payments = await FeePayment.find(query)
-    .sort({ paymentDate: -1, createdAt: -1 })
-    .lean();
+  const payments = latest
+    ? await FeePayment.aggregate([
+        { $match: query },
+        { $sort: { student: 1, paymentDate: -1, createdAt: -1 } },
+        { $group: { _id: "$student", payment: { $first: "$$ROOT" } } },
+        { $replaceRoot: { newRoot: "$payment" } },
+      ])
+    : await FeePayment.find(query)
+        .sort({ paymentDate: -1, createdAt: -1 })
+        .lean();
 
   const map = new Map();
 
@@ -571,23 +578,40 @@ export const getMonthlyAttendanceRegister = async ({
   const days = buildDays({ year: numericYear, month: numericMonth });
   const { start, end } = getMonthRange({ year: numericYear, month: numericMonth });
   const orderId = `${academyObjectId}:${batchObjectId}:${numericYear}:${numericMonth}`;
-  const [batch, attendanceDocs, dayNoteDocs, order, monthMetadataDocs, historicalFeeContextDocs] = await Promise.all([
+  const metadataScope = isCurrentRegister
+    ? {
+        academy: academyObjectId,
+        batch: batchObjectId,
+        $or: [
+          { year: { $lt: numericYear } },
+          { year: numericYear, month: { $lte: numericMonth } },
+        ],
+      }
+    : { academy: academyObjectId, batch: batchObjectId, year: numericYear, month: numericMonth };
+  const latestMetadataFacet = (field) => [
+    { $match: { [field]: { $exists: true, $nin: [null, ""] } } },
+    { $sort: { updatedAt: -1 } },
+    { $group: { _id: "$student", student: { $first: "$student" }, [field]: { $first: `$${field}` } } },
+    { $project: { _id: 0, student: 1, [field]: 1 } },
+  ];
+  const metadataQuery = isCurrentRegister
+    ? AttendanceMonthMetadata.aggregate([
+        { $match: metadataScope },
+        { $facet: {
+          importedDueDate: latestMetadataFacet("importedDueDate"),
+          importedPaidDate: latestMetadataFacet("importedPaidDate"),
+          importedFeePaid: latestMetadataFacet("importedFeePaid"),
+          importedFeeStatus: latestMetadataFacet("importedFeeStatus"),
+          importedExtraNote: latestMetadataFacet("importedExtraNote"),
+        } },
+      ])
+    : AttendanceMonthMetadata.find(metadataScope).lean();
+  const [batch, attendanceDocs, dayNoteDocs, order, rawMonthMetadataDocs, historicalFeeContextDocs] = await Promise.all([
     Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).select("batchName martialArt branch isActive").lean(),
     Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date records").lean(),
     AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date type title description color createdAt updatedAt").lean(),
     AttendanceRowOrder.findById(orderId).select("keys revision").lean(),
-    AttendanceMonthMetadata.find(
-      isCurrentRegister
-        ? {
-            academy: academyObjectId,
-            batch: batchObjectId,
-            $or: [
-              { year: { $lt: numericYear } },
-              { year: numericYear, month: { $lte: numericMonth } },
-            ],
-          }
-        : { academy: academyObjectId, batch: batchObjectId, year: numericYear, month: numericMonth }
-    ).sort(isCurrentRegister ? { updatedAt: -1 } : {}).lean(),
+    metadataQuery,
     isCurrentRegister
       ? Attendance.aggregate([
           { $match: {
@@ -634,6 +658,13 @@ export const getMonthlyAttendanceRegister = async ({
     error.statusCode = 404;
     throw error;
   }
+
+  // Current attendance only needs the newest non-empty value of each imported
+  // fee field per student. Resolve that inside MongoDB instead of transferring
+  // every historical metadata document to Node.
+  const monthMetadataDocs = isCurrentRegister
+    ? Object.values(rawMonthMetadataDocs?.[0] || {}).flat()
+    : rawMonthMetadataDocs;
 
   const dayNotes = dayNoteDocs.reduce((map, note) => {
     const dateKey = new Date(note.date).toISOString().slice(0, 10);

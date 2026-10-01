@@ -9,8 +9,8 @@ test("manual fee control cannot mark a membership paid, due or partial", () => {
   assert.match(service, /must come from fee transactions/);
 });
 
-test("state-changing membership actions require an audit reason", () => {
-  assert.match(service, /type !== "set_note" && !reason/);
+test("custom due date may omit a reason while other state changes remain audited", () => {
+  assert.match(service, /!\["set_note", "set_due_date"\]\.includes\(type\) && !reason/);
 });
 
 test("legacy clear fee action does not erase outstanding balance", () => {

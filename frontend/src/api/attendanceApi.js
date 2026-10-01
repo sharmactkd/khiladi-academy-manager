@@ -10,7 +10,7 @@ export const attendanceApi = {
   getBatchHistory: (batchId, params = {}) =>
     api.get(`/attendance/batch/${batchId}`, { params }),
   getMonthlyRegister: (params = {}, config = {}) =>
-    api.get("/attendance/monthly-register", { ...config, params }),
+    api.get("/attendance/monthly-register", { timeout: 75000, ...config, params }),
   getYearlyRegister: (params = {}) =>
     api.get("/attendance/yearly-register", { params }),
   saveMonthlyRegister: (payload) =>

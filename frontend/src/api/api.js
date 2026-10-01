@@ -51,7 +51,9 @@ const api = axios.create({
 export const requestTokenRefresh = () => {
   if (!directRefreshPromise) {
     directRefreshPromise = api
-      .post("/auth/refresh")
+      // A free Render service can need considerably longer than the normal API
+      // timeout to wake up. A cold start is not an expired login session.
+      .post("/auth/refresh", undefined, { timeout: 75000 })
       .finally(() => {
         directRefreshPromise = null;
       });
@@ -113,9 +115,14 @@ api.interceptors.response.use(
 
       return api(originalRequest);
     } catch (refreshError) {
-      clearAccessToken();
       processQueue(refreshError, null);
-      notifyAuthenticationExpired();
+      // Only the server can definitively end a login. Network failures,
+      // cold-start timeouts and rotation conflicts must retain the local user
+      // so the next request can retry the HttpOnly refresh cookie.
+      if ([401, 403].includes(refreshError?.response?.status)) {
+        clearAccessToken();
+        notifyAuthenticationExpired();
+      }
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

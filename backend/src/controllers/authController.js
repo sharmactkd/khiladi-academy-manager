@@ -69,7 +69,7 @@ const clearFailedLogin = async (user) => {
 
 const getRefreshTokenExpiryDate = () => {
   const milliseconds = ms(env.REFRESH_TOKEN_EXPIRES_IN);
-  return new Date(Date.now() + (milliseconds || 30 * 24 * 60 * 60 * 1000));
+  return new Date(Date.now() + (milliseconds || 365 * 24 * 60 * 60 * 1000));
 };
 
 export const hashRefreshToken = (refreshToken) => hashToken(refreshToken);
@@ -121,7 +121,7 @@ export const setRefreshTokenCookie = (res, refreshToken) => {
     httpOnly: true,
     secure: env.isProduction,
     sameSite: "strict",
-    maxAge: ms(env.REFRESH_TOKEN_EXPIRES_IN) || 30 * 24 * 60 * 60 * 1000,
+    maxAge: ms(env.REFRESH_TOKEN_EXPIRES_IN) || 365 * 24 * 60 * 60 * 1000,
     path: "/api/auth",
   });
 };

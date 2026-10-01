@@ -74,7 +74,10 @@ const env = {
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
 
   ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m",
-  REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d",
+  // Long-lived rolling sessions: active users stay signed in, while explicit
+  // logout, password/security changes and administrator revocation still end
+  // the session immediately.
+  REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN || "365d",
   REFRESH_TOKEN_COOKIE_NAME:
     process.env.REFRESH_TOKEN_COOKIE_NAME || "khiladi_refresh_token",
 

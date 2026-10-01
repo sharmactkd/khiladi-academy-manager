@@ -18,7 +18,7 @@ test("dangerous one-click clear controls are not exposed", () => {
   assert.doesNotMatch(source, /membership-quick-actions/);
 });
 
-test("audited membership changes require a reason", () => {
-  assert.match(source, /Reason <b>\*<\/b>/);
-  assert.match(source, /required/);
+test("custom due date reason is optional while other changes require it", () => {
+  assert.match(source, /form\.type === "set_due_date" \? <small>\(optional\)<\/small>/);
+  assert.match(source, /required=\{form\.type !== "set_due_date"\}/);
 });
