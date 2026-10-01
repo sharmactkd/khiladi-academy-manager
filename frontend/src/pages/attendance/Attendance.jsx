@@ -205,6 +205,12 @@ const Attendance = () => {
   }, [year, allowedLimit]);
 
   const formattedRows = useMemo(() => formatRows(rows), [rows]);
+  const activeStudentCount = useMemo(
+    () => formattedRows.filter((row) =>
+      String(row.status || "").toLowerCase() === "active" && row.rowType !== "raw-import"
+    ).length,
+    [formattedRows]
+  );
 
   const openFeeCollection = useCallback(
     (row) => {
@@ -784,7 +790,7 @@ const Attendance = () => {
       </header>
 
       <section className="attendance-metrics" aria-label="Attendance overview">
-        <article className="attendance-metric attendance-metric--red"><span><UsersRound /></span><div><small>Total Students</small><strong>{formattedRows.length}</strong></div></article>
+        <article className="attendance-metric attendance-metric--red"><span><UsersRound /></span><div><small>Active Students</small><strong>{activeStudentCount}</strong></div></article>
         <article className="attendance-metric attendance-metric--green"><span><UserCheck /></span><div><small>Present {Number(month) === now.getMonth() + 1 && Number(year) === now.getFullYear() ? "Today" : "Latest Day"}</small><strong>{attendanceStats.present}</strong></div></article>
         <article className="attendance-metric attendance-metric--amber"><span><UserX /></span><div><small>Absent {Number(month) === now.getMonth() + 1 && Number(year) === now.getFullYear() ? "Today" : "Latest Day"}</small><strong>{attendanceStats.absent}</strong></div></article>
         <article className="attendance-metric attendance-metric--blue"><span><TrendingUp /></span><div><small>Attendance Rate</small><strong>{attendanceStats.rate}%</strong></div></article>

@@ -27,8 +27,8 @@ const ACTIONS = [
   { value: "set_due_date", label: "Correct next due date", help: "Replace the next membership due date with an audited correction." },
   { value: "extend_days", label: "Add membership days", help: "Credit calendar days and move the due date forward." },
   { value: "reduce_days", label: "Remove membership days", help: "Debit calendar days and move the due date backward." },
-  { value: "set_remaining_days", label: "Set exact day credit", help: "Correct the protected membership-day balance." },
-  { value: "change_unpaid_months", label: "Correct opening outstanding", help: "Legacy/import correction for outstanding months and days." },
+  { value: "set_remaining_days", label: "Adjust remaining months & days", help: "Set the exact paid membership time still available to the student." },
+  { value: "change_unpaid_months", label: "Adjust due months & days", help: "Set the exact outstanding membership duration." },
   { value: "pause", label: "Pause membership", help: "Temporarily stop membership progression." },
   { value: "resume", label: "Resume membership", help: "Restart membership from a chosen date." },
   { value: "set_fee_status", label: "Apply fee exception", help: "Grant a waiver or complimentary membership; payments stay ledger-driven." },
@@ -37,8 +37,9 @@ const ACTIONS = [
 
 const ACTION_GROUPS = [
   { key: "due", label: "Due Date", help: "Correct the next due date.", icon: CalendarDays, actions: ["set_due_date"] },
-  { key: "days", label: "Membership Days", help: "Credit, debit or correct day balance.", icon: TimerReset, actions: ["extend_days", "reduce_days", "set_remaining_days"] },
-  { key: "balance", label: "Opening Balance", help: "Correct legacy outstanding duration.", icon: CircleDollarSign, actions: ["change_unpaid_months"] },
+  { key: "remaining", label: "Remaining Time", help: "Adjust remaining months and days.", icon: TimerReset, actions: ["set_remaining_days"] },
+  { key: "balance", label: "Due Balance", help: "Adjust due months and days.", icon: CircleDollarSign, actions: ["change_unpaid_months"] },
+  { key: "days", label: "Add / Remove Days", help: "Move the current due date by days.", icon: CalendarClock, actions: ["extend_days", "reduce_days"] },
   { key: "access", label: "Pause / Resume", help: "Temporarily pause or restart access.", icon: PauseCircle, actions: ["pause", "resume"] },
   { key: "fee", label: "Fee Exception", help: "Waiver or complimentary access only.", icon: ReceiptIndianRupee, actions: ["set_fee_status"] },
   { key: "note", label: "Internal Note", help: "Update an operational note only.", icon: StickyNote, actions: ["set_note"] },
@@ -238,8 +239,8 @@ const MembershipAdjustmentDrawer = ({ open, student, onClose, onUpdated }) => {
 
               {["extend_days", "reduce_days"].includes(form.type) && <label className="membership-field"><span>Number of Days</span><input type="number" min="1" max="3650" value={form.days} onChange={(event) => updateForm("days", event.target.value)} required /></label>}
               {form.type === "set_due_date" && <label className="membership-field"><span>Custom Due Date</span><DateInput value={form.dueDate} onChange={(event) => updateForm("dueDate", event.target.value)} required /></label>}
-              {form.type === "set_remaining_days" && <><label className="membership-field"><span>Remaining Months</span><input type="number" min="0" max="120" value={form.remainingMonths} onChange={(event) => updateForm("remainingMonths", event.target.value)} required /><small>1 month is treated as 30 training days.</small></label><label className="membership-field"><span>Remaining Days</span><input type="number" min="0" max="29" value={form.remainingDays} onChange={(event) => updateForm("remainingDays", event.target.value)} required /><small>Total: {formatRemainingTrainingTime((Number(form.remainingMonths) * 30) + Number(form.remainingDays))}</small></label></>}
-              {form.type === "change_unpaid_months" && <><label className="membership-field"><span>Unpaid Months</span><input type="number" min="0" max="120" value={form.months} onChange={(event) => updateForm("months", event.target.value)} required /><small>Exact unpaid month balance.</small></label><label className="membership-field"><span>Unpaid Days</span><input type="number" min="0" max="29" value={form.unpaidDays} onChange={(event) => updateForm("unpaidDays", event.target.value)} required /><small>For 10 days due, enter 0 months and 10 days.</small></label></>}
+              {form.type === "set_remaining_days" && <><label className="membership-field"><span>Remaining Months</span><input type="number" min="0" max="120" value={form.remainingMonths} onChange={(event) => updateForm("remainingMonths", event.target.value)} required /><small>1 month is treated as 30 membership days.</small></label><label className="membership-field"><span>Remaining Days</span><input type="number" min="0" max="29" value={form.remainingDays} onChange={(event) => updateForm("remainingDays", event.target.value)} required /><small>Total: {formatRemainingTrainingTime((Number(form.remainingMonths) * 30) + Number(form.remainingDays))}</small></label></>}
+              {form.type === "change_unpaid_months" && <><label className="membership-field"><span>Due Months</span><input type="number" min="0" max="120" value={form.months} onChange={(event) => updateForm("months", event.target.value)} required /><small>Exact outstanding month balance.</small></label><label className="membership-field"><span>Due Days</span><input type="number" min="0" max="29" value={form.unpaidDays} onChange={(event) => updateForm("unpaidDays", event.target.value)} required /><small>For 10 days due, enter 0 months and 10 days.</small></label></>}
               {form.type === "resume" && <label className="membership-field"><span>Resume Date</span><DateInput value={form.resumeDate} onChange={(event) => updateForm("resumeDate", event.target.value)} /></label>}
               {form.type === "set_fee_status" && <label className="membership-field"><span>Fee Exception</span><select value={form.feeStatus} onChange={(event) => updateForm("feeStatus", event.target.value)}><option value="waived">Waive outstanding fee</option><option value="complimentary">Complimentary membership</option></select><small>Paid, partial and due states are calculated from fee transactions—not set manually.</small></label>}
 

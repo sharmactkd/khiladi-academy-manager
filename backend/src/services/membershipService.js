@@ -263,6 +263,7 @@ export const applyMembershipAdjustment = async ({
       break;
     case "set_due_date":
       membership.effectiveDueDate = parseMembershipDate(payload.dueDate, "Due date");
+      if (!membership.effectiveDueDate) throw createError("Due date is required");
       membership.nextDueDate = membership.effectiveDueDate;
       // A custom due date is an explicit replacement for any temporary
       // remaining-training-days display. Keeping both makes the register show

@@ -22,3 +22,10 @@ test("custom due date reason is optional while other changes require it", () => 
   assert.match(source, /form\.type === "set_due_date" \? <small>\(optional\)<\/small>/);
   assert.match(source, /required=\{form\.type !== "set_due_date"\}/);
 });
+
+test("due and remaining month/day adjustments are directly visible", () => {
+  assert.match(source, /label: "Remaining Time"/);
+  assert.match(source, /label: "Due Balance"/);
+  assert.match(source, /Adjust remaining months & days/);
+  assert.match(source, /Adjust due months & days/);
+});
