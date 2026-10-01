@@ -16,3 +16,11 @@ test("historical attendance cannot open live membership controls", () => {
   assert.match(source, /Membership Control sirf current month me available hai/);
   assert.match(source, /Historical month ka student status change nahi kiya ja sakta/);
 });
+
+test("current-month status changes persist an isolated monthly order/status snapshot", () => {
+  assert.match(source, /const snapshotResponse = await attendanceApi\.moveMonthlyRow/);
+  assert.match(source, /orderedKeys,/);
+  assert.match(source, /revision: previousRevision/);
+  assert.match(source, /setPreserveMonthlyOrder\(true\)/);
+  assert.match(source, /Please wait for attendance to finish saving before changing student status/);
+});

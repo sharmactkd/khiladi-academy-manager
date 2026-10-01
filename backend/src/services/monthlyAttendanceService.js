@@ -8,7 +8,7 @@ import AttendanceDayNote from "../models/AttendanceDayNote.js";
 import AttendanceRowOrder from "../models/AttendanceRowOrder.js";
 import AttendanceMonthMetadata from "../models/AttendanceMonthMetadata.js";
 import MembershipAdjustment from "../models/MembershipAdjustment.js";
-import { applyRowOrder, moveRowKeys } from "../utils/attendanceRowOrder.js";
+import { applyRowOrder, moveRowKeys, previousMonthPeriod, selectMonthlyOrder } from "../utils/attendanceRowOrder.js";
 import { getMembershipMap } from "./membershipService.js";
 import { resolveFeeStatus } from "../utils/feeStatus.js";
 import { todayDateKey } from "../utils/businessDate.js";
@@ -670,6 +670,8 @@ export const getMonthlyAttendanceRegister = async ({
   const days = buildDays({ year: numericYear, month: numericMonth });
   const { start, end } = getMonthRange({ year: numericYear, month: numericMonth });
   const orderId = `${academyObjectId}:${batchObjectId}:${numericYear}:${numericMonth}`;
+  const previousPeriod = previousMonthPeriod(numericYear, numericMonth);
+  const previousOrderId = `${academyObjectId}:${batchObjectId}:${previousPeriod.year}:${previousPeriod.month}`;
   const metadataScope = isCurrentRegister
     ? {
         academy: academyObjectId,
@@ -698,11 +700,14 @@ export const getMonthlyAttendanceRegister = async ({
         } },
       ])
     : AttendanceMonthMetadata.find(metadataScope).lean();
-  const [batch, attendanceDocs, dayNoteDocs, order, rawMonthMetadataDocs, historicalFeeContextDocs] = await Promise.all([
+  const [batch, attendanceDocs, dayNoteDocs, order, previousOrder, rawMonthMetadataDocs, historicalFeeContextDocs] = await Promise.all([
     Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).select("batchName martialArt branch isActive").lean(),
     Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date records").lean(),
     AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date type title description color createdAt updatedAt").lean(),
     AttendanceRowOrder.findById(orderId).select("keys statuses snapshotSource revision").lean(),
+    isCurrentRegister
+      ? AttendanceRowOrder.findById(previousOrderId).select("keys statuses snapshotSource revision year month").lean()
+      : Promise.resolve(null),
     metadataQuery,
     isCurrentRegister
       ? Attendance.aggregate([
@@ -819,11 +824,8 @@ export const getMonthlyAttendanceRegister = async ({
 
   // Ignore status arrays created by the withdrawn read-time snapshot build.
   // Only an explicit attendance save is authoritative.
-  const storedStatuses = order?.snapshotSource === "explicit-save"
-    ? asStatusObject(order?.statuses)
-    : {};
-  const withdrawnReadSnapshot = order?.snapshotSource !== "explicit-save" &&
-    Array.isArray(order?.statuses) && order.statuses.length > 0;
+  const selectedOrder = selectMonthlyOrder({ currentOrder: order, previousOrder, isCurrentRegister });
+  const storedStatuses = asStatusObject(selectedOrder.statuses);
   const rowsWithMonthlyState = rows.map((row) => {
     const registerOrderKey = getAttendanceRegisterRowKey(row);
     return {
@@ -844,10 +846,13 @@ export const getMonthlyAttendanceRegister = async ({
   const initialKeys = rowsWithMonthlyState.map((row) => row.registerOrderKey);
   const orderedRows = applyRowOrder(
     rowsWithMonthlyState,
-    !withdrawnReadSnapshot && order?.keys?.length ? order.keys : initialKeys
+    selectedOrder.keys.length ? selectedOrder.keys : initialKeys
   );
   return {
-    orderRevision: withdrawnReadSnapshot ? 0 : order?.revision || 0,
+    orderRevision: selectedOrder.revision,
+    preserveManualOrder: selectedOrder.keys.length > 0,
+    orderInherited: selectedOrder.inherited,
+    orderInheritedFrom: selectedOrder.inheritedFrom,
     month: numericMonth,
     year: numericYear,
     batch,
@@ -881,13 +886,32 @@ export const moveMonthlyAttendanceRow = async ({ academyId, batchId, month, year
     keys = moveRowKeys(currentKeys, rowKey, position);
   }
   const orderId = `${academyId}:${batchId}:${Number(year)}:${Number(month)}`;
+  const statuses = register.rows.map((row) => ({
+    key: row.registerOrderKey,
+    status: normalizeStudentState(row.status, row.rowType === "raw-import" ? "imported" : "active"),
+  }));
   try {
     const saved = await AttendanceRowOrder.findOneAndUpdate({ _id: orderId, revision }, {
-      $set: { academy: academyId, batch: batchId, month: Number(month), year: Number(year), keys },
+      $set: {
+        academy: academyId,
+        batch: batchId,
+        month: Number(month),
+        year: Number(year),
+        keys,
+        statuses,
+        snapshotSource: "explicit-save",
+      },
       $inc: { revision: 1 },
     }, { upsert: revision === 0, new: true, runValidators: true });
     if (!saved) throw Object.assign(new Error("Order changed. Refresh and try again."), { statusCode: 409 });
-    return { ...register, orderRevision: saved.revision, rows: applyRowOrder(register.rows, keys) };
+    return {
+      ...register,
+      orderRevision: saved.revision,
+      preserveManualOrder: true,
+      orderInherited: false,
+      orderInheritedFrom: null,
+      rows: applyRowOrder(register.rows, keys),
+    };
   } catch (error) {
     if (error.code === 11000) throw Object.assign(new Error("Order changed. Refresh and try again."), { statusCode: 409 });
     throw error;

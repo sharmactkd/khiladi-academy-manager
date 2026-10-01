@@ -7,6 +7,9 @@ meaning of an older attendance register.
 
 - Opening a register is read-only. It does not create row-order snapshots.
 - A saved month keeps its own row order and active/inactive status snapshot.
+- A new current month starts with the immediately previous month's exact saved
+  order. Its first reorder, attendance save or status change creates a separate
+  current-month snapshot; the previous month is never updated.
 - Historical registers do not expose live Membership Control or student-status
   actions.
 - Attendance saves do not copy the current membership due date, fee status or

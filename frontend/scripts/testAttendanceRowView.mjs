@@ -127,8 +127,9 @@ test("search lives in batch/year controls, not a duplicate toolbar", () => {
 });
 test("attendance page keeps saved manual order while search is active", () => {
   const source = readFileSync(new URL("../src/pages/attendance/Attendance.jsx", import.meta.url), "utf8");
-  assert.match(source, /preserveManualOrder=\{orderRevision > 0\}/);
-  assert.doesNotMatch(source, /preserveManualOrder=\{orderRevision > 0 && !studentSearch\}/);
+  assert.match(source, /preserveManualOrder=\{preserveMonthlyOrder\}/);
+  assert.match(source, /setPreserveMonthlyOrder\(Boolean\(data\.preserveManualOrder\)\)/);
+  assert.doesNotMatch(source, /preserveManualOrder=\{[^}]*!studentSearch/);
 });
 
 test("saved monthly order is not regrouped after student status changes", () => {

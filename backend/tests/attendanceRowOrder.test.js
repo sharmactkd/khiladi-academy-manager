@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyRowOrder, moveRowKeys } from "../src/utils/attendanceRowOrder.js";
+import {
+  applyRowOrder,
+  moveRowKeys,
+  previousMonthPeriod,
+  selectMonthlyOrder,
+} from "../src/utils/attendanceRowOrder.js";
 
 test("8 to 2 shifts intervening students without dropping anyone", () => {
   const keys = ["a", "b", "c", "d", "e", "f", "g", "ram"];
@@ -28,4 +33,49 @@ test("saved keys reapply after reload without altering marks or imported serial 
 test("removed keys are ignored, new students append in original order", () => {
   const rows = ["new1", "b", "a", "new2"].map((registerOrderKey) => ({ registerOrderKey }));
   assert.deepEqual(applyRowOrder(rows, ["a", "deleted", "b"]).map((row) => row.registerOrderKey), ["a", "b", "new1", "new2"]);
+});
+
+test("October inherits September order as a revision-zero baseline", () => {
+  const selected = selectMonthlyOrder({
+    currentOrder: null,
+    previousOrder: {
+      year: 2026,
+      month: 9,
+      keys: ["student:c", "student:a", "student:b"],
+      revision: 7,
+      snapshotSource: "explicit-save",
+      statuses: [],
+    },
+    isCurrentRegister: true,
+  });
+  assert.deepEqual(selected.keys, ["student:c", "student:a", "student:b"]);
+  assert.equal(selected.revision, 0);
+  assert.equal(selected.inherited, true);
+  assert.deepEqual(selected.inheritedFrom, { year: 2026, month: 9 });
+});
+
+test("October's own order wins without changing September", () => {
+  const september = ["student:c", "student:a", "student:b"];
+  const october = ["student:a", "student:b", "student:c"];
+  const selected = selectMonthlyOrder({
+    currentOrder: { year: 2026, month: 10, keys: october, revision: 2, snapshotSource: "explicit-save", statuses: [] },
+    previousOrder: { year: 2026, month: 9, keys: september, revision: 7, snapshotSource: "explicit-save", statuses: [] },
+    isCurrentRegister: true,
+  });
+  assert.deepEqual(selected.keys, october);
+  assert.deepEqual(september, ["student:c", "student:a", "student:b"]);
+  assert.equal(selected.revision, 2);
+  assert.equal(selected.inherited, false);
+});
+
+test("historical months never inherit a neighbouring month's order", () => {
+  const selected = selectMonthlyOrder({
+    currentOrder: null,
+    previousOrder: { year: 2026, month: 8, keys: ["student:a"], revision: 1 },
+    isCurrentRegister: false,
+  });
+  assert.deepEqual(selected.keys, []);
+  assert.equal(selected.inherited, false);
+  assert.deepEqual(previousMonthPeriod(2026, 1), { year: 2025, month: 12 });
+  assert.deepEqual(previousMonthPeriod(2026, 10), { year: 2026, month: 9 });
 });

@@ -164,6 +164,7 @@ const Attendance = () => {
   const [saving, setSaving] = useState(false);
   const [studentSearch, setStudentSearch] = useState("");
   const [orderRevision, setOrderRevision] = useState(0);
+  const [preserveMonthlyOrder, setPreserveMonthlyOrder] = useState(false);
   const [reordering, setReordering] = useState(false);
   const reorderingRef = useRef(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -302,6 +303,7 @@ const Attendance = () => {
         setDays(Array.isArray(data.days) ? data.days : []);
         const loadedRows = Array.isArray(data.rows) ? data.rows : [];
         setOrderRevision(data.orderRevision || 0);
+        setPreserveMonthlyOrder(Boolean(data.preserveManualOrder));
         rowsRef.current = loadedRows;
         editVersionRef.current = 0;
         setRows(loadedRows);
@@ -346,6 +348,7 @@ const Attendance = () => {
         rowsRef.current = [];
         setRows([]);
         setDayNotes({});
+        setPreserveMonthlyOrder(false);
       } finally {
         if (loadRequestRef.current.id === requestId) setLoading(false);
       }
@@ -401,6 +404,7 @@ const Attendance = () => {
         } else {
           const persistedRows = Array.isArray(data.rows) ? data.rows : rowsSnapshot;
           setOrderRevision(data.orderRevision || 0);
+          setPreserveMonthlyOrder(Boolean(data.preserveManualOrder));
           rowsRef.current = persistedRows;
           setRows(persistedRows);
           setHasUnsavedChanges(false);
@@ -483,9 +487,18 @@ const Attendance = () => {
       return;
     }
     if (!row.studentId || statusUpdatingIds.includes(row.studentId)) return;
+    if (hasUnsavedChanges || saveInFlightRef.current || reorderingRef.current || loading) {
+      toast.error("Please wait for attendance to finish saving before changing student status.");
+      return;
+    }
     const changedAt = new Date().toISOString();
     const previous = rowsRef.current;
+    const previousRevision = orderRevision;
+    const previousPreserveMonthlyOrder = preserveMonthlyOrder;
+    let studentWasUpdated = false;
     setStatusUpdatingIds((ids) => [...ids, row.studentId]);
+    reorderingRef.current = true;
+    setReordering(true);
     registerCacheRef.current.delete(`${batch}:${year}:${month}`);
     const optimisticRows = applyStudentStatusToAttendanceRows(
       previous, row.studentId, status, changedAt
@@ -494,6 +507,7 @@ const Attendance = () => {
     setRows(optimisticRows);
     try {
       const response = await studentApi.updateStatus(row.studentId, status);
+      studentWasUpdated = true;
       const saved = normalizeResponseData(response);
       registerCacheRef.current.delete(`${batch}:${year}:${month}`);
       const persistedRows = applyStudentStatusToAttendanceRows(
@@ -504,12 +518,40 @@ const Attendance = () => {
       );
       rowsRef.current = persistedRows;
       setRows(persistedRows);
+      const orderedKeys = persistedRows.map((item) => item.registerOrderKey).filter(Boolean);
+      const snapshotResponse = await attendanceApi.moveMonthlyRow({
+        batch,
+        month,
+        year,
+        orderedKeys,
+        revision: previousRevision,
+      });
+      const snapshot = normalizeResponseData(snapshotResponse);
+      if (!Number.isInteger(snapshot.orderRevision)) {
+        throw new Error("Server did not confirm the monthly status snapshot");
+      }
+      const snapshotRows = Array.isArray(snapshot.rows) ? snapshot.rows : persistedRows;
+      rowsRef.current = snapshotRows;
+      setRows(snapshotRows);
+      setOrderRevision(snapshot.orderRevision);
+      setPreserveMonthlyOrder(true);
       toast.success(`${row.name || "Student"} marked ${status}`);
     } catch (error) {
-      rowsRef.current = previous;
-      setRows(previous);
-      toast.error(error?.response?.data?.message || "Student status update failed");
-    } finally { setStatusUpdatingIds((ids) => ids.filter((id) => id !== row.studentId)); }
+      if (studentWasUpdated) {
+        toast.error("Student status save hua, lekin monthly snapshot refresh karna pada.");
+        await loadMonthlyRegister(batch, month, year);
+      } else {
+        rowsRef.current = previous;
+        setRows(previous);
+        setOrderRevision(previousRevision);
+        setPreserveMonthlyOrder(previousPreserveMonthlyOrder);
+        toast.error(error?.response?.data?.message || "Student status update failed");
+      }
+    } finally {
+      reorderingRef.current = false;
+      setReordering(false);
+      setStatusUpdatingIds((ids) => ids.filter((id) => id !== row.studentId));
+    }
   };
 
   const repeatAttendance = () => {
@@ -565,6 +607,7 @@ const Attendance = () => {
     const context = registerContextRef.current;
     const previousRows = rowsRef.current;
     const previousRevision = orderRevision;
+    const previousPreserveMonthlyOrder = preserveMonthlyOrder;
     reorderingRef.current = true;
     setReordering(true);
     // Keep the table visible and move the row immediately. The request only
@@ -572,6 +615,7 @@ const Attendance = () => {
     rowsRef.current = orderedRows;
     setRows(orderedRows);
     setOrderRevision(previousRevision + 1);
+    setPreserveMonthlyOrder(true);
     try {
       const response = await attendanceApi.moveMonthlyRow({ batch, month, year, rowKey: row.registerOrderKey, position, orderedKeys, revision: previousRevision });
       const data = normalizeResponseData(response);
@@ -579,6 +623,7 @@ const Attendance = () => {
       if (!Number.isInteger(data.orderRevision)) throw new Error("Server did not confirm the saved row order");
       registerCacheRef.current.delete(`${batch}:${year}:${month}`);
       setOrderRevision(data.orderRevision);
+      setPreserveMonthlyOrder(true);
       toast.success(`Moved to position ${position}. Order saved.`);
       return true;
     } catch (error) {
@@ -586,6 +631,7 @@ const Attendance = () => {
         rowsRef.current = previousRows;
         setRows(previousRows);
         setOrderRevision(previousRevision);
+        setPreserveMonthlyOrder(previousPreserveMonthlyOrder);
       }
       toast.error(error?.response?.data?.message || error.message || "Order could not be saved");
       return false;
@@ -806,7 +852,7 @@ const Attendance = () => {
             searchQuery={studentSearch}
             onMoveRow={moveRegisterRow}
             reorderDisabled={loading || saving || hasUnsavedChanges || reordering}
-            preserveManualOrder={orderRevision > 0}
+            preserveManualOrder={preserveMonthlyOrder}
             dayNotes={dayNotes}
             onRowsChange={handleRowsChange}
             onSaveDayNote={saveDayNote}

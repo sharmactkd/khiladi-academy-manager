@@ -65,6 +65,9 @@ test("opening a monthly register does not create or update row snapshots", () =>
     .split("export const getMonthlyAttendanceRegister")[1]
     .split("export const moveMonthlyAttendanceRow")[0];
   assert.doesNotMatch(getBlock, /AttendanceRowOrder\.(findOneAndUpdate|updateOne|create)/);
+  assert.match(getBlock, /previousOrderId/);
+  assert.match(getBlock, /selectMonthlyOrder/);
+  assert.match(getBlock, /preserveManualOrder: selectedOrder\.keys\.length > 0/);
 });
 
 test("real imported fee data remains visible", () => {
