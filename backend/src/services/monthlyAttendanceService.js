@@ -498,9 +498,17 @@ const buildMonthlyRows = async ({
   ].map(String))].filter((id) => mongoose.Types.ObjectId.isValid(id));
   const studentFields = "admissionNumber firstName lastName phone countryCode status statusUpdatedAt joiningDate createdAt updatedAt batch dob dateOfBirth fatherName schoolName address";
   const [rosterStudents, historicalStudents] = await Promise.all([
-    isCurrentRegister
-      ? Student.find({ academy: academyObjectId, batch: batchObjectId }).select(studentFields).lean()
-      : Promise.resolve([]),
+    // The monthly register is a batch register, not an attendance-only
+    // register.  Historical months must include the complete batch roster as
+    // well; otherwise a month imported with marks for only a subset of
+    // students renders only that subset (for example September showing 70
+    // rows while the current October roster has 548).  Attendance, metadata
+    // and order references below still add legacy rows which no longer exist
+    // in the current batch roster.
+    Student.find({ academy: academyObjectId, batch: batchObjectId })
+      .select(studentFields)
+      .sort({ createdAt: 1, _id: 1 })
+      .lean(),
     historicalIdentityIds.length
       ? Student.find({ academy: academyObjectId, _id: { $in: historicalIdentityIds } }).select(studentFields).lean()
       : Promise.resolve([]),
