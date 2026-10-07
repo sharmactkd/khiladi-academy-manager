@@ -994,20 +994,16 @@ export const updateStudentStatus = asyncHandler(async (req, res) => {
     );
   }
 
-  const student = await Student.findOne({
+  const student = await Student.findOneAndUpdate({
     _id: req.params.id,
     academy: req.academyId,
     ...buildBranchAccessFilter(req.user),
-  });
+  }, { $set: { status: nextStatus, statusUpdatedAt: new Date(), updatedBy: req.user._id } },
+  { new: true, runValidators: true });
 
   if (!student) {
     return errorResponse(res, "Student not found", 404);
   }
-
-  student.status = nextStatus;
-  student.statusUpdatedAt = new Date();
-  student.updatedBy = req.user._id;
-  await student.save();
 
   return successResponse(res, "Student status updated successfully", {
     _id: student._id,

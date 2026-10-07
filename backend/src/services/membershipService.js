@@ -112,10 +112,10 @@ const comparableSnapshot = (value = {}) => JSON.stringify(
   }, {})
 );
 
-export const serializeMembership = (membership) => {
+export const serializeMembership = (membership, now = new Date()) => {
   if (!membership) return null;
   const source = typeof membership.toObject === "function" ? membership.toObject() : membership;
-  const accrual = calculateMembershipAccrualState(source);
+  const accrual = calculateMembershipAccrualState(source, now);
   const unpaidMonths = accrual.unpaidMonths;
   const displayedDueDate = unpaidMonths > 0 || Number(source.unpaidDays || 0) > 0
     ? source.effectiveDueDate || source.nextDueDate

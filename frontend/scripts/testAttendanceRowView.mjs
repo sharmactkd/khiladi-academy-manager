@@ -78,6 +78,20 @@ test("student status update replaces the cached attendance row without changing 
   assert.equal(current[0].status, "active");
 });
 
+test("reactivation appends after the last active student and preserves marks and repeat response order", () => {
+  const current = [
+    { studentId: "a", status: "active" },
+    { studentId: "b", status: "inactive", attendance: { "2026-10-01": "P" } },
+    { studentId: "c", status: "active" },
+    { studentId: "d", status: "inactive" },
+  ];
+  const next = applyStudentStatusToAttendanceRows(current, "b", "active", "2026-10-07");
+  assert.deepEqual(next.map(row => row.studentId), ["a", "c", "b", "d"]);
+  assert.equal(next[2].status, "active");
+  assert.equal(next[2].attendance, current[1].attendance);
+  assert.deepEqual(applyStudentStatusToAttendanceRows(next, "b", "active").map(row => row.studentId), ["a", "c", "b", "d"]);
+});
+
 const rows = [
   { studentId: "a", rowType: "student", name: "Asha", contact: "9876-54-3210", admissionNumber: "ADM-101", feeDueDate: "2026-09-20", feeStatus: "Paid", attendance: { "2026-09-01": "P" } },
   { studentId: "b", rowType: "student", name: "Prachi Jain", feeDueDate: "02-09-2026", feeStatus: "Due", attendance: { "2026-09-01": "A" } },

@@ -78,7 +78,7 @@ test("one manual unpaid month stays due while the next cycle remains internal", 
     nextDueDate: new Date("2026-10-05T00:00:00.000Z"),
     unpaidMonths: 1,
     unpaidDays: 0,
-  });
+  }, new Date("2026-10-01T00:00:00.000Z"));
   assert.equal(result.effectiveDueDate.toISOString(), "2026-09-05T00:00:00.000Z");
   assert.equal(result.nextDueDate.toISOString(), "2026-10-05T00:00:00.000Z");
   assert.equal(result.feeStatusSummary.label, "1M DUE");

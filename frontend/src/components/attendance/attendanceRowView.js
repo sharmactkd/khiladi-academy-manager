@@ -93,7 +93,7 @@ export const applyStudentStatusToAttendanceRows = (rows, studentId, status, stat
       : row
   );
   const index = updated.findIndex(row => String(row.studentId) === String(studentId));
-  if (status !== "inactive" || index < 0 || rows[index].status === "inactive") return updated;
+  if (!["active", "inactive"].includes(status) || index < 0 || rows[index].status === status) return updated;
   const [changed] = updated.splice(index, 1);
   const lastActive = updated.reduce((last, row, i) => row.status === "active" && row.rowType !== "raw-import" ? i : last, -1);
   updated.splice(lastActive + 1, 0, changed);
