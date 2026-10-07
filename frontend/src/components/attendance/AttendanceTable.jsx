@@ -250,6 +250,12 @@ const AttendanceTable = ({
   const [noteEditor, setNoteEditor] = useState(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [sort, setSort] = useState([]);
+  const statusSignature = safeRows.map(row => `${row.studentId}:${row.status}`).sort().join("|");
+  const previousStatusSignature = useRef(statusSignature);
+  useEffect(() => {
+    if (previousStatusSignature.current !== statusSignature) setSort([]);
+    previousStatusSignature.current = statusSignature;
+  }, [statusSignature]);
   const viewRows = useMemo(
     () =>
       buildAttendanceRowView(

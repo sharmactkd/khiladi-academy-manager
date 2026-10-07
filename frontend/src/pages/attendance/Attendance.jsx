@@ -501,7 +501,7 @@ const Attendance = () => {
     setReordering(true);
     registerCacheRef.current.delete(`${batch}:${year}:${month}`);
     const optimisticRows = applyStudentStatusToAttendanceRows(
-      previous, row.studentId, status, changedAt
+      previous, row.studentId, status, changedAt, true
     );
     rowsRef.current = optimisticRows;
     setRows(optimisticRows);
@@ -561,13 +561,22 @@ const Attendance = () => {
     let sourceIndex = -1;
     eligible.forEach((day, index) => { if (isMarked(day.dateKey)) sourceIndex = index; });
     if (sourceIndex < 0) return toast.error("Repeat karne ke liye pehle kisi din attendance mark karein");
+    // A partially marked latest day is a target too. Choosing it as the
+    // source prevented the button from filling today's remaining students.
+    if (sourceIndex > 0) {
+      const latest = eligible[sourceIndex];
+      const prior = eligible.slice(0, sourceIndex).reverse().find(day => isMarked(day.dateKey));
+      if (prior && rows.some(row => row.status !== "inactive" && !row.attendance?.[latest.dateKey] && ["P", "A", "L", "LT"].includes(row.attendance?.[prior.dateKey]))) {
+        sourceIndex = eligible.findIndex(day => day.dateKey === prior.dateKey);
+      }
+    }
     const target = eligible[sourceIndex + 1];
     if (!target) return toast("Aaj tak koi next eligible date available nahi hai");
     const source = eligible[sourceIndex];
     let copied = 0;
     const next = rows.map((row) => {
       const value = row.attendance?.[source.dateKey];
-      if (!["P", "A", "L", "LT"].includes(value) || row.attendance?.[target.dateKey]) return row;
+      if (row.status === "inactive" || !["P", "A", "L", "LT"].includes(value) || row.attendance?.[target.dateKey]) return row;
       copied += 1;
       return recalculateRow({ ...row, attendance: { ...row.attendance, [target.dateKey]: value } }, days);
     });
