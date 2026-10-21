@@ -95,6 +95,7 @@ const getAttendanceReturnPath = (searchParams) => {
 
 const CollectFee = () => {
   const collectionKeyRef = useRef("");
+  const previousPayableRef = useRef(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
@@ -108,6 +109,8 @@ const CollectFee = () => {
   const [academy, setAcademy] = useState(null);
   const [branches, setBranches] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [submissionError, setSubmissionError] = useState("");
+  const showSubmissionError = message => { setSubmissionError(message); toast.error(message); };
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [studentSearch, setStudentSearch] = useState("");
   const [studentMenuOpen, setStudentMenuOpen] = useState(false);
@@ -118,6 +121,7 @@ const CollectFee = () => {
     handleSubmit,
     watch,
     setValue,
+    clearErrors,
     reset,
     formState: { errors },
   } = useForm({
@@ -157,7 +161,7 @@ const CollectFee = () => {
     [students, selectedStudentId]
   );
   // Allow advance collections even when only one (or zero) cycle is due.
-  const selectableMonthCount = 12;
+  const selectableMonthCount = Math.min(24, Math.max(12, dueMonthCount));
 
   const filteredStudents = useMemo(() => {
     const query = studentSearch.trim().toLowerCase();
@@ -175,16 +179,22 @@ const CollectFee = () => {
       studentApi.getAll({ status: "active" }),
       academyApi.getMyAcademy(),
       getBranches({ status: "active" }),
-    ]).then(([studentResult, academyResult, branchResult]) => {
+      studentIdFromUrl ? studentApi.getById(studentIdFromUrl) : Promise.resolve(null),
+    ]).then(([studentResult, academyResult, branchResult, requestedStudentResult]) => {
       if (!mounted) return;
-      if (studentResult.status === "fulfilled") setStudents(normalizeStudents(studentResult.value));
-      else toast.error(studentResult.reason?.response?.data?.message || "Students load nahi hue");
+      const list = studentResult.status === "fulfilled" ? normalizeStudents(studentResult.value) : [];
+      const requestedResponse = requestedStudentResult.status === "fulfilled" ? requestedStudentResult.value : null;
+      const requested = requestedResponse?.data?.student || requestedResponse?.data?.data?.student || requestedResponse?.data?.data || requestedResponse?.data || requestedResponse?.student || requestedResponse;
+      if (requested?._id && !list.some(item => String(item._id) === String(requested._id))) list.push(requested);
+      setStudents(list);
+      if (studentResult.status !== "fulfilled")
+        toast.error(studentResult.reason?.response?.data?.message || "Students load nahi hue");
       if (academyResult.status === "fulfilled") setAcademy(normalizeAcademy(academyResult.value));
       if (branchResult.status === "fulfilled") setBranches(normalizeBranches(branchResult.value));
       setLoadingStudents(false);
     });
     return () => { mounted = false; };
-  }, []);
+  }, [studentIdFromUrl]);
 
   useEffect(() => {
     if (!studentIdFromUrl || !students.length) return;
@@ -246,6 +256,15 @@ const CollectFee = () => {
     setValue("amountPaid", cashAmount + onlineAmount, { shouldValidate: true });
   }, [cashAmount, onlineAmount, paymentMode, setValue]);
 
+  useEffect(() => {
+    // Keep a full-payment suggestion aligned with a newly entered discount.
+    // An explicitly entered partial payment stays untouched.
+    if (paymentMode !== "cash_online" && (amountPaid === previousPayableRef.current || amountPaid === amount)) {
+      setValue("amountPaid", finalPayable, { shouldValidate: true });
+    }
+    previousPayableRef.current = finalPayable;
+  }, [finalPayable, paymentMode, setValue]);
+
   const selectStudent = (student) => {
     setValue("student", student._id, { shouldDirty: true, shouldValidate: true });
     setStudentSearch(studentName(student));
@@ -253,6 +272,7 @@ const CollectFee = () => {
   };
 
   const selectPaymentMode = (mode) => {
+    clearErrors(["cashAmount", "onlineAmount", "amountPaid"]);
     setValue("paymentMode", mode, { shouldDirty: true, shouldValidate: true });
 
     if (mode === "cash_online") {
@@ -287,10 +307,11 @@ const CollectFee = () => {
 
   const onSubmit = async (values) => {
     if (saving) return;
-    if (feeConfigLoading) return toast.error("Please wait for this student's fee details to load");
+    setSubmissionError("");
+    if (feeConfigLoading) return showSubmissionError("Please wait for this student's fee details to load");
     const payable = Number(values.amount || 0) - Number(values.discount || 0);
-    if (payable < 0) return toast.error("Discount cannot exceed the total fee");
-    if (Number(values.amountPaid || 0) > payable + 0.001) return toast.error("Amount paid exceeds the selected months' payable fee. Check discount or select more months.");
+    if (payable < 0) return showSubmissionError("Discount cannot exceed the total fee");
+    if (Number(values.amountPaid || 0) > payable + 0.001) return showSubmissionError("Amount paid exceeds the selected months' payable fee. Check discount or select more months.");
     try {
       setSaving(true);
       if (!collectionKeyRef.current) {
@@ -327,7 +348,7 @@ const CollectFee = () => {
       navigate(payment?._id ? `/fees/receipt/${payment._id}` : "/fees/payments");
     } catch (error) {
       const details = error.response?.data?.data;
-      toast.error(
+      showSubmissionError(
         Array.isArray(details) && details.length
           ? details.map((item) => item.message).join(", ")
           : error.response?.data?.message || "Fee collect nahi hui"
@@ -375,7 +396,15 @@ const CollectFee = () => {
         <Link to="/fees/payments"><History size={16} />Payment History</Link>
       </header>
 
-      <form className={styles.workspace} onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form className={styles.workspace} onSubmit={handleSubmit(onSubmit, (invalid) => {
+        const field = Object.keys(invalid)[0];
+        const labels = { student: "Select a student from the search results", numberOfMonths: "Select a valid number of months", feeYear: "Enter a valid fee year", cashAmount: "Enter the cash amount", onlineAmount: "Enter the online amount" };
+        showSubmissionError(invalid[field]?.message || labels[field] || "Please check the highlighted payment fields");
+        const input = field === "student" ? document.getElementById("fee-student-search") : document.querySelector(`[name="${field}"]`);
+        input?.scrollIntoView({ behavior: "smooth", block: "center" });
+        input?.focus();
+      })} noValidate>
+        {submissionError ? <div role="alert" style={{ gridColumn: "1 / -1", padding: "14px 16px", border: "1px solid #efb3b8", borderRadius: 12, background: "#fff1f2", color: "#9f1239" }}>{submissionError}</div> : null}
         <main className={styles.formCard}>
           <section className={styles.formSection}>
             <header><span>01</span><div><h2>Select Student & Fee Period</h2><p>Find the student and confirm the billing month.</p></div></header>
@@ -425,7 +454,7 @@ const CollectFee = () => {
             <div className={styles.periodGrid}>
               <label><span>Month *</span><select {...register("feeMonth", { required: "Month required" })}>{MONTH_OPTIONS.map((month) => <option key={month.value} value={month.value}>{month.label}</option>)}</select></label>
               <label><span>Year *</span><input type="number" min="2000" max="2100" {...register("feeYear", { required: "Year required", min: 2000, max: 2100 })} /></label>
-              <label><span>Number of Months *</span><select {...register("numberOfMonths", { required: true, min: 1, max: selectableMonthCount })}>{Array.from({ length: selectableMonthCount }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} {index ? "Months" : "Month"}</option>)}</select><small className={styles.helperText}>{dueMonthCount > 1 ? `${dueMonthCount} unpaid months detected. Advance payment is also allowed.` : "Advance payment up to 12 months is allowed."}</small></label>
+              <label><span>Number of Months *</span><select {...register("numberOfMonths", { required: "Select the number of months", min: { value: 1, message: "Select at least one month" }, max: { value: selectableMonthCount, message: "Selected duration exceeds the available months" } })}>{Array.from({ length: selectableMonthCount }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} {index ? "Months" : "Month"}</option>)}</select><small className={styles.helperText}>{dueMonthCount > 1 ? `${dueMonthCount} unpaid months detected. Advance payment is also allowed.` : "Advance payment up to 12 months is allowed."}</small></label>
               <label><span>Total Fee</span><div className={styles.readOnlyField}>{currency(amount)}</div></label>
             </div>
           </section>
@@ -451,9 +480,9 @@ const CollectFee = () => {
               <div className={styles.splitPayment}>
                 <header><WalletCards size={17} /><div><strong>Split Payment</strong><small>Enter how much was received in cash and online.</small></div><span>{currency(cashAmount + onlineAmount)}</span></header>
                 <div>
-                  <label><span>Cash Amount *</span><div className={styles.moneyInput}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0.01" {...register("cashAmount", { required: "Cash amount required", min: { value: 0.01, message: "Cash amount must be greater than zero" } })} /></div>{errors.cashAmount ? <small className={styles.errorText}>{errors.cashAmount.message}</small> : null}</label>
+                  <label><span>Cash Amount *</span><div className={styles.moneyInput}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0.01" {...register("cashAmount", { validate: value => paymentMode !== "cash_online" || Number(value) > 0 || "Cash amount must be greater than zero" })} /></div>{errors.cashAmount ? <small className={styles.errorText}>{errors.cashAmount.message}</small> : null}</label>
                   <span className={styles.splitPlus}>+</span>
-                  <label><span>Online Amount *</span><div className={styles.moneyInput}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0.01" {...register("onlineAmount", { required: "Online amount required", min: { value: 0.01, message: "Online amount must be greater than zero" } })} /></div>{errors.onlineAmount ? <small className={styles.errorText}>{errors.onlineAmount.message}</small> : null}</label>
+                  <label><span>Online Amount *</span><div className={styles.moneyInput}><b className={styles.currencyMark} aria-label={feeCurrency.code}>{feeCurrency.symbol}</b><input type="number" step="0.01" min="0.01" {...register("onlineAmount", { validate: value => paymentMode !== "cash_online" || Number(value) > 0 || "Online amount must be greater than zero" })} /></div>{errors.onlineAmount ? <small className={styles.errorText}>{errors.onlineAmount.message}</small> : null}</label>
                   <span className={styles.splitEquals}>=</span>
                   <div className={styles.splitTotal}><small>Total Amount Paid</small><strong>{currency(cashAmount + onlineAmount)}</strong></div>
                 </div>
@@ -477,7 +506,7 @@ const CollectFee = () => {
           </dl>
           <div className={`${styles.statusPanel} ${styles[`status${paymentStatus.key[0].toUpperCase()}${paymentStatus.key.slice(1)}`]}`}><CheckCircle2 size={22} /><strong>{paymentStatus.label}</strong></div>
           <div className={styles.summaryMeta}><p><CalendarDays size={15} /><span>Fee Period</span><strong>{feePeriodLabel}</strong></p><p><FileText size={15} /><span>Receipts</span><strong>{numberOfMonths === 1 ? "Generated automatically" : `${numberOfMonths} monthly ledger records`}</strong></p><p><Banknote size={15} /><span>Mode</span><strong>{PAYMENT_MODES.find((mode) => mode.value === paymentMode)?.label}</strong></p></div>
-          <button className={styles.submitButton} type="submit" disabled={saving || loadingStudents}><ReceiptText size={17} />{saving ? "Collecting Fee..." : "Collect Fee & Generate Receipt"}<ArrowRight size={16} /></button>
+          <button className={styles.submitButton} type="submit" disabled={saving || loadingStudents || feeConfigLoading}><ReceiptText size={17} />{saving ? "Collecting Fee..." : feeConfigLoading ? "Loading Fee Details..." : "Collect Fee & Generate Receipt"}<ArrowRight size={16} /></button>
           <button className={styles.resetButton} type="button" onClick={resetForm} disabled={saving}><RotateCcw size={15} />Reset Form</button>
           <footer><ShieldCheck size={15} /><span><strong>Secure academy record</strong>Payment and receipt details are stored safely.</span><LockKeyhole size={13} /></footer>
         </aside>
