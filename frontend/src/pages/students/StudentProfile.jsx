@@ -15,7 +15,7 @@ import BatchAcademyHeader from "../batches/components/BatchAcademyHeader.jsx";
 import BatchDetailSectionHeader from "../batches/components/BatchDetailSectionHeader.jsx";
 import IconOptionGrid from "../../components/common/iconOptions/IconOptionGrid.jsx";
 import BeltTileSelector from "../../components/taekwondoBelts/BeltTileSelector.jsx";
-import { getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import { getStudentPhotoUrl, handleStudentPhotoError } from "../../utils/fileUrl.js";
 import useAuth from "../../hooks/useAuth.js";
 import { formatMoney } from "../../utils/currency.js";
 import { getStudentAgeCategoryDisplay } from "../../utils/studentAgeCategory.js";
@@ -244,7 +244,7 @@ const StudentProfile = () => {
             <DetailItem icon={UserRound} label="Occupation">{text(student.occupation || student.education?.occupation)}</DetailItem>
           </div>
           <aside className="student-detail-basic-photo">
-            <img src={getStudentPhotoUrl(student)} alt="" onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }} />
+            <img src={getStudentPhotoUrl(student)} alt="" onError={(event) => handleStudentPhotoError(event, student)} />
           </aside>
         </div>
       </section>

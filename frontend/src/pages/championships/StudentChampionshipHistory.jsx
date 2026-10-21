@@ -6,7 +6,7 @@ import { getBranches } from "../../api/branchApi.js";
 import { championshipRecordApi } from "../../api/championshipRecordApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
-import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import { getAcademyLogoUrl, getStudentPhotoUrl, handleStudentPhotoError } from "../../utils/fileUrl.js";
 import styles from "./StudentChampionshipHistory.module.css";
 
 const payloadOf = (response) => response?.data?.data || response?.data || response || {};
@@ -38,7 +38,7 @@ const StudentChampionshipHistory = () => {
     <nav className={styles.breadcrumb}><Link to="/dashboard">Dashboard</Link><span>/</span><Link to="/championship-records">Championships</Link><span>/</span><strong>Student History</strong></nav>
     <header className={styles.heading}><div><span><History size={25}/></span><div><small>Athlete competition archive</small><h1>Championship History</h1><p>Complete participation, medal, bout and evidence timeline.</p></div></div><div className={styles.headingActions}><Link to={`/students/${studentId}`}><UserRound size={15}/>Student Profile</Link><Link className={styles.primary} to={`/championship-records/new?student=${studentId}`}><Plus size={16}/>Add Record</Link></div></header>
     {error ? <div className={styles.error}><ShieldAlert size={17}/><span>{error}</span></div> : null}
-    <section className={styles.studentHero}><img src={getStudentPhotoUrl(student || {})} alt={studentName(student)} onError={(event) => { event.currentTarget.src = "/default-avatar.png"; }}/><div className={styles.identity}><small>Student championship profile</small><h2>{studentName(student)}</h2><span>{studentCode(student)}</span><div className={styles.studentMeta}><span><GraduationCap size={12}/>{student?.batch?.batchName || "Batch not assigned"}</span><span><Award size={12}/>{[student?.beltRank, student?.danRank].filter(Boolean).join(" · ") || "Rank not added"}</span><span><CircleDot size={11}/>{student?.status === "inactive" ? "Inactive Student" : "Active Student"}</span></div></div><Link to={`/students/${studentId}`}>View complete profile<ChevronRight size={14}/></Link></section>
+    <section className={styles.studentHero}><img src={getStudentPhotoUrl(student || {})} alt={studentName(student)} onError={(event) => handleStudentPhotoError(event, student)}/><div className={styles.identity}><small>Student championship profile</small><h2>{studentName(student)}</h2><span>{studentCode(student)}</span><div className={styles.studentMeta}><span><GraduationCap size={12}/>{student?.batch?.batchName || "Batch not assigned"}</span><span><Award size={12}/>{[student?.beltRank, student?.danRank].filter(Boolean).join(" · ") || "Rank not added"}</span><span><CircleDot size={11}/>{student?.status === "inactive" ? "Inactive Student" : "Active Student"}</span></div></div><Link to={`/students/${studentId}`}>View complete profile<ChevronRight size={14}/></Link></section>
     <section className={styles.stats}>{[
       { label: "Championship Entries", value: summary.total || 0, icon: Trophy, tone: "" },
       { label: "Gold Medals", value: summary.gold || 0, icon: Medal, tone: "gold" },

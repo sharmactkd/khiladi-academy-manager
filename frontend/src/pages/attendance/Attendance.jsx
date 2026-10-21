@@ -763,19 +763,17 @@ const Attendance = () => {
 
   useEffect(() => {
     const refreshFees = () => {
-      if (document.hidden || !batch || hasUnsavedChanges || loading || saveInFlightRef.current || reorderingRef.current) return;
+      if (document.hidden || !selectedPeriodIsCurrent || !batch || hasUnsavedChanges || loading || saveInFlightRef.current || reorderingRef.current) return;
       loadMonthlyRegister(batch, month, year);
     };
     const onStorage = event => { if (event.key === "khiladi.fees.changed") refreshFees(); };
-    window.addEventListener("focus", refreshFees);
     window.addEventListener("khiladi:fees-changed", refreshFees);
     window.addEventListener("storage", onStorage);
     return () => {
-      window.removeEventListener("focus", refreshFees);
       window.removeEventListener("khiladi:fees-changed", refreshFees);
       window.removeEventListener("storage", onStorage);
     };
-  }, [batch, month, year, hasUnsavedChanges, loading, loadMonthlyRegister]);
+  }, [batch, month, year, hasUnsavedChanges, loading, selectedPeriodIsCurrent, loadMonthlyRegister]);
 
   useEffect(() => {
     window.clearTimeout(autoSaveTimerRef.current);
@@ -897,7 +895,7 @@ const Attendance = () => {
         <footer className="attendance-save-bar">
           <span className={hasUnsavedChanges ? "is-pending" : "is-saved"}><i />{hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}</span>
           <span>{autoSaveError ? `Auto-save failed: ${autoSaveError}` : lastSavedAt ? `Last auto-saved ${lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Changes auto-save after editing"}</span>
-          <div><span>{formattedRows.length} students · {attendanceStats.totalCells} attendance cells</span><button type="button" onClick={() => saveRegister({ silent: false })} disabled={saving || loading || !rows.length}><Save size={15} /> {saving ? "Saving…" : "Save Now"}</button></div>
+          <div><span>{formattedRows.length} students</span><button type="button" onClick={() => saveRegister({ silent: false })} disabled={saving || loading || !rows.length}><Save size={15} /> {saving ? "Saving…" : "Save Now"}</button></div>
         </footer>
       </section>
     </div>

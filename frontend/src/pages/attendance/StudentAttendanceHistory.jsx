@@ -27,7 +27,7 @@ import useAuth from "../../hooks/useAuth.js";
 import { printDomElement } from "../../utils/securePrint.js";
 import { attendanceExportPeriodLabel, filterAttendanceHistoryMonths, validateAttendanceExportScope } from "../../utils/attendanceHistoryExport.js";
 import { exportAttendanceHistoryPdf, exportAttendanceHistoryWorkbook } from "../../utils/attendanceHistoryVisualExport.js";
-import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import { getAcademyLogoUrl, getStudentPhotoUrl, handleStudentPhotoError } from "../../utils/fileUrl.js";
 import styles from "./StudentAttendanceHistory.module.css";
 
 const getStudentName = (student) => {
@@ -283,7 +283,7 @@ const StudentAttendanceHistory = () => {
         {searchingStudents ? <span className={styles.searchLoader} /> : null}
         {studentQuery.trim().length >= 2 ? <div className={styles.searchResults}>
           {studentResults.length ? studentResults.map((result) => <button key={result._id} type="button" onMouseDown={() => { setStudentQuery(""); setStudentResults([]); navigate(`/attendance/student/${result._id}`); }}>
-            <img src={getStudentPhotoUrl(result)} alt="" /><span><strong>{getStudentName(result)}</strong><small>{result.admissionNumber || result.phone || "No identifier"}</small></span><em>{getStudentStatus(result.status).label}</em>
+            <img src={getStudentPhotoUrl(result)} alt=""  onError={(event) => handleStudentPhotoError(event, result)} /><span><strong>{getStudentName(result)}</strong><small>{result.admissionNumber || result.phone || "No identifier"}</small></span><em>{getStudentStatus(result.status).label}</em>
           </button>) : !searchingStudents ? <p>No matching student found.</p> : null}
         </div> : null}
       </section>
@@ -309,7 +309,7 @@ const StudentAttendanceHistory = () => {
         <>
           <section className={styles.studentOverview}>
             <article className={styles.studentIdentity}>
-              <img src={getStudentPhotoUrl(student)} alt={studentName} />
+              <img src={getStudentPhotoUrl(student)} alt={studentName}  onError={(event) => handleStudentPhotoError(event, student)} />
               <div className={styles.studentName}><small>Student profile</small><h2>{studentName}</h2><b>{student.admissionNumber || "Admission number not added"}</b></div>
               <dl>
                 <div><dt><MapPin size={14} />Branch</dt><dd>{studentBranch}</dd></div>

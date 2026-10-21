@@ -1126,8 +1126,8 @@
   z-index: 1500;
   display: flex;
   justify-content: flex-end;
-  background: rgba(8, 22, 47, 0.48);
-  backdrop-filter: blur(3px);
+  background: transparent;
+  backdrop-filter: none;
 }
 .membership-drawer {
   width: min(570px, 100%);

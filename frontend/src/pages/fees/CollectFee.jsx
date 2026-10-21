@@ -32,7 +32,7 @@ import { studentApi } from "../../api/studentApi.js";
 import AcademyHeroHeader from "../../components/academy/AcademyHeroHeader.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import { PAYMENT_MODE_OPTIONS } from "../../utils/feePaymentModes.js";
-import { getAcademyLogoUrl, getStudentPhotoUrl } from "../../utils/fileUrl.js";
+import { getAcademyLogoUrl, getStudentPhotoUrl, handleStudentPhotoError } from "../../utils/fileUrl.js";
 import { branchFor, currencyMeta, formatMoney } from "../../utils/currency.js";
 import styles from "./CollectFee.module.css";
 
@@ -430,7 +430,7 @@ const CollectFee = () => {
                 <div className={styles.studentMenu} role="listbox">
                   {filteredStudents.length ? filteredStudents.map((student) => (
                     <button key={student._id} type="button" role="option" aria-selected={student._id === selectedStudentId} onMouseDown={(event) => event.preventDefault()} onClick={() => selectStudent(student)}>
-                      <img src={getStudentPhotoUrl(student)} alt="" />
+                      <img src={getStudentPhotoUrl(student)} alt=""  onError={(event) => handleStudentPhotoError(event, student)} />
                       <span><strong>{studentName(student)}</strong><small>{student.admissionNumber || "No admission number"} · {student.phone || "No phone"}</small></span>
                       <b>{student.batch?.batchName || "No batch"}</b>
                     </button>
@@ -441,7 +441,7 @@ const CollectFee = () => {
 
             {selectedStudent ? (
               <article className={styles.selectedStudent}>
-                <img src={getStudentPhotoUrl(selectedStudent)} alt={studentName(selectedStudent)} />
+                <img src={getStudentPhotoUrl(selectedStudent)} alt={studentName(selectedStudent)}  onError={(event) => handleStudentPhotoError(event, selectedStudent)} />
                 <div><small>Selected student</small><strong>{studentName(selectedStudent)}</strong><span>{selectedStudent.admissionNumber || "Admission number not added"}</span></div>
                 <dl>
                   <div><dt><MapPin size={13} />Branch</dt><dd>{selectedStudent.branch?.branchName || "Not assigned"}</dd></div>
@@ -495,7 +495,7 @@ const CollectFee = () => {
 
         <aside className={styles.summaryCard}>
           <header><span><ReceiptText size={20} /></span><div><small>Review & confirm</small><h2>Payment Summary</h2></div></header>
-          {selectedStudent ? <div className={styles.summaryStudent}><img src={getStudentPhotoUrl(selectedStudent)} alt="" /><div><strong>{studentName(selectedStudent)}</strong><span>{selectedStudent.admissionNumber || "No admission number"}</span><small>{selectedStudent.branch?.branchName || "No branch"} · {selectedStudent.batch?.batchName || "No batch"}</small></div></div> : <div className={styles.summaryPlaceholder}><UserRound size={24} /><span>Select a student to prepare the receipt.</span></div>}
+          {selectedStudent ? <div className={styles.summaryStudent}><img src={getStudentPhotoUrl(selectedStudent)} alt=""  onError={(event) => handleStudentPhotoError(event, selectedStudent)} /><div><strong>{studentName(selectedStudent)}</strong><span>{selectedStudent.admissionNumber || "No admission number"}</span><small>{selectedStudent.branch?.branchName || "No branch"} · {selectedStudent.batch?.batchName || "No batch"}</small></div></div> : <div className={styles.summaryPlaceholder}><UserRound size={24} /><span>Select a student to prepare the receipt.</span></div>}
           <dl className={styles.breakdown}>
             <div><dt>Fee for {numberOfMonths} {numberOfMonths === 1 ? "month" : "months"}</dt><dd>{currency(amount)}</dd></div>
             <div><dt>Discount / Scholarship</dt><dd className={discount > 0 ? styles.discountText : ""}>{discount > 0 ? `−${currency(discount)}` : currency(0)}</dd></div>

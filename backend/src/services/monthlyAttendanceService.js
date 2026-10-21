@@ -12,6 +12,7 @@ import { applyRowOrder, moveRowKeys, previousMonthPeriod, selectMonthlyOrder, st
 import { getMembershipMap } from "./membershipService.js";
 import { resolveFeeStatus } from "../utils/feeStatus.js";
 import { todayDateKey } from "../utils/businessDate.js";
+import { historicalFeeSnapshot } from "../utils/historicalFeeSnapshot.js";
 
 const STATUS_MAP = {
   present: "P",
@@ -265,6 +266,7 @@ const getMonthlyFeeMap = async ({ academyId, studentIds, month, year, latest = f
     status: { $ne: "cancelled" },
   };
   if (!latest) {
+    delete query.status;
     query.feeMonth = Number(month);
     query.feeYear = Number(year);
   }
@@ -283,8 +285,10 @@ const getMonthlyFeeMap = async ({ academyId, studentIds, month, year, latest = f
   const map = new Map();
 
   payments.forEach((payment) => {
-    const key = String(payment.student);
-    if (!map.has(key)) map.set(key, payment);
+    const snapshot = latest ? payment : historicalFeeSnapshot(payment, getMonthRange({ month, year }).end);
+    if (!snapshot) return;
+    const key = String(snapshot.student);
+    if (!map.has(key)) map.set(key, snapshot);
   });
 
   return map;
@@ -411,7 +415,7 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
     fallbackStatus: membership?.feeStatus || fee?.status || identity.importedFeeStatus || "due",
   }) : null;
 
-  return {
+  const row = {
     no: identity.importedSerialNo || index + 1,
     sortOrder: Number(identity.importedRowNumber || index + 1),
     studentId: identity.studentId || identity.rowId,
@@ -466,6 +470,17 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
     attendance,
     ...counts,
   };
+  // Imported month values (including deliberate blanks) are the historical
+  // snapshot. Later ledger payments must never replace them.
+  if (historical && identity.source === "excel-import") {
+    row.historicalFeeSnapshot = true;
+    row.feeDueDate = normalizedDueDate || null;
+    row.feePaidDate = formatDisplayDate(normalizedPaidDate) || null;
+    row.feeStatus = identity.importedFeeStatus || "";
+    row.feeStatusSummary = null;
+    row.membership = null;
+  }
+  return row;
 };
 
 const buildMonthlyRows = async ({
@@ -610,6 +625,16 @@ const buildMonthlyRows = async ({
     });
   });
 
+  if (!isCurrentRegister) {
+    // An explicit monthly metadata blank is authoritative too. Do not let a
+    // legacy attendance day's non-empty fee field fill it back in.
+    monthMetadataDocs.forEach(metadata => {
+      const identity = rowIdentityMap.get(getAttendanceRegisterRowKey({ student: String(metadata.student || "") }));
+      if (!identity) return;
+      identity.source = "excel-import";
+      for (const field of ["importedDueDate", "importedPaidDate", "importedFeePaid", "importedFeeStatus", "importedExtraNote"]) identity[field] = metadata[field] ?? "";
+    });
+  }
   return {
     students,
     rows: Array.from(rowIdentityMap.entries())

@@ -11,6 +11,16 @@ process.env.AUDIT_LOG_SIGNING_KEY ||= "unit-test-audit-key-at-least-32-character
 process.env.PRIVATE_MEDIA_SIGNING_KEY ||= "unit-test-private-media-key-at-least-32-chars";
 
 const { applyCurrentMembershipFeeStatus, buildRowFromRecord, hasMarkedAttendanceCounts, mergeMonthlyRecordIdentity, resolveMonthlyStudentStatus } = await import("../src/services/monthlyAttendanceService.js");
+
+test("historical imported blanks and previous dates win over later ledger values", () => {
+  for (const paidDate of ["", "05-09-2026"]) {
+    const row = buildRowFromRecord({identity:{rowType:"student", studentId:"student-1",source:"excel-import",importedDueDate:"",importedPaidDate:paidDate,importedFeeStatus:""},attendance:{},index:0,historical:true,fee:{paidDate:"2026-10-02",dueDate:"2026-10-10",status:"paid",amountPaid:800,finalAmount:800}});
+    assert.equal(row.feePaidDate,paidDate||null);
+    assert.equal(row.feeDueDate,null);
+    assert.equal(row.feeStatus,"");
+    assert.equal(row.feeStatusSummary,null);
+  }
+});
 const { backfillImportedAttendanceMetadata, getImportedAttendancePeriod, isProtectedReconciliationPeriod } = await import("../src/controllers/attendanceController.js");
 const monthlyServiceSource = fs.readFileSync(new URL("../src/services/monthlyAttendanceService.js", import.meta.url), "utf8");
 

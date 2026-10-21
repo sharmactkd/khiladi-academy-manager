@@ -21,6 +21,7 @@ export const compactAttendanceDueLabel = (value, studentStatus = "active") => {
 };
 
 export const getCanonicalFeeDisplay = (row = {}) => {
+  if (row.historicalFeeSnapshot) return text(row.importedFeeStatus) || "-";
   const linked = row.rowType === "student" && Boolean(row.studentId);
   if (!linked) {
     const imported = text(row.importedFeeStatus || row.feeStatus || "-").toUpperCase();
