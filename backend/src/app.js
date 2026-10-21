@@ -35,6 +35,7 @@ import parentLinkRoutes from "./routes/parentLinkRoutes.js";
 import parentPortalRoutes from "./routes/parentPortalRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import academyReminderRoutes from "./routes/academyReminderRoutes.js";
 import communicationLogRoutes from "./routes/communicationLogRoutes.js";
 import reminderRoutes from "./routes/reminderRoutes.js";
 
@@ -183,6 +184,7 @@ app.use("/api/parent-links", parentLinkRoutes);
 app.use("/api/parent-portal", parentPortalRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/academy-reminders", academyReminderRoutes);
 app.use("/api/communication-logs", communicationLogRoutes);
 app.use("/api/reminders", reminderRoutes);
 

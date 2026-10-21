@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 
 import Navbar from "../components/common/Navbar.jsx";
 import Sidebar from "../components/common/Sidebar.jsx";
+import { ReminderProvider } from "../components/notifications/ReminderCenter.jsx";
 import LegacyRouteHero, { isLegacyThemedRoute } from "../components/common/LegacyRouteHero.jsx";
 
 const DashboardLayout = () => {
@@ -42,7 +43,7 @@ const DashboardLayout = () => {
   }, [sidebarOpen]);
 
   return (
-    <div className="dashboard-shell">
+    <ReminderProvider><div className="dashboard-shell">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={closeSidebar}
@@ -72,7 +73,7 @@ const DashboardLayout = () => {
           </div>
         </section>
       </main>
-    </div>
+    </div></ReminderProvider>
   );
 };
 

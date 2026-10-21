@@ -11,6 +11,7 @@ import {
 
 import { notificationApi } from "../../api/notificationApi.js";
 import useAuth from "../../hooks/useAuth.js";
+import { ReminderBell } from "../notifications/ReminderCenter.jsx";
 
 const pageNames = {
   dashboard: "Dashboard",
@@ -188,7 +189,7 @@ const Navbar = ({ onMenuClick }) => {
       </div>
 
       <div className="navbar-actions">
-        <NotificationBell />
+        <ReminderBell fallback={<NotificationBell />} />
 
         <div
           className="navbar-user"
