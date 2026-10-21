@@ -442,7 +442,7 @@ export const buildRowFromRecord = ({ identity, attendance, index, fee, membershi
     statusUpdatedAt:
       student?.statusUpdatedAt || student?.updatedAt || student?.createdAt || null,
     feeDueDate:
-      normalizedDueDate ||
+      (!historical && membership?.lastPaymentAt ? membership.effectiveDueDate : null) || normalizedDueDate ||
       fee?.dueDate ||
       membership?.effectiveDueDate ||
       null,

@@ -2,6 +2,7 @@ import Student from "../models/Student.js";
 import FeePayment from "../models/FeePayment.js";
 import ExpenseTransaction from "../models/ExpenseTransaction.js";
 import mongoose from "mongoose";
+import { createHash } from "node:crypto";
 import asyncHandler from "../utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../utils/apiResponse.js";
 import { getCurrencySymbol } from "../utils/currency.js";
@@ -15,6 +16,7 @@ import {
   getMonthYearNow,
 } from "../services/feeService.js";
 import { queueFeeIntegritySync } from "../services/automaticFeeIntegrityService.js";
+import { allocateFeeCollection, correctPaymentInstallments } from "../utils/feeCollection.js";
 
 const getStudentName = (student) =>
   `${student?.firstName || ""} ${student?.lastName || ""}`.trim();
@@ -31,13 +33,6 @@ const getMonthYearFromQuery = (query) => {
 const addBillingMonths = (month, year, offset) => {
   const date = new Date(Date.UTC(Number(year), Number(month) - 1 + offset, 1));
   return { feeMonth: date.getUTCMonth() + 1, feeYear: date.getUTCFullYear() };
-};
-
-const moneyPart = (total, count, index) => {
-  const roundedTotal = Math.round(Number(total || 0) * 100);
-  const base = Math.floor(roundedTotal / count);
-  const cents = index === count - 1 ? roundedTotal - base * (count - 1) : base;
-  return cents / 100;
 };
 
 const getActiveStudents = async (academyId, query = {}) => {
@@ -280,16 +275,29 @@ export const getStudentsFeeStatus = asyncHandler(async (req, res) => {
 export const collectFee = asyncHandler(async (req, res) => {
   const session = await mongoose.startSession();
   try {
-    const periodCount = Math.min(Math.max(Number(req.body.numberOfMonths) || 1, 1), 24);
+    const allocations = allocateFeeCollection(req.body);
+    const periodCount = allocations.length;
+    const requestFingerprint = createHash("sha256").update(JSON.stringify(allocations.map(item => ({
+      student: String(item.student), month: item.feeMonth, year: item.feeYear,
+      amount: item.amount, discount: item.discount, paid: item.amountPaid,
+      cash: item.cashAmount, online: item.onlineAmount, paymentDate: item.paymentDate || "",
+    })))).digest("hex");
     const idempotencyKey = String(req.body.idempotencyKey || "").trim();
     let payments = [];
     let replayed = false;
     await session.withTransaction(async () => {
+      // withTransaction can retry its callback after a transient write conflict.
+      payments = [];
+      replayed = false;
       const prior = await FeePayment.find({ academy: req.academyId, student: req.body.student, "installments.idempotencyKey": idempotencyKey })
         .sort({ feeYear: 1, feeMonth: 1 })
         .session(session);
       if (prior.length) {
         if (prior.length !== periodCount) throw new Error("This collection request is incomplete. Review payment history before retrying.");
+        if (prior.some(payment => payment.status === "cancelled")) throw Object.assign(new Error("This collection was reversed. Start a new collection instead of retrying it."), { statusCode: 409 });
+        if (prior.some(payment => (payment.installments || []).some(item => item.idempotencyKey === idempotencyKey && item.requestFingerprint && item.requestFingerprint !== requestFingerprint))) {
+          throw Object.assign(new Error("This request already saved a different payment. Review Payment History before creating another collection."), { statusCode: 409 });
+        }
         payments = prior;
         replayed = true;
         return;
@@ -297,16 +305,7 @@ export const collectFee = asyncHandler(async (req, res) => {
 
       let completedPeriods = 0;
       for (let index = 0; index < periodCount; index += 1) {
-        const period = addBillingMonths(req.body.feeMonth || req.body.month, req.body.feeYear || req.body.year, index);
-        const periodPayload = {
-          ...req.body,
-          ...period,
-          amount: moneyPart(req.body.amount, periodCount, index),
-          discount: moneyPart(req.body.discount, periodCount, index),
-          amountPaid: moneyPart(req.body.amountPaid, periodCount, index),
-          cashAmount: moneyPart(req.body.cashAmount, periodCount, index),
-          onlineAmount: moneyPart(req.body.onlineAmount, periodCount, index),
-        };
+        const periodPayload = { ...allocations[index], requestFingerprint };
         const result = await collectStudentFee({ academyId: req.academyId, userId: req.user._id, payload: periodPayload, session });
         const payment = result.payment;
         payments.push(payment);
@@ -337,6 +336,7 @@ export const collectFee = asyncHandler(async (req, res) => {
         student,
         completedPeriods,
         latestPayment: payments[payments.length - 1],
+        collectionStartDueDate: payments[0]?.dueDate,
         session,
       });
     });
@@ -357,7 +357,7 @@ export const collectFee = asyncHandler(async (req, res) => {
       replayed ? 200 : 201
     );
   } catch (error) {
-    const status = error?.code === 11000 ? 409 : 400;
+    const status = error?.statusCode || (error?.code === 11000 ? 409 : 400);
     return errorResponse(res, error.message || "Fee collection failed", status);
   } finally {
     await session.endSession();
@@ -550,6 +550,13 @@ export const updateFeePayment = asyncHandler(async (req, res) => {
   }
 
   const previousStatus = payment.status;
+  if (payment.status === "cancelled") throw new Error("Cancelled payments cannot be edited. Create a new collection.");
+  if (req.body.expectedUpdatedAt && new Date(req.body.expectedUpdatedAt).getTime() !== new Date(payment.updatedAt).getTime()) {
+    throw Object.assign(new Error("Payment changed in another window. Refresh before editing."), { statusCode: 409 });
+  }
+  const previousState = payment.toObject();
+  delete previousState.corrections;
+  correctPaymentInstallments(payment, req.body);
   if (Object.prototype.hasOwnProperty.call(req.body, "status") && req.body.status !== payment.status) {
     throw new Error("Payment status is calculated automatically. Use Reverse Payment to cancel a payment.");
   }
@@ -573,20 +580,8 @@ export const updateFeePayment = asyncHandler(async (req, res) => {
     }
   });
 
-  if (Object.prototype.hasOwnProperty.call(req.body, "paymentDate")) {
-    payment.paidDate = Number(payment.amountPaid || 0) > 0 ? payment.paymentDate : null;
-    const latest = payment.installments?.filter((item) => !item.reversedAt).sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate))[0];
-    if (latest) latest.paymentDate = payment.paymentDate;
-  }
-  if (Object.prototype.hasOwnProperty.call(req.body, "amountPaid") && payment.installments?.length) {
-    const latest = payment.installments.filter((item) => !item.reversedAt).sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate))[0];
-    if (latest) {
-      latest.amountPaid = Number(req.body.amountPaid || 0);
-      latest.paymentMode = req.body.paymentMode || latest.paymentMode;
-      latest.cashAmount = latest.paymentMode === "cash" ? latest.amountPaid : Number(req.body.cashAmount || latest.cashAmount || 0);
-      latest.onlineAmount = latest.paymentMode === "online" ? latest.amountPaid : Number(req.body.onlineAmount || latest.onlineAmount || 0);
-    }
-  }
+  if (Number(payment.discount) > Number(payment.amount)) throw new Error("Discount cannot exceed the fee amount");
+  payment.corrections.push({ previousState, correctedBy: req.user._id, correctedAt: new Date() });
 
   payment.updatedBy = req.user._id;
 

@@ -171,6 +171,7 @@ export const createFeePaymentValidator = [
 
 export const updateFeePaymentValidator = [
   param("id").isMongoId().withMessage("Invalid fee payment ID"),
+  body("expectedUpdatedAt").optional().isISO8601(),
 
   body("feePlan").optional({ nullable: true, checkFalsy: true }).isMongoId(),
 

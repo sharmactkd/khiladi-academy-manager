@@ -143,6 +143,7 @@ export const serializeMembership = (membership, now = new Date()) => {
     feeStatusSummary,
     feeStatusCleared: source.feeStatusCleared === true,
     manualFeeStatus: source.manualFeeStatus || "",
+    lastPaymentAt: source.lastPaymentAt || null,
     autoMonthlyDue: source.autoMonthlyDue === true,
     internalNote: source.internalNote || "",
     lastAdjustedAt: source.lastAdjustedAt,

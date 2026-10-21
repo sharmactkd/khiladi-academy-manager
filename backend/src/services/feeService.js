@@ -475,9 +475,6 @@ export const collectStudentFee = async ({
     student: student._id,
     feeMonth,
     feeYear,
-    status: {
-      $ne: "cancelled",
-    },
   }).session(session);
 
   const paymentDate = payload.paymentDate || new Date();
@@ -490,6 +487,7 @@ export const collectStudentFee = async ({
     : Number(payload.onlineAmount || 0);
   const installment = {
     idempotencyKey,
+    requestFingerprint: payload.requestFingerprint || "",
     receiptNumber,
     amountPaid,
     cashAmount: installmentCash,
@@ -501,6 +499,22 @@ export const collectStudentFee = async ({
   };
 
   if (existing) {
+    if (existing.status !== "cancelled") {
+      const payable = Math.max(Number(existing.amount || 0), amount) - Math.max(Number(existing.discount || 0), discount);
+      const remaining = Math.max(0, payable - Number(existing.amountPaid || 0));
+      if (amountPaid > remaining + 0.001 || (remaining <= 0 && existing.status === "paid")) {
+        throw Object.assign(new Error(`Fee for ${feeMonth}/${feeYear} already contains a payment. Remaining balance: ${remaining.toFixed(2)}. Use Edit Payment to correct it or select the next unpaid month.`), { statusCode: 409 });
+      }
+    } else {
+      existing.status = "due";
+      existing.reversedAt = null;
+      existing.reversalReason = "";
+      existing.reversedBy = null;
+      existing.receiptNumber = receiptNumber;
+      existing.amount = amount;
+      existing.discount = discount;
+      existing.amountPaid = 0;
+    }
     const wasPaid = existing.status === "paid";
     existing.amount = Math.max(Number(existing.amount || 0), amount);
     existing.discount = Math.max(Number(existing.discount || 0), discount);
@@ -625,6 +639,7 @@ export const reconcileMembershipAfterCollection = async ({
   student,
   completedPeriods = 0,
   latestPayment,
+  collectionStartDueDate = null,
   session = null,
 }) => {
   let membership = await StudentMembership.findOne({ academy: academyId, student: student._id }).session(session);
@@ -635,9 +650,9 @@ export const reconcileMembershipAfterCollection = async ({
       batch: student.batch?._id || student.batch || null,
       status: student.status === "active" ? "active" : "paused",
       startDate: student.joiningDate || student.createdAt || new Date(),
-      originalDueDate: latestPayment?.dueDate || student.joiningDate || new Date(),
-      effectiveDueDate: latestPayment?.dueDate || student.joiningDate || new Date(),
-      nextDueDate: latestPayment?.dueDate || student.joiningDate || new Date(),
+      originalDueDate: collectionStartDueDate || latestPayment?.dueDate || student.joiningDate || new Date(),
+      effectiveDueDate: collectionStartDueDate || latestPayment?.dueDate || student.joiningDate || new Date(),
+      nextDueDate: collectionStartDueDate || latestPayment?.dueDate || student.joiningDate || new Date(),
       feeRequired: true,
     });
   }
@@ -657,6 +672,8 @@ export const reconcileMembershipAfterCollection = async ({
   membership.feeStatus = nextState.feeStatus;
   membership.feeRequired = true;
   membership.feeStatusCleared = false;
+  membership.manualFeeStatus = "";
+  membership.lastPaymentAt = new Date();
   await membership.save({ session });
   return membership;
 };
@@ -673,6 +690,21 @@ export const applyPaymentStatusTransitionToMembership = async ({
   if (!membership) return null;
   const wasPaid = oldStatus === "paid";
   const isPaid = newStatus === "paid";
+  // A date/mode/amount correction that remains paid must not move the
+  // membership anchor or consume another billing cycle.
+  if (wasPaid === isPaid) {
+    membership.feeStatusCleared = false;
+    membership.manualFeeStatus = "";
+    membership.lastPaymentAt = new Date();
+    await membership.save({ session });
+    return membership;
+  }
+  if (isPaid) {
+    const nextState = deriveMembershipCollectionState({ membership, completedPeriods: 1, latestStatus: "paid", latestDueDate: payment?.dueDate });
+    Object.assign(membership, nextState, { feeStatusCleared: false, manualFeeStatus: "", lastPaymentAt: new Date(), dueDateCleared: false });
+    await membership.save({ session });
+    return membership;
+  }
   const accrual = calculateMembershipAccrualState(membership);
   membership.unpaidMonths = accrual.unpaidMonths;
   membership.nextDueDate = accrual.nextDueDate || membership.nextDueDate || membership.effectiveDueDate;
@@ -683,6 +715,8 @@ export const applyPaymentStatusTransitionToMembership = async ({
   const stillDue = Number(membership.unpaidMonths || 0) > 0 || Number(membership.unpaidDays || 0) > 0;
   membership.feeStatus = stillDue ? "due" : isPaid ? "paid" : (newStatus === "cancelled" ? "due" : newStatus);
   membership.feeStatusCleared = false;
+  membership.manualFeeStatus = "";
+  membership.lastPaymentAt = new Date();
   if (!stillDue && isPaid && payment) {
     const next = Number(payment.feeMonth) === 12
       ? { month: 1, year: Number(payment.feeYear) + 1 }

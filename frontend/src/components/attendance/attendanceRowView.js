@@ -7,7 +7,7 @@ const missing = (value) => !text(value) || ["-", "—"].includes(text(value));
 export const getDueDateValue = (row) =>
   row.membership?.dueDateCleared
     ? "-"
-    : row.rowType === "student" && row.studentId && row.membership?.lastAdjustedAt
+    : row.rowType === "student" && row.studentId && (row.membership?.lastAdjustedAt || row.membership?.lastPaymentAt)
     ? row.membership.effectiveDueDate || row.feeDueDate || row.importedDueDate || "-"
     : row.importedDueDate || row.feeDueDate || row.membership?.effectiveDueDate || "-";
 export const getFeeStatusValue = getCanonicalFeeDisplay;

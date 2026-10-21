@@ -770,7 +770,7 @@ const AttendanceTable = ({
                         dateOnly
                         membership={row.membership}
                         fallbackDueDate={getDueDateValue(row)}
-                        dateOverride={row.membership?.lastAdjustedAt ? "" : row.importedDueDate || ""}
+                        dateOverride={row.membership?.lastAdjustedAt || row.membership?.lastPaymentAt ? "" : row.importedDueDate || ""}
                         dateFormat={dueDateFormat}
                         monthDate={suppliedDays[0]?.dateKey || ""}
                         onClick={

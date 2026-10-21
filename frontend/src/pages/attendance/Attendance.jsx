@@ -315,11 +315,8 @@ const Attendance = () => {
       try {
         setLoading(true);
 
-        const cached = registerCacheRef.current.get(cacheKey);
-        if (cached && Date.now() - cached.savedAt < 120000) {
-          applyLoadedData(cached.data);
-          return;
-        }
+        // Returning from Collect Fee must fetch committed payment/membership
+        // values, rather than restoring a two-minute stale register snapshot.
 
         const response = await attendanceApi.getMonthlyRegister({
           batch: selectedBatchId,
@@ -763,6 +760,22 @@ const Attendance = () => {
 
     loadMonthlyRegister(batch, month, year);
   }, [batch, month, year, loadMonthlyRegister]);
+
+  useEffect(() => {
+    const refreshFees = () => {
+      if (document.hidden || !batch || hasUnsavedChanges || loading || saveInFlightRef.current || reorderingRef.current) return;
+      loadMonthlyRegister(batch, month, year);
+    };
+    const onStorage = event => { if (event.key === "khiladi.fees.changed") refreshFees(); };
+    window.addEventListener("focus", refreshFees);
+    window.addEventListener("khiladi:fees-changed", refreshFees);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("focus", refreshFees);
+      window.removeEventListener("khiladi:fees-changed", refreshFees);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [batch, month, year, hasUnsavedChanges, loading, loadMonthlyRegister]);
 
   useEffect(() => {
     window.clearTimeout(autoSaveTimerRef.current);

@@ -28,7 +28,7 @@ export const getCanonicalFeeDisplay = (row = {}) => {
   }
   if (row.feeStatusSummary?.label) return compactAttendanceDueLabel(row.feeStatusSummary.label, row.status);
   const imported = text(row.importedFeeStatus);
-  if (!row.membership?.lastAdjustedAt && imported && !["-", "—"].includes(imported)) {
+  if (!row.membership?.lastAdjustedAt && !row.membership?.lastPaymentAt && imported && !["-", "—"].includes(imported)) {
     return compactAttendanceDueLabel(imported.toUpperCase().replace(/OVERDUE/g, "DUE").replace(/PENDING/g, "DUE"), row.status);
   }
   const membership = row.membership || {};

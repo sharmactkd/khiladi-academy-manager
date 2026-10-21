@@ -138,6 +138,7 @@ const CollectFee = () => {
   });
 
   const selectedStudentId = watch("student");
+  const [feeConfigLoading, setFeeConfigLoading] = useState(false);
   const feeMonth = Number(watch("feeMonth") || initialMonth);
   const feeYear = Number(watch("feeYear") || initialYear);
   const numberOfMonths = Math.min(Math.max(Number(watch("numberOfMonths")) || 1, 1), 24);
@@ -211,9 +212,11 @@ const CollectFee = () => {
   useEffect(() => {
     if (!selectedStudentId) {
       setDueMonthCount(1);
+      setFeeConfigLoading(false);
       return;
     }
     let active = true;
+    setFeeConfigLoading(true);
     membershipApi.getStudentMembership(selectedStudentId)
       .then((response) => {
         if (!active) return;
@@ -233,7 +236,8 @@ const CollectFee = () => {
         if (!active) return;
         setDueMonthCount(1);
         setValue("numberOfMonths", 1, { shouldDirty: false, shouldValidate: true });
-      });
+      })
+      .finally(() => { if (active) setFeeConfigLoading(false); });
     return () => { active = false; };
   }, [selectedStudentId, setValue]);
 
@@ -263,6 +267,7 @@ const CollectFee = () => {
   };
 
   const resetForm = () => {
+    collectionKeyRef.current = "";
     reset({
       student: studentIdFromUrl,
       feeMonth: initialMonth,
@@ -281,6 +286,11 @@ const CollectFee = () => {
   };
 
   const onSubmit = async (values) => {
+    if (saving) return;
+    if (feeConfigLoading) return toast.error("Please wait for this student's fee details to load");
+    const payable = Number(values.amount || 0) - Number(values.discount || 0);
+    if (payable < 0) return toast.error("Discount cannot exceed the total fee");
+    if (Number(values.amountPaid || 0) > payable + 0.001) return toast.error("Amount paid exceeds the selected months' payable fee. Check discount or select more months.");
     try {
       setSaving(true);
       if (!collectionKeyRef.current) {
@@ -300,7 +310,7 @@ const CollectFee = () => {
         // to ISO shifts it to the previous date in UTC-based attendance views.
         paymentDate: values.paymentDate || new Date().toISOString().slice(0, 10),
       });
-      toast.success("Fee collected successfully");
+      toast.success(`${Number(values.numberOfMonths || 1)} month(s): ${Number(values.amountPaid || 0).toFixed(2)} payment saved successfully`);
       collectionKeyRef.current = "";
       const payment = response?.data?.data || response?.data || null;
 

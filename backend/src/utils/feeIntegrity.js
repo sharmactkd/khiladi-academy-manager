@@ -35,10 +35,10 @@ export const buildAutomaticFeeIntegrityPlan = ({ payments = [], memberships = []
   const plan = { payments: [], memberships: [], incomes: [], skipped: [] };
   for (const payment of payments) {
     const truth = derivePaymentTruth(payment);
-    if (paymentHasMismatch(payment, truth)) plan.payments.push({ paymentId: key(payment), academy: key(payment.academy), truth });
+    if (paymentHasMismatch(payment, truth)) plan.payments.push({ paymentId: key(payment), academy: key(payment.academy), truth, observedUpdatedAt: payment.updatedAt || null });
     const income = incomeMap.get(key(payment));
     if (payment.status === "cancelled") {
-      if (income && !income.reversedAt) plan.incomes.push({ type: "reverse", paymentId: key(payment), incomeId: key(income), academy: key(payment.academy), reason: payment.reversalReason || "Fee payment cancelled" });
+      if (income && !income.reversedAt) plan.incomes.push({ type: "reverse", paymentId: key(payment), incomeId: key(income), academy: key(payment.academy), observedUpdatedAt: income.updatedAt || null, reason: payment.reversalReason || "Fee payment cancelled" });
       continue;
     }
     if (truth.amountPaid <= 0) continue;
@@ -54,12 +54,12 @@ export const buildAutomaticFeeIntegrityPlan = ({ payments = [], memberships = []
       if (createdBy) plan.incomes.push({ type: "create", paymentId: key(payment), academy: key(payment.academy), values: { ...values, createdBy } });
       else plan.skipped.push({ type: "missing_income_actor", paymentId: key(payment), academy: key(payment.academy) });
     } else if (Math.abs(Number(income.amount || 0) - truth.amountPaid) > 0.01 || income.reversedAt) {
-      plan.incomes.push({ type: "update", paymentId: key(payment), incomeId: key(income), academy: key(payment.academy), values });
+      plan.incomes.push({ type: "update", paymentId: key(payment), incomeId: key(income), academy: key(payment.academy), observedUpdatedAt: income.updatedAt || null, values });
     }
   }
   for (const membership of memberships) {
     const expected = expectedMembershipFeeStatus(membership);
-    if (expected && membership.feeStatus !== expected) plan.memberships.push({ membershipId: key(membership), academy: key(membership.academy), current: membership.feeStatus, expected });
+    if (expected && membership.feeStatus !== expected) plan.memberships.push({ membershipId: key(membership), academy: key(membership.academy), current: membership.feeStatus, expected, observedUpdatedAt: membership.updatedAt || null });
   }
   return plan;
 };

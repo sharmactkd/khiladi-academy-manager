@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const paymentInstallmentSchema = new mongoose.Schema(
   {
     idempotencyKey: { type: String, trim: true, maxlength: 120, required: true },
+    requestFingerprint: { type: String, default: "", maxlength: 64 },
     receiptNumber: { type: String, trim: true, uppercase: true, required: true },
     amountPaid: { type: Number, required: true, min: 0 },
     cashAmount: { type: Number, default: 0, min: 0 },
@@ -191,6 +192,7 @@ const feePaymentSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    corrections: { type: [{ previousState: mongoose.Schema.Types.Mixed, correctedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, correctedAt: Date }], default: [] },
   },
   { timestamps: true }
 );

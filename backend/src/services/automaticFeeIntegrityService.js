@@ -37,7 +37,7 @@ export const synchronizeFeeIntegrity = async ({ academyId = null } = {}) => {
     if (plan.payments.length) {
       await FeePayment.bulkWrite(plan.payments.map(item => ({
         updateOne: {
-          filter: { _id: item.paymentId, ...(academyId ? { academy: academyId } : {}) },
+          filter: { _id: item.paymentId, updatedAt: item.observedUpdatedAt, ...(academyId ? { academy: academyId } : {}) },
           update: { $set: item.truth },
         },
       })), { ordered: false });
@@ -45,14 +45,14 @@ export const synchronizeFeeIntegrity = async ({ academyId = null } = {}) => {
     if (plan.memberships.length) {
       await StudentMembership.bulkWrite(plan.memberships.map(item => ({
         updateOne: {
-          filter: { _id: item.membershipId, ...(academyId ? { academy: academyId } : {}) },
+          filter: { _id: item.membershipId, updatedAt: item.observedUpdatedAt, ...(academyId ? { academy: academyId } : {}) },
           update: { $set: { feeStatus: item.expected } },
         },
       })), { ordered: false });
     }
     for (const item of plan.incomes) {
       if (item.type === "reverse") {
-        await ExpenseTransaction.updateOne({ _id: item.incomeId, academy: item.academy }, { $set: { reversedAt: new Date(), reversalReason: item.reason } });
+        await ExpenseTransaction.updateOne({ _id: item.incomeId, academy: item.academy, updatedAt: item.observedUpdatedAt }, { $set: { reversedAt: new Date(), reversalReason: item.reason } });
       } else if (item.type === "create") {
         await ExpenseTransaction.updateOne(
           { academy: item.academy, sourceType: "fee_payment", sourceId: item.paymentId },
@@ -60,7 +60,7 @@ export const synchronizeFeeIntegrity = async ({ academyId = null } = {}) => {
           { upsert: true },
         );
       } else {
-        await ExpenseTransaction.updateOne({ _id: item.incomeId, academy: item.academy }, { $set: item.values });
+        await ExpenseTransaction.updateOne({ _id: item.incomeId, academy: item.academy, updatedAt: item.observedUpdatedAt }, { $set: item.values });
       }
     }
 

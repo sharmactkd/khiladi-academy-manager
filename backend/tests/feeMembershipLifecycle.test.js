@@ -8,6 +8,8 @@ process.env.JWT_REFRESH_SECRET ||= "fee-lifecycle-refresh-secret-with-at-least-3
 
 const { buildDueDate, deriveMembershipCollectionState } = await import("../src/services/feeService.js");
 const { serializeMembership } = await import("../src/services/membershipService.js");
+const { applyPaymentStatusTransitionToMembership } = await import("../src/services/feeService.js");
+const { default: StudentMembership } = await import("../src/models/StudentMembership.js");
 
 const membership = {
   status: "active",
@@ -19,6 +21,17 @@ const membership = {
   unpaidMonths: 0,
   unpaidDays: 0,
 };
+
+test("editing an already-paid fee preserves a manually anchored membership due date", async () => {
+  const originalFind = StudentMembership.findOne;
+  const state = { effectiveDueDate: new Date("2026-12-20T00:00:00Z"), nextDueDate: new Date("2026-12-20T00:00:00Z"), unpaidMonths: 0, unpaidDays: 0, save: async () => {} };
+  StudentMembership.findOne = () => ({ session: async () => state });
+  try {
+    await applyPaymentStatusTransitionToMembership({ academyId: "academy", studentId: "student", oldStatus: "paid", newStatus: "paid", payment: { feeMonth: 9, feeYear: 2026, dueDate: new Date("2026-09-10") } });
+    assert.equal(state.effectiveDueDate.toISOString(), "2026-12-20T00:00:00.000Z");
+    assert.equal(state.unpaidMonths, 0);
+  } finally { StudentMembership.findOne = originalFind; }
+});
 
 test("one month paid on Sep 22 moves a Sep 20 custom due date to Oct 20", () => {
   const result = deriveMembershipCollectionState({ membership, completedPeriods: 1, latestStatus: "paid", now: new Date("2026-09-22T00:00:00.000Z") });
