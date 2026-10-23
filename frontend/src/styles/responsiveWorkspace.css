@@ -1,0 +1,47 @@
+/* Screen containment belongs to the workspace, not to the document body.
+   Wide registers/reports scroll in their own wrappers. Print keeps its sizes. */
+@media screen {
+  .dashboard-main, .dashboard-content, .dashboard-content > div {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .dashboard-content > div > *, .dashboard-content .page {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .dashboard-content .page > * { min-width: 0; }
+  .dashboard-content :is(.table-card, .table-wrap) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .dashboard-content .page-header { flex-wrap: wrap; }
+  .dashboard-content .page-header > div { min-width: 0; }
+  .dashboard-content .page-header h1,
+  .dashboard-content .announcement-message { overflow-wrap: anywhere; }
+}
+
+@media screen and (max-width: 1100px) {
+  .dashboard-content .page-header > div { flex: 1 1 260px; }
+  .dashboard-content .page-header > :is(a, button) { max-width: 100%; white-space: normal; }
+}
+
+@media screen and (max-width: 1024px) {
+  /* Route CSS is loaded lazily after main.css; keep editable text legible
+     even when a later compact form rule uses !important. Do not disable zoom. */
+  #root :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="color"]):not([type="range"]), select, textarea) {
+    font-size: 16px !important;
+  }
+}
+
+@media screen and (pointer: coarse) {
+  .dashboard-content :is(.btn, .form-actions button, .actions button) { min-height: 44px; }
+}
+
+@media screen {
+  .owner-attendance-header, .owner-attendance-header__actions { flex-wrap: wrap; min-width: 0; }
+  .owner-attendance-header > *, .owner-attendance-header__actions > * { min-width: 0; max-width: 100%; }
+  .owner-attendance-header__actions a { white-space: normal; }
+}

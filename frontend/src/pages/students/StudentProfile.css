@@ -123,3 +123,5 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media screen { .student-detail-heading__title > div { min-width:0; } .student-detail-heading h1, .student-detail-heading__badges > * { overflow-wrap:anywhere; } }

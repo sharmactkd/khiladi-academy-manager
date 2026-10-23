@@ -9,3 +9,5 @@
 @media(max-width:760px){.heading{align-items:flex-start;flex-direction:column}.actions{width:100%;flex-wrap:wrap}.actions label,.actions button,.actions a{flex:1;justify-content:center}.kpis{grid-template-columns:1fr}.analyticsGrid{grid-template-columns:1fr}.mixBody{grid-template-columns:1fr}.activityGrid{grid-template-columns:1fr}.attentionCard{min-width:0}}
 @media(max-width:520px){.actions{display:grid;grid-template-columns:1fr}.actions label,.actions button,.actions a{width:100%}.tableCard{overflow-x:auto}.tableCard table{min-width:680px}.attentionList>div{grid-template-columns:29px 1fr auto}.attentionList em,.attentionList a{grid-column:2/-1}.attentionList a{text-align:left}.title h1{font-size:19px}}
 .tableCard table td:first-child { display: table-cell; }
+
+@media screen{.heading,.actions{min-width:0;flex-wrap:wrap}.heading>*{min-width:0;max-width:100%}.actions>*{max-width:100%}.actions select{min-width:0;max-width:100%}}

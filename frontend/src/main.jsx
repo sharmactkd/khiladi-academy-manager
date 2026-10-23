@@ -10,6 +10,7 @@ import "./styles/responsive.css";
 import "./styles/legacyPremium.css";
 import "./styles/designSystem.css";
 import "./styles/choiceSystem.css";
+import "./styles/responsiveWorkspace.css";
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 

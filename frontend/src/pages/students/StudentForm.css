@@ -888,3 +888,8 @@
     grid-template-columns: 1fr;
   }
 }
+@media screen {
+  .student-medical-panel { grid-template-columns: minmax(0,1fr); }
+  .student-medical-conditions-grid { grid-template-columns: repeat(auto-fit,minmax(min(92px,100%),1fr)); }
+}
+@media screen and (max-width:1100px) { .student-medical-selectors { grid-template-columns:minmax(0,1fr); } }

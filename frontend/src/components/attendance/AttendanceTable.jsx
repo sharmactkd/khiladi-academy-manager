@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, MoreHorizontal } from "lucide-react";
 import {
   buildAttendanceRowView,
   cycleAttendanceSort,
@@ -250,6 +250,7 @@ const AttendanceTable = ({
   const [noteEditor, setNoteEditor] = useState(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [sort, setSort] = useState([]);
+  const [multiSort, setMultiSort] = useState(false);
   const statusSignature = safeRows.map(row => `${row.studentId}:${row.status}`).sort().join("|");
   const previousStatusSignature = useRef(statusSignature);
   useEffect(() => {
@@ -279,7 +280,7 @@ const AttendanceTable = ({
   }, [safeRows, suppliedDays, preserveManualOrder]);
   const toggleSort = (key, event) =>
     setSort((current) =>
-      cycleAttendanceSort(current, key, event.ctrlKey || event.metaKey),
+      cycleAttendanceSort(current, key, multiSort || event.ctrlKey || event.metaKey),
     );
   const sortIcon = (key) => {
     const index = sort.findIndex((item) => item.key === key);
@@ -338,6 +339,7 @@ const AttendanceTable = ({
 
   useEffect(() => {
     const closeContextMenu = (event) => {
+      if (event.target instanceof Element && event.target.closest(".attendance-context-menu")) return;
       setContextMenu(null);
     };
 
@@ -390,11 +392,8 @@ const AttendanceTable = ({
     });
   };
 
-  const openStudentMenu = (event, row) => {
-    if (
-      !row.studentId ||
-      !["active", "inactive"].includes(String(row.status).toLowerCase())
-    ) {
+  const openStudentMenu = (event, row, serial) => {
+    if (!row.studentId) {
       return;
     }
 
@@ -406,6 +405,7 @@ const AttendanceTable = ({
       x: event.clientX,
       y: event.clientY,
       row,
+      serial: serial || row.no,
     });
   };
 
@@ -520,6 +520,7 @@ const AttendanceTable = ({
       <div className="attendance-mobile-scroll-hint" role="note">
         Swipe sideways to view dates, fee details and attendance totals
       </div>
+      <label className="attendance-sort-options"><input type="checkbox" checked={multiSort} onChange={(event) => setMultiSort(event.target.checked)}/>Combine Due Date and Fee Status sorting</label>
       <div ref={tableScrollRef} className="monthly-register-table-wrap">
         <table
           className="monthly-register-table"
@@ -675,7 +676,12 @@ const AttendanceTable = ({
                     onContextMenu={(event) => openDateMenu(event, day)}
                     title="Right click to add or edit a date note"
                   >
-                    {String(day.day).padStart(2, "0")}
+                    <button type="button" className="attendance-day-actions"
+                      aria-label={`Notes and colour for ${day.dateKey}`}
+                      aria-haspopup="menu"
+                      disabled={!onSaveDayNote && !onRemoveDayNote}
+                      onClick={(event) => openDateMenu(event, day)}
+                    >{String(day.day).padStart(2, "0")}</button>
                     {day.isToday && (
                       <span className="attendance-today-label">Today</span>
                     )}
@@ -727,18 +733,11 @@ const AttendanceTable = ({
                       type="button"
                       className="attendance-serial-button"
                       disabled={!onMoveRow || reorderDisabled || sort.length > 0}
-                      title="Double-click to move this student to another serial number (Enter also works)"
+                      title="Move this student to another serial number"
                       aria-label={`Serial ${displayedSerial}: move ${row.name || row.importedName || "student"}`}
-                      onDoubleClick={async () => {
-                        if (await onMoveRow?.(row, displayedSerial))
-                          setSort([]);
-                      }}
-                      onKeyDown={async (event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          if (await onMoveRow?.(row, displayedSerial))
-                            setSort([]);
-                        }
+                      onClick={async (event) => {
+                        event.stopPropagation();
+                        if (await onMoveRow?.(row, displayedSerial)) setSort([]);
                       }}
                     >
                       {displayedSerial}
@@ -747,7 +746,7 @@ const AttendanceTable = ({
 
                   <td
                     className="sticky-col sticky-name monthly-register__name"
-                    onContextMenu={(event) => openStudentMenu(event, row)}
+                    onContextMenu={(event) => openStudentMenu(event, row, displayedSerial)}
                     onDoubleClick={() => openStudentProfile(row)}
                     title={
                       row.studentId
@@ -757,6 +756,15 @@ const AttendanceTable = ({
                   >
                     <div className="attendance-student-cell">
                       <strong>{row.name || row.importedName || "-"}</strong>
+                      {row.rowType === "student" && row.studentId ? <button
+                        type="button"
+                        className="attendance-row-actions"
+                        aria-label={`Actions for ${row.name || "student"}`}
+                        aria-haspopup="menu"
+                        aria-expanded={contextMenu?.type === "student" && contextMenu.row.studentId === row.studentId}
+                        onClick={(event) => openStudentMenu(event, row, displayedSerial)}
+                        onDoubleClick={(event) => event.stopPropagation()}
+                      ><MoreHorizontal size={18}/></button> : null}
                     </div>
                   </td>
 
@@ -929,6 +937,7 @@ const AttendanceTable = ({
           }}
           onClick={(event) => event.stopPropagation()}
           role="menu"
+          aria-label={contextMenu.type === "student" ? "Student actions" : "Attendance day actions"}
         >
           {contextMenu.type === "date" && (
             <>
@@ -966,13 +975,19 @@ const AttendanceTable = ({
           )}
 
           {contextMenu.type === "student" && (
-            <button
-              type="button"
-              disabled={statusUpdatingIds.includes(contextMenu.row.studentId)}
-              onClick={toggleStudentStatus}
-            >
-              Mark {contextMenu.row.status === "active" ? "Inactive" : "Active"}
-            </button>
+            <>
+              <button type="button" role="menuitem" onClick={() => { openStudentProfile(contextMenu.row); setContextMenu(null); }}>Open student profile</button>
+              {onMoveRow ? <button type="button" role="menuitem" disabled={reorderDisabled || sort.length > 0} onClick={async () => {
+                const selected = contextMenu; setContextMenu(null);
+                if (await onMoveRow(selected.row, selected.serial)) setSort([]);
+              }}>Move serial number</button> : null}
+              {canManageMembership && onOpenMembership ? <button type="button" role="menuitem" onClick={() => { onOpenMembership(contextMenu.row); setContextMenu(null); }}>Membership Control</button> : null}
+              {canManageMembership && onOpenFeeCollection ? <button type="button" role="menuitem" onClick={() => { onOpenFeeCollection(contextMenu.row); setContextMenu(null); }}>Collect fee</button> : null}
+              {onToggleStudentStatus && ["active", "inactive"].includes(String(contextMenu.row.status).toLowerCase()) ? <button type="button" role="menuitem"
+                disabled={statusUpdatingIds.includes(contextMenu.row.studentId)} onClick={toggleStudentStatus}>
+                Mark {contextMenu.row.status === "active" ? "Inactive" : "Active"}
+              </button> : null}
+            </>
           )}
         </div>
       )}

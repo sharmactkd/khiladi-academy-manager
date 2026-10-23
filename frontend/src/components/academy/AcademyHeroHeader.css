@@ -38,7 +38,7 @@
 .owner-hero__brand button {
   position: relative;
   z-index: 1;
-  right: -20px!important;
+  right: auto;
   width: 86px;
   height: 86px;
   padding: 8px;
@@ -757,4 +757,32 @@
   .academy-hero-header__owner,
   .academy-hero-header__address { font-size: 12px; }
   .academy-hero-header__summary { gap: 6px 10px; font-size: 11px; }
+}
+
+/* Keep the shared hero inside its grid track, including tablet workspaces. */
+.owner-hero { grid-template-columns: minmax(150px, 24%) minmax(0, 1fr); min-width: 0; max-width: 100%; }
+.owner-hero__content { min-width: 0; max-width: 100%; }
+.owner-hero__brand { min-width: 0; padding-right: 0; }
+.owner-hero__brand > button, .owner-hero__logo-static { right: auto; justify-self: center; }
+.owner-hero h1, .owner-hero__owner strong, .owner-hero__address strong { overflow-wrap: anywhere; }
+.owner-hero__owner, .owner-hero__address, .owner-hero__address > span, .owner-hero__summary { min-width: 0; max-width: 100%; flex-wrap: wrap; }
+.owner-hero__address b, .owner-hero__address strong { white-space: normal; min-width: 0; }
+.owner-hero__summary > span { min-width: 0; max-width: 100%; white-space: normal; flex-wrap: wrap; }
+.academy-hero-header__action { max-width: calc(100% - 32px); }
+@media screen and (max-width: 1100px) {
+  .owner-hero { grid-template-columns: 150px minmax(0, 1fr); }
+  .owner-hero__content { width: 100%; padding: 20px 28px; }
+  .academy-hero-header--has-action .owner-hero__content { padding-bottom: 66px; }
+}
+@media screen and (max-width: 900px) {
+  .owner-hero { min-height: 0; grid-template-columns: minmax(0, 1fr); }
+  .owner-hero__brand { min-height: 74px; padding: 8px; clip-path: none; }
+  .owner-hero__brand::after { width: 54px; height: 54px; }
+  .owner-hero__brand > svg { width: 34px; height: 40px; }
+  .owner-hero__brand > button, .owner-hero__logo-static { width: 48px; height: 48px; padding: 4px; margin: 0; transform: none; }
+  .owner-hero__content { width: 100%; padding: 18px 16px 24px; }
+  .owner-hero__owner, .owner-hero__address { font-size: 13px; }
+  .owner-hero__decoration { display: none; }
+  .academy-hero-header__action { left: 16px; right: 16px; bottom: 12px; max-width: none; transform: none; display: flex; justify-content: center; }
+  .academy-hero-header__action > button { max-width: 100%; min-height: 40px; white-space: normal; }
 }

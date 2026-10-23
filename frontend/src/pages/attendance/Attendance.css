@@ -2007,3 +2007,33 @@
     contain-intrinsic-size: auto 48px;
   }
 }
+
+@media screen {
+  .attendance-page { width: 100%; min-width: 0; max-width: 100%; grid-template-columns: minmax(0, 1fr); }
+  .attendance-page > *, .attendance-page .attendance-controls, .attendance-page .attendance-controls__top,
+  .attendance-page .attendance-batches, .attendance-page .attendance-register,
+  .attendance-page .monthly-register-table-wrap { min-width: 0; max-width: 100%; }
+  .attendance-page .monthly-register-table-wrap { width: 100%; overflow: auto; }
+  .attendance-batches button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .membership-drawer__header > div { min-width: 0; }
+  .membership-drawer__header h2 { min-width: 0; overflow-wrap: anywhere; }
+  .attendance-student-cell { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .attendance-student-cell > strong { min-width: 0; flex: 1; }
+  .attendance-row-actions, .attendance-day-actions { display: inline-grid; place-items: center; flex-shrink: 0; min-width: 32px; min-height: 32px; padding: 3px; border: 1px solid #dce3ed; border-radius: 7px; background: #fff; color: #b50012; cursor: pointer; }
+  .attendance-day-actions { width: 100%; border: 0; background: transparent; color: inherit; }
+  .attendance-context-menu { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; }
+  .attendance-context-menu button { min-height: 40px; white-space: normal; }
+  .attendance-sort-options { display: flex; align-items: center; gap: 8px; padding: 6px 10px; color: #53627a; font-size: 12px; }
+  .attendance-sort-options input { width: 18px; height: 18px; }
+}
+@media screen and (max-width: 480px) {
+  .attendance-page .sticky-name { width: 156px; min-width: 156px; max-width: 156px; }
+}
+@media screen and (pointer: coarse) {
+  .attendance-row-actions { min-height: 40px; min-width: 36px; }
+  .attendance-context-menu button { min-height: 44px; }
+}
+@media print {
+  .attendance-row-actions, .attendance-sort-options { display: none !important; }
+  .attendance-day-actions { border: 0; background: transparent; color: inherit; }
+}

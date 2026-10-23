@@ -308,3 +308,13 @@
     grid-column: 1 / -1;
   }
 }
+
+/* A tablet's form column is narrower than its full viewport. */
+@media screen and (max-width: 1100px) {
+  .phone-location-primary-row--with-trailing { grid-template-columns: 105px minmax(0, 1fr) auto; }
+  .phone-location-primary-trailing { grid-column: 1 / -1; }
+}
+@media screen and (max-width: 640px) {
+  .phone-location-primary-row, .phone-location-primary-row--with-trailing { grid-template-columns: 96px minmax(0, 1fr); }
+  .phone-location-primary-row > button:last-of-type:not(:first-child) { grid-column: 1 / -1; max-width: 100%; white-space: normal; }
+}

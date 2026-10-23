@@ -21,3 +21,8 @@
 @media(max-width:760px){.heading{align-items:flex-start;flex-direction:column}.formGrid,.feeGrid,.studentGrid,.metrics,.editorGrid,.listControls{grid-template-columns:1fr}.studentTools{grid-template-columns:1fr}.overrideList>article{grid-template-columns:1fr 1fr}.person{grid-column:1/-1}.rowSummary{grid-template-columns:28px 34px 1fr 20px}.rowSummary>span:nth-of-type(n+2),.rowSummary>i{display:none}.eventBar{align-items:flex-start;flex-direction:column}.eventBar button,.finalized{margin-left:0}.eventList>a{grid-template-columns:44px 1fr 20px}.eventList dl{display:none}}
 .beltTileField { grid-column: 1 / -1; display: grid; gap: 8px; min-width: 0; }
 .beltTileField > span { color: #334155; font-size: 12px; font-weight: 800; }
+
+@media screen{.createGrid>main,.createGrid>main>*{min-width:0;max-width:100%}}
+@media screen and (max-width:1200px){.createGrid{grid-template-columns:minmax(0,1fr)}}
+@media screen and (max-width:1100px){.studentTools{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.studentTools>label{grid-column:1/-1}.studentTools>*{min-width:0;max-width:100%}.studentTools button{justify-content:center}}
+@media screen and (max-width:760px){.studentTools{grid-template-columns:minmax(0,1fr)}}

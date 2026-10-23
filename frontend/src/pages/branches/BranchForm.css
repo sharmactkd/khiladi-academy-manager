@@ -57,7 +57,7 @@
 .add-branch-message button { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border: 0; background: transparent; color: inherit; }
 .add-branch-message--error { border-color: #fecaca; color: #991b1b; background: #fff7f7; }
 .add-branch-message--success { border-color: #bbf7d0; color: #166534; background: #f0fdf4; }
-.add-branch-form { display: grid; gap: 13px; }
+.add-branch-form { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 13px; }
 .add-branch-primary-grid,
 .add-branch-secondary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
 .add-branch-card {
@@ -126,8 +126,9 @@
 .add-branch-inline-status { min-width:0; display:grid; gap:6px; }
 .add-branch-inline-status > span { color:#334155; font-size:12px; font-weight:800; }
 .add-branch-inline-status .add-branch-switch { min-height:42px; padding:6px 10px; }
-.add-branch-switch { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 8px; padding: 10px; border: 1px solid #e4e9f0; border-radius: 10px; cursor: pointer; }
-.add-branch-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.add-branch-switch { position: relative; min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 8px; padding: 10px; border: 1px solid #e4e9f0; border-radius: 10px; cursor: pointer; }
+.add-branch-switch input { position: absolute; inset: 0; width: 1px; height: 1px; min-width: 0; min-height: 0; padding: 0; margin: 0; opacity: 0; clip-path: inset(50%); }
+.add-branch-switch input:focus-visible + span { outline: 3px solid #2563eb; outline-offset: 3px; }
 .add-branch-switch > span { position: relative; width: 34px; height: 19px; border-radius: 999px; background: #cbd5e1; transition: background .16s ease; }
 .add-branch-switch > span::after { content:""; position:absolute; top:3px; left:3px; width:13px; height:13px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(15,23,42,.3); transition:transform .16s ease; }
 .add-branch-switch input:checked + span { background: var(--ab-red); }
@@ -200,7 +201,7 @@
 .add-branch-actions .btn-primary { min-width:145px; }
 @media (max-width:1100px) {
   .add-branch-primary-grid,
-.add-branch-secondary-grid { grid-template-columns:1fr; } }
+.add-branch-secondary-grid { grid-template-columns:minmax(0,1fr); min-width:0; } }
 @media (max-width:760px) {
   .add-branch-heading { align-items:flex-start; flex-direction:column; } }
 @media (max-width:760px) {
