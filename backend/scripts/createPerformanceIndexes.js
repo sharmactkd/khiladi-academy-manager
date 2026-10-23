@@ -7,8 +7,10 @@ import AttendanceMonthMetadata from "../src/models/AttendanceMonthMetadata.js";
 import FeePayment from "../src/models/FeePayment.js";
 import Student from "../src/models/Student.js";
 import StudentMembership from "../src/models/StudentMembership.js";
+import MembershipAdjustment from "../src/models/MembershipAdjustment.js";
+import Notification from "../src/models/Notification.js";
 
-const models = [Student, Attendance, AttendanceDayNote, AttendanceMonthMetadata, FeePayment, StudentMembership];
+const models = [Student, Attendance, AttendanceDayNote, AttendanceMonthMetadata, FeePayment, StudentMembership, MembershipAdjustment, Notification];
 
 let failed = false;
 try {

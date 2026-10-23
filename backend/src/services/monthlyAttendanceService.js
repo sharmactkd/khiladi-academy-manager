@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { compactImportedFeeContextStages, latestMetadataStages, REGISTER_STUDENT_FIELDS } from "../utils/attendanceReadPlan.js";
 
 import Attendance from "../models/Attendance.js";
 import Student from "../models/Student.js";
@@ -277,6 +278,7 @@ const getMonthlyFeeMap = async ({ academyId, studentIds, month, year, latest = f
         { $sort: { student: 1, paymentDate: -1, createdAt: -1 } },
         { $group: { _id: "$student", payment: { $first: "$$ROOT" } } },
         { $replaceRoot: { newRoot: "$payment" } },
+        { $project: { student: 1, finalAmount: 1, amount: 1, amountPaid: 1, dueDate: 1, paidDate: 1, paymentDate: 1, status: 1 } },
       ])
     : await FeePayment.find(query)
         .sort({ paymentDate: -1, createdAt: -1 })
@@ -495,6 +497,7 @@ const buildMonthlyRows = async ({
   isCurrentRegister = false,
   monthEnd,
   orderedStudentIds = [],
+  prefetchedRoster,
 }) => {
   const markedStudentIds = [];
 
@@ -512,23 +515,13 @@ const buildMonthlyRows = async ({
     ...metadataStudentIds,
     ...orderedStudentIds,
   ].map(String))].filter((id) => mongoose.Types.ObjectId.isValid(id));
-  const studentFields = "admissionNumber firstName lastName phone countryCode status statusUpdatedAt joiningDate createdAt updatedAt batch dob dateOfBirth fatherName schoolName address";
-  const [rosterStudents, historicalStudents] = await Promise.all([
-    // The monthly register is a batch register, not an attendance-only
-    // register.  Historical months must include the complete batch roster as
-    // well; otherwise a month imported with marks for only a subset of
-    // students renders only that subset (for example September showing 70
-    // rows while the current October roster has 548).  Attendance, metadata
-    // and order references below still add legacy rows which no longer exist
-    // in the current batch roster.
-    Student.find({ academy: academyObjectId, batch: batchObjectId })
-      .select(studentFields)
-      .sort({ createdAt: 1, _id: 1 })
-      .lean(),
-    historicalIdentityIds.length
-      ? Student.find({ academy: academyObjectId, _id: { $in: historicalIdentityIds } }).select(studentFields).lean()
-      : Promise.resolve([]),
-  ]);
+  const rosterStudents = prefetchedRoster ?? await Student.find({ academy: academyObjectId, batch: batchObjectId })
+    .select(REGISTER_STUDENT_FIELDS).sort({ createdAt: 1, _id: 1 }).lean();
+  const rosterIds = new Set(rosterStudents.map(student => String(student._id)));
+  const missingIdentityIds = historicalIdentityIds.filter(id => !rosterIds.has(id));
+  const historicalStudents = missingIdentityIds.length
+    ? await Student.find({ academy: academyObjectId, _id: { $in: missingIdentityIds } }).select(REGISTER_STUDENT_FIELDS).lean()
+    : [];
   const students = [...new Map([...rosterStudents, ...historicalStudents].map(student => [String(student._id), student])).values()];
 
   const studentMap = new Map(students.map((student) => [String(student._id), student]));
@@ -722,25 +715,13 @@ export const getMonthlyAttendanceRegister = async ({
         ],
       }
     : { academy: academyObjectId, batch: batchObjectId, year: numericYear, month: numericMonth };
-  const latestMetadataFacet = (field) => [
-    { $match: { [field]: { $exists: true, $nin: [null, ""] } } },
-    { $sort: { updatedAt: -1 } },
-    { $group: { _id: "$student", student: { $first: "$student" }, [field]: { $first: `$${field}` } } },
-    { $project: { _id: 0, student: 1, [field]: 1 } },
-  ];
   const metadataQuery = isCurrentRegister
     ? AttendanceMonthMetadata.aggregate([
         { $match: metadataScope },
-        { $facet: {
-          importedDueDate: latestMetadataFacet("importedDueDate"),
-          importedPaidDate: latestMetadataFacet("importedPaidDate"),
-          importedFeePaid: latestMetadataFacet("importedFeePaid"),
-          importedFeeStatus: latestMetadataFacet("importedFeeStatus"),
-          importedExtraNote: latestMetadataFacet("importedExtraNote"),
-        } },
+        ...latestMetadataStages(),
       ])
     : AttendanceMonthMetadata.find(metadataScope).lean();
-  const [batch, attendanceDocs, dayNoteDocs, order, previousOrder, rawMonthMetadataDocs, historicalFeeContextDocs] = await Promise.all([
+  const [batch, attendanceDocs, dayNoteDocs, order, previousOrder, rawMonthMetadataDocs, historicalFeeContextDocs, prefetchedRoster] = await Promise.all([
     Batch.findOne({ _id: batchObjectId, academy: academyObjectId }).select("batchName martialArt branch isActive").lean(),
     Attendance.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date records").lean(),
     AttendanceDayNote.find({ academy: academyObjectId, batch: batchObjectId, date: { $gte: start, $lt: end } }).select("date type title description color createdAt updatedAt").lean(),
@@ -766,29 +747,13 @@ export const getMonthlyAttendanceRegister = async ({
             },
           },
         } },
-          { $sort: { date: -1, updatedAt: -1 } },
-          { $limit: 40 },
-          { $unwind: "$records" },
-          { $match: {
-            $or: [
-              { "records.importedDueDate": { $exists: true, $nin: [null, ""] } },
-              { "records.importedPaidDate": { $exists: true, $nin: [null, ""] } },
-              { "records.importedFeePaid": { $exists: true, $nin: [null, ""] } },
-              { "records.importedFeeStatus": { $exists: true, $nin: [null, ""] } },
-            ],
-          } },
-          { $project: {
-            _id: 0,
-            date: 1,
-            student: "$records.student",
-            importedDueDate: "$records.importedDueDate",
-            importedPaidDate: "$records.importedPaidDate",
-            importedFeePaid: "$records.importedFeePaid",
-            importedFeeStatus: "$records.importedFeeStatus",
-          } },
+          ...compactImportedFeeContextStages(),
         ])
       : Promise.resolve([]),
+    Student.find({ academy: academyObjectId, batch: batchObjectId })
+      .select(REGISTER_STUDENT_FIELDS).sort({ createdAt: 1, _id: 1 }).lean(),
   ]);
+  const initialReadsMs = performance.now() - startedAt;
 
   if (!batch) {
     const error = new Error("Batch not found in your academy");
@@ -862,6 +827,7 @@ export const getMonthlyAttendanceRegister = async ({
     isCurrentRegister,
     monthEnd: end,
     orderedStudentIds: studentIdsFromOrderKeys(selectedOrder.keys),
+    prefetchedRoster,
   });
 
   // Ignore status arrays created by the withdrawn read-time snapshot build.
@@ -902,7 +868,7 @@ export const getMonthlyAttendanceRegister = async ({
     dayNotes,
     students,
     rows: orderedRows,
-    performance: { totalMs: Math.round(performance.now() - startedAt), rowCount: orderedRows.length, attendanceDocuments: attendanceDocs.length },
+    performance: { initialReadsMs: Math.round(initialReadsMs), rowBuildMs: Math.round(performance.now() - startedAt - initialReadsMs), totalMs: Math.round(performance.now() - startedAt), rowCount: orderedRows.length, attendanceDocuments: attendanceDocs.length },
   };
 };
 

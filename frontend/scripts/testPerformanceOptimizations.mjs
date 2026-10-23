@@ -7,7 +7,7 @@ const [auth, academyApi, batchApi, attendanceService, feePayment] = await Promis
   read("../src/context/AuthContext.jsx"),
   read("../src/api/academyApi.js"),
   read("../src/api/batchApi.js"),
-  read("../../backend/src/services/monthlyAttendanceService.js"),
+  Promise.all([read("../../backend/src/services/monthlyAttendanceService.js"), read("../../backend/src/utils/attendanceReadPlan.js")]).then(parts => parts.join("\n")),
   read("../../backend/src/models/FeePayment.js"),
 ]);
 

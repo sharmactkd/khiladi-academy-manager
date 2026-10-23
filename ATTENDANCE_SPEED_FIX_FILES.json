@@ -1,0 +1,18 @@
+[
+  "backend/package-lock.json",
+  "backend/package.json",
+  "backend/scripts/createPerformanceIndexes.js",
+  "backend/src/controllers/attendanceController.js",
+  "backend/src/services/monthlyAttendanceService.js",
+  "backend/src/utils/reminderEvents.js",
+  "frontend/package.json",
+  "frontend/scripts/testPerformanceOptimizations.mjs",
+  "frontend/src/api/attendanceApi.js",
+  "frontend/src/components/notifications/ReminderCenter.jsx",
+  "frontend/src/pages/attendance/Attendance.jsx",
+  "backend/src/utils/attendanceReadPlan.js",
+  "backend/tests/attendanceReadPlan.test.js",
+  "frontend/scripts/testReminderScheduling.mjs",
+  "frontend/src/components/notifications/reminderScheduling.js",
+  "ATTENDANCE_SPEED_README.md"
+]

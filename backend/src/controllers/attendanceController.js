@@ -1225,10 +1225,16 @@ export const getMonthlyRegister = asyncHandler(async (req, res) => {
     year,
   });
 
-  res.setHeader("Server-Timing", `attendance;dur=${Number(data.performance?.totalMs || 0)}`);
+  res.setHeader("Server-Timing", [
+    `attendance;dur=${Number(data.performance?.totalMs || 0)}`,
+    `registerReads;dur=${Number(data.performance?.initialReadsMs || 0)}`,
+    `registerRows;dur=${Number(data.performance?.rowBuildMs || 0)}`,
+  ].join(", "));
   res.setHeader("Cache-Control", "private, no-store");
 
-  return successResponse(res, "Monthly attendance register fetched", data);
+  // The table consumes rows only. Keep the legacy payload for other callers.
+  const { students, ...tableData } = data;
+  return successResponse(res, "Monthly attendance register fetched", req.query.includeStudents === "false" ? tableData : data);
 });
 
 export const getYearlyRegister = asyncHandler(async (req, res) => {

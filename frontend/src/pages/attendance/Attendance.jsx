@@ -347,7 +347,10 @@ const Attendance = () => {
         setDayNotes({});
         setPreserveMonthlyOrder(false);
       } finally {
-        if (loadRequestRef.current.id === requestId) setLoading(false);
+        if (loadRequestRef.current.id === requestId) {
+          setLoading(false);
+          window.dispatchEvent(new Event("khiladi:attendance-ready"));
+        }
       }
     },
     [batch, month, year]

@@ -10,6 +10,13 @@ export const buildReminderEvents = ({students=[],memberships=[],settings={},now=
   const today=todayDateKey(now,timeZone), midnight=new Date(`${today}T00:00:00Z`);
   const maps=new Map(memberships.map(item=>[String(item.student),item]));
   const events=[];
+  // Calendar work is shared by all students rather than repeated per DOB.
+  const birthdayDays=[];
+  if(settings.birthdays)for(let offset=-30;offset<=settings.range;offset++){
+    const date=new Date(midnight.getTime()+offset*dayMs),year=date.getUTCFullYear();
+    birthdayDays.push({offset,year,month:date.getUTCMonth()+1,day:date.getUTCDate(),
+      key:date.toISOString().slice(0,10),leap:new Date(Date.UTC(year,2,0)).getUTCDate()===29});
+  }
   for(const student of students){
     const id=String(student._id), name=[student.firstName,student.lastName].filter(Boolean).join(" ") || "Student";
     const base={studentId:id,name,batch:student.batch?.batchName||"",phone:student.phone||"",countryCode:student.countryCode||"",studentStatus:student.status};
@@ -17,14 +24,10 @@ export const buildReminderEvents = ({students=[],memberships=[],settings={},now=
     const dob=storedDateKey(student.dateOfBirth || student.dob);
     if(settings.birthdays && (active||settings.inactiveBirthdays) && dob && dob<=today){
       const [,month,day]=dob.split("-").map(Number);
-      for(let offset=-30;offset<=settings.range;offset++){
-        const date=new Date(midnight.getTime()+offset*dayMs);
-        const year=date.getUTCFullYear();
-        // In non-leap years celebrate February 29 birthdays on February 28.
-        const birthdayDay=month===2&&day===29&&new Date(Date.UTC(year,2,0)).getUTCDate()===28?28:day;
-        if(date.getUTCMonth()+1!==month||date.getUTCDate()!==birthdayDay)continue;
-        const key=date.toISOString().slice(0,10);
-        events.push({...base,id:`birthday:${key}:${id}`,kind:"birthday",date:key,offset,age:year-Number(dob.slice(0,4))});
+      for(const date of birthdayDays){
+        const birthdayDay=month===2&&day===29&&!date.leap?28:day;
+        if(date.month!==month||date.day!==birthdayDay)continue;
+        events.push({...base,id:`birthday:${date.key}:${id}`,kind:"birthday",date:date.key,offset:date.offset,age:date.year-Number(dob.slice(0,4))});
       }
     }
     const member=maps.get(id);

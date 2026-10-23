@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import useAuth from "../../hooks/useAuth.js";
 import {reminderApi} from "../../api/reminderApi.js";
 import styles from "./ReminderCenter.module.css";
+import {scheduleInitialReminderRefresh} from "./reminderScheduling.js";
 const Context=createContext(null);
 const unwrap=response=>response?.data?.data||{};
 const management=["academy_owner","super_admin","assistant_coach"];
@@ -46,14 +47,15 @@ export function ReminderProvider({children}){
     finally{if(version===generation.current){flight.current=false;setLoading(false);if(pending.current){pending.current=false;setTimeout(()=>{if(version===generation.current)refresh();},0);}}}
   },[enabled,user?._id]);
   useEffect(()=>{
-    const reset=()=>{generation.current++;flight.current=false;pending.current=false;latest.current=null;setData(null);setQueue([]);setOpen(false);lastFetch.current=0;refresh();};
+    let cancelInitial=()=>{};
+    const reset=()=>{cancelInitial();generation.current++;flight.current=false;pending.current=false;latest.current=null;setData(null);setQueue([]);setOpen(false);lastFetch.current=0;cancelInitial=scheduleInitialReminderRefresh(refresh);};
     reset();
     const tick=()=>{if(!document.hidden&&(Date.now()-lastFetch.current>=300000||clientDay(latest.current?.timeZone)!==lastDay.current))refresh();};
     const focus=()=>{if(Date.now()-lastFetch.current>30000)refresh();};
     const timer=window.setInterval(tick,60000);
     window.addEventListener("focus",focus);window.addEventListener("khiladi:fees-changed",refresh);
     window.addEventListener("khiladi:academy-changed",reset);document.addEventListener("visibilitychange",tick);
-    return()=>{generation.current++;flight.current=false;clearInterval(timer);window.removeEventListener("focus",focus);window.removeEventListener("khiladi:fees-changed",refresh);window.removeEventListener("khiladi:academy-changed",reset);document.removeEventListener("visibilitychange",tick);};
+    return()=>{cancelInitial();generation.current++;flight.current=false;clearInterval(timer);window.removeEventListener("focus",focus);window.removeEventListener("khiladi:fees-changed",refresh);window.removeEventListener("khiladi:academy-changed",reset);document.removeEventListener("visibilitychange",tick);};
   },[refresh]);
   const markRead=async ids=>{
     const version=generation.current;
